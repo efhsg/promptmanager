@@ -14,7 +14,7 @@ echo "PHP-FPM Server Port: " . $_SERVER['SERVER_PORT'] . "<br>";
 // MySQL Connection Test
 echo "<h2>MySQL Connection Test</h2>";
 try {
-    $host = 'mysql';  // Docker service name
+    $host = 'pma_mysql';  // Docker service name
     $dbname = getenv('DB_DATABASE');
     $user = getenv('DB_USER');
     $pass = getenv('DB_PASSWORD');
