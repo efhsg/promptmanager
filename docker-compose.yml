@@ -1,7 +1,7 @@
 version: '3.9'
 
 services:
-  yii:
+  pma_yii:
     build:
       context: .
       dockerfile: ./docker/Dockerfile
@@ -9,7 +9,7 @@ services:
         - USER_ID=${USER_ID:-1000}
         - USER_NAME=${USER_NAME:-appuser}
         - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}        
-    container_name: yii
+    container_name: pma_yii
     working_dir: /var/www/html/yii
     environment:
       TZ: ${TIMEZONE:-Europe/Amsterdam}
@@ -22,13 +22,13 @@ services:
       - .:/var/www/html
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
     depends_on:
-      - mysql
+      - pma_mysql
     networks:
       - promptmanager_network
 
-  nginx:
+  pma_nginx:
     image: nginx:latest
-    container_name: nginx
+    container_name: pma_nginx
     ports:
       - "${NGINX_PORT:-8502}:80"
     volumes:
@@ -40,13 +40,13 @@ services:
       sh -c "envsubst '$$PHP_FPM_PORT' < /etc/nginx/nginx.conf.template \
       > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
     depends_on:
-      - yii
+      - pma_yii
     networks:
       - promptmanager_network
   
-  mysql:
+  pma_mysql:
     image: mysql:8.0
-    container_name: mysql
+    container_name: pma_mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_DATABASE}

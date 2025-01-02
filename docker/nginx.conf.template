@@ -21,7 +21,7 @@ http {
 
     location ~ \.php$ {
         include fastcgi_params;
-        fastcgi_pass yii:${PHP_FPM_PORT};
+        fastcgi_pass pma_yii:${PHP_FPM_PORT};
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $fastcgi_path_info;
