@@ -1,0 +1,67 @@
+version: '3.9'
+
+services:
+  yii:
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      args:
+        - USER_ID=${USER_ID:-1000}
+        - USER_NAME=${USER_NAME:-appuser}
+        - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}        
+    container_name: yii
+    working_dir: /var/www/html/yii
+    environment:
+      TZ: ${TIMEZONE:-Europe/Amsterdam}
+      PHP_IDE_CONFIG: "serverName=Docker"
+    extra_hosts:
+        - 'host.docker.internal:host-gateway'
+    env_file:
+      - .env
+    volumes:
+      - .:/var/www/html
+      - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
+    depends_on:
+      - mysql
+    networks:
+      - promptmanager_network
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "${NGINX_PORT:-8502}:80"
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx.conf.template:/etc/nginx/nginx.conf.template
+    environment:
+      PHP_FPM_PORT: ${PHP_FPM_PORT:-9000}
+    command: >
+      sh -c "envsubst '$$PHP_FPM_PORT' < /etc/nginx/nginx.conf.template \
+      > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+    depends_on:
+      - yii
+    networks:
+      - promptmanager_network
+  
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_DATABASE_TEST: ${DB_DATABASE_TEST}      
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: Europe/Amsterdam
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - ./data/db/mysql:/var/lib/mysql
+      - ./docker/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - promptmanager_network
+
+networks:
+  promptmanager_network:
+    name: promptmanager_network

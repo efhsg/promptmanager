@@ -1,0 +1,6 @@
+# phpstorm project files
+.idea
+
+/data/
+trash/
+.env
