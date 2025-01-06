@@ -3,6 +3,9 @@ FROM php:8.2-fpm
 # TZ
 RUN echo "date.timezone=Europe/Amsterdam" > /usr/local/etc/php/conf.d/timezone.ini
 
+# Disable expose_php for security reasons
+RUN echo "expose_php=Off" > /usr/local/etc/php/conf.d/security.ini
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     zip \
@@ -15,12 +18,24 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libfreetype6-dev \
     libjpeg-dev \
+    libicu-dev \
+    libpq-dev \
+    imagemagick \
+    libmagickwand-dev \
+    libmemcached-dev \
+    zlib1g-dev \
     vim --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd
+    docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd intl pdo_pgsql
+
+# Install and enable the Memcached extension
+RUN pecl install memcached && docker-php-ext-enable memcached
+
+# Install and enable the Imagick extension
+RUN pecl install imagick && docker-php-ext-enable imagick  
 
 # Install Xdebug
 RUN pecl install xdebug && docker-php-ext-enable xdebug
