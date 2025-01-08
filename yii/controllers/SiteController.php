@@ -5,7 +5,7 @@ namespace app\controllers;
 use Exception;
 use Yii;
 use yii\filters\{AccessControl, VerbFilter};
-use yii\web\{Controller, Response};
+use yii\web\{Controller};
 
 class SiteController extends Controller
 {
@@ -55,16 +55,6 @@ class SiteController extends Controller
                 'message' => 'Unable to connect to the database. Please try again later.',
             ]);
         }
-    }
-
-    public function actionAbout(): string
-    {
-        return $this->render('about');
-    }
-
-    public function actionFeatures(): string
-    {
-        return $this->render('features');
     }
 
 }

@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnhandledExceptionInspection */
 
 /** @var yii\web\View $this */
 
@@ -26,6 +26,11 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                     'label' => 'Manage',
                     'items' => [
                         [
+                            'label' => 'Projects',
+                            'url' => ['/project/index'],
+                            'active' => (Yii::$app->controller->id === 'project'),
+                        ],
+                        [
                             'label' => 'Contexts',
                             'url' => ['/manage/contexts'],
                         ],
@@ -49,7 +54,7 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                 ['label' => 'Login', 'url' => ['/identity/auth/login']],
             ] : [
                 '<li class="nav-item">'
-                . Html::beginForm(['/identity/auth/logout'], 'post')
+                . Html::beginForm(['/identity/auth/logout'])
                 . Html::submitButton(
                     'Logout (' . Html::encode(Yii::$app->user->identity->username) . ')',
                     ['class' => 'nav-link btn btn-link logout']
