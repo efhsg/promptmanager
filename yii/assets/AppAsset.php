@@ -9,6 +9,7 @@ class AppAsset extends AssetBundle
     public $basePath = '@webroot';
     public $baseUrl = '@web';
     public $css = [
+        'css/spacelab.min.css',
         'css/site.css',
     ];
     public $js = [];

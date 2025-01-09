@@ -14,7 +14,7 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
         NavBar::begin([
             'brandLabel' => Html::img('@web/images/prompt-manager-logo-nav.png', ['alt' => Yii::$app->name, 'height' => 40]) . '&nbsp;&nbsp;&nbsp;' . Yii::$app->name,
             'brandUrl' => Yii::$app->homeUrl,
-            'options' => ['class' => 'navbar-expand-md navbar-dark bg-dark fixed-top']
+            'options' => ['class' => 'navbar-expand-md navbar-dark bg-primary fixed-top']
         ]);
 
         echo Nav::widget([
