@@ -26,6 +26,7 @@ $this->params['breadcrumbs'][] = $this->title;
         <div class="card-body p-0">
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
+                'filterModel' => $searchModel,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',
                 'summaryOptions' => ['class' => 'text-start m-2'],
                 'layout' => "{items}"

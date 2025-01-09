@@ -74,14 +74,8 @@ class ProjectController extends Controller
     {
         $model = $this->findModel($id);
 
-        // In your example, you might show contexts or templates here as well:
-        // $contextsDataProvider = new ActiveDataProvider([
-        //     'query' => $model->getContexts(),
-        // ]);
-
         return $this->render('view', [
             'model' => $model,
-            // 'contextsDataProvider' => $contextsDataProvider,
         ]);
     }
 
@@ -95,7 +89,6 @@ class ProjectController extends Controller
         $model = new Project();
 
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
-            // Redirect to view or index
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
@@ -160,14 +153,8 @@ class ProjectController extends Controller
     {
         $model = $this->findModel($id);
 
-        // Optionally gather related data, e.g. contexts or templates
-        // $contexts = $model->getContexts()->all();
-        // $templates = $model->getPromptTemplates()->all();
-
         return $this->render('delete-confirm', [
             'model' => $model,
-            // 'contexts' => $contexts,
-            // 'templates' => $templates,
         ]);
     }
 

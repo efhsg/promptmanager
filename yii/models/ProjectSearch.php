@@ -1,4 +1,4 @@
-<?php /** @noinspection PhpUnused */
+<?php
 
 namespace app\models;
 
@@ -6,7 +6,7 @@ use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
 /**
- * ProjectSearch represents the model behind the search form of `app\modules\project\models\Project`.
+ * ProjectSearch represents the model behind the search form about `app\models\Project`.
  */
 class ProjectSearch extends Project
 {
@@ -16,7 +16,6 @@ class ProjectSearch extends Project
     public function rules(): array
     {
         return [
-            [['id', 'user_id'], 'integer'],
             [['name', 'description'], 'safe'],
         ];
     }
@@ -26,7 +25,6 @@ class ProjectSearch extends Project
      */
     public function scenarios(): array
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -34,14 +32,13 @@ class ProjectSearch extends Project
      * Creates data provider instance with search query applied
      *
      * @param array $params
-     * @param int|null $userId If we need to filter by a specific user
+     * @param int|null $userId If filtering by the currently logged-in user, for example
      * @return ActiveDataProvider
      */
     public function search(array $params, ?int $userId = null): ActiveDataProvider
     {
         $query = Project::find();
 
-        // If each user can only see their own Projects, enforce user_id
         if ($userId) {
             $query->andWhere(['user_id' => $userId]);
         }
@@ -49,26 +46,18 @@ class ProjectSearch extends Project
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [
-                'pageSize' => 10,  // Adjust as needed
+                'pageSize' => 10,
             ],
         ]);
 
         $this->load($params);
 
         if (!$this->validate()) {
-            // If validation fails, we can optionally return no records.
-            // $query->where('0=1');
             return $dataProvider;
         }
 
-        // Apply filtering conditions
-        $query->andFilterWhere([
-            'id' => $this->id,
-            'deleted_at' => $this->deleted_at,
-        ]);
-
-        $query->andFilterWhere(['like', 'name', $this->name])
-            ->andFilterWhere(['like', 'description', $this->description]);
+        $query->andFilterWhere(['like', 'name', $this->name]);
+        $query->andFilterWhere(['like', 'description', $this->description]);
 
         return $dataProvider;
     }
