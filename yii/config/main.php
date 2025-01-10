@@ -65,6 +65,7 @@ $config = [
             'rules' => [],
         ],
         'assetManager' => [
+            'basePath' => __DIR__ . '/../web/assets',
             'bundles' => [],
         ],
         'user' => [
