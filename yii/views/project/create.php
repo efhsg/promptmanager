@@ -5,9 +5,12 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 
-$this->title = 'Create Project';
-$this->params['breadcrumbs'][] = ['label' => 'Projects', 'url' => ['index']];
-$this->params['breadcrumbs'][] = $this->title;
+$this->title = 'Create project';
+echo $this->render('_breadcrumbs', [
+    'model' => null,
+    'actionLabel' => $this->title,
+]);
+
 ?>
 <div class="project-create container py-4">
     <div class="row justify-content-center">

@@ -1,16 +1,20 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\models\ProjectSearch;
+use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\Url;
-use yii\grid\GridView;
-use app\models\ProjectSearch;
 
 /** @var yii\web\View $this */
 /** @var ProjectSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
 $this->title = 'Projects';
-$this->params['breadcrumbs'][] = $this->title;
+echo $this->render('_breadcrumbs', [
+    'model' => null,
+    'actionLabel' => null,
+]);
+
 ?>
 <div class="project-index container py-4">
 

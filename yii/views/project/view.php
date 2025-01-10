@@ -1,14 +1,16 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
-use yii\widgets\DetailView;
 use yii\helpers\Html;
+use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 
 $this->title = $model->name;
-$this->params['breadcrumbs'][] = ['label' => 'Projects', 'url' => ['index']];
-$this->params['breadcrumbs'][] = $this->title;
+echo $this->render('_breadcrumbs', [
+    'model' => null,
+    'actionLabel' => $model->name . ' - view',
+]);
 ?>
 
 <div class="project-view container py-4">
@@ -20,7 +22,6 @@ $this->params['breadcrumbs'][] = $this->title;
                 'class' => 'btn btn-danger me-2',
                 'data' => ['method' => 'post'],
             ]) ?>
-            <?= Html::a('Back to List', ['index'], ['class' => 'btn btn-secondary']) ?>
         </div>
     </div>
 

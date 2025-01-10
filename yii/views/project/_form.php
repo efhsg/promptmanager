@@ -17,7 +17,7 @@ use yii\widgets\ActiveForm;
     <?= $form->field($model, 'description')->textarea(['rows' => 5]) ?>
 
     <div class="form-group mt-4 text-end">
-        <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
+        <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], ['class' => 'btn btn-secondary me-2']) ?>
         <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
     </div>
 

@@ -5,11 +5,13 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 
-$this->title = 'Update Project: ' . $model->name;
-$this->params['breadcrumbs'][] = ['label' => 'Projects', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => $model->name, 'url' => ['view', 'id' => $model->id]];
-$this->params['breadcrumbs'][] = 'Update';
+$this->title = 'Update ' . $model->name;
+echo $this->render('_breadcrumbs', [
+    'model' => null,
+    'actionLabel' => $model->name . ' - update',
+]);
 ?>
+
 <div class="project-update container py-4">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
