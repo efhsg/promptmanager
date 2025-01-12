@@ -35,11 +35,13 @@ $this->params['breadcrumbs'][] = $this->title;
                     'placeholder' => 'Enter your password',
                 ]) ?>
 
-                <?= $form->field($model, 'captcha', ['labelOptions' => ['style' => 'display:none']])->widget(Captcha::class, [
-                    'captchaAction' => '/identity/auth/captcha',
-                    'options' => ['placeholder' => 'Enter the verification code'],
-                    'template' => '<div class="d-flex">{image}{input}</div>',
-                ]) ?>
+                <?php if (getenv('IDENTITY_DISABLE_CAPTCHA') !== 'TRUE'): ?>
+                    <?= $form->field($model, 'captcha', ['labelOptions' => ['style' => 'display:none']])->widget(Captcha::class, [
+                        'captchaAction' => '/identity/auth/captcha',
+                        'options' => ['placeholder' => 'Enter the verification code'],
+                        'template' => '<div class="d-flex">{image}{input}</div>',
+                    ]) ?>
+                <?php endif; ?>
 
                 <div class="form-group mt-4">
                     <?= Html::submitButton('Signup', ['class' => 'btn btn-primary w-100', 'name' => 'signup-button']) ?>

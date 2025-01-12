@@ -26,12 +26,17 @@ class SignupForm extends Model
 
     public function rules(): array
     {
-        return [
+        $rules = [
             [['username', 'email', 'password'], 'required'],
             [['password'], 'string', 'min' => 3, 'max' => 255],
             ['email', 'email'],
-            ['captcha', 'captcha', 'captchaAction' => '/identity/auth/captcha'],
         ];
+
+        if (getenv('IDENTITY_DISABLE_CAPTCHA') !== 'TRUE') {
+            $rules[] = ['captcha', 'captcha', 'captchaAction' => '/identity/auth/captcha'];
+        }
+
+        return $rules;
     }
 
     public function signup(): ?User
