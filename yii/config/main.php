@@ -76,6 +76,9 @@ $config = [
             'loginUrl' => ['/identity/auth/login'],
             'enableSession' => !Yii::$app instanceof yii\console\Application,
         ],
+        'session' => [
+            'class' => 'yii\web\Session',
+        ],
         'mailer' => [
             'class' => Mailer::class,
             'viewPath' => '@app/mail',

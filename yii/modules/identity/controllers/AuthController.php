@@ -30,7 +30,7 @@ class AuthController extends Controller
         $loginForm = new LoginForm();
 
         if ($loginForm->load(Yii::$app->request->post()) && $loginForm->login()) {
-            return $this->goHome();
+            return $this->goBack();
         }
 
         return $this->render('login', [

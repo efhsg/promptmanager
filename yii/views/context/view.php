@@ -1,10 +1,12 @@
-<?php /** @noinspection PhpUnhandledExceptionInspection */
+<?php /** @noinspection DuplicatedCode */
+
+/** @noinspection PhpUnhandledExceptionInspection */
 
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
-/** @var app\models\Project $model */
+/** @var app\models\Context $model */
 
 $this->title = 'View ' . $model->name;
 echo $this->render('_breadcrumbs', [
@@ -27,28 +29,44 @@ echo $this->render('_breadcrumbs', [
 
     <div class="card mb-4">
         <div class="card-header">
-            <strong>Project Details</strong>
+            <strong>Context Details</strong>
         </div>
         <div class="card-body">
             <?= DetailView::widget([
                 'model' => $model,
                 'options' => ['class' => 'table table-borderless'],
                 'attributes' => [
+                    [
+                        'attribute' => 'project_name',
+                        'label' => 'Project',
+                        'value' => function ($model) {
+                            return $model->project ? $model->project->name : 'N/A';
+                        },
+                    ],
                     'name',
                     [
-                        'attribute' => 'description',
-                        'format' => 'ntext',
+                        'attribute' => 'content',
+                        'format' => 'raw', // Enables raw HTML rendering
+                        'value' => function ($model) {
+                            return Html::textarea('content', $model->content, [
+                                'class' => 'form-control',
+                                'rows' => 10,
+                                'readonly' => true,
+                                'style' => 'resize: none;',
+                            ]);
+                        },
                     ],
                     [
                         'attribute' => 'created_at',
-                        'format' => ['datetime', 'php:Y-m-d H:i:s']
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
                     [
                         'attribute' => 'updated_at',
-                        'format' => ['datetime', 'php:Y-m-d H:i:s']
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
                 ],
             ]) ?>
         </div>
+
     </div>
 </div>

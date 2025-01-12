@@ -122,12 +122,15 @@ class ProjectController extends Controller
      */
     public function actionDelete(int $id): Response|string
     {
-        // If user hasn't confirmed, show the confirm page
-        if (!Yii::$app->request->post('confirm')) {
-            return $this->actionDeleteConfirm($id);
-        }
 
         $model = $this->findModel($id);
+
+        if (!Yii::$app->request->post('confirm')) {
+            return $this->render('delete-confirm', [
+                'model' => $model,
+            ]);
+        }
+
         try {
             $model->delete();
             Yii::$app->session->setFlash('success', "Project '$model->name' deleted successfully.");
@@ -138,24 +141,7 @@ class ProjectController extends Controller
                 'Unable to delete the project. Please try again later.'
             );
         }
-
         return $this->redirect(['index']);
-    }
-
-    /**
-     * Show a confirmation page before deleting the Project.
-     *
-     * @param int $id
-     * @return string
-     * @throws NotFoundHttpException
-     */
-    public function actionDeleteConfirm(int $id): string
-    {
-        $model = $this->findModel($id);
-
-        return $this->render('delete-confirm', [
-            'model' => $model,
-        ]);
     }
 
     /**

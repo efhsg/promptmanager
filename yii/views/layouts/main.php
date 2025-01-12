@@ -32,11 +32,11 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                         ],
                         [
                             'label' => 'Contexts',
-                            'url' => ['/manage/contexts'],
+                            'url' => ['/context/index'],
                         ],
                         [
                             'label' => 'Templates',
-                            'url' => ['/manage/templates']
+                            'url' => ['/templates/index']
                         ],
                     ],
                 ],

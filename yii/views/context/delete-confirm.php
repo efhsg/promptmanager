@@ -3,7 +3,7 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\Project $model */
+/** @var app\models\Context $model */
 
 $this->title = 'Delete ' . $model->name;
 echo $this->render('_breadcrumbs', [
@@ -11,16 +11,22 @@ echo $this->render('_breadcrumbs', [
     'actionLabel' => $this->title,
 ]);
 ?>
-<div class="project-delete-confirm container py-4">
+<div class="context-delete-confirm container py-4">
 
     <div class="card">
         <div class="card-header">
-            <strong>Are you sure you want to delete the project: <?= Html::encode($model->name) ?>?</strong>
+            <strong>Are you sure you want to delete the context: <?= Html::encode($model->name) ?>?</strong>
         </div>
         <div class="card-body">
-            <p class="mb-3">
-                Deleting this project could also remove all related contexts, templates, and instances.
-            </p>
+            <div class="context-content mb-3">
+                <strong>Content:</strong>
+                <?= Html::textarea('content-preview', $model->content, [
+                    'class' => 'form-control',
+                    'rows' => 10,
+                    'readonly' => true,
+                    'style' => 'resize: none;',
+                ]) ?>
+            </div>
         </div>
 
         <div class="card-footer d-flex justify-content-end">

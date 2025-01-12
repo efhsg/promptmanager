@@ -3,7 +3,8 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\Project $model */
+/** @var app\models\Context $model */
+/** @var array $projects */
 
 $this->title = 'Update ' . $model->name;
 echo $this->render('_breadcrumbs', [
@@ -11,16 +12,14 @@ echo $this->render('_breadcrumbs', [
     'actionLabel' => $this->title ,
 ]);
 ?>
-
-<div class="project-update container py-4">
+<div class="context-update container py-4">
     <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="border rounded p-4 shadow bg-white">
-                <h3 class="mb-4"><?= Html::encode($this->title) ?></h3>
-                <p>Please update the following fields:</p>
-
+        <div class="col-12 col-md-10 col-lg-10">
+            <div class="border rounded p-4 shadow bg-white mt-4">
+                <h3 class="mb-4 text-center"><?= Html::encode($this->title) ?></h3>
                 <?= $this->render('_form', [
                     'model' => $model,
+                    'projects' => $projects,
                 ]) ?>
             </div>
         </div>
