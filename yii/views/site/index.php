@@ -14,7 +14,7 @@ $this->title = 'Welcome to Promptmanager';
             class="mb-4">
         <h1 class="display-4">Promptmanager</h1>
         <p class="lead">Automate your AI prompts</p>
-        <p><?= Html::a('Get Started', ['/site/configuration'], ['class' => 'btn btn-primary btn-lg']) ?></p>
+        <p><?= Html::a('Get Started', ['/project/index'], ['class' => 'btn btn-primary btn-lg']) ?></p>
     </div>
 
 </div>
