@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php /** @noinspection DuplicatedCode */
+
+/** @noinspection PhpUnused */
 
 
 namespace app\controllers;
@@ -22,7 +24,6 @@ use yii\web\Response;
 class ContextController extends Controller
 {
 
-
     /**
      * @inheritDoc
      */
@@ -45,62 +46,18 @@ class ContextController extends Controller
         );
     }
 
-    /**
-     * Lists all Context models for a specific project,
-     * grouped by project.
-     *
-     * @return string
-     */
     public function actionIndex(): string
     {
         $searchModel = new ContextSearch();
-        $activeDataProvider = $searchModel->search(
+        $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             Yii::$app->user->id
         );
 
-        $allModels = $activeDataProvider->getModels();
-        $groupedModels = $this->groupByProject($allModels);
-
-        $arrayDataProvider = new ArrayDataProvider([
-            'allModels' => $groupedModels,
-            'pagination' => [
-                'pageSize' => 20,
-            ],
-        ]);
-
         return $this->render('index', [
             'searchModel' => $searchModel,
-            'dataProvider' => $arrayDataProvider,
+            'dataProvider' => $dataProvider,
         ]);
-    }
-
-    /**
-     * Group the Context models by project,
-     * so that each project name appears only once at the beginning of its group.
-     */
-    private function groupByProject(array $models): array
-    {
-        $grouped = [];
-        $currentProjectId = null;
-
-        foreach ($models as $model) {
-            $projectName = $model->project ? $model->project->name : '(No Project)';
-
-            // Only show the project name if we are at a new project
-            $row = [
-                'project_name' => $currentProjectId !== $model->project_id
-                    ? $projectName
-                    : '',
-                'name' => $model->name,
-                'id' => $model->id,
-            ];
-            $currentProjectId = $model->project_id;
-
-            $grouped[] = $row;
-        }
-
-        return $grouped;
     }
 
     /**

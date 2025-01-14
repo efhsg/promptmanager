@@ -1,4 +1,4 @@
-<?php /** @noinspection PhpUnused */
+<?php
 
 namespace app\models;
 
@@ -11,6 +11,8 @@ use yii\data\ActiveDataProvider;
  */
 class ContextSearch extends Context
 {
+    public string $projectName = '';
+
     /**
      * {@inheritdoc}
      */
@@ -19,6 +21,7 @@ class ContextSearch extends Context
         return [
             [['id', 'project_id', 'created_at', 'updated_at'], 'integer'],
             [['name', 'content'], 'safe'],
+            ['projectName', 'safe'],
         ];
     }
 
@@ -54,15 +57,21 @@ class ContextSearch extends Context
             ],
         ]);
 
+        $dataProvider->sort->attributes['projectName'] = [
+            'asc' => ['p.name' => SORT_ASC],
+            'desc' => ['p.name' => SORT_DESC],
+        ];
+
         $this->load($params);
 
         if (!$this->validate()) {
             return $dataProvider;
         }
 
-        $query->andFilterWhere(['id' => $this->id]);
-        $query->andFilterWhere(['like', 'name', $this->name]);
-        $query->andFilterWhere(['like', 'content', $this->content]);
+        $query
+            ->andFilterWhere(['like', 'name', $this->name])
+            ->andFilterWhere(['like', 'content', $this->content])
+            ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;
     }

@@ -1,12 +1,12 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
+/** @noinspection PhpUnhandledExceptionInspection */
+/** @var yii\web\View $this */
+/** @var app\models\ContextSearch $searchModel */
+/** @var yii\data\ActiveDataProvider $dataProvider */
 
 use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\Url;
-
-/** @var yii\web\View $this */
-/** @var app\models\ContextSearch $searchModel */
-/** @var yii\data\DataProviderInterface $dataProvider */
 
 $this->title = 'Contexts';
 echo $this->render('_breadcrumbs', [
@@ -28,7 +28,6 @@ echo $this->render('_breadcrumbs', [
         <div class="card-body p-0">
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
-//                'filterModel' => $searchModel,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',
                 'summaryOptions' => ['class' => 'text-start m-2'],
                 'layout' => "{items}"
@@ -49,7 +48,6 @@ echo $this->render('_breadcrumbs', [
                     'nextPageLabel' => 'Next',
                     'firstPageLabel' => 'First',
                     'lastPageLabel' => 'Last',
-
                     'pageCssClass' => 'page-item',
                     'firstPageCssClass' => 'page-item',
                     'lastPageCssClass' => 'page-item',
@@ -58,27 +56,38 @@ echo $this->render('_breadcrumbs', [
                     'activePageCssClass' => 'active',
                     'disabledPageCssClass' => 'disabled',
                 ],
+
                 'rowOptions' => function ($model) {
+                    $id = is_array($model) ? $model['id'] : $model->id;
                     return [
-                        'onclick' => 'window.location.href = "'
-                            . Url::to(['view', 'id' => $model['id']]) . '";',
+                        'onclick' => 'window.location.href = "' . Url::to(['view', 'id' => $id]) . '";',
                         'style' => 'cursor: pointer;',
                     ];
                 },
+
                 'columns' => [
-                    // Using 'project_name' which we created in groupByProject()
                     [
-                        'attribute' => 'project_name',
+                        'attribute' => 'projectName',
                         'label' => 'Project Name',
+                        'enableSorting' => true,
+                        'value' => function ($model) {
+                            return $model->project
+                                ? $model->project->name
+                                : '(No Project)';
+                        },
                     ],
+
                     [
                         'attribute' => 'name',
                         'label' => 'Context Name',
+                        'enableSorting' => true,
                     ],
+
                     [
                         'class' => yii\grid\ActionColumn::class,
                         'urlCreator' => function ($action, $model) {
-                            return Url::toRoute([$action, 'id' => $model['id']]);
+                            $id = is_array($model) ? $model['id'] : $model->id;
+                            return Url::toRoute([$action, 'id' => $id]);
                         },
                         'template' => '{update} {delete}',
                         'buttonOptions' => ['data-confirm' => false],

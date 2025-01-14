@@ -2,6 +2,8 @@
 
 namespace app\models;
 
+use app\models\traits\TimestampTrait;
+use app\modules\identity\models\User;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -19,6 +21,9 @@ use yii\db\ActiveRecord;
  */
 class Context extends ActiveRecord
 {
+
+    use TimestampTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -42,7 +47,7 @@ class Context extends ActiveRecord
                 'unique',
                 'targetAttribute' => ['project_id', 'name'],
                 'message' => 'The context name has already been taken in this sector.'
-            ],            
+            ],
             [['project_id'],
                 'exist',
                 'skipOnError' => true,
@@ -74,26 +79,5 @@ class Context extends ActiveRecord
     public function getProject(): ActiveQuery
     {
         return $this->hasOne(Project::class, ['id' => 'project_id']);
-    }
-
-    /**
-     * Before saving, set timestamps.
-     *
-     * @param bool $insert whether this is a new record
-     * @return bool
-     */
-    public function beforeSave($insert): bool
-    {
-        if (!parent::beforeSave($insert)) {
-            return false;
-        }
-
-        $time = time();
-        if ($insert) {
-            $this->created_at = $time;
-        }
-        $this->updated_at = $time;
-
-        return true;
     }
 }
