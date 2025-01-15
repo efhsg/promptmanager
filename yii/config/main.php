@@ -82,13 +82,19 @@ $config = [
         'mailer' => [
             'class' => Mailer::class,
             'viewPath' => '@app/mail',
-            // Send all mails to a file by default (change to `false` for real emails)
             'useFileTransport' => true,
         ],
     ],
 
-    // Common parameters
     'params' => $params,
+];
+
+$config['container'] = [
+    'definitions' => [
+        'app\modules\identity\services\UserDataSeederInterface' => [
+            'class' => 'app\services\UserDataSeeder',
+        ],
+    ],
 ];
 
 return $config;

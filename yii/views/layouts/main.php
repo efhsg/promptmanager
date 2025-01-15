@@ -35,9 +35,14 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                             'url' => ['/context/index'],
                         ],
                         [
-                            'label' => 'Templates',
-                            'url' => ['/templates/index']
+                            'label' => 'Fields',
+                            'url' => ['/field/index']
                         ],
+                        [
+                            'label' => 'Templates',
+                            'url' => ['/template/index']
+                        ],
+
                     ],
                 ],
                 [

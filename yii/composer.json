@@ -75,7 +75,8 @@
     ],
     "autoload-dev": {
         "psr-4": {
-            "tests\\": "tests/"
+            "tests\\": "tests/",
+            "common\\": "common/"
         },
         "exclude-from-classmap": [
             "tests/_support/"

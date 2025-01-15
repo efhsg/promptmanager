@@ -1,32 +1,33 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
-/** @noinspection PhpUnhandledExceptionInspection */
 /** @var yii\web\View $this */
-/** @var app\models\ContextSearch $searchModel */
+/** @var app\models\FieldSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
 use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
-$this->title = 'Contexts';
+$this->title = 'Fields';
 echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => null,
 ]);
 ?>
 
-<div class="context-index container py-4">
+<div class="field-index container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
-        <?= Html::a('Create Context', ['create'], ['class' => 'btn btn-primary']) ?>
+        <?= Html::a('Create Field', ['create'], ['class' => 'btn btn-primary']) ?>
     </div>
 
     <div class="card">
         <div class="card-header">
-            <strong>Context List</strong>
+            <strong>Field List</strong>
         </div>
         <div class="card-body p-0">
-            <?= GridView::widget([
+            <?php
+
+            echo GridView::widget([
                 'dataProvider' => $dataProvider,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',
                 'summaryOptions' => ['class' => 'text-start m-2'],
@@ -38,7 +39,7 @@ echo $this->render('_breadcrumbs', [
                 'tableOptions' => [
                     'class' => 'table table-striped table-hover mb-0',
                     'data-responsive' => 'true',
-                    'aria-label' => 'Context Table',
+                    'aria-label' => 'Field Table',
                 ],
                 'pager' => [
                     'options' => ['class' => 'pagination justify-content-center m-3'],
@@ -48,6 +49,7 @@ echo $this->render('_breadcrumbs', [
                     'nextPageLabel' => 'Next',
                     'firstPageLabel' => 'First',
                     'lastPageLabel' => 'Last',
+
                     'pageCssClass' => 'page-item',
                     'firstPageCssClass' => 'page-item',
                     'lastPageCssClass' => 'page-item',
@@ -56,7 +58,6 @@ echo $this->render('_breadcrumbs', [
                     'activePageCssClass' => 'active',
                     'disabledPageCssClass' => 'disabled',
                 ],
-
                 'rowOptions' => function ($model) {
                     $id = is_array($model) ? $model['id'] : $model->id;
                     return [
@@ -64,32 +65,40 @@ echo $this->render('_breadcrumbs', [
                         'style' => 'cursor: pointer;',
                     ];
                 },
-
                 'columns' => [
                     [
                         'attribute' => 'projectName',
                         'label' => 'Project Name',
                         'enableSorting' => true,
-                        'value' => 'projectName',
+                        'format' => 'raw',
+                        'value' => function ($model) {
+                            return $model->project
+                                ? Html::encode($model->project->name)
+                                : Yii::$app->formatter->nullDisplay;
+                        },
                     ],
-
                     [
                         'attribute' => 'name',
-                        'label' => 'Context Name',
+                        'label' => 'Field Name',
                         'enableSorting' => true,
                     ],
-
+                    [
+                        'attribute' => 'type',
+                        'label' => 'Type',
+                        'enableSorting' => true,
+                    ],
                     [
                         'class' => yii\grid\ActionColumn::class,
                         'urlCreator' => function ($action, $model) {
                             $id = is_array($model) ? $model['id'] : $model->id;
-                            return Url::toRoute([$action, 'id' => $id]);
+                            return Url::to([$action, 'id' => $id]);
                         },
                         'template' => '{update} {delete}',
                         'buttonOptions' => ['data-confirm' => false],
                     ],
                 ],
-            ]); ?>
+            ]);
+            ?>
         </div>
     </div>
 </div>

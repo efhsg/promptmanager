@@ -2,13 +2,13 @@
 
 namespace app\models;
 
+use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
-use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
-  *
+ *
  * @property int $id
  * @property int $user_id
  * @property string $name
@@ -21,6 +21,8 @@ use yii\db\ActiveRecord;
  */
 class Project extends ActiveRecord
 {
+    use TimestampTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -59,28 +61,6 @@ class Project extends ActiveRecord
     }
 
     /**
-     * Before saving, set timestamps and user_id (on create).
-     *
-     * @param bool $insert whether this is a new record
-     * @return bool
-     */
-    public function beforeSave($insert): bool
-    {
-        if (!parent::beforeSave($insert)) {
-            return false;
-        }
-
-        $time = time();
-        if ($insert) {
-            $this->created_at = $time;
-            $this->user_id = Yii::$app->user->id;
-        }
-        $this->updated_at = $time;
-
-        return true;
-    }
-
-    /**
      * Gets query for [[User]].
      */
     public function getUser(): ActiveQuery
@@ -88,5 +68,14 @@ class Project extends ActiveRecord
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
+    public function beforeSave($insert): bool
+    {
+        if (!parent::beforeSave($insert)) {
+            return false;
+        }
 
+        $this->handleTimestamps($insert);
+
+        return true;
+    }
 }

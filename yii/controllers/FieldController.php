@@ -1,16 +1,15 @@
 <?php /** @noinspection DuplicatedCode */
 
-/** @noinspection PhpUnused */
-
-
 namespace app\controllers;
 
 use app\models\Context;
-use app\models\ContextSearch;
+use app\models\Field;
+use app\models\FieldSearch;
 use app\models\Project;
 use Throwable;
 use Yii;
 use yii\db\Exception;
+use yii\db\StaleObjectException;
 use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\web\Controller;
@@ -18,36 +17,37 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 /**
- * ContextController implements the CRUD actions for Context model.
+ * FieldController implements the CRUD actions for Field model.
  */
-class ContextController extends Controller
+class FieldController extends Controller
 {
-
     /**
      * @inheritDoc
      */
     public function behaviors(): array
     {
-        return array_merge(
-            parent::behaviors(),
-            [
-                'access' => [
-                    'class' => AccessControl::class,
-                    'rules' => [
-                        [
-                            'actions' => ['index', 'view', 'create', 'update', 'delete', 'delete-confirm'],
-                            'allow' => true,
-                            'roles' => ['@'],
-                        ],
+        return [
+            'access' => [
+                'class' => AccessControl::class,
+                'rules' => [
+                    [
+                        'actions' => ['index', 'view', 'create', 'update', 'delete'],
+                        'allow' => true,
+                        'roles' => ['@'],
                     ],
                 ],
-            ]
-        );
+            ],
+        ];
     }
 
+    /**
+     * Lists all Field models.
+     *
+     * @return string
+     */
     public function actionIndex(): string
     {
-        $searchModel = new ContextSearch();
+        $searchModel = new FieldSearch();
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             Yii::$app->user->id
@@ -59,35 +59,34 @@ class ContextController extends Controller
         ]);
     }
 
+
     /**
-     * Displays a single Context model.
-     *
-     * @param int $id
+     * Displays a single Field model.
+     * @param int $id ID
      * @return string
-     * @throws NotFoundHttpException
      */
     public function actionView(int $id): string
     {
-        $model = $this->findModel($id);
+        $model = Field::find()->where(['field.id' => $id])->joinWith('project')->one();
 
         return $this->render('view', [
             'model' => $model,
         ]);
     }
 
-
     /**
-     * Creates a new Context model.
-     *
-     * @return string|Response
      * @throws Exception
      */
     public function actionCreate(): Response|string
     {
-        $model = new Context();
+        $model = new Field(['user_id' => Yii::$app->user->id]);
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($this->request->isPost) {
+            if ($model->load($this->request->post()) && $model->save()) {
+                return $this->redirect(['view', 'id' => $model->id]);
+            }
+        } else {
+            $model->loadDefaultValues();
         }
 
         return $this->render('create', [
@@ -97,11 +96,28 @@ class ContextController extends Controller
     }
 
     /**
-     * Updates an existing Context model.
+     * Fetches a list of projects for the logged-in user.
      *
-     * @param int $id
+     * @return array
+     */
+    private function fetchProjectsList(): array
+    {
+        return ArrayHelper::map(
+            Project::find()
+                ->where(['user_id' => Yii::$app->user->id])
+                ->all(),
+            'id',
+            'name'
+        );
+    }
+
+
+    /**
+     * Updates an existing Field model.
+     * If update is successful, the browser will be redirected to the 'view' page.
+     * @param int $id ID
      * @return string|Response
-     * @throws NotFoundHttpException|Exception
+     * @throws NotFoundHttpException|Exception if the model cannot be found
      */
     public function actionUpdate(int $id): Response|string
     {
@@ -145,32 +161,18 @@ class ContextController extends Controller
     }
 
     /**
-     * Finds the Context model based on its primary key value.
-     *
-     * @param int $id
-     * @return Context
+     * Finds the Field model based on its primary key value.
+     * If the model is not found, a 404 HTTP exception will be thrown.
+     * @param int $id ID
+     * @return Field the loaded model
      * @throws NotFoundHttpException if the model cannot be found
      */
-    protected function findModel(int $id): Context
+    protected function findModel(int $id): Field
     {
-        if (($model = Context::findOne($id)) !== null) {
+        if (($model = Field::findOne(['id' => $id])) !== null) {
             return $model;
         }
 
-        throw new NotFoundHttpException('The requested context does not exist.');
-    }
-
-    /**
-     * @return array
-     */
-    private function fetchProjectsList(): array
-    {
-        return ArrayHelper::map(
-            Project::find()
-                ->where(['user_id' => Yii::$app->user->id])
-                ->all() ?: [],
-            'id',
-            'name'
-        );
+        throw new NotFoundHttpException('The requested page does not exist.');
     }
 }

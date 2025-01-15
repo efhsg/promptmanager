@@ -3,7 +3,6 @@
 namespace app\models;
 
 use app\models\traits\TimestampTrait;
-use app\modules\identity\models\User;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -79,5 +78,27 @@ class Context extends ActiveRecord
     public function getProject(): ActiveQuery
     {
         return $this->hasOne(Project::class, ['id' => 'project_id']);
+    }
+
+    /**
+     * Gets the name of the related project.
+     *
+     * @return string|null
+     */
+    public function getProjectName(): ?string
+    {
+        return $this->project->name ?? null;
+    }
+
+
+    public function beforeSave($insert): bool
+    {
+        if (!parent::beforeSave($insert)) {
+            return false;
+        }
+
+        $this->handleTimestamps($insert);
+
+        return true;
     }
 }

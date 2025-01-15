@@ -1,18 +1,20 @@
-<?php /** @noinspection PhpUnused */
+<?php
+/** @noinspection PhpUnused */
 
+use common\constants\FieldConstants;
 use yii\db\Migration;
 
 /**
  * Class m230101_000001_initial_migration
  *
- * This migration sets up:
+ * This migration sets up the following tables:
  *  - project
  *  - context
  *  - field
+ *  - field_option         <-- newly added
  *  - prompt_template
  *  - template_field
  *  - prompt_instance
- *  - prompt_instance_field
  */
 class m230101_000001_initial_migration extends Migration
 {
@@ -31,22 +33,14 @@ class m230101_000001_initial_migration extends Migration
             'deleted_at' => $this->integer()->null(),
         ]);
 
-        // FK: project -> user
         $this->addForeignKey(
             'fk_project_user',
             '{{%project}}',
             'user_id',
-            '{{%user}}',  // Adjust if your user table is named differently
+            '{{%user}}',
             'id',
             'CASCADE',
             'CASCADE'
-        );
-
-        // Optional index on user_id
-        $this->createIndex(
-            'idx_project_user_id',
-            '{{%project}}',
-            'user_id'
         );
 
         /*******************************************************
@@ -61,7 +55,6 @@ class m230101_000001_initial_migration extends Migration
             'updated_at' => $this->integer()->notNull(),
         ]);
 
-        // FK: context -> project
         $this->addForeignKey(
             'fk_context_project',
             '{{%context}}',
@@ -72,26 +65,67 @@ class m230101_000001_initial_migration extends Migration
             'CASCADE'
         );
 
-        // Optional index on project_id
-        $this->createIndex(
-            'idx_context_project_id',
-            '{{%context}}',
-            'project_id'
-        );
-
         /*******************************************************
-         * 3. field (generic fields)
+         * 3. field
          *******************************************************/
+        $enumValues = implode(',', array_map(fn($type) => "'$type'", FieldConstants::TYPES));
         $this->createTable('{{%field}}', [
             'id' => $this->primaryKey(),
-            'name' => $this->string()->notNull(),      // e.g. "codeBlock", "codeType"
-            'type' => $this->string()->notNull(),      // e.g. "free", "single_select"
-            'content' => $this->text()->null(),        // JSON or text for enumerated options
-            'label' => $this->string()->null(),        // default label
-            'is_generic' => $this->boolean()->defaultValue(true),
+            'user_id' => $this->integer()->notNull(),
+            'project_id' => $this->integer()->null(),
+            'name' => $this->string()->notNull(),
+            // This syntax works on MySQL but is not portable to all DBs
+            'type' => "ENUM($enumValues) NOT NULL",
+            'selected_by_default' => $this->boolean()->notNull()->defaultValue(false),
+            'label' => $this->string()->null(),
             'created_at' => $this->integer()->notNull(),
             'updated_at' => $this->integer()->notNull(),
         ]);
+
+        $this->addForeignKey(
+            'fk_field_user',
+            '{{%field}}',
+            'user_id',
+            '{{%user}}',
+            'id',
+            'CASCADE',
+            'CASCADE'
+        );
+
+        $this->addForeignKey(
+            'fk_field_project',
+            '{{%field}}',
+            'project_id',
+            '{{%project}}',
+            'id',
+            'CASCADE',
+            'CASCADE'
+        );
+
+        /*******************************************************
+         * 3a. field_option
+         * For storing select/multi-select options.
+         *******************************************************/
+        $this->createTable('{{%field_option}}', [
+            'id' => $this->primaryKey(),
+            'field_id' => $this->integer()->notNull(),
+            'value' => $this->string()->notNull(),
+            'label' => $this->string()->null(),
+            'selected_by_default' => $this->boolean()->notNull()->defaultValue(false),
+            'order' => $this->integer()->defaultValue(0),
+            'created_at' => $this->integer()->notNull(),
+            'updated_at' => $this->integer()->notNull(),
+        ]);
+
+        $this->addForeignKey(
+            'fk_field_option_field',
+            '{{%field_option}}',
+            'field_id',
+            '{{%field}}',
+            'id',
+            'CASCADE',
+            'CASCADE'
+        );
 
         /*******************************************************
          * 4. prompt_template
@@ -100,13 +134,12 @@ class m230101_000001_initial_migration extends Migration
             'id' => $this->primaryKey(),
             'project_id' => $this->integer()->notNull(),
             'name' => $this->string()->notNull(),
-            'template_body' => $this->text()->notNull(), // e.g. "Given this code: {codeBlock}"
+            'template_body' => $this->text()->notNull(),
             'description' => $this->text()->null(),
             'created_at' => $this->integer()->notNull(),
             'updated_at' => $this->integer()->notNull(),
         ]);
 
-        // FK: prompt_template -> project
         $this->addForeignKey(
             'fk_prompt_template_project',
             '{{%prompt_template}}',
@@ -117,15 +150,8 @@ class m230101_000001_initial_migration extends Migration
             'CASCADE'
         );
 
-        // Optional index on project_id
-        $this->createIndex(
-            'idx_prompt_template_project_id',
-            '{{%prompt_template}}',
-            'project_id'
-        );
-
         /*******************************************************
-         * 5. template_field (pivot table between prompt_template and field)
+         * 5. template_field
          *******************************************************/
         $this->createTable('{{%template_field}}', [
             'id' => $this->primaryKey(),
@@ -137,7 +163,6 @@ class m230101_000001_initial_migration extends Migration
             'updated_at' => $this->integer()->notNull(),
         ]);
 
-        // FKs: template_field -> prompt_template, field
         $this->addForeignKey(
             'fk_template_field_template',
             '{{%template_field}}',
@@ -147,6 +172,7 @@ class m230101_000001_initial_migration extends Migration
             'CASCADE',
             'CASCADE'
         );
+
         $this->addForeignKey(
             'fk_template_field_field',
             '{{%template_field}}',
@@ -158,7 +184,7 @@ class m230101_000001_initial_migration extends Migration
         );
 
         /*******************************************************
-         * 6. prompt_instance (references only prompt_template)
+         * 6. prompt_instance
          *******************************************************/
         $this->createTable('{{%prompt_instance}}', [
             'id' => $this->primaryKey(),
@@ -168,72 +194,47 @@ class m230101_000001_initial_migration extends Migration
             'updated_at' => $this->integer()->notNull(),
         ]);
 
-        // FK: prompt_instance -> prompt_template
         $this->addForeignKey(
             'fk_prompt_instance_template',
             '{{%prompt_instance}}',
             'template_id',
             '{{%prompt_template}}',
             'id',
-            'RESTRICT', // or CASCADE, adjust as you prefer
-            'CASCADE'
-        );
-
-        /*******************************************************
-         * 7. prompt_instance_field (user-supplied field values)
-         *******************************************************/
-        $this->createTable('{{%prompt_instance_field}}', [
-            'id' => $this->primaryKey(),
-            'instance_id' => $this->integer()->notNull(),
-            'field_name' => $this->string()->notNull(),  // e.g. "codeBlock"
-            'field_value' => $this->text()->notNull(),   // user input
-        ]);
-
-        // FK: prompt_instance_field -> prompt_instance
-        $this->addForeignKey(
-            'fk_prompt_instance_field_instance',
-            '{{%prompt_instance_field}}',
-            'instance_id',
-            '{{%prompt_instance}}',
-            'id',
-            'CASCADE',
+            'RESTRICT',
             'CASCADE'
         );
     }
 
     public function safeDown(): void
     {
-        // Reverse creation order:
 
-        // 7. prompt_instance_field
-        $this->dropForeignKey('fk_prompt_instance_field_instance', '{{%prompt_instance_field}}');
-        $this->dropTable('{{%prompt_instance_field}}');
-
-        // 6. prompt_instance
+        // Drop prompt_instance
         $this->dropForeignKey('fk_prompt_instance_template', '{{%prompt_instance}}');
         $this->dropTable('{{%prompt_instance}}');
 
-        // 5. template_field
+        // Drop template_field
         $this->dropForeignKey('fk_template_field_field', '{{%template_field}}');
         $this->dropForeignKey('fk_template_field_template', '{{%template_field}}');
         $this->dropTable('{{%template_field}}');
 
-        // 4. prompt_template
+        // Drop prompt_template
         $this->dropForeignKey('fk_prompt_template_project', '{{%prompt_template}}');
-        $this->dropIndex('idx_prompt_template_project_id', '{{%prompt_template}}');
         $this->dropTable('{{%prompt_template}}');
 
-        // 3. field
+        // Drop field_option
+        $this->dropForeignKey('fk_field_option_field', '{{%field_option}}');
+        $this->dropTable('{{%field_option}}');
+
+        // Drop field
+        $this->dropForeignKey('fk_field_user', '{{%field}}');
         $this->dropTable('{{%field}}');
 
-        // 2. context
+        // Drop context
         $this->dropForeignKey('fk_context_project', '{{%context}}');
-        $this->dropIndex('idx_context_project_id', '{{%context}}');
         $this->dropTable('{{%context}}');
 
-        // 1. project
+        // Drop project
         $this->dropForeignKey('fk_project_user', '{{%project}}');
-        $this->dropIndex('idx_project_user_id', '{{%project}}');
         $this->dropTable('{{%project}}');
     }
 }
