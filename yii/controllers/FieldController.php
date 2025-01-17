@@ -2,19 +2,19 @@
 
 namespace app\controllers;
 
-use app\models\Context;
 use app\models\Field;
+use app\models\FieldOption;
 use app\models\FieldSearch;
 use app\models\Project;
 use Throwable;
 use Yii;
 use yii\db\Exception;
-use yii\db\StaleObjectException;
 use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
+use Yii2\Extensions\DynamicForm\Models\Model;
 
 /**
  * FieldController implements the CRUD actions for Field model.
@@ -75,22 +75,48 @@ class FieldController extends Controller
     }
 
     /**
+     * @throws Throwable
      * @throws Exception
      */
-    public function actionCreate(): Response|string
+    public function actionCreate(): Response|array|string
     {
-        $model = new Field(['user_id' => Yii::$app->user->id]);
+        $modelField = new Field(['user_id' => Yii::$app->user->id]);
+        $modelsFieldOption = [new FieldOption()];
 
-        if ($this->request->isPost) {
-            if ($model->load($this->request->post()) && $model->save()) {
-                return $this->redirect(['view', 'id' => $model->id]);
+        if ($modelField->load(Yii::$app->request->post())) {
+
+            $modelsFieldOption = Model::createMultiple(FieldOption::class);
+            Model::loadMultiple($modelsFieldOption, Yii::$app->request->post());
+
+            $valid = $modelField->validate();
+            $valid = Model::validateMultiple($modelsFieldOption) && $valid;
+
+            if ($valid) {
+                $transaction = Yii::$app->db->beginTransaction();
+                try {
+                    if ($flag = $modelField->save(false)) {
+                        foreach ($modelsFieldOption as $modelFieldOption) {
+                            $modelFieldOption->field_id = $modelField->id;
+                            if (!($flag = $modelFieldOption->save(false))) {
+                                $transaction->rollBack();
+                                break;
+                            }
+                        }
+                    }
+                    if ($flag) {
+                        $transaction->commit();
+                        return $this->redirect(['view', 'id' => $modelField->id]);
+                    }
+                } catch (Throwable $e) {
+                    $transaction->rollBack();
+                    throw $e;
+                }
             }
-        } else {
-            $model->loadDefaultValues();
         }
 
         return $this->render('create', [
-            'model' => $model,
+            'modelField' => $modelField,
+            'modelsFieldOption' => empty($modelsFieldOption) ? [new FieldOption()] : $modelsFieldOption,
             'projects' => $this->fetchProjectsList(),
         ]);
     }
@@ -113,25 +139,63 @@ class FieldController extends Controller
 
 
     /**
-     * Updates an existing Field model.
-     * If update is successful, the browser will be redirected to the 'view' page.
-     * @param int $id ID
-     * @return string|Response
-     * @throws NotFoundHttpException|Exception if the model cannot be found
+     * @throws Exception
+     * @throws Throwable
+     * @throws NotFoundHttpException
      */
     public function actionUpdate(int $id): Response|string
     {
-        $model = $this->findModel($id);
+        $modelField = $this->findModel($id);
+        $modelsFieldOption = $modelField->fieldOptions;
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            return $this->redirect(['view', 'id' => $model->id]);
+        if ($modelField->load(Yii::$app->request->post())) {
+
+            $oldIDs = ArrayHelper::map($modelsFieldOption, 'id', 'id');
+            $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
+            Model::loadMultiple($modelsFieldOption, Yii::$app->request->post());
+
+            $newIDs = ArrayHelper::map($modelsFieldOption, 'id', 'id');
+            $deletedIDs = array_diff($oldIDs, array_filter($newIDs));
+
+            $valid = $modelField->validate();
+            $valid = Model::validateMultiple($modelsFieldOption) && $valid;
+
+            if ($valid) {
+                $transaction = Yii::$app->db->beginTransaction();
+                try {
+                    if ($flag = $modelField->save(false)) {
+
+                        if (!empty($deletedIDs)) {
+                            FieldOption::deleteAll(['id' => $deletedIDs]);
+                        }
+
+                        foreach ($modelsFieldOption as $modelFieldOption) {
+                            $modelFieldOption->field_id = $modelField->id;
+                            if (! ($flag = $modelFieldOption->save(false))) {
+                                $transaction->rollBack();
+                                break;
+                            }
+                        }
+                    }
+
+                    if ($flag) {
+                        $transaction->commit();
+                        return $this->redirect(['view', 'id' => $modelField->id]);
+                    }
+                } catch (Throwable $e) {
+                    $transaction->rollBack();
+                    throw $e;
+                }
+            }
         }
 
         return $this->render('update', [
-            'model' => $model,
-            'projects' => $this->fetchProjectsList(),
+            'modelField'        => $modelField,
+            'modelsFieldOption' => (empty($modelsFieldOption)) ? [new FieldOption()] : $modelsFieldOption,
+            'projects'          => $this->fetchProjectsList(),
         ]);
     }
+
 
     /**
      * @throws NotFoundHttpException

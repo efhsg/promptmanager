@@ -32,11 +32,10 @@ echo $this->render('_breadcrumbs', [
             <?= DetailView::widget([
                 'model' => $model,
                 'options' => ['class' => 'table table-borderless'],
-                'attributes' => [
+                'attributes' => array_filter([
                     [
                         'attribute' => 'projectName',
                         'label' => 'Project Name',
-                        'enableSorting' => true,
                         'format' => 'raw',
                         'value' => function ($model) {
                             return $model->project
@@ -59,8 +58,44 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'updated_at',
                         'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
-                ],
+                    $model->type === 'text' && !empty($model->content) ? [
+                        'attribute' => 'content',
+                        'format' => 'ntext',
+                        'value' => $model->content,
+                        'label' => 'Field Content',
+                    ] : null,
+                ]),
             ]) ?>
         </div>
     </div>
+
+    <?php if (!empty($model->fieldOptions)): ?>
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Field Options</strong>
+            </div>
+            <div class="card-body p-0">
+                <table class="table table-striped mb-0">
+                    <thead>
+                    <tr>
+                        <th>Value</th>
+                        <th>Label</th>
+                        <th>Default on</th>
+                        <th>Order</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($model->fieldOptions as $option): ?>
+                        <tr>
+                            <td><?= Html::encode($option->value) ?></td>
+                            <td><?= Html::encode($option->label) ?></td>
+                            <td><?= $option->selected_by_default ? 'Yes' : 'No' ?></td>
+                            <td><?= Html::encode($option->order) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>

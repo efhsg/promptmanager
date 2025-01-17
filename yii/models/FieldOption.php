@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\traits\TimestampTrait;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -21,6 +22,9 @@ use yii\db\ActiveRecord;
  */
 class FieldOption extends ActiveRecord
 {
+
+    use TimestampTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -35,9 +39,10 @@ class FieldOption extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['field_id', 'value', 'created_at', 'updated_at'], 'required'],
+            [['value'], 'required'],
             [['field_id', 'selected_by_default', 'order', 'created_at', 'updated_at'], 'integer'],
-            [['value', 'label'], 'string', 'max' => 255],
+            [['value'], 'string',],
+            [['label'], 'string', 'max' => 255],
             [['field_id'], 'exist', 'skipOnError' => true, 'targetClass' => Field::class, 'targetAttribute' => ['field_id' => 'id']],
         ];
     }
@@ -52,7 +57,7 @@ class FieldOption extends ActiveRecord
             'field_id' => 'Field ID',
             'value' => 'Value',
             'label' => 'Label',
-            'selected_by_default' => 'Selected By Default',
+            'selected_by_default' => 'Default on',
             'order' => 'Order',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
@@ -67,5 +72,29 @@ class FieldOption extends ActiveRecord
     public function getField(): ActiveQuery
     {
         return $this->hasOne(Field::class, ['id' => 'field_id']);
+    }
+
+    public function init(): void
+    {
+        parent::init();
+
+        if ($this->isNewRecord && $this->order === null) {
+            $this->order = 10;
+        }
+    }
+
+    public function beforeSave($insert): bool
+    {
+        if (!parent::beforeSave($insert)) {
+            return false;
+        }
+
+        $this->handleTimestamps($insert);
+
+        if (empty($this->label)) {
+            $this->label = null;
+        }
+
+        return true;
     }
 }

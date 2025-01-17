@@ -76,6 +76,7 @@ class m230101_000001_initial_migration extends Migration
             'name' => $this->string()->notNull(),
             // This syntax works on MySQL but is not portable to all DBs
             'type' => "ENUM($enumValues) NOT NULL",
+            'content' => $this->text()->null(),
             'selected_by_default' => $this->boolean()->notNull()->defaultValue(false),
             'label' => $this->string()->null(),
             'created_at' => $this->integer()->notNull(),
@@ -109,7 +110,7 @@ class m230101_000001_initial_migration extends Migration
         $this->createTable('{{%field_option}}', [
             'id' => $this->primaryKey(),
             'field_id' => $this->integer()->notNull(),
-            'value' => $this->string()->notNull(),
+            'value' => $this->text()->notNull(),
             'label' => $this->string()->null(),
             'selected_by_default' => $this->boolean()->notNull()->defaultValue(false),
             'order' => $this->integer()->defaultValue(0),

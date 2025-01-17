@@ -16,6 +16,7 @@ use yii\db\ActiveRecord;
  * @property int|null $project_id
  * @property string $name
  * @property string $type
+ * @property string|null $content
  * @property int $selected_by_default
  * @property string|null $label
  * @property int $created_at
@@ -50,6 +51,7 @@ class Field extends ActiveRecord
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],
             [['name', 'label'], 'string', 'max' => 255],
+            [['content'], 'string'],
             [['project_id'],
                 'exist',
                 'skipOnError' => true,
@@ -77,8 +79,9 @@ class Field extends ActiveRecord
             'user_id' => 'User ID',
             'project_id' => 'Project ID',
             'name' => 'Name',
+            'content' => 'Content',
             'type' => 'Type',
-            'selected_by_default' => 'Selected By Default',
+            'selected_by_default' => 'Default on',
             'label' => 'Label',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
@@ -123,6 +126,15 @@ class Field extends ActiveRecord
     public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
+    }
+
+    public function init(): void
+    {
+        parent::init();
+
+        if ($this->isNewRecord && $this->type === null) {
+            $this->type = FieldConstants::TYPES[0];
+        }
     }
 
     public function beforeSave($insert): bool

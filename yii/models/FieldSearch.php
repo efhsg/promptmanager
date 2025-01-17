@@ -5,6 +5,7 @@ namespace app\models;
 use InvalidArgumentException;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
+use yii\db\ActiveRecord;
 
 /**
  * FieldSearch represents the model behind the search form of `app\models\Field`.
@@ -21,7 +22,7 @@ class FieldSearch extends Field
     {
         return [
             [['id', 'user_id', 'project_id', 'selected_by_default', 'created_at', 'updated_at'], 'integer'],
-            [['name', 'type', 'label'], 'safe'],
+            [['name', 'content', 'type', 'label'], 'safe'],
             ['projectName', 'safe'],
         ];
     }
@@ -69,9 +70,16 @@ class FieldSearch extends Field
 
         $query
             ->andFilterWhere(['like', 'name', $this->name])
+            ->andFilterWhere(['like', 'content', $this->content])
             ->andFilterWhere(['like', 'type', $this->type])
             ->andFilterWhere(['like', 'project.name', $this->projectName]);
 
         return $dataProvider;
+    }
+
+    public function init(): void
+    {
+        ActiveRecord::init();
+        $this->isNewRecord = false;
     }
 }

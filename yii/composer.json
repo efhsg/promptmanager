@@ -18,7 +18,8 @@
         "yiisoft/yii2": "~2.0.45",
         "yiisoft/yii2-bootstrap5": "^2.0",
         "yiisoft/yii2-symfonymailer": "~2.0.3",
-        "luoxiaojun1992/yii2-tinker": "*"
+        "luoxiaojun1992/yii2-tinker": "*",
+        "yii2-extensions/dynamicform": "^1.0.0"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",

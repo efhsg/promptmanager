@@ -47,6 +47,9 @@ RUN echo "zend_extension=xdebug.so" > /usr/local/etc/php/conf.d/docker-php-ext-x
     echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
     echo "xdebug.client_port=9003" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
+# Set max_execution_time
+RUN echo "max_execution_time=300" > /usr/local/etc/php/conf.d/custom.ini
+
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 

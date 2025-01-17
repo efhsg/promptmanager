@@ -17,12 +17,12 @@ class UserDataSeeder implements UserDataSeederInterface
             'codeBlock' => [
                 'label' => null, // Set label to null
                 'type' => 'text',
-                'options' => null
+                'options' => null,
             ],
             'codeType' => [
                 'label' => null, // Set label to null
                 'type' => 'select',
-                'options' => ['class', 'test', 'function', 'interface', 'migration']
+                'options' => ['class', 'test', 'function', 'interface', 'migration'],
             ],
             'extraCriteria' => [
                 'label' => null, // Set label to null
@@ -30,7 +30,7 @@ class UserDataSeeder implements UserDataSeederInterface
                 'options' => [
                     "don't write any comment",
                     "use SOLID, DRY, YAGNI principles"
-                ]
+                ],
             ]
         ];
 
@@ -48,6 +48,7 @@ class UserDataSeeder implements UserDataSeederInterface
             $fieldId = Yii::$app->db->getLastInsertID();
 
             if (!empty($fieldData['options'])) {
+                $order = 0;
                 foreach ($fieldData['options'] as $option) {
                     Yii::$app->db->createCommand()->insert('{{%field_option}}', [
                         'field_id' => $fieldId,
@@ -57,6 +58,7 @@ class UserDataSeeder implements UserDataSeederInterface
                             $option,
                             ["don't write any comment", "use SOLID, DRY, YAGNI principles"]
                         ),
+                        'order' => $order += 10,
                         'created_at' => time(),
                         'updated_at' => time(),
                     ])->execute();
