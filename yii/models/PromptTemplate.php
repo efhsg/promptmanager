@@ -1,4 +1,4 @@
-<?php /** @noinspection PhpUnused */
+<?php
 
 namespace app\models;
 
@@ -7,18 +7,21 @@ use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
- * This is the model class for table "context".
+ * This is the model class for table "prompt_template".
  *
  * @property int $id
  * @property int $project_id
  * @property string $name
- * @property string|null $content
+ * @property string $template_body
+ * @property string|null $description
  * @property int $created_at
  * @property int $updated_at
  *
  * @property Project $project
+ * @property PromptInstance[] $promptInstances
+ * @property TemplateField[] $templateFields
  */
-class Context extends ActiveRecord
+class PromptTemplate extends ActiveRecord
 {
 
     use TimestampTrait;
@@ -28,7 +31,7 @@ class Context extends ActiveRecord
      */
     public static function tableName(): string
     {
-        return 'context';
+        return 'prompt_template';
     }
 
     /**
@@ -37,15 +40,15 @@ class Context extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['name', 'project_id'], 'required'],
+            [['project_id', 'name', 'template_body'], 'required'],
             [['project_id', 'created_at', 'updated_at'], 'integer'],
-            [['content'], 'string'],
+            [['template_body', 'description'], 'string'],
             [['name'], 'string', 'max' => 255],
             [
                 ['project_id', 'name'],
                 'unique',
                 'targetAttribute' => ['project_id', 'name'],
-                'message' => 'The context name has already been taken in this sector.'
+                'message' => 'The template name has already been taken in this sector.'
             ],
             [['project_id'],
                 'exist',
@@ -62,11 +65,12 @@ class Context extends ActiveRecord
     {
         return [
             'id' => 'ID',
-            'project_id' => 'Project',
+            'project_id' => 'Project ID',
             'name' => 'Name',
-            'content' => 'Content',
-            'created_at' => 'Created',
-            'updated_at' => 'Updated',
+            'template_body' => 'Template Body',
+            'description' => 'Description',
+            'created_at' => 'Created At',
+            'updated_at' => 'Updated At',
         ];
     }
 
@@ -90,6 +94,26 @@ class Context extends ActiveRecord
         return $this->project->name ?? null;
     }
 
+    /**
+     * Gets query for [[PromptInstances]].
+     *
+     * @return ActiveQuery
+     */
+    public function getPromptInstances(): ActiveQuery
+    {
+        return $this->hasMany(PromptInstance::class, ['template_id' => 'id']);
+    }
+
+    /**
+     * Gets query for [[TemplateFields]].
+     *
+     * @return ActiveQuery
+     */
+    public function getTemplateFields(): ActiveQuery
+    {
+        return $this->hasMany(TemplateField::class, ['template_id' => 'id']);
+    }
+
     public function beforeSave($insert): bool
     {
         if (!parent::beforeSave($insert)) {
@@ -100,4 +124,6 @@ class Context extends ActiveRecord
 
         return true;
     }
+
+
 }

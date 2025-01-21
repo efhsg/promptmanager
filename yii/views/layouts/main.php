@@ -40,7 +40,7 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                         ],
                         [
                             'label' => 'Templates',
-                            'url' => ['/template/index']
+                            'url' => ['/prompt-template/index']
                         ],
 
                     ],
