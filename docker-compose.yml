@@ -4,23 +4,24 @@ services:
   pma_yii:
     build:
       context: .
-      dockerfile: ./docker/Dockerfile
+      dockerfile: ./docker/yii/Dockerfile
       args:
         - USER_ID=${USER_ID:-1000}
         - USER_NAME=${USER_NAME:-appuser}
-        - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}        
+        - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}
     container_name: pma_yii
     working_dir: /var/www/html/yii
     environment:
       TZ: ${TIMEZONE:-Europe/Amsterdam}
       PHP_IDE_CONFIG: "serverName=Docker"
     extra_hosts:
-        - 'host.docker.internal:host-gateway'
+      - 'host.docker.internal:host-gateway'
     env_file:
       - .env
     volumes:
       - .:/var/www/html
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
+      - ./ckeditor/dist:/var/www/html/web/ckeditor-dist
     depends_on:
       - pma_mysql
     networks:
@@ -43,14 +44,14 @@ services:
       - pma_yii
     networks:
       - promptmanager_network
-  
+
   pma_mysql:
     image: mysql:8.0
     container_name: pma_mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_DATABASE}
-      MYSQL_DATABASE_TEST: ${DB_DATABASE_TEST}      
+      MYSQL_DATABASE_TEST: ${DB_DATABASE_TEST}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: Europe/Amsterdam
@@ -59,6 +60,20 @@ services:
     volumes:
       - ./data/db/mysql:/var/lib/mysql
       - ./docker/init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - promptmanager_network
+
+
+  pma_ckeditor:
+    build:
+      context: ./ckeditor
+      dockerfile: ../docker/ckeditor/Dockerfile
+    container_name: pma_ckeditor
+    working_dir: /app
+    volumes:
+      - ./ckeditor:/app
+      - ./ckeditor/dist:/app/dist
+    command: ["npm", "run", "build"]
     networks:
       - promptmanager_network
 
