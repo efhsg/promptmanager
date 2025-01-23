@@ -21,7 +21,6 @@ services:
     volumes:
       - .:/var/www/html
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
-      - ./ckeditor/dist:/var/www/html/web/ckeditor-dist
     depends_on:
       - pma_mysql
     networks:
@@ -63,16 +62,16 @@ services:
     networks:
       - promptmanager_network
 
-
-  pma_ckeditor:
+  pma_npm:
     build:
-      context: ./ckeditor
-      dockerfile: ../docker/ckeditor/Dockerfile
-    container_name: pma_ckeditor
+      context: ./npm
+      dockerfile: ../docker/npm/Dockerfile
+    container_name: pma_npm
     working_dir: /app
+    user: "node"
     volumes:
-      - ./ckeditor:/app
-      - ./ckeditor/dist:/app/dist
+      - ./npm:/app:rw
+      - ./yii/web/quill:/yii/web/quill:rw
     command: ["npm", "run", "build"]
     networks:
       - promptmanager_network

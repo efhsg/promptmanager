@@ -64,9 +64,9 @@ a.desc:after {
     color: rgba(255, 255, 255, 0.5);
 }
 
-@media(max-width:767px) {
+@media (max-width: 767px) {
     .nav li > form > button.logout {
-        display:block;
+        display: block;
         text-align: left;
         width: 100%;
         padding: 10px 0;
@@ -85,4 +85,77 @@ a.desc:after {
 
 .form-group {
     margin-bottom: 1rem;
+}
+
+.help-block.error-message:empty {
+    display: none;
+}
+
+.help-block.error-message:not(:empty) {
+    color: #842029;
+    background-color: #f8d7da;
+    border: 1px solid #f5c2c7;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-top: 4px;
+    font-size: 0.9em;
+    display: block;
+    animation: fadeInError 0.2s ease-in-out;
+}
+
+.has-error .form-control {
+    border-color: #dc3545;
+}
+
+.has-error .control-label {
+    color: #666;
+}
+
+@keyframes fadeInError {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.resizable-editor-container {
+    border: 1px solid #ced4da;
+    padding: 10px;
+    resize: vertical; /* or both, if you want horizontal resizing as well */
+    overflow: auto;
+    min-height: 150px;
+    max-height: 800px; /* optional: prevents it from growing too large */
+}
+
+.resizable-editor {
+    min-height: 300px;
+}
+
+/* Make sure your custom pickers look like the default Quill pickers. */
+.ql-toolbar .ql-picker.ql-insertGeneralField,
+.ql-toolbar .ql-picker.ql-insertProjectField {
+    width: auto;
+    padding: 2px 2px;
+    margin: 8px 0 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background-color: #fff;
+    color: #444;
+    font: smaller sans-serif;
+    cursor: pointer;
+}
+
+/* Remove the native arrow and add a simple chevron background image */
+.ql-snow .ql-toolbar select.ql-picker {
+    -webkit-appearance: none; /* hide default arrow in Chrome/Safari */
+    -moz-appearance: none; /* hide default arrow in Firefox       */
+    background: #fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg fill='none' stroke='%23ccc' viewBox='0 0 18 18'%3E%3Cpolyline points='5 7 9 11 13 7'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center/9px 9px;
+    padding-right: 26px; /* leave space for the arrow */
+    border: 1px solid #ccc; /* match Quill’s border color */
+    border-radius: 3px;
+    cursor: pointer;
 }

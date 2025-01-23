@@ -1,0 +1,16 @@
+{
+    "name": "quill-build",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "setup": "git clone https://github.com/quilljs/quill.git && cd quill && npm install",
+        "prebuild": "[ -d \"/yii/web/quill\" ] && find /yii/web/quill -mindepth 1 -delete && mkdir -p /yii/web/quill",
+        "build": "cd quill/packages/quill && npm run build && cp -r dist/dist/* /yii/web/quill/",
+        "minify": "npx uglify-js /yii/web/quill/quill.js -o /yii/web/quill/quill.min.js",
+        "clean": "rm -rf quill",
+        "build-and-minify": "npm run build && npm run minify"
+    },
+    "devDependencies": {
+        "uglify-js": "^3.19.3"
+    }
+}
