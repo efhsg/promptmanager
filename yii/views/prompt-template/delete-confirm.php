@@ -5,7 +5,7 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\PromptTemplate $model */
 
-$this->title = 'Delete ' . $model->name;
+$this->title = 'Delete - ' . $model->name;
 echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => $this->title,

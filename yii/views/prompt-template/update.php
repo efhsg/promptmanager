@@ -1,25 +1,26 @@
 <?php
 
-use yii\helpers\Html;
-
 /** @var yii\web\View $this */
 /** @var app\models\PromptTemplate $model */
 /** @var array $projects */
+/** @var array $generalFieldsMap */
+/** @var array $projectFieldsMap */
 
-$this->title = 'Update Prompt Template: ' . $model->name;
+$this->title = 'Update - ' . $model->name;
 echo $this->render('_breadcrumbs', [
-    'model' => $model,
-    'actionLabel' => 'Update Prompt Template',
+    'model' => null,
+    'actionLabel' => $this->title,
 ]);
 ?>
 <div class="prompt-template-update container py-4">
     <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-10">
+        <div class="col-12 col-md-11 col-lg-11">
             <div class="border rounded p-4 shadow bg-white mt-4">
-                <h3 class="mb-4 text-center"><?= Html::encode($this->title) ?></h3>
                 <?= $this->render('_form', [
                     'model' => $model,
                     'projects' => $projects,
+                    'generalFieldsMap' => $generalFieldsMap,
+                    'projectFieldsMap' => $projectFieldsMap,
                 ]) ?>
             </div>
         </div>

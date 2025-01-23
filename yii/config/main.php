@@ -84,6 +84,9 @@ $config = [
             'viewPath' => '@app/mail',
             'useFileTransport' => true,
         ],
+        'validator' => [
+            'class' => 'yii\validators\Validator',
+        ],
     ],
 
     'params' => $params,
@@ -93,6 +96,17 @@ $config['container'] = [
     'definitions' => [
         'app\modules\identity\services\UserDataSeederInterface' => [
             'class' => 'app\services\UserDataSeeder',
+        ],
+        'yii\widgets\ActiveForm' => [
+            'errorCssClass' => 'has-error',
+            'successCssClass' => 'has-success',
+            'options' => ['class' => 'form-vertical'],
+            'fieldConfig' => [
+                'template' => "{label}\n{input}\n{error}",
+                'errorOptions' => [
+                    'class' => 'help-block error-message',
+                ],
+            ],
         ],
     ],
 ];

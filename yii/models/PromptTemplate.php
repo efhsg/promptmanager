@@ -1,4 +1,6 @@
-<?php
+<?php /** @noinspection RequiredAttributes */
+
+/** @noinspection HtmlRequiredAltAttribute */
 
 namespace app\models;
 
@@ -45,16 +47,23 @@ class PromptTemplate extends ActiveRecord
             [['template_body', 'description'], 'string'],
             [['name'], 'string', 'max' => 255],
             [
-                ['project_id', 'name'],
+                ['name', 'project_id'],
                 'unique',
-                'targetAttribute' => ['project_id', 'name'],
-                'message' => 'The template name has already been taken in this sector.'
+                'targetAttribute' => ['name', 'project_id'],
+                'message' => 'The template name has already been taken in this project.'
             ],
             [['project_id'],
                 'exist',
                 'skipOnError' => true,
                 'targetClass' => Project::class,
                 'targetAttribute' => ['project_id' => 'id']],
+            ['template_body', function ($attribute) {
+                $content = strip_tags($this->$attribute, '<img><video><audio>');
+                $content = trim($content);
+                if (empty($content) || $content === '<br>') {
+                    $this->addError($attribute, 'Template body cannot be empty.');
+                }
+            }],
         ];
     }
 
@@ -65,7 +74,7 @@ class PromptTemplate extends ActiveRecord
     {
         return [
             'id' => 'ID',
-            'project_id' => 'Project ID',
+            'project_id' => 'Project',
             'name' => 'Name',
             'template_body' => 'Template Body',
             'description' => 'Description',

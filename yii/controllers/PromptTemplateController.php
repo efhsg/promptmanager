@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use app\models\Field;
 use app\models\Project;
 use app\models\PromptTemplate;
 use app\models\PromptTemplateSearch;
@@ -69,23 +70,56 @@ class PromptTemplateController extends Controller
     }
 
     /**
-     * Creates a new PromptTemplate model.
-     *
-     * @return string|Response
      * @throws Exception
      */
     public function actionCreate(): Response|string
     {
         $model = new PromptTemplate();
 
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
+        if ($this->isPostRequest($model)) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
+        $userId = Yii::$app->user->id;
         return $this->render('create', [
             'model' => $model,
             'projects' => $this->fetchProjectsList(),
+            'generalFieldsMap' => $this->fetchFieldsMap($userId, null),
+            'projectFieldsMap' => $this->fetchFieldsMap($userId, $model->project_id),
         ]);
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function isPostRequest(PromptTemplate $model): bool
+    {
+        return $model->load(Yii::$app->request->post()) && $model->save();
+    }
+
+    private function fetchFieldsMap(int $userId, ?int $projectId): array
+    {
+        $query = Field::find()
+            ->where(['user_id' => $userId]);
+
+        if ($projectId === null) {
+            $query->andWhere(['project_id' => null]);
+        } else {
+            $query->andWhere(['project_id' => $projectId]);
+        }
+
+        $rawFields = $query->all();
+
+        return array_reduce($rawFields, function (array $fieldsMap, Field $field) {
+            $prefix = $field->project_id ? 'PRJ:' : 'GEN:';
+            $placeholder = $prefix . '{{' . $field->name . '}}';
+            $label = $field->label ?: $field->name;
+            $fieldsMap[$placeholder] = [
+                'label' => $label,
+                'isProjectSpecific' => $field->project_id !== null
+            ];
+            return $fieldsMap;
+        }, []);
     }
 
     /**
@@ -103,9 +137,12 @@ class PromptTemplateController extends Controller
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
+        $userId = Yii::$app->user->id;
         return $this->render('update', [
             'model' => $model,
             'projects' => $this->fetchProjectsList(),
+            'generalFieldsMap' => $this->fetchFieldsMap($userId, null),
+            'projectFieldsMap' => $this->fetchFieldsMap($userId, $model->project_id),
         ]);
     }
 
