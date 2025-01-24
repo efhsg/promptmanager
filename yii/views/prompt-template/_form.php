@@ -26,6 +26,7 @@ if ($model->hasErrors()) {
             break;
         }
     }
+
     if (!$panelToOpen) {
         foreach ($attributesEditor as $attr) {
             if ($model->hasErrors($attr)) {
@@ -40,6 +41,7 @@ if ($model->hasErrors()) {
 <div class="prompt-template-form">
     <?php $form = ActiveForm::begin([
         'id' => 'prompt-template-form',
+        'enableClientValidation' => true,
     ]); ?>
 
     <div class="accordion" id="formAccordion">
@@ -209,9 +211,11 @@ try {
 } catch (error) {
     console.error('Error injecting template body:', error);
 }
-document.querySelector('#prompt-template-form').onsubmit = function() {
+
+quill.on('text-change', function() {
     document.querySelector('#template-body').value = quill.root.innerHTML;
-};
+});
+
 JS;
 $this->registerJs($script);
 ?>
