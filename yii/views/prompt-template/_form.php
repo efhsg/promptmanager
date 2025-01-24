@@ -15,27 +15,6 @@ use yii\widgets\ActiveForm;
 
 QuillAsset::register($this);
 
-$panelToOpen = '';
-$attributesBasic = ['project_id', 'name', 'description'];
-$attributesEditor = ['template_body'];
-
-if ($model->hasErrors()) {
-    foreach ($attributesBasic as $attr) {
-        if ($model->hasErrors($attr)) {
-            $panelToOpen = 'collapseBasicInfo';
-            break;
-        }
-    }
-
-    if (!$panelToOpen) {
-        foreach ($attributesEditor as $attr) {
-            if ($model->hasErrors($attr)) {
-                $panelToOpen = 'collapseEditor';
-                break;
-            }
-        }
-    }
-}
 ?>
 
 <div class="prompt-template-form">
@@ -48,17 +27,17 @@ if ($model->hasErrors()) {
 
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingBasicInfo">
-                <button class="accordion-button <?= $panelToOpen === 'collapseEditor' ? 'collapsed' : '' ?>"
+                <button class="accordion-button"
                         type="button"
                         data-bs-toggle="collapse"
                         data-bs-target="#collapseBasicInfo"
-                        aria-expanded="<?= $panelToOpen === 'collapseEditor' ? 'false' : 'true' ?>"
-                        aria-controls="collapseBasicInfo">
-                    Basic Information
+                        aria-expanded="true"
+                aria-controls="collapseBasicInfo">
+                Basic Information
                 </button>
             </h2>
             <div id="collapseBasicInfo"
-                 class="accordion-collapse collapse<?= $panelToOpen === 'collapseBasicInfo' || $panelToOpen === '' ? ' show' : '' ?>"
+                 class="accordion-collapse collapse show"
                  aria-labelledby="headingBasicInfo"
                  data-bs-parent="#formAccordion">
 
@@ -76,17 +55,17 @@ if ($model->hasErrors()) {
 
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingEditor">
-                <button class="accordion-button <?= $panelToOpen === 'collapseEditor' ? '' : 'collapsed' ?>"
+                <button class="accordion-button collapsed"
                         type="button"
                         data-bs-toggle="collapse"
                         data-bs-target="#collapseEditor"
-                        aria-expanded="<?= $panelToOpen === 'collapseEditor' ? 'true' : 'false' ?>"
+                        aria-expanded="false"
                         aria-controls="collapseEditor">
                     Editor
                 </button>
             </h2>
             <div id="collapseEditor"
-                 class="accordion-collapse collapse<?= $panelToOpen === 'collapseEditor' ? ' show' : '' ?>"
+                 class="accordion-collapse collapse"
                  aria-labelledby="headingEditor"
                  data-bs-parent="#formAccordion">
 
@@ -215,7 +194,35 @@ try {
 quill.on('text-change', function() {
     document.querySelector('#template-body').value = quill.root.innerHTML;
 });
-
 JS;
 $this->registerJs($script);
 ?>
+
+<?php
+$script = <<<JS
+$('#prompt-template-form').on('afterValidate', function (event, messages, errorAttributes) {
+    if (!$(this).data('yiiActiveForm').submitting) {
+        return;
+    }
+
+    if (errorAttributes.length > 0) {
+        let firstErrorField = $(this).find('.has-error').first();
+        if (firstErrorField.length) {
+            let accordionPanel = firstErrorField.closest('.accordion-collapse');
+            if (accordionPanel.length) {
+                let collapseInstance = bootstrap.Collapse.getOrCreateInstance(accordionPanel[0]);
+                collapseInstance.show();
+
+                let accordionButton = accordionPanel.siblings('.accordion-header').find('button');
+                if (accordionButton.length) {
+                    accordionButton.removeClass('collapsed').attr('aria-expanded', true);
+                }
+            }
+        }
+    }
+});
+JS;
+$this->registerJs($script);
+?>
+
+
