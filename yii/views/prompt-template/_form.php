@@ -61,7 +61,7 @@ QuillAsset::register($this);
                         data-bs-target="#collapseEditor"
                         aria-expanded="false"
                         aria-controls="collapseEditor">
-                    Editor
+                    Body
                 </button>
             </h2>
             <div id="collapseEditor"
@@ -124,7 +124,6 @@ var quill = new Quill('#editor', {
 var toolbar = quill.getModule('toolbar');
 var toolbarContainer = toolbar.container;
 
-// Create custom dropdowns
 var generalFieldDropdown = document.createElement('select');
 generalFieldDropdown.classList.add('ql-insertGeneralField', 'ql-picker', 'ql-font');
 generalFieldDropdown.innerHTML = '<option value="" selected disabled>General Field</option>';
@@ -133,7 +132,6 @@ var projectFieldDropdown = document.createElement('select');
 projectFieldDropdown.classList.add('ql-insertProjectField', 'ql-picker', 'ql-font');
 projectFieldDropdown.innerHTML = '<option value="" selected disabled>Project Field</option>';
 
-// Populate general fields dropdown
 var generalFields = $generalFieldsJson;
 Object.keys(generalFields).forEach(function(key) {
     var option = document.createElement('option');
@@ -142,7 +140,6 @@ Object.keys(generalFields).forEach(function(key) {
     generalFieldDropdown.appendChild(option);
 });
 
-// Populate project fields dropdown
 var projectFields = $projectFieldsJson;
 Object.keys(projectFields).forEach(function(key) {
     var option = document.createElement('option');
@@ -154,7 +151,6 @@ Object.keys(projectFields).forEach(function(key) {
 generalFieldDropdown.classList.add('ql-picker', 'ql-font');
 projectFieldDropdown.classList.add('ql-picker', 'ql-font');
 
-// Replace toolbar placeholders with dropdowns
 toolbarContainer.querySelector('.ql-insertGeneralField').replaceWith(generalFieldDropdown);
 toolbarContainer.querySelector('.ql-insertProjectField').replaceWith(projectFieldDropdown);
 

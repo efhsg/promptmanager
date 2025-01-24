@@ -42,7 +42,7 @@ class PromptTemplate extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['project_id', 'name', 'template_body'], 'required'],
+            [['project_id', 'name'], 'required'],
             [['project_id', 'created_at', 'updated_at'], 'integer'],
             [['template_body', 'description'], 'string'],
             [['name'], 'string', 'max' => 255],
@@ -57,13 +57,6 @@ class PromptTemplate extends ActiveRecord
                 'skipOnError' => true,
                 'targetClass' => Project::class,
                 'targetAttribute' => ['project_id' => 'id']],
-            ['template_body', function ($attribute) {
-                $content = strip_tags($this->$attribute, '<img><video><audio>');
-                $content = trim($content);
-                if (empty($content) || $content === '<br>') {
-                    $this->addError($attribute, 'Template body cannot be empty.');
-                }
-            }],
         ];
     }
 
