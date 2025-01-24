@@ -210,7 +210,9 @@ $('#prompt-template-form').on('afterValidate', function (event, messages, errorA
         if (firstErrorField.length) {
             let accordionPanel = firstErrorField.closest('.accordion-collapse');
             if (accordionPanel.length) {
-                let collapseInstance = bootstrap.Collapse.getOrCreateInstance(accordionPanel[0]);
+                let collapseInstance = bootstrap.Collapse.getOrCreateInstance(accordionPanel[0], {
+                    toggle: false
+                });
                 collapseInstance.show();
 
                 let accordionButton = accordionPanel.siblings('.accordion-header').find('button');
