@@ -21,23 +21,7 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
 
         echo '<div class="d-flex align-items-center">';
 
-        if (!Yii::$app->user->isGuest) {
-            $projectList = Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id);
-            $currentProject = Yii::$app->projectContext->getCurrentProject();
-            $currentProjectId = $currentProject?->id;
-
-            echo Html::beginForm(['/project/set-current'], 'post', ['class' => 'd-flex align-items-center me-3']);
-            echo Html::dropDownList('project_id', $currentProjectId, $projectList, [
-                'class' => 'form-select me-2',
-                'prompt' => 'No Project',
-                'onchange' => 'this.form.submit()',
-            ]);
-            echo Html::endForm();
-        }
-
-        echo '</div>';
-
-        echo Nav::widget([
+         echo Nav::widget([
             'options' => ['class' => 'navbar-nav me-auto'],
             'activateParents' => true,
             'activateItems' => true,
@@ -71,6 +55,22 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                 ],
             ],
         ]);
+
+        if (!Yii::$app->user->isGuest) {
+            $projectList = Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id);
+            $currentProject = Yii::$app->projectContext->getCurrentProject();
+            $currentProjectId = $currentProject?->id;
+
+            echo Html::beginForm(['/project/set-current'], 'post', ['class' => 'd-flex align-items-center me-3']);
+            echo Html::dropDownList('project_id', $currentProjectId, $projectList, [
+                'class' => 'form-select me-2',
+                'prompt' => 'No Project',
+                'onchange' => 'this.form.submit()',
+            ]);
+            echo Html::endForm();
+        }
+
+        echo '</div>';
 
         echo Nav::widget([
             'options' => ['class' => 'navbar-nav ms-auto'],
