@@ -22,7 +22,7 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
         echo '<div class="d-flex align-items-center">';
 
          echo Nav::widget([
-            'options' => ['class' => 'navbar-nav me-auto'],
+            'options' => ['class' => 'navbar-nav me-auto ms-1'],
             'activateParents' => true,
             'activateItems' => true,
             'items' => [
@@ -61,7 +61,7 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
             $currentProject = Yii::$app->projectContext->getCurrentProject();
             $currentProjectId = $currentProject?->id;
 
-            echo Html::beginForm(['/project/set-current'], 'post', ['class' => 'd-flex align-items-center me-3']);
+            echo Html::beginForm(['/project/set-current'], 'post', ['class' => 'd-flex align-items-center ms-4 me-3']);
             echo Html::dropDownList('project_id', $currentProjectId, $projectList, [
                 'class' => 'form-select me-2',
                 'prompt' => 'No Project',
