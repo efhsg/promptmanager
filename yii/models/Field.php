@@ -24,7 +24,6 @@ use yii\db\ActiveRecord;
  *
  * @property FieldOption[] $fieldOptions
  * @property Project $project
- * @property TemplateField[] $templateFields
  * @property User $user
  */
 class Field extends ActiveRecord
@@ -106,16 +105,6 @@ class Field extends ActiveRecord
     public function getProject(): ActiveQuery
     {
         return $this->hasOne(Project::class, ['id' => 'project_id']);
-    }
-
-    /**
-     * Gets query for [[TemplateFields]].
-     *
-     * @return ActiveQuery
-     */
-    public function getTemplateFields(): ActiveQuery
-    {
-        return $this->hasMany(TemplateField::class, ['field_id' => 'id']);
     }
 
     /**
