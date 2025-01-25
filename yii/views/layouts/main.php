@@ -4,8 +4,10 @@
 
 /** @var string $content */
 
+use app\models\Project;
 use app\widgets\Alert;
 use yii\bootstrap5\{Breadcrumbs, Html, Nav, NavBar};
+use yii\helpers\ArrayHelper;
 
 $this->beginContent('@app/views/layouts/_base.php'); ?>
 
@@ -16,6 +18,24 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
             'brandUrl' => Yii::$app->homeUrl,
             'options' => ['class' => 'navbar-expand-md navbar-dark bg-primary fixed-top']
         ]);
+
+        echo '<div class="d-flex align-items-center">';
+
+        if (!Yii::$app->user->isGuest) {
+            $projectList = Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id);
+            $currentProject = Yii::$app->projectContext->getCurrentProject();
+            $currentProjectId = $currentProject?->id;
+
+            echo Html::beginForm(['/project/set-current'], 'post', ['class' => 'd-flex align-items-center me-3']);
+            echo Html::dropDownList('project_id', $currentProjectId, $projectList, [
+                'class' => 'form-select me-2',
+                'prompt' => 'No Project',
+                'onchange' => 'this.form.submit()',
+            ]);
+            echo Html::endForm();
+        }
+
+        echo '</div>';
 
         echo Nav::widget([
             'options' => ['class' => 'navbar-nav me-auto'],

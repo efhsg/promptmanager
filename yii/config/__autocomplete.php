@@ -24,6 +24,12 @@ class Yii
 /**
  * @property yii\rbac\DbManager $authManager
  * @property \yii\web\User|__WebUser $user
+ * @property mixed|object|null $projectContext
+ * @property mixed|object|null $userPreference
+ * @property mixed|object|null $modelService
+ * @property mixed|object|null $fieldService
+ * @property mixed|object|null $projectService
+ * @property mixed|object|null $promptTemplateService
  *
  */
 class __Application

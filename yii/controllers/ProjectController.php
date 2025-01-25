@@ -3,11 +3,13 @@
 
 namespace app\controllers;
 
+use app\components\ProjectContext;
 use app\models\Project;
 use app\models\ProjectSearch;
 use Throwable;
 use Yii;
 use yii\db\Exception;
+use yii\db\StaleObjectException;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -18,6 +20,15 @@ use yii\web\Response;
  */
 class ProjectController extends Controller
 {
+
+    private ProjectContext $projectContext;
+
+    public function init(): void
+    {
+        parent::init();
+        $this->projectContext = Yii::$app->projectContext;
+    }
+
     /**
      * @inheritDoc
      */
@@ -28,7 +39,7 @@ class ProjectController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index', 'view', 'create', 'update', 'delete'],
+                        'actions' => ['index', 'view', 'create', 'update', 'delete', 'set-current'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -136,6 +147,19 @@ class ProjectController extends Controller
         }
         return $this->redirect(['index']);
     }
+
+    /**
+     * @throws StaleObjectException
+     * @throws Throwable
+     */
+    public function actionSetCurrent(): Response
+    {
+        $projectId = Yii::$app->request->post('project_id');
+        $this->projectContext->setCurrentProject((int)$projectId);
+
+        return $this->redirect(Yii::$app->request->referrer ?: ['index']);
+    }
+
 
     /**
      * Finds the Project model by ID,

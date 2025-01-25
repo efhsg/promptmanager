@@ -26,21 +26,13 @@ class PromptTemplateController extends Controller
     private ProjectService $projectService;
     private PromptTemplateService $promptTemplateService;
 
-    public function __construct(
-        $id,
-        $module,
-        ModelService $modelService,
-        FieldService $fieldService,
-        ProjectService $projectService,
-        PromptTemplateService $promptTemplateService,
-        $config = []
-    )
+    public function init(): void
     {
-        $this->modelService = $modelService;
-        $this->fieldService = $fieldService;
-        $this->projectService = $projectService;
-        $this->promptTemplateService = $promptTemplateService;
-        parent::__construct($id, $module, $config);
+        parent::init();
+        $this->modelService         = Yii::$app->modelService;
+        $this->fieldService         = Yii::$app->fieldService;
+        $this->projectService       = Yii::$app->projectService;
+        $this->promptTemplateService = Yii::$app->promptTemplateService;
     }
 
     protected function accessRules(): array

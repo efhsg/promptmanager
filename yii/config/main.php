@@ -5,6 +5,12 @@
  * We do NOT load the DB here (it is loaded in each environment config).
  */
 
+use app\components\ProjectContext;
+use app\services\FieldService;
+use app\services\ModelService;
+use app\services\ProjectService;
+use app\services\PromptTemplateService;
+use app\services\UserPreferenceService;
 use yii\symfonymailer\Mailer;
 
 $params = require __DIR__ . '/params.php';
@@ -87,6 +93,30 @@ $config = [
         'validator' => [
             'class' => 'yii\validators\Validator',
         ],
+        'modelService' => [
+            'class' => ModelService::class,
+        ],
+        'fieldService' => [
+            'class' => FieldService::class,
+        ],
+        'projectService' => [
+            'class' => ProjectService::class,
+        ],
+        'promptTemplateService' => [
+            'class' => PromptTemplateService::class,
+        ],
+        'userPreference' => [
+            'class' => UserPreferenceService::class,
+        ],
+        'projectContext' => function () {
+            $app = Yii::$app;
+            return new ProjectContext(
+                $app->session,
+                $app->userPreference,
+                $app->user
+            );
+        },
+
     ],
 
     'params' => $params,
