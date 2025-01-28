@@ -11,6 +11,14 @@ use yii\web\{Controller, Response};
 class AuthController extends Controller
 {
 
+    protected UserService $userService;
+
+    public function __construct($id, $module, UserService $userService, $config = [])
+    {
+        $this->userService = $userService;
+        parent::__construct($id, $module, $config);
+    }
+
     public function actions(): array
     {
         return [
@@ -46,7 +54,7 @@ class AuthController extends Controller
 
     public function actionSignup(): Response|string
     {
-        $model = new SignupForm(new UserService());
+        $model = new SignupForm($this->userService);
 
         if (Yii::$app->request->isPost) {
             $model->load(Yii::$app->request->post());
