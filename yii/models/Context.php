@@ -3,6 +3,7 @@
 namespace app\models;
 
 use app\models\traits\TimestampTrait;
+use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -88,6 +89,17 @@ class Context extends ActiveRecord
     public function getProjectName(): ?string
     {
         return $this->project->name ?? null;
+    }
+
+    public function init(): void
+    {
+        parent::init();
+
+        if ($this->isNewRecord && $this->project_id === null) {
+            $projectContext = Yii::$app->projectContext;
+            $currentProject = $projectContext->getCurrentProject();
+            $this->project_id = $currentProject ? $currentProject['id'] : null;
+        }
     }
 
     public function beforeSave($insert): bool

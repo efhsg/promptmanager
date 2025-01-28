@@ -5,6 +5,7 @@ namespace app\models;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use common\constants\FieldConstants;
+use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -122,8 +123,16 @@ class Field extends ActiveRecord
     {
         parent::init();
 
-        if ($this->isNewRecord && $this->type === null) {
-            $this->type = FieldConstants::TYPES[0];
+        if ($this->isNewRecord) {
+            if ($this->type === null) {
+                $this->type = FieldConstants::TYPES[0];
+            }
+
+            if ($this->project_id === null) {
+                $projectContext = Yii::$app->projectContext;
+                $currentProject = $projectContext->getCurrentProject();
+                $this->project_id = $currentProject ? $currentProject['id'] : null;
+            }
         }
     }
 
