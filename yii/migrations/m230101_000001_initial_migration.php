@@ -4,18 +4,6 @@
 use common\constants\FieldConstants;
 use yii\db\Migration;
 
-/**
- * Class m230101_000001_initial_migration
- *
- * This migration sets up the following tables:
- *  - project
- *  - context
- *  - field
- *  - field_option         <-- newly added
- *  - prompt_template
- *  - template_field
- *  - prompt_instance
- */
 class m230101_000001_initial_migration extends Migration
 {
     public function safeUp(): void
@@ -211,10 +199,48 @@ class m230101_000001_initial_migration extends Migration
             'RESTRICT',
             'CASCADE'
         );
+
+        /*******************************************************
+         * 6. user_preference
+         *******************************************************/
+        $this->createTable('{{%user_preference}}', [
+            'id' => $this->primaryKey(),
+            'user_id' => $this->integer()->notNull(),
+            'pref_key' => $this->string(255)->notNull(),
+            'pref_value' => $this->string(255)->null(),
+            'created_at' => $this->integer()->notNull(),
+            'updated_at' => $this->integer()->notNull(),
+        ]);
+
+        $this->createIndex(
+            'idx_user_preference_user_key',
+            '{{%user_preference}}',
+            ['user_id', 'pref_key'],
+            true
+        );
+
+        $this->addForeignKey(
+            'fk_user_preference_user',
+            '{{%user_preference}}',
+            'user_id',
+            '{{%user}}',
+            'id',
+            'CASCADE',
+            'CASCADE'
+        );
+
     }
 
     public function safeDown(): void
     {
+
+        /*******************************************************
+         * user_preference
+         *******************************************************/
+        $this->dropForeignKey('fk_user_preference_user', '{{%user_preference}}');
+        $this->dropIndex('idx_user_preference_user_key', '{{%user_preference}}');
+        $this->dropTable('{{%user_preference}}');
+
 
         // Drop prompt_instance
         $this->dropForeignKey('fk_prompt_instance_template', '{{%prompt_instance}}');
