@@ -21,7 +21,6 @@ use yii\db\ActiveRecord;
  *
  * @property Project $project
  * @property PromptInstance[] $promptInstances
- * @property TemplateField[] $templateFields
  */
 class PromptTemplate extends ActiveRecord
 {
@@ -104,16 +103,6 @@ class PromptTemplate extends ActiveRecord
     public function getPromptInstances(): ActiveQuery
     {
         return $this->hasMany(PromptInstance::class, ['template_id' => 'id']);
-    }
-
-    /**
-     * Gets query for [[TemplateFields]].
-     *
-     * @return ActiveQuery
-     */
-    public function getTemplateFields(): ActiveQuery
-    {
-        return $this->hasMany(TemplateField::class, ['template_id' => 'id']);
     }
 
     public function beforeSave($insert): bool

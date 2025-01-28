@@ -1,0 +1,40 @@
+<?php
+
+return [
+    [
+        'id' => 1,
+        'user_id' => 1,
+        'project_id' => null,
+        'name' => 'codeBlock',
+        'type' => 'text',
+        'content' => null,
+        'selected_by_default' => 0,
+        'label' => null,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'id' => 2,
+        'user_id' => 1,
+        'project_id' => 1,
+        'name' => 'codeType',
+        'type' => 'select',
+        'content' => null,
+        'selected_by_default' => 0,
+        'label' => null,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'id' => 3,
+        'user_id' => 1,
+        'project_id' => null,
+        'name' => 'extraCriteria',
+        'type' => 'multi-select',
+        'content' => null,
+        'selected_by_default' => 0,
+        'label' => null,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+];

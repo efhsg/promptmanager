@@ -50,6 +50,7 @@ class Field extends ActiveRecord
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],
             [['name', 'label'], 'string', 'max' => 255],
+            ['name', 'validateUniqueNameWithinProject', 'skipOnError' => true],
             [['content'], 'string'],
             [['project_id'],
                 'exist',
@@ -140,5 +141,26 @@ class Field extends ActiveRecord
 
         return true;
     }
+
+    public function validateUniqueNameWithinProject($attribute): void
+    {
+        $query = self::find()->where(['name' => $this->name]);
+
+        if ($this->project_id === null || $this->project_id === '') {
+            $query->andWhere(['project_id' => null]);
+        } else {
+            $query->andWhere(['project_id' => $this->project_id]);
+        }
+
+        if (!$this->isNewRecord) {
+            $query->andWhere(['<>', 'id', $this->id]);
+        }
+
+        if ($query->exists()) {
+            $this->addError($attribute, 'Duplicate name.');
+        }
+    }
+
+
 
 }

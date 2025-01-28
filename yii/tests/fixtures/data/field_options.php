@@ -1,0 +1,68 @@
+<?php
+
+
+return [
+    [
+        'field_id' => 2,
+        'value' => 'class',
+        'label' => null,
+        'selected_by_default' => 0,
+        'order' => 10,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'field_id' => 2,
+        'value' => 'test',
+        'label' => null,
+        'selected_by_default' => 0,
+        'order' => 20,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'field_id' => 2,
+        'value' => 'function',
+        'label' => null,
+        'selected_by_default' => 0,
+        'order' => 30,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'field_id' => 2,
+        'value' => 'interface',
+        'label' => null,
+        'selected_by_default' => 0,
+        'order' => 40,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'field_id' => 2,
+        'value' => 'migration',
+        'label' => null,
+        'selected_by_default' => 0,
+        'order' => 50,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'field_id' => 3,
+        'value' => "don't write any comment",
+        'label' => null,
+        'selected_by_default' => 1,
+        'order' => 10,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+    [
+        'field_id' => 3,
+        'value' => 'use SOLID, DRY, YAGNI principles',
+        'label' => null,
+        'selected_by_default' => 1,
+        'order' => 20,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
+];

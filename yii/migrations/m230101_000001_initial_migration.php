@@ -103,6 +103,13 @@ class m230101_000001_initial_migration extends Migration
             'CASCADE'
         );
 
+        $this->createIndex(
+            'idx_field_project_id_name_unique',
+            '{{%field}}',
+            ['project_id', 'name'],
+            true
+        );
+
         /*******************************************************
          * 3a. field_option
          * For storing select/multi-select options.

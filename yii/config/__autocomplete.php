@@ -12,6 +12,7 @@
  * class __Rollbar {
  * }
  * ```
+ * @method static log(string $getMessage, string $string)
  */
 class Yii
 {
