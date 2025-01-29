@@ -24,7 +24,6 @@ echo $this->render('_breadcrumbs', [
         </div>
 
         <div class="card-footer d-flex justify-content-end">
-            <!-- Cancel Button -->
             <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], ['class' => 'btn btn-secondary me-2']) ?>
 
             <!-- Delete Form (inline) -->

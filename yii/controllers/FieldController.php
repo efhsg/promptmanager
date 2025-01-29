@@ -8,23 +8,24 @@ use app\models\FieldSearch;
 use app\models\Project;
 use Throwable;
 use Yii;
+use yii\db\ActiveRecord;
 use yii\db\Exception;
 use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\web\Controller;
-use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use Yii2\Extensions\DynamicForm\Models\Model;
 
-/**
- * FieldController implements the CRUD actions for Field model.
- */
 class FieldController extends Controller
 {
-    /**
-     * @inheritDoc
-     */
+    private array $actionPermissionMap = [
+        'create' => 'createField',
+        'view' => 'viewField',
+        'update' => 'updateField',
+        'delete' => 'deleteField',
+    ];
+
     public function behaviors(): array
     {
         return [
@@ -32,20 +33,36 @@ class FieldController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index', 'view', 'create', 'update', 'delete'],
+                        'actions' => ['index'],
                         'allow' => true,
                         'roles' => ['@'],
+                    ],
+                    [
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'actions' => array_keys($this->actionPermissionMap),
+                        'matchCallback' => function ($rule, $action) {
+                            $actionName = $action->id;
+                            if (!isset($this->actionPermissionMap[$actionName])) {
+                                return false;
+                            }
+                            $permission = $this->actionPermissionMap[$actionName];
+                            $id = Yii::$app->request->get('id');
+                            $model = in_array($actionName, ['view', 'update', 'delete']) ? Field::findOne($id) : null;
+                            if ($actionName !== 'create' && $actionName !== 'index' && $model === null) {
+                                throw new NotFoundHttpException('The requested page does not exist.');
+                            }
+                            if ($actionName === 'create') {
+                                return Yii::$app->user->can($permission);
+                            }
+                            return Yii::$app->user->can($permission, ['model' => $model]);
+                        },
                     ],
                 ],
             ],
         ];
     }
 
-    /**
-     * Lists all Field models.
-     *
-     * @return string
-     */
     public function actionIndex(): string
     {
         $searchModel = new FieldSearch();
@@ -60,21 +77,12 @@ class FieldController extends Controller
         ]);
     }
 
-
     /**
-     * Displays a single Field model.
-     * @param int $id ID
-     * @return string
-     * @throws ForbiddenHttpException
+     * @throws NotFoundHttpException
      */
     public function actionView(int $id): string
     {
-        $model = Field::find()->where(['field.id' => $id])->joinWith('project')->one();
-
-        if (!Yii::$app->user->can('viewField', ['model' => $model])) {
-            throw new ForbiddenHttpException('You are not allowed to view this field.');
-        }
-
+        $model = $this->findModel($id);
         return $this->render('view', [
             'model' => $model,
         ]);
@@ -89,18 +97,11 @@ class FieldController extends Controller
         $modelField = new Field(['user_id' => Yii::$app->user->id]);
         $modelsFieldOption = [new FieldOption()];
 
-        if (!Yii::$app->user->can('createField')) {
-            throw new ForbiddenHttpException('You are not allowed to create a field.');
-        }
-
         if ($modelField->load(Yii::$app->request->post())) {
-
             $modelsFieldOption = Model::createMultiple(FieldOption::class);
             Model::loadMultiple($modelsFieldOption, Yii::$app->request->post());
-
             $valid = $modelField->validate();
             $valid = Model::validateMultiple($modelsFieldOption) && $valid;
-
             if ($valid) {
                 $transaction = Yii::$app->db->beginTransaction();
                 try {
@@ -131,11 +132,6 @@ class FieldController extends Controller
         ]);
     }
 
-    /**
-     * Fetches a list of projects for the logged-in user.
-     *
-     * @return array
-     */
     private function fetchProjectsList(): array
     {
         return ArrayHelper::map(
@@ -147,42 +143,32 @@ class FieldController extends Controller
         );
     }
 
-
     /**
-     * @throws Exception
      * @throws Throwable
+     * @throws Exception
      * @throws NotFoundHttpException
      */
     public function actionUpdate(int $id): Response|string
     {
+        /** @var Field $modelField */
         $modelField = $this->findModel($id);
         $modelsFieldOption = $modelField->fieldOptions;
 
-        if (!Yii::$app->user->can('updateField', ['model' => $modelField])) {
-            throw new ForbiddenHttpException('You are not allowed to update this field.');
-        }
-
         if ($modelField->load(Yii::$app->request->post())) {
-
             $oldIDs = ArrayHelper::map($modelsFieldOption, 'id', 'id');
             $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
             Model::loadMultiple($modelsFieldOption, Yii::$app->request->post());
-
             $newIDs = ArrayHelper::map($modelsFieldOption, 'id', 'id');
             $deletedIDs = array_diff($oldIDs, array_filter($newIDs));
-
             $valid = $modelField->validate();
             $valid = Model::validateMultiple($modelsFieldOption) && $valid;
-
             if ($valid) {
                 $transaction = Yii::$app->db->beginTransaction();
                 try {
                     if ($flag = $modelField->save(false)) {
-
                         if (!empty($deletedIDs)) {
                             FieldOption::deleteAll(['id' => $deletedIDs]);
                         }
-
                         foreach ($modelsFieldOption as $modelFieldOption) {
                             $modelFieldOption->field_id = $modelField->id;
                             if (!($flag = $modelFieldOption->save(false))) {
@@ -191,7 +177,6 @@ class FieldController extends Controller
                             }
                         }
                     }
-
                     if ($flag) {
                         $transaction->commit();
                         return $this->redirect(['view', 'id' => $modelField->id]);
@@ -210,19 +195,13 @@ class FieldController extends Controller
         ]);
     }
 
-
     /**
      * @throws NotFoundHttpException
-     * @throws ForbiddenHttpException
      */
     public function actionDelete(int $id): Response|string
     {
-
+        /** @var Field $model */
         $model = $this->findModel($id);
-
-        if (!Yii::$app->user->can('deleteField', ['model' => $model])) {
-            throw new ForbiddenHttpException('You are not allowed to delete this field.');
-        }
 
         if (!Yii::$app->request->post('confirm')) {
             return $this->render('delete-confirm', [
@@ -235,27 +214,19 @@ class FieldController extends Controller
             Yii::$app->session->setFlash('success', "Context '$model->name' deleted successfully.");
         } catch (Throwable $e) {
             Yii::error($e->getMessage(), 'database');
-            Yii::$app->session->setFlash(
-                'error',
-                'Unable to delete the context. Please try again later.'
-            );
+            Yii::$app->session->setFlash('error', 'Unable to delete the context. Please try again later.');
         }
         return $this->redirect(['index']);
     }
 
     /**
-     * Finds the Field model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
-     * @param int $id ID
-     * @return Field the loaded model
-     * @throws NotFoundHttpException if the model cannot be found
+     * @throws NotFoundHttpException
      */
-    protected function findModel(int $id): Field
+    protected function findModel(int $id): array|ActiveRecord
     {
-        if (($model = Field::findOne(['id' => $id])) !== null) {
+        if (($model = Field::find()->with('project')->where(['id' => $id])->one()) !== null) {
             return $model;
         }
-
         throw new NotFoundHttpException('The requested page does not exist.');
     }
 }
