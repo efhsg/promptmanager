@@ -1,10 +1,16 @@
-<?php /** @noinspection PhpUnused */
+<?php /** @noinspection PhpPropertyOnlyWrittenInspection */
+
+/** @noinspection PhpUnused */
 
 namespace tests\functional\indentity;
 
 use app\modules\identity\models\User;
 use app\modules\identity\services\UserService;
 use FunctionalTester;
+use tests\fixtures\AuthAssignmentFixture;
+use tests\fixtures\AuthItemChildFixture;
+use tests\fixtures\AuthItemFixture;
+use tests\fixtures\AuthRuleFixture;
 use tests\fixtures\UserFixture;
 use Yii;
 use yii\base\InvalidConfigException;
@@ -22,7 +28,13 @@ class SignupFormCest
     public function _before(FunctionalTester $I): void
     {
         $this->userService = Yii::$container->get(UserService::class);
-        $I->haveFixtures(['user' => UserFixture::class]);
+        $I->haveFixtures([
+            'user' => UserFixture::class,
+            'auth_rule' => AuthRuleFixture::class,
+            'auth_item' => AuthItemFixture::class,
+            'auth_item_child' => AuthItemChildFixture::class,
+            'auth_assignment' => AuthAssignmentFixture::class,
+        ]);
         $I->amOnRoute('/identity/auth/signup');
     }
 

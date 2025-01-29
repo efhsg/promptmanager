@@ -8,6 +8,7 @@ use app\modules\identity\traits\ValidationErrorFormatterTrait;
 use Exception;
 use Throwable;
 use Yii;
+use yii\rbac\ManagerInterface;
 
 class UserService
 {
@@ -34,6 +35,8 @@ class UserService
             if (!$user->save()) {
                 throw new UserCreationException("User creation failed: {$this->formatValidationErrors($user)}");
             }
+
+            $this->assignUserRole($user);
 
             $this->userDataSeeder?->seed($user->id);
 
@@ -112,12 +115,55 @@ class UserService
 
     public function hardDelete(User $user): bool
     {
+        $db = Yii::$app->db;
+        $transaction = $db->beginTransaction();
+
         try {
-            return (bool)$user->delete();
+            if ($this->isRbacAvailable()) {
+                $auth = Yii::$app->authManager;
+
+                $auth->revokeAll($user->id);
+                Yii::info("Revoked all RBAC roles and permissions from user ID {$user->id}.", __METHOD__);
+            }
+
+            if (!$user->delete()) {
+                Yii::error("Failed to hard-delete user ID {$user->id}.", __METHOD__);
+                throw new Exception("Failed to delete user ID {$user->id}.");
+            }
+
+            $transaction->commit();
+            return true;
         } catch (Throwable $e) {
-            Yii::error("Error permanently deleting user ID $user->id: " . $e->getMessage(), __METHOD__);
+            $transaction->rollBack();
+            Yii::error("Error hard-deleting user ID {$user->id}: " . $e->getMessage(), __METHOD__);
             return false;
         }
+    }
+
+
+    /**
+     * @throws Exception
+     */
+    private function assignUserRole(User $user): void
+    {
+        if (!$this->isRbacAvailable()) {
+            Yii::warning('RBAC is not configured. Skipping role assignment.', __METHOD__);
+            return;
+        }
+
+        $auth = Yii::$app->authManager;
+        $userRole = $auth->getRole('user');
+
+        if ($userRole) {
+            $auth->assign($userRole, $user->id);
+        } else {
+            Yii::warning("Role 'user' does not exist in the RBAC system.", __METHOD__);
+        }
+    }
+
+    private function isRbacAvailable(): bool
+    {
+        return Yii::$app->has('authManager') && Yii::$app->authManager instanceof ManagerInterface;
     }
 
 }

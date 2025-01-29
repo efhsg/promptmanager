@@ -90,6 +90,9 @@ $config = [
             'viewPath' => '@app/mail',
             'useFileTransport' => true,
         ],
+        'authManager' => [
+            'class' => 'yii\rbac\DbManager',
+        ],
         'validator' => [
             'class' => 'yii\validators\Validator',
         ],

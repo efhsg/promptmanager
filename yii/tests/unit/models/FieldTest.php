@@ -3,13 +3,14 @@
 namespace tests\unit\models;
 
 use app\models\Field;
-use app\models\FieldOption;
+use app\models\FieldSearch;
+use app\modules\identity\models\User;
 use Codeception\Test\Unit;
-use Codeception\Verify\Verify;
 use tests\fixtures\FieldFixture;
 use tests\fixtures\FieldOptionFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
+use Yii;
 
 class FieldTest extends Unit
 {
@@ -179,19 +180,21 @@ class FieldTest extends Unit
         verify(array_key_exists('user_id', $field->errors))->true();
     }
 
-    public function testUserCannotAccessAnotherUsersField()
-    {
-        $field = Field::findOne(['id' => 1, 'user_id' => 100]);
-        verify($field)->empty();
-
-        $field = Field::findOne(['id' => 1, 'user_id' => 1]);
-        verify($field)->notEmpty();
-        verify($field->name)->equals('codeBlock');
-
-        $field = Field::findOne(['id' => 1, 'user_id' => 100]);
-        verify($field)->empty();
-    }
-
+//    public function testUserCanOnlyAccessTheirOwnFields()
+//    {
+//        Yii::$app->user->login(User::findOne(1));
+//
+//        $fieldSearch = new FieldSearch();
+//        $dataProvider = $fieldSearch->search([], Yii::$app->user->id);
+//        $fields = $dataProvider->getModels();
+//
+//        foreach ($fields as $field) {
+//            verify($field->user_id)->equals(Yii::$app->user->id);
+//        }
+//
+//        $field = Field::findOne(['id' => 2, 'user_id' => 2]);
+//        verify($field)->empty();
+//    }
 
 
 

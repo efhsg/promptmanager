@@ -37,4 +37,16 @@ return [
         'created_at' => 1737766798,
         'updated_at' => 1737766798,
     ],
+    [
+        'id' => 4,
+        'user_id' => 100,
+        'project_id' => null,
+        'name' => 'unitTest',
+        'type' => 'text',
+        'content' => null,
+        'selected_by_default' => 0,
+        'label' => null,
+        'created_at' => 1737766798,
+        'updated_at' => 1737766798,
+    ],
 ];

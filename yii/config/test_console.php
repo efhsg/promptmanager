@@ -1,5 +1,8 @@
 <?php
 
+use yii\helpers\ArrayHelper;
+
+$main = require __DIR__ . '/main.php';
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/test_db.php';
 
@@ -33,13 +36,6 @@ $config = [
             app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class
         ],
     ],
-    /*
-    'controllerMap' => [
-        'fixture' => [ // Fixture generation command line.
-            'class' => 'yii\faker\FixtureController',
-        ],
-    ],
-    */
 ];
 
 if (YII_ENV_DEV) {
@@ -57,5 +53,5 @@ if (YII_ENV_DEV) {
         //'allowedIPs' => ['127.0.0.1', '::1'],
     ];
 }
+return ArrayHelper::merge($main, $config);
 
-return $config;

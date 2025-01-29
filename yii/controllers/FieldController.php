@@ -12,6 +12,7 @@ use yii\db\Exception;
 use yii\filters\AccessControl;
 use yii\helpers\ArrayHelper;
 use yii\web\Controller;
+use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use Yii2\Extensions\DynamicForm\Models\Model;
@@ -64,10 +65,15 @@ class FieldController extends Controller
      * Displays a single Field model.
      * @param int $id ID
      * @return string
+     * @throws ForbiddenHttpException
      */
     public function actionView(int $id): string
     {
         $model = Field::find()->where(['field.id' => $id])->joinWith('project')->one();
+
+        if (!Yii::$app->user->can('viewField', ['model' => $model])) {
+            throw new ForbiddenHttpException('You are not allowed to view this field.');
+        }
 
         return $this->render('view', [
             'model' => $model,
@@ -82,6 +88,10 @@ class FieldController extends Controller
     {
         $modelField = new Field(['user_id' => Yii::$app->user->id]);
         $modelsFieldOption = [new FieldOption()];
+
+        if (!Yii::$app->user->can('createField')) {
+            throw new ForbiddenHttpException('You are not allowed to create a field.');
+        }
 
         if ($modelField->load(Yii::$app->request->post())) {
 
@@ -148,6 +158,10 @@ class FieldController extends Controller
         $modelField = $this->findModel($id);
         $modelsFieldOption = $modelField->fieldOptions;
 
+        if (!Yii::$app->user->can('updateField', ['model' => $modelField])) {
+            throw new ForbiddenHttpException('You are not allowed to update this field.');
+        }
+
         if ($modelField->load(Yii::$app->request->post())) {
 
             $oldIDs = ArrayHelper::map($modelsFieldOption, 'id', 'id');
@@ -171,7 +185,7 @@ class FieldController extends Controller
 
                         foreach ($modelsFieldOption as $modelFieldOption) {
                             $modelFieldOption->field_id = $modelField->id;
-                            if (! ($flag = $modelFieldOption->save(false))) {
+                            if (!($flag = $modelFieldOption->save(false))) {
                                 $transaction->rollBack();
                                 break;
                             }
@@ -190,20 +204,25 @@ class FieldController extends Controller
         }
 
         return $this->render('update', [
-            'modelField'        => $modelField,
+            'modelField' => $modelField,
             'modelsFieldOption' => (empty($modelsFieldOption)) ? [new FieldOption()] : $modelsFieldOption,
-            'projects'          => $this->fetchProjectsList(),
+            'projects' => $this->fetchProjectsList(),
         ]);
     }
 
 
     /**
      * @throws NotFoundHttpException
+     * @throws ForbiddenHttpException
      */
     public function actionDelete(int $id): Response|string
     {
 
         $model = $this->findModel($id);
+
+        if (!Yii::$app->user->can('deleteField', ['model' => $model])) {
+            throw new ForbiddenHttpException('You are not allowed to delete this field.');
+        }
 
         if (!Yii::$app->request->post('confirm')) {
             return $this->render('delete-confirm', [

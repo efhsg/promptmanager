@@ -48,7 +48,10 @@ class FieldSearch extends Field
             throw new InvalidArgumentException('User ID must be provided for ContextSearch.');
         }
 
-        $query = Field::find()->joinWith('user',false, 'INNER JOIN')->joinWith('project');
+        $query = Field::find()
+            ->joinWith('user u',false, 'INNER JOIN')
+            ->joinWith('project')
+            ->andWhere(['u.id' => $userId]);;
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

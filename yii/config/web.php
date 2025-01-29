@@ -4,11 +4,12 @@ use yii\helpers\ArrayHelper;
 
 $main = require __DIR__ . '/main.php';
 $params = require __DIR__ . '/params.php';
+$db = require __DIR__ . '/db.php';
 
 $config = [
     'id' => 'basic',
     'components' => [
-        'db' => require __DIR__ . '/db.php',
+        'db' => $db,
         'request' => [
             'cookieValidationKey' => 'IwE5i3d_0AhHc5a7gnVMSk38YDzgqBYi',
         ],
