@@ -28,7 +28,7 @@ class FieldController extends Controller
     )
     {
         parent::__construct($id, $module, $config);
-        $this->actionPermissionMap = Yii::$app->params['actionPermissionMap'];
+        $this->actionPermissionMap = Yii::$app->params['rbac']['entities']['field']['actionPermissionMap'];
     }
 
     public function behaviors(): array
@@ -37,7 +37,11 @@ class FieldController extends Controller
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
-                    ['actions' => ['index'], 'allow' => true, 'roles' => ['@']],
+                    [
+                        'actions' => ['index'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
                     [
                         'allow' => true,
                         'roles' => ['@'],
@@ -54,31 +58,25 @@ class FieldController extends Controller
         if (!isset($this->actionPermissionMap[$actionName])) {
             return false;
         }
-
         if (in_array($actionName, ['view', 'update', 'delete'])) {
             $id = Yii::$app->request->get('id');
             if (!$id) {
                 return false;
             }
-
             try {
                 $model = $this->findModel($id);
             } catch (NotFoundHttpException) {
                 return false;
             }
-
             return Yii::$app->user->can($this->actionPermissionMap[$actionName], ['model' => $model]);
         }
-
         return Yii::$app->user->can($this->actionPermissionMap[$actionName]);
     }
-
 
     public function actionIndex(): string
     {
         $searchModel = new FieldSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams, Yii::$app->user->id);
-
         return $this->render('index', compact('searchModel', 'dataProvider'));
     }
 
@@ -102,29 +100,25 @@ class FieldController extends Controller
     {
         /** @var Field $model */
         $model = $this->findModel($id);
-        return $this->handleCreateOrUpdate($model, $model->fieldOptions);
+       return $this->handleCreateOrUpdate($model, $model->fieldOptions);
     }
 
     private function handleCreateOrUpdate(Field $modelField, array $modelsFieldOption): Response|string
     {
         $postData = Yii::$app->request->post();
-
         if ($modelField->load($postData)) {
             $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
             Model::loadMultiple($modelsFieldOption, $postData);
-
             if ($this->fieldService->saveFieldWithOptions($modelField, $modelsFieldOption)) {
                 return $this->redirect(['view', 'id' => $modelField->id]);
             }
         }
-
         return $this->render($modelField->isNewRecord ? 'create' : 'update', [
             'modelField' => $modelField,
-            'modelsFieldOption' => !empty($modelsFieldOption) ? $modelsFieldOption : [new FieldOption()],
+            'modelsFieldOption' => $modelsFieldOption ?: [new FieldOption()],
             'projects' => $this->projectService->fetchProjectsList(Yii::$app->user->id),
         ]);
     }
-
 
     /**
      * @throws NotFoundHttpException
@@ -133,11 +127,9 @@ class FieldController extends Controller
     {
         /** @var Field $model */
         $model = $this->findModel($id);
-
         if (!Yii::$app->request->post('confirm')) {
             return $this->render('delete-confirm', compact('model'));
         }
-
         return $this->fieldService->deleteField($model)
             ? $this->redirect(['index'])
             : $this->redirectWithError();

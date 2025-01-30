@@ -3,7 +3,6 @@
 use yii\helpers\ArrayHelper;
 
 $main = require __DIR__ . '/main.php';
-$params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
 
 $config = [
@@ -18,8 +17,6 @@ $config = [
             'errorAction' => 'site/error',
         ],
     ],
-
-    'params' => $params,
 ];
 
 if (YII_ENV_DEV) {

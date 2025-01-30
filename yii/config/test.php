@@ -3,7 +3,6 @@
 use yii\helpers\ArrayHelper;
 
 $main = require __DIR__ . '/main.php';
-$params = require __DIR__ . '/params.php';
 
 $config = [
     'id' => 'basic-tests',
@@ -15,8 +14,6 @@ $config = [
             'enableCsrfValidation' => false,
         ],
     ],
-
-    'params' => $params,
 ];
 
 return ArrayHelper::merge($main, $config);

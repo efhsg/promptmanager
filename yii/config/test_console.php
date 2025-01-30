@@ -3,7 +3,6 @@
 use yii\helpers\ArrayHelper;
 
 $main = require __DIR__ . '/main.php';
-$params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/test_db.php';
 
 $config = [
@@ -30,7 +29,6 @@ $config = [
         ],
         'db' => $db,
     ],
-    'params' => $params,
     'container' => [
         'definitions' => [
             app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class

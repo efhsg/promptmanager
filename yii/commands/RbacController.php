@@ -2,71 +2,85 @@
 
 namespace app\commands;
 
-use app\rbac\FieldOwnerRule;
-use Exception;
 use Yii;
+use yii\base\Exception;
 use yii\console\Controller;
+use yii\base\InvalidConfigException;
+use yii\rbac\ManagerInterface;
 
 class RbacController extends Controller
 {
+    private array $rules = [];
+
     /**
-     * Initializes RBAC roles, permissions, and rules.
-     * @throws Exception
+     * @throws InvalidConfigException|Exception
+     * @throws \Exception
      */
     public function actionInit(): void
     {
         $auth = Yii::$app->authManager;
-
-        // Remove all existing data
+        $rbacConfig = Yii::$app->params['rbac'] ?? null;
+        if (!$rbacConfig) {
+            throw new InvalidConfigException('RBAC configuration not found in params.php');
+        }
         $auth->removeAll();
-
-        // Add the rule
-        $rule = new FieldOwnerRule();
-        $auth->add($rule);
-
-        // Create permissions
-        $createField = $auth->createPermission('createField');
-        $createField->description = 'Create a Field';
-        $auth->add($createField);
-
-        $viewField = $auth->createPermission('viewField');
-        $viewField->description = 'View a Field';
-        $auth->add($viewField);
-
-        $updateField = $auth->createPermission('updateField');
-        $updateField->description = 'Update a Field';
-        $auth->add($updateField);
-
-        $deleteField = $auth->createPermission('deleteField');
-        $deleteField->description = 'Delete a Field';
-        $auth->add($deleteField);
-
-        // Assign rules to view, update, and delete permissions
-        $viewField->ruleName = $rule->name;
-        $auth->update('viewField', $viewField);
-
-        $updateField->ruleName = $rule->name;
-        $auth->update('updateField', $updateField);
-
-        $deleteField->ruleName = $rule->name;
-        $auth->update('deleteField', $deleteField);
-
-        // Create roles
-        $userRole = $auth->createRole('user');
-        $auth->add($userRole);
-
-        // Assign permissions to roles
-        $auth->addChild($userRole, $createField);
-        $auth->addChild($userRole, $viewField);
-        $auth->addChild($userRole, $updateField);
-        $auth->addChild($userRole, $deleteField);
-
-        // Optionally, create an admin role with all permissions
-        $adminRole = $auth->createRole('admin');
-        $auth->add($adminRole);
-        $auth->addChild($adminRole, $userRole);
-        // Admins can have additional permissions or inherit all from 'user'
-
+        $this->initializePermissions($auth, $rbacConfig['entities']);
+        $this->initializeRoles($auth, $rbacConfig['roles']);
         echo "RBAC initialization complete.\n";
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private function initializePermissions(ManagerInterface $auth, array $entities): void
+    {
+        foreach ($entities as $entityConfig) {
+            $permissions = $entityConfig['permissions'] ?? [];
+            foreach ($permissions as $permissionName => $permissionData) {
+                $permission = $auth->createPermission($permissionName);
+                $permission->description = $permissionData['description'] ?? $permissionName;
+                if (!empty($permissionData['rule'])) {
+                    $permission->ruleName = $this->getRuleName($permissionData['rule']);
+                }
+                $auth->add($permission);
+            }
+        }
+    }
+
+    /**
+     * @throws Exception
+     * @throws \Exception
+     */
+    private function initializeRoles(ManagerInterface $auth, array $roles): void
+    {
+        foreach ($roles as $roleName => $config) {
+            $role = $auth->createRole($roleName);
+            $auth->add($role);
+        }
+        foreach ($roles as $roleName => $config) {
+            $role = $auth->getRole($roleName);
+            foreach ($config['permissions'] as $permName) {
+                $perm = $auth->getPermission($permName);
+                if ($perm) {
+                    $auth->addChild($role, $perm);
+                }
+            }
+            foreach ($config['children'] as $childRole) {
+                $auth->addChild($role, $auth->getRole($childRole));
+            }
+        }
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private function getRuleName(string $ruleClass): string
+    {
+        if (!isset($this->rules[$ruleClass])) {
+            $rule = new $ruleClass();
+            Yii::$app->authManager->add($rule);
+            $this->rules[$ruleClass] = $rule->name;
+        }
+        return $this->rules[$ruleClass];
     }
 }

@@ -3,7 +3,6 @@
 use yii\helpers\ArrayHelper;
 
 $main = require __DIR__ . '/main.php';
-$params = require __DIR__ . '/params.php';
 
 $config = [
     'id' => 'basic-console',
@@ -19,7 +18,6 @@ $config = [
             app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class
         ],
     ],
-    'params' => $params,
 ];
 
 // Dev environment adjustments
