@@ -5,6 +5,7 @@ namespace app\controllers;
 use app\models\Field;
 use app\models\FieldOption;
 use app\models\FieldSearch;
+use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ProjectService;
 use Yii;
@@ -24,11 +25,11 @@ class FieldController extends Controller
         $module,
         private readonly ProjectService $projectService,
         private readonly FieldService $fieldService,
+        private readonly EntityPermissionService $permissionService,
         $config = []
-    )
-    {
+    ) {
         parent::__construct($id, $module, $config);
-        $this->actionPermissionMap = Yii::$app->params['rbac']['entities']['field']['actionPermissionMap'];
+        $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('field');
     }
 
     public function behaviors(): array
@@ -58,7 +59,7 @@ class FieldController extends Controller
         if (!isset($this->actionPermissionMap[$actionName])) {
             return false;
         }
-        if (in_array($actionName, ['view', 'update', 'delete'])) {
+        if (in_array($actionName, ['view', 'update', 'delete'], true)) {
             $id = Yii::$app->request->get('id');
             if (!$id) {
                 return false;
@@ -68,9 +69,12 @@ class FieldController extends Controller
             } catch (NotFoundHttpException) {
                 return false;
             }
-            return Yii::$app->user->can($this->actionPermissionMap[$actionName], ['model' => $model]);
+            return $this->permissionService->checkPermission(
+                $this->actionPermissionMap[$actionName],
+                $model
+            );
         }
-        return Yii::$app->user->can($this->actionPermissionMap[$actionName]);
+        return $this->permissionService->checkPermission($this->actionPermissionMap[$actionName]);
     }
 
     public function actionIndex(): string
@@ -100,7 +104,7 @@ class FieldController extends Controller
     {
         /** @var Field $model */
         $model = $this->findModel($id);
-       return $this->handleCreateOrUpdate($model, $model->fieldOptions);
+        return $this->handleCreateOrUpdate($model, $model->fieldOptions);
     }
 
     private function handleCreateOrUpdate(Field $modelField, array $modelsFieldOption): Response|string
