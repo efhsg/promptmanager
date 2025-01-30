@@ -17,12 +17,7 @@ use Yii2\Extensions\DynamicForm\Models\Model;
 
 class FieldController extends Controller
 {
-    private array $actionPermissionMap = [
-        'create' => 'createField',
-        'view' => 'viewField',
-        'update' => 'updateField',
-        'delete' => 'deleteField',
-    ];
+    private array $actionPermissionMap;
 
     public function __construct(
         $id,
@@ -33,6 +28,7 @@ class FieldController extends Controller
     )
     {
         parent::__construct($id, $module, $config);
+        $this->actionPermissionMap = Yii::$app->params['actionPermissionMap'];
     }
 
     public function behaviors(): array
@@ -41,11 +37,7 @@ class FieldController extends Controller
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
-                    [
-                        'actions' => ['index'],
-                        'allow' => true,
-                        'roles' => ['@'],
-                    ],
+                    ['actions' => ['index'], 'allow' => true, 'roles' => ['@']],
                     [
                         'allow' => true,
                         'roles' => ['@'],
@@ -57,22 +49,30 @@ class FieldController extends Controller
         ];
     }
 
-    /**
-     * @throws NotFoundHttpException
-     */
     private function hasPermission(string $actionName): bool
     {
         if (!isset($this->actionPermissionMap[$actionName])) {
             return false;
         }
 
-        $permission = $this->actionPermissionMap[$actionName];
-        $model = in_array($actionName, ['view', 'update', 'delete'])
-            ? $this->findModel(Yii::$app->request->get('id'))
-            : null;
+        if (in_array($actionName, ['view', 'update', 'delete'])) {
+            $id = Yii::$app->request->get('id');
+            if (!$id) {
+                return false;
+            }
 
-        return Yii::$app->user->can($permission, $model ? ['model' => $model] : []);
+            try {
+                $model = $this->findModel($id);
+            } catch (NotFoundHttpException) {
+                return false;
+            }
+
+            return Yii::$app->user->can($this->actionPermissionMap[$actionName], ['model' => $model]);
+        }
+
+        return Yii::$app->user->can($this->actionPermissionMap[$actionName]);
     }
+
 
     public function actionIndex(): string
     {
@@ -90,12 +90,9 @@ class FieldController extends Controller
         return $this->render('view', ['model' => $this->findModel($id)]);
     }
 
-    public function actionCreate(): Response|array|string
+    public function actionCreate(): Response|string
     {
-        $modelField = new Field(['user_id' => Yii::$app->user->id]);
-        $modelsFieldOption = [new FieldOption()];
-
-        return $this->handleCreateOrUpdate($modelField, $modelsFieldOption);
+        return $this->handleCreateOrUpdate(new Field(['user_id' => Yii::$app->user->id]), [new FieldOption()]);
     }
 
     /**
@@ -103,18 +100,18 @@ class FieldController extends Controller
      */
     public function actionUpdate(int $id): Response|string
     {
-        /** @var Field $modelField */
-        $modelField = $this->findModel($id);
-        $modelsFieldOption = $modelField->fieldOptions;
-
-        return $this->handleCreateOrUpdate($modelField, $modelsFieldOption);
+        /** @var Field $model */
+        $model = $this->findModel($id);
+        return $this->handleCreateOrUpdate($model, $model->fieldOptions);
     }
 
-    private function handleCreateOrUpdate(Field $modelField, array $modelsFieldOption): Response|array|string
+    private function handleCreateOrUpdate(Field $modelField, array $modelsFieldOption): Response|string
     {
-        if ($modelField->load(Yii::$app->request->post())) {
+        $postData = Yii::$app->request->post();
+
+        if ($modelField->load($postData)) {
             $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
-            Model::loadMultiple($modelsFieldOption, Yii::$app->request->post());
+            Model::loadMultiple($modelsFieldOption, $postData);
 
             if ($this->fieldService->saveFieldWithOptions($modelField, $modelsFieldOption)) {
                 return $this->redirect(['view', 'id' => $modelField->id]);
@@ -123,10 +120,11 @@ class FieldController extends Controller
 
         return $this->render($modelField->isNewRecord ? 'create' : 'update', [
             'modelField' => $modelField,
-            'modelsFieldOption' => empty($modelsFieldOption) ? [new FieldOption()] : $modelsFieldOption,
+            'modelsFieldOption' => !empty($modelsFieldOption) ? $modelsFieldOption : [new FieldOption()],
             'projects' => $this->projectService->fetchProjectsList(Yii::$app->user->id),
         ]);
     }
+
 
     /**
      * @throws NotFoundHttpException
@@ -147,7 +145,7 @@ class FieldController extends Controller
 
     private function redirectWithError(): Response
     {
-        Yii::$app->session->setFlash('error', 'Unable to delete the context. Please try again later.');
+        Yii::$app->session->setFlash('error', 'Unable to delete the field. Please try again later.');
         return $this->redirect(['index']);
     }
 
