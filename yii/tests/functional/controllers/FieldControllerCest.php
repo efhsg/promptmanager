@@ -2,7 +2,6 @@
 
 namespace tests\functional\controllers;
 
-use app\modules\identity\models\User;
 use Codeception\Exception\ModuleException;
 use FunctionalTester;
 use tests\fixtures\AuthAssignmentFixture;
@@ -164,9 +163,6 @@ class FieldControllerCest
         $I->see('Manage Fields');
     }
 
-    /**
-     * @throws ModuleException
-     */
     public function testUnauthorizedUserCannotAccessFieldPages(FunctionalTester $I): void
     {
         $auth = Yii::$app->authManager;
@@ -185,7 +181,6 @@ class FieldControllerCest
             $I->see('Forbidden');
         }
     }
-
 
 
 }
