@@ -1,6 +1,6 @@
 <?php /** @noinspection PhpUnused */
 
-namespace tests\functional\indentity;
+namespace identity\tests\functional;
 
 use app\modules\identity\models\User;
 use Codeception\Exception\ModuleException;

@@ -1,0 +1,48 @@
+actor: Tester
+bootstrap: '../../../tests/_bootstrap.php'
+namespace: 'identity'
+
+paths:
+  tests: .
+  output: '../../../tests/_output'
+  data: '../../../tests/_data'
+  support: '../../../tests/_support'
+
+settings:
+  memory_limit: 1024M
+  colors: true
+
+modules:
+  config:
+    Yii2:
+      configFile: '../../../config/test.php'
+
+params:
+  - env
+
+suites:
+  unit:
+    path: unit
+    actor: IdentityUnitTester
+    modules:
+      enabled:
+        - Asserts
+        - Yii2:
+            part: [orm, email, fixtures]
+
+  functional:
+    path: functional
+    actor: IdentityFunctionalTester
+    modules:
+      enabled:
+        - Filesystem
+        - Yii2
+        - Asserts
+        - Db
+      config:
+        Db:
+          dsn: 'mysql:host=%DB_HOST%;port=3306;dbname=%DB_DATABASE_TEST%'
+          user: '%DB_USER%'
+          password: '%DB_PASSWORD%'
+          charset: 'utf8'
+          cleanup: true

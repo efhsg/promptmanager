@@ -77,6 +77,7 @@
     "autoload-dev": {
         "psr-4": {
             "tests\\": "tests/",
+            "identity\\tests\\": "modules/identity/tests/",
             "common\\": "common/"
         },
         "exclude-from-classmap": [

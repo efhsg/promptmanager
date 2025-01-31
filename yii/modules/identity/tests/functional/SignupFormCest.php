@@ -2,7 +2,7 @@
 
 /** @noinspection PhpUnused */
 
-namespace tests\functional\indentity;
+namespace identity\tests\functional;
 
 use app\modules\identity\models\User;
 use app\modules\identity\services\UserService;

@@ -5,6 +5,8 @@ paths:
     output: tests/_output
     data: tests/_data
     helpers: tests/_support
+include:
+    - modules/identity/tests
 settings:
     memory_limit: 1024M
     colors: true

@@ -1,6 +1,6 @@
 <?php
 
-namespace tests\unit\identity\services;
+namespace identity\tests\unit\services;
 
 use app\modules\identity\exceptions\UserCreationException;
 use app\modules\identity\models\User;
