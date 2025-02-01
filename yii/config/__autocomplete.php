@@ -31,6 +31,7 @@ class Yii
  * @property mixed|object|null $fieldService
  * @property mixed|object|null $projectService
  * @property mixed|object|null $promptTemplateService
+ * @property mixed|object|null $permissionService
  *
  */
 class __Application

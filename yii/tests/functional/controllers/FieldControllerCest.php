@@ -165,8 +165,7 @@ class FieldControllerCest
 
     public function testUnauthorizedUserCannotAccessFieldPages(FunctionalTester $I): void
     {
-        $auth = Yii::$app->authManager;
-        $auth->revokeAll($this->userId);
+        Yii::$app->permissionService->revokeAllUserPermissions($this->userId);
 
         $restrictedRoutes = [
             '/field/view?id=1',

@@ -6,6 +6,7 @@
  */
 
 use app\components\ProjectContext;
+use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ModelService;
 use app\services\ProjectService;
@@ -95,6 +96,9 @@ $config = [
         ],
         'validator' => [
             'class' => 'yii\validators\Validator',
+        ],
+        'permissionService' => [
+            'class' => EntityPermissionService::class,
         ],
         'modelService' => [
             'class' => ModelService::class,
