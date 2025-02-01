@@ -3,14 +3,12 @@
 namespace tests\unit\models;
 
 use app\models\Field;
-use app\models\FieldSearch;
-use app\modules\identity\models\User;
+use app\models\FieldOption;
 use Codeception\Test\Unit;
 use tests\fixtures\FieldFixture;
 use tests\fixtures\FieldOptionFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
-use Yii;
 
 class FieldTest extends Unit
 {
@@ -180,22 +178,44 @@ class FieldTest extends Unit
         verify(array_key_exists('user_id', $field->errors))->true();
     }
 
-//    public function testUserCanOnlyAccessTheirOwnFields()
-//    {
-//        Yii::$app->user->login(User::findOne(1));
-//
-//        $fieldSearch = new FieldSearch();
-//        $dataProvider = $fieldSearch->search([], Yii::$app->user->id);
-//        $fields = $dataProvider->getModels();
-//
-//        foreach ($fields as $field) {
-//            verify($field->user_id)->equals(Yii::$app->user->id);
-//        }
-//
-//        $field = Field::findOne(['id' => 2, 'user_id' => 2]);
-//        verify($field)->empty();
-//    }
+    public function testFieldOptionsAreSavedAndLinked()
+    {
+        $field = new Field();
+        $field->name = 'testFieldWithOptions';
+        $field->type = 'select';
+        $field->user_id = 1;
+        $field->project_id = 1;
+        verify($field->save())->true();
 
+        $option1 = new FieldOption();
+        $option1->field_id = $field->id;
+        $option1->value = 'option1';
+        verify($option1->save())->true();
+
+        $option2 = new FieldOption();
+        $option2->field_id = $field->id;
+        $option2->value = 'option2';
+        verify($option2->save())->true();
+
+        $option3 = new FieldOption();
+        $option3->field_id = $field->id;
+        $option3->value = 'option3';
+        verify($option3->save())->true();
+
+        $retrievedField = Field::findOne($field->id);
+        verify($retrievedField)->notEmpty();
+
+        $options = $retrievedField->fieldOptions;
+        verify(count($options))->equals(3);
+
+        foreach ($options as $option) {
+            verify($option->field_id)->equals($retrievedField->id);
+        }
+
+        verify($options[0]->value)->equals('option1');
+        verify($options[1]->value)->equals('option2');
+        verify($options[2]->value)->equals('option3');
+    }
 
 
 }
