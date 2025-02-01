@@ -37,10 +37,11 @@ class Project extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['name'], 'required'],
+            [['name', 'user_id'], 'required'],
             [['user_id', 'created_at', 'updated_at', 'deleted_at'], 'integer'],
             [['description'], 'string'],
             [['name'], 'string', 'max' => 255],
+            [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
         ];
     }
 

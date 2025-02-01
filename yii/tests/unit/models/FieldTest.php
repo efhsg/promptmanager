@@ -2,13 +2,16 @@
 
 namespace tests\unit\models;
 
+use app\components\ProjectContext;
 use app\models\Field;
 use app\models\FieldOption;
 use Codeception\Test\Unit;
+use common\constants\FieldConstants;
 use tests\fixtures\FieldFixture;
 use tests\fixtures\FieldOptionFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
+use Yii;
 
 class FieldTest extends Unit
 {
@@ -215,6 +218,34 @@ class FieldTest extends Unit
         verify($options[0]->value)->equals('option1');
         verify($options[1]->value)->equals('option2');
         verify($options[2]->value)->equals('option3');
+    }
+
+    public function testProjectIdIsSetFromContextOnInit()
+    {
+        $mockProjectContext = $this->createMock(ProjectContext::class);
+        $mockProjectContext->method('getCurrentProject')->willReturn(['id' => 5]);
+        Yii::$app->set('projectContext', $mockProjectContext);
+
+        $field = new Field();
+        verify($field->project_id)->equals(5);
+    }
+
+    public function testDefaultTypeIsSetOnInit()
+    {
+        $field = new Field();
+        verify($field->type)->equals(FieldConstants::TYPES[0]);
+    }
+
+    public function testLabelIsSetToNullWhenEmptyBeforeSave()
+    {
+        $field = new Field();
+        $field->name = 'testField';
+        $field->type = 'text';
+        $field->user_id = 1;
+        $field->label = '';
+
+        verify($field->save())->true();
+        verify($field->label)->null();
     }
 
 
