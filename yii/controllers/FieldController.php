@@ -54,6 +54,9 @@ class FieldController extends Controller
         ];
     }
 
+    /**
+     * @throws NotFoundHttpException
+     */
     private function hasPermission(string $actionName): bool
     {
         if (!isset($this->actionPermissionMap[$actionName])) {
@@ -64,11 +67,7 @@ class FieldController extends Controller
             if (!$id) {
                 return false;
             }
-            try {
-                $model = $this->findModel($id);
-            } catch (NotFoundHttpException) {
-                return false;
-            }
+            $model = $this->findModel($id);
             return $this->permissionService->checkPermission(
                 $this->actionPermissionMap[$actionName],
                 $model

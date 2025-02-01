@@ -1,16 +1,20 @@
-<?php
+<?php /** @noinspection PhpExpressionResultUnusedInspection */
 
 namespace tests\functional\controllers;
 
 use Codeception\Exception\ModuleException;
 use FunctionalTester;
+use ReflectionClass;
+use ReflectionException;
 use tests\fixtures\AuthAssignmentFixture;
 use tests\fixtures\AuthItemChildFixture;
 use tests\fixtures\AuthItemFixture;
 use tests\fixtures\AuthRuleFixture;
 use tests\fixtures\FieldFixture;
+use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 use Yii;
+use yii\base\InvalidConfigException;
 
 class FieldControllerCest
 {
@@ -28,6 +32,7 @@ class FieldControllerCest
             'auth_item' => AuthItemFixture::class,
             'auth_item_child' => AuthItemChildFixture::class,
             'auth_assignment' => AuthAssignmentFixture::class,
+            'projects' => ProjectFixture::class,
             'fields' => FieldFixture::class,
         ]);
 
@@ -163,6 +168,33 @@ class FieldControllerCest
         $I->see('Manage Fields');
     }
 
+    public function testDeleteActionRequiresPost(FunctionalTester $I): void
+    {
+        // First, perform a GET request to /field/delete to display confirmation.
+        $I->amOnRoute('/field/delete', ['id' => 1]);
+        $I->seeResponseCodeIs(200);
+        $I->see('Are you sure you want to delete');
+
+        // Now simulate a GET request without confirmation, ensuring the field still exists.
+        $I->amOnRoute('/field/delete', ['id' => 1]);
+        $I->seeInDatabase('field', ['id' => 1]);
+    }
+
+    public function testAuthorizedUserCanAccessFieldPages(FunctionalTester $I): void
+    {
+        $restrictedRoutes = [
+            '/field/view?id=1',
+            '/field/create',
+            '/field/update?id=1',
+            '/field/delete?id=1',
+        ];
+
+        foreach ($restrictedRoutes as $route) {
+            $I->amOnRoute($route);
+            $I->seeResponseCodeIs(200);
+        }
+    }
+
     public function testUnauthorizedUserCannotAccessFieldPages(FunctionalTester $I): void
     {
         Yii::$app->permissionService->revokeAllUserPermissions($this->userId);
@@ -181,5 +213,88 @@ class FieldControllerCest
         }
     }
 
+    public function testUserCannotAccessFieldsOfOtherUsers(FunctionalTester $I): void
+    {
+        $otherUserFieldId = 4;
+        $restrictedRoutes = [
+            "/field/view?id=$otherUserFieldId",
+            "/field/update?id=$otherUserFieldId",
+            "/field/delete?id=$otherUserFieldId",
+        ];
+
+        foreach ($restrictedRoutes as $route) {
+            $I->amOnRoute($route);
+            $I->seeResponseCodeIs(403);
+            $I->see('Forbidden');
+        }
+    }
+
+    public function testUnauthenticatedUserIsRedirected(FunctionalTester $I): void
+    {
+        Yii::$app->user->logout();
+
+        $restrictedRoutes = [
+            '/field/view?id=1',
+            '/field/create',
+            '/field/update?id=1',
+            '/field/delete?id=1',
+        ];
+
+        foreach ($restrictedRoutes as $route) {
+            $I->amOnRoute($route);
+            $I->seeInCurrentUrl('/identity/auth/login');
+        }
+    }
+
+    public function testNonExistentFieldAccess(FunctionalTester $I): void
+    {
+        $I->amOnRoute('/field/view', ['id' => 9999]);
+        $I->seeResponseCodeIs(404);
+    }
+
+
+    /**
+     * @throws ReflectionException
+     * @throws InvalidConfigException
+     */
+    public function testHasPermissionReturnsFalseForInvalidAction(FunctionalTester $I): void
+    {
+        $I->amOnRoute('/field/index');
+
+        $controller = Yii::$app->createController('field')[0];
+
+        $I->assertFalse(
+            $this->invokeMethod($controller, 'hasPermission', ['invalidAction']),
+            'hasPermission should return false for an invalid action'
+        );
+    }
+
+    /**
+     * @throws ReflectionException
+     * @throws InvalidConfigException
+     */
+    public function testFindModelReturnsFieldWithProjectRelation(FunctionalTester $I): void
+    {
+        $controller = Yii::$app->createController('field')[0];
+
+        $model = $this->invokeMethod($controller, 'findModel', [2]);
+
+        $I->assertNotNull($model, 'findModel should return a valid model instance');
+        $I->assertEquals(2, $model->id, 'Model ID should match the requested ID');
+        $I->assertNotNull($model->project, 'Model should have a related project');
+        $I->assertEquals('Test Project', $model->project->name, 'Related project name should be correct');
+    }
+
+    /**
+     * @throws ReflectionException
+     */
+    private function invokeMethod(object $object, string $methodName, array $parameters = [])
+    {
+        $reflection = new ReflectionClass($object);
+        $method = $reflection->getMethod($methodName);
+        $method->setAccessible(true);
+
+        return $method->invokeArgs($object, $parameters);
+    }
 
 }
