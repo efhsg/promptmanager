@@ -159,7 +159,7 @@ class ProjectContext extends BaseObject
             ->exists();
     }
 
-    private function getValidatedProject(int $projectId): array|ActiveRecord
+    private function getValidatedProject(int $projectId): array|ActiveRecord|null
     {
         return Project::find()
             ->where(['id' => $projectId, 'user_id' => $this->webUser->id])

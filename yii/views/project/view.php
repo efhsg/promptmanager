@@ -15,7 +15,7 @@ echo $this->render('_breadcrumbs', [
 
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
+        <h1 class="h3 mb-0"></h1>
         <div>
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
