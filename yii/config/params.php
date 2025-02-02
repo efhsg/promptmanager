@@ -37,6 +37,7 @@ return [
                     'view'   => 'viewProject',
                     'update' => 'updateProject',
                     'delete' => 'deleteProject',
+                    'setCurrent' => 'setCurrentProject',
                 ],
                 'permissions' => [
                     'createProject' => [
@@ -55,6 +56,10 @@ return [
                         'description' => 'Delete a Project',
                         'rule'        => 'app\rbac\ProjectOwnerRule',
                     ],
+                    'setCurrentProject' => [
+                        'description' => 'Set Current Project',
+                        'rule'        => null,
+                    ],
                 ],
             ],
         ],
@@ -69,6 +74,7 @@ return [
                     'viewProject',
                     'updateProject',
                     'deleteProject',
+                    'setCurrentProject',
                 ],
                 'children' => [],
             ],

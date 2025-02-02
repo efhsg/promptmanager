@@ -30,10 +30,46 @@ return [
         'data' => null,
     ],
 
+    [
+        'name' => 'createProject',
+        'type' => 2,
+        'description' => 'Create a Project',
+        'rule_name' => null,
+        'data' => null,
+    ],
+    [
+        'name' => 'viewProject',
+        'type' => 2,
+        'description' => 'View a Project',
+        'rule_name' => 'projectOwner',
+        'data' => null,
+    ],
+    [
+        'name' => 'updateProject',
+        'type' => 2,
+        'description' => 'Update a Project',
+        'rule_name' => 'projectOwner',
+        'data' => null,
+    ],
+    [
+        'name' => 'deleteProject',
+        'type' => 2,
+        'description' => 'Delete a Project',
+        'rule_name' => 'projectOwner',
+        'data' => null,
+    ],
+    [
+        'name' => 'setCurrentProject',
+        'type' => 2,
+        'description' => 'Set Current Project',
+        'rule_name' => null,
+        'data' => null,
+    ],
+
     // Roles
     [
         'name' => 'user',
-        'type' => 1, // Role
+        'type' => 1,
         'description' => 'Regular User',
         'rule_name' => null,
         'data' => null,

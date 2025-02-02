@@ -80,17 +80,20 @@ class EntityPermissionService extends Component
      * @param string $entityName
      * @return array
      */
+
     private function buildActionPermissionMap(string $entityName): array
     {
-        $prefix = ucfirst($entityName);
         $map = [];
-        $actions = ['create', 'view', 'update', 'delete'];
-        foreach ($actions as $action) {
-            $permissionName = $action . $prefix;
+
+        $entityConfig = Yii::$app->params['rbac']['entities'][$entityName] ?? [];
+        $actionsConfig = $entityConfig['actionPermissionMap'] ?? [];
+
+        foreach ($actionsConfig as $actionKey => $permissionName) {
             if ($this->permissionExists($permissionName)) {
-                $map[$action] = $permissionName;
+                $map[$this->camelCaseToHyphen($actionKey)] = $permissionName;
             }
         }
+
         return $map;
     }
 
@@ -145,5 +148,16 @@ class EntityPermissionService extends Component
             $auth->revokeAll($userId);
             self::invalidatePermissionCache();
         }
+    }
+
+    /**
+     * Converts a camelCase string to a hyphenated (kebab-case) string.
+     *
+     * @param string $string
+     * @return string
+     */
+    private function camelCaseToHyphen(string $string): string
+    {
+        return strtolower(preg_replace('/([a-z])([A-Z])/', '$1-$2', $string));
     }
 }
