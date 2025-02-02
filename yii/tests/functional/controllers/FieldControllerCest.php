@@ -224,8 +224,8 @@ class FieldControllerCest
 
         foreach ($restrictedRoutes as $route) {
             $I->amOnRoute($route);
-            $I->seeResponseCodeIs(403);
-            $I->see('Forbidden');
+            $I->seeResponseCodeIs(404);
+            $I->see('The requested field does not exist or is not yours');
         }
     }
 

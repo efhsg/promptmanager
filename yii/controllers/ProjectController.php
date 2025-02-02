@@ -8,6 +8,7 @@ use app\models\Project;
 use app\models\ProjectSearch;
 use Throwable;
 use Yii;
+use yii\db\ActiveRecord;
 use yii\db\Exception;
 use yii\db\StaleObjectException;
 use yii\filters\AccessControl;
@@ -110,6 +111,7 @@ class ProjectController extends Controller
      */
     public function actionUpdate(int $id): Response|string
     {
+        /** @var Project $model */
         $model = $this->findModel($id);
 
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
@@ -126,7 +128,7 @@ class ProjectController extends Controller
      */
     public function actionDelete(int $id): Response|string
     {
-
+        /** @var Project $model */
         $model = $this->findModel($id);
 
         if (!Yii::$app->request->post('confirm')) {
@@ -162,19 +164,13 @@ class ProjectController extends Controller
 
 
     /**
-     * Finds the Project model by ID,
-     * ensuring that it belongs to the logged-in user.
-     *
-     * @param int $id
-     * @return Project
      * @throws NotFoundHttpException
      */
-    protected function findModel(int $id): Project
+    protected function findModel(int $id): array|ActiveRecord
     {
-        $model = Project::findOne(['id' => $id, 'user_id' => Yii::$app->user->id]);
-        if (!$model) {
-            throw new NotFoundHttpException('The requested Project does not exist or is not yours.');
-        }
-        return $model;
+        return Project::find()->where([
+            'id' => $id,
+            'user_id' => Yii::$app->user->id,
+        ])->one() ?? throw new NotFoundHttpException('The requested Project does not exist or is not yours.');
     }
 }

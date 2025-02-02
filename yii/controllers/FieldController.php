@@ -149,7 +149,9 @@ class FieldController extends Controller
      */
     protected function findModel(int $id): ActiveRecord
     {
-        return Field::find()->with('project')->where(['id' => $id])->one()
-            ?? throw new NotFoundHttpException('The requested page does not exist.');
+        return Field::find()->with('project')->where([
+            'id' => $id,
+            'user_id' => Yii::$app->user->id,
+        ])->one() ?? throw new NotFoundHttpException('The requested field does not exist or is not yours.');
     }
 }

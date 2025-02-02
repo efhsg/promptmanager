@@ -1,5 +1,4 @@
 <?php /** @noinspection PhpSameParameterValueInspection */
-
 /** @noinspection PhpExpressionResultUnusedInspection */
 
 namespace tests\functional\controllers;
@@ -225,6 +224,77 @@ class ProjectControllerCest
 
         $I->assertNotNull($model, 'findModel should return a valid model instance');
         $I->assertEquals(2, $model->id, 'Model ID should match the requested ID');
+    }
+
+    // --- Additional RBAC / Authorization Tests ---
+
+    public function testAuthorizedUserCanAccessProjectPages(FunctionalTester $I): void
+    {
+        $restrictedRoutes = [
+            '/project/view?id=2',
+            '/project/create',
+            '/project/update?id=2',
+            '/project/delete?id=2',
+            '/project/set-current',
+        ];
+
+        foreach ($restrictedRoutes as $route) {
+            $I->amOnRoute($route);
+            $I->seeResponseCodeIs(200);
+        }
+    }
+
+    public function testUnauthorizedUserCannotAccessProjectPages(FunctionalTester $I): void
+    {
+        Yii::$app->permissionService->revokeAllUserPermissions($this->userId);
+
+        $restrictedRoutes = [
+            '/project/view?id=2',
+            '/project/create',
+            '/project/update?id=2',
+            '/project/delete?id=2',
+            '/project/set-current',
+        ];
+
+        foreach ($restrictedRoutes as $route) {
+            $I->amOnRoute($route);
+            $I->seeResponseCodeIs(403);
+            $I->see('Forbidden');
+        }
+    }
+
+    public function testUserCannotAccessProjectsOfOtherUsersRBAC(FunctionalTester $I): void
+    {
+        // Attempt to access a project not owned by the logged in user (e.g. project id=1).
+        $restrictedRoutes = [
+            '/project/view?id=1',
+            '/project/update?id=1',
+            '/project/delete?id=1',
+        ];
+
+        foreach ($restrictedRoutes as $route) {
+            $I->amOnRoute($route);
+            $I->seeResponseCodeIs(404);
+            $I->see('The requested Project does not exist or is not yours.');
+        }
+    }
+
+    public function testUnauthenticatedUserIsRedirectedForProjectPages(FunctionalTester $I): void
+    {
+        Yii::$app->user->logout();
+
+        $restrictedRoutes = [
+            '/project/view?id=2',
+            '/project/create',
+            '/project/update?id=2',
+            '/project/delete?id=2',
+            '/project/set-current',
+        ];
+
+        foreach ($restrictedRoutes as $route) {
+            $I->amOnRoute($route);
+            $I->seeInCurrentUrl('/identity/auth/login');
+        }
     }
 
     /**
