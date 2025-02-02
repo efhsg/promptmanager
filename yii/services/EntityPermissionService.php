@@ -32,6 +32,32 @@ class EntityPermissionService extends Component
         );
     }
 
+    public function hasActionPermission(
+        string $entityName,
+        string $actionName,
+        ?callable $getModelCallback = null
+    ): bool {
+        $actionPermissionMap = $this->getActionPermissionMap($entityName);
+        if (!isset($actionPermissionMap[$actionName])) {
+            return false;
+        }
+        $permissionName = $actionPermissionMap[$actionName];
+
+        // For actions that require a model, retrieve it via the callback.
+        if (in_array($actionName, ['view', 'update', 'delete'], true)) {
+            if ($getModelCallback === null) {
+                return false;
+            }
+            $model = call_user_func($getModelCallback);
+            if (!$model instanceof ActiveRecord) {
+                return false;
+            }
+            return $this->checkPermission($permissionName, $model);
+        }
+
+        return $this->checkPermission($permissionName);
+    }
+
     /**
      * Checks the permission for the current user.
      * If a model is provided, it uses its primary key (or object hash as fallback)

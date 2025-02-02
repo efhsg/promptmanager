@@ -257,15 +257,17 @@ class FieldControllerCest
      * @throws ReflectionException
      * @throws InvalidConfigException
      */
-    public function testHasPermissionReturnsFalseForInvalidAction(FunctionalTester $I): void
+    public function testHasActionPermissionReturnsFalseForInvalidAction(FunctionalTester $I): void
     {
         $I->amOnRoute('/field/index');
 
-        $controller = Yii::$app->createController('field')[0];
+        $permissionService = Yii::$app->get('permissionService');
+
+        $result = $permissionService->hasActionPermission('field', 'invalidAction');
 
         $I->assertFalse(
-            $this->invokeMethod($controller, 'hasPermission', ['invalidAction']),
-            'hasPermission should return false for an invalid action'
+            $result,
+            'hasActionPermission should return false for an invalid action'
         );
     }
 

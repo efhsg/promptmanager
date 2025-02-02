@@ -56,42 +56,15 @@ class ProjectController extends Controller
                         'roles' => ['@'],
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
-                            return $this->hasPermission($action->id);
+                            $callback = in_array($action->id, ['view', 'update', 'delete'], true)
+                                ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
+                                : null;
+                            return $this->permissionService->hasActionPermission('project', $action->id, $callback);
                         },
                     ],
                 ],
             ],
         ];
-    }
-
-    /**
-     * Checks permission for a given action.
-     *
-     * For actions that need a model (like view, update, delete), it retrieves the model and passes it to the permission check.
-     *
-     * @param string $actionName
-     * @return bool
-     * @throws NotFoundHttpException
-     */
-    private function hasPermission(string $actionName): bool
-    {
-        if (!isset($this->actionPermissionMap[$actionName])) {
-            return false;
-        }
-        // For actions that work with an existing model, retrieve it using the 'id' parameter.
-        if (in_array($actionName, ['view', 'update', 'delete'], true)) {
-            $id = Yii::$app->request->get('id');
-            if (!$id) {
-                return false;
-            }
-            $model = $this->findModel($id);
-            return $this->permissionService->checkPermission(
-                $this->actionPermissionMap[$actionName],
-                $model
-            );
-        }
-        // For actions like 'create' or 'set-current' that do not require a model instance.
-        return $this->permissionService->checkPermission($this->actionPermissionMap[$actionName]);
     }
 
     /**

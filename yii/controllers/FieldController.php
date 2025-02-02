@@ -47,33 +47,16 @@ class FieldController extends Controller
                         'allow' => true,
                         'roles' => ['@'],
                         'actions' => array_keys($this->actionPermissionMap),
-                        'matchCallback' => fn($rule, $action) => $this->hasPermission($action->id),
+                        'matchCallback' => function ($rule, $action) {
+                            $callback = in_array($action->id, ['view', 'update', 'delete'], true)
+                                ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
+                                : null;
+                            return $this->permissionService->hasActionPermission('field', $action->id, $callback);
+                        },
                     ],
                 ],
             ],
         ];
-    }
-
-    /**
-     * @throws NotFoundHttpException
-     */
-    private function hasPermission(string $actionName): bool
-    {
-        if (!isset($this->actionPermissionMap[$actionName])) {
-            return false;
-        }
-        if (in_array($actionName, ['view', 'update', 'delete'], true)) {
-            $id = Yii::$app->request->get('id');
-            if (!$id) {
-                return false;
-            }
-            $model = $this->findModel($id);
-            return $this->permissionService->checkPermission(
-                $this->actionPermissionMap[$actionName],
-                $model
-            );
-        }
-        return $this->permissionService->checkPermission($this->actionPermissionMap[$actionName]);
     }
 
     public function actionIndex(): string
