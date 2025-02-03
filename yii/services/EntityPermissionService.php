@@ -14,6 +14,8 @@ class EntityPermissionService extends Component
     private const CACHE_TAG = 'user_permissions';
     private const RBAC_VERSION_KEY = 'rbac_version';
 
+    private const MODEL_BASED_ACTIONS = ['view', 'update', 'delete'];
+
     /**
      * Returns the permission mapping for the given entity.
      * The map is cached with a tag dependency.
@@ -32,6 +34,11 @@ class EntityPermissionService extends Component
         );
     }
 
+    public function isModelBasedAction(string $actionName): bool
+    {
+        return in_array($actionName, self::MODEL_BASED_ACTIONS, true);
+    }
+
     public function hasActionPermission(
         string $entityName,
         string $actionName,
@@ -43,8 +50,7 @@ class EntityPermissionService extends Component
         }
         $permissionName = $actionPermissionMap[$actionName];
 
-        // For actions that require a model, retrieve it via the callback.
-        if (in_array($actionName, ['view', 'update', 'delete'], true)) {
+        if ($this->isModelBasedAction($actionName)) {
             if ($getModelCallback === null) {
                 return false;
             }
@@ -57,6 +63,7 @@ class EntityPermissionService extends Component
 
         return $this->checkPermission($permissionName);
     }
+
 
     /**
      * Checks the permission for the current user.

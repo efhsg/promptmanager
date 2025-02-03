@@ -48,7 +48,7 @@ class FieldController extends Controller
                         'roles' => ['@'],
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
-                            $callback = in_array($action->id, ['view', 'update', 'delete'], true)
+                            $callback = $this->permissionService->isModelBasedAction($action->id)
                                 ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
                                 : null;
                             return $this->permissionService->hasActionPermission('field', $action->id, $callback);
