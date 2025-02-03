@@ -5,6 +5,7 @@
 namespace app\models;
 
 use app\models\traits\TimestampTrait;
+use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -103,6 +104,19 @@ class PromptTemplate extends ActiveRecord
     public function getPromptInstances(): ActiveQuery
     {
         return $this->hasMany(PromptInstance::class, ['template_id' => 'id']);
+    }
+
+    public function init(): void
+    {
+        parent::init();
+
+        if ($this->isNewRecord) {
+            if ($this->project_id === null) {
+                $projectContext = Yii::$app->projectContext;
+                $currentProject = $projectContext->getCurrentProject();
+                $this->project_id = $currentProject ? $currentProject['id'] : null;
+            }
+        }
     }
 
     public function beforeSave($insert): bool
