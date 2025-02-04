@@ -10,6 +10,10 @@ return [
     ['parent' => 'user', 'child' => 'updateProject'],
     ['parent' => 'user', 'child' => 'deleteProject'],
     ['parent' => 'user', 'child' => 'setCurrentProject'],
+    ['parent' => 'user', 'child' => 'createContext'],
+    ['parent' => 'user', 'child' => 'viewContext'],
+    ['parent' => 'user', 'child' => 'updateContext'],
+    ['parent' => 'user', 'child' => 'deleteContext'],
 
     ['parent' => 'admin', 'child' => 'user'],
 ];

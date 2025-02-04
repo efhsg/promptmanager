@@ -13,5 +13,11 @@ return [
         'created_at' => time(),
         'updated_at' => time(),
     ],
+    [
+        'name' => 'contextOwner',
+        'data' => 'O:25:"app\rbac\ContextOwnerRule":3:{s:4:"name";s:14:"isContextOwner";s:9:"createdAt";i:1738626947;s:9:"updatedAt";i:1738626947;}',
+        'created_at' => time(),
+        'updated_at' => time(),
+    ],
 ];
 

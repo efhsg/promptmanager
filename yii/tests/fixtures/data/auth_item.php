@@ -66,6 +66,36 @@ return [
         'data' => null,
     ],
 
+    [
+        'name' => 'createContext',
+        'type' => 2,
+        'description' => 'Create a Context',
+        'rule_name' => null,
+        'data' => null,
+    ],
+    [
+        'name' => 'viewContext',
+        'type' => 2,
+        'description' => 'View a Context',
+        'rule_name' => 'contextOwner',
+        'data' => null,
+    ],
+    [
+        'name' => 'updateContext',
+        'type' => 2,
+        'description' => 'Update a Context',
+        'rule_name' => 'contextOwner',
+        'data' => null,
+    ],
+    [
+        'name' => 'deleteContext',
+        'type' => 2,
+        'description' => 'Delete a Context',
+        'rule_name' => 'contextOwner',
+        'data' => null,
+    ],
+
+
     // Roles
     [
         'name' => 'user',

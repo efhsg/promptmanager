@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnusedPrivateMethodInspection */
 
 namespace app\commands;
 
@@ -6,6 +6,7 @@ use Yii;
 use yii\base\Exception;
 use yii\console\Controller;
 use yii\base\InvalidConfigException;
+use yii\db\Query;
 use yii\rbac\ManagerInterface;
 
 class RbacController extends Controller
@@ -26,6 +27,7 @@ class RbacController extends Controller
         $auth->removeAll();
         $this->initializePermissions($auth, $rbacConfig['entities']);
         $this->initializeRoles($auth, $rbacConfig['roles']);
+        $this->assignUserRoleToAllUsers($auth);
         echo "RBAC initialization complete.\n";
     }
 
@@ -82,5 +84,36 @@ class RbacController extends Controller
             $this->rules[$ruleClass] = $rule->name;
         }
         return $this->rules[$ruleClass];
+    }
+
+    /**
+     * @throws \Exception
+     */
+    private function assignUserRoleToAllUsers(ManagerInterface $auth): void
+    {
+        $userRole = $auth->getRole('user');
+        if (!$userRole) {
+            return;
+        }
+
+        if (!$userRole) {
+            echo "Warning: 'user' role not found. Skipping user role assignment.\n";
+            return;
+        }
+
+        $userIds = (new Query())
+            ->select('id')
+            ->from('{{%user}}')
+            ->column();
+
+        foreach ($userIds as $userId) {
+            // Check if the user doesn't already have the role
+            $existingRoles = $auth->getRolesByUser($userId);
+            if (!isset($existingRoles['user'])) {
+                $auth->assign($userRole, $userId);
+            }
+        }
+
+        echo "Assigned 'user' role to " . count($userIds) . " users.\n";
     }
 }
