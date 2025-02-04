@@ -1,5 +1,4 @@
 <?php
-
 return [
     [
         'name' => 'createField',
@@ -95,6 +94,34 @@ return [
         'data' => null,
     ],
 
+    [
+        'name' => 'createPromptTemplate',
+        'type' => 2,
+        'description' => 'Create a Prompt Template',
+        'rule_name' => null,
+        'data' => null,
+    ],
+    [
+        'name' => 'viewPromptTemplate',
+        'type' => 2,
+        'description' => 'View a Prompt Template',
+        'rule_name' => 'promptTemplateOwner',
+        'data' => null,
+    ],
+    [
+        'name' => 'updatePromptTemplate',
+        'type' => 2,
+        'description' => 'Update a Prompt Template',
+        'rule_name' => 'promptTemplateOwner',
+        'data' => null,
+    ],
+    [
+        'name' => 'deletePromptTemplate',
+        'type' => 2,
+        'description' => 'Delete a Prompt Template',
+        'rule_name' => 'promptTemplateOwner',
+        'data' => null,
+    ],
 
     // Roles
     [

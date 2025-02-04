@@ -88,6 +88,32 @@ return [
                     ],
                 ],
             ],
+            'promptTemplate' => [
+                'actionPermissionMap' => [
+                    'create' => 'createPromptTemplate',
+                    'view' => 'viewPromptTemplate',
+                    'update' => 'updatePromptTemplate',
+                    'delete' => 'deletePromptTemplate',
+                ],
+                'permissions' => [
+                    'createPromptTemplate' => [
+                        'description' => 'Create a Prompt Template',
+                        'rule' => null,
+                    ],
+                    'viewPromptTemplate' => [
+                        'description' => 'View a Prompt Template',
+                        'rule' => 'app\rbac\PromptTemplateOwnerRule',
+                    ],
+                    'updatePromptTemplate' => [
+                        'description' => 'Update a Prompt Template',
+                        'rule' => 'app\rbac\PromptTemplateOwnerRule',
+                    ],
+                    'deletePromptTemplate' => [
+                        'description' => 'Delete a Prompt Template',
+                        'rule' => 'app\rbac\PromptTemplateOwnerRule',
+                    ],
+                ],
+            ],
         ],
         'roles' => [
             'user' => [
@@ -105,6 +131,10 @@ return [
                     'viewContext',
                     'updateContext',
                     'deleteContext',
+                    'createPromptTemplate',
+                    'viewPromptTemplate',
+                    'updatePromptTemplate',
+                    'deletePromptTemplate',
                 ],
                 'children' => [],
             ],
