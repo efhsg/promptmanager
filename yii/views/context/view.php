@@ -1,9 +1,9 @@
-<?php /** @noinspection DuplicatedCode */
-
+<?php /** @noinspection JSDeprecatedSymbols */
 /** @noinspection PhpUnhandledExceptionInspection */
 
 use yii\helpers\Html;
 use yii\widgets\DetailView;
+use app\widgets\CopyToClipboardWidget;
 
 /** @var yii\web\View $this */
 /** @var app\models\Context $model */
@@ -11,7 +11,7 @@ use yii\widgets\DetailView;
 $this->title = 'View ' . $model->name;
 echo $this->render('_breadcrumbs', [
     'model' => null,
-    'actionLabel' => $this->title ,
+    'actionLabel' => $this->title,
 ]);
 ?>
 
@@ -46,14 +46,27 @@ echo $this->render('_breadcrumbs', [
                     'name',
                     [
                         'attribute' => 'content',
-                        'format' => 'raw', // Enables raw HTML rendering
+                        'format' => 'raw',
                         'value' => function ($model) {
-                            return Html::textarea('content', $model->content, [
+                            $textareaId = 'context-content';
+                            $textarea = Html::textarea('content', $model->content, [
+                                'id' => $textareaId,
                                 'class' => 'form-control',
                                 'rows' => 10,
                                 'readonly' => true,
                                 'style' => 'resize: none;',
                             ]);
+                            $copyButton = CopyToClipboardWidget::widget([
+                                'targetSelector' => '#' . $textareaId,
+                                'buttonOptions' => [
+                                    'class' => 'btn btn-sm position-absolute',
+                                    'style' => 'bottom: 10px; right: 20px;',
+                                    'title' => 'Copy to clipboard',
+                                    'aria-label' => 'Copy content to clipboard',
+                                ],
+                                'label' => '<i class="bi bi-clipboard"></i>',
+                            ]);
+                            return '<div class="position-relative">' . $textarea . $copyButton . '</div>';
                         },
                     ],
                     [
@@ -67,6 +80,5 @@ echo $this->render('_breadcrumbs', [
                 ],
             ]) ?>
         </div>
-
     </div>
 </div>
