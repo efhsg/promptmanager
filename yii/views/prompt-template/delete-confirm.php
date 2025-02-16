@@ -1,5 +1,6 @@
-<?php
+<?php /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\widgets\ContentViewerWidget;
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
@@ -20,20 +21,21 @@ echo $this->render('_breadcrumbs', [
         <div class="card-body">
             <div class="template-description mb-3">
                 <strong>Description:</strong>
-                <?= Html::textarea('content-preview', $model->description, [
-                    'class' => 'form-control',
-                    'rows' => 10,
-                    'readonly' => true,
-                    'style' => 'resize: none;',
+                <?= ContentViewerWidget::widget([
+                    'content'    => $model->description,
+                    'enableCopy' => false,
+                ]) ?>
+
+                <strong>Content:</strong>
+                <?= ContentViewerWidget::widget([
+                    'content'    => $model->template_body,
+                    'enableCopy' => false,
                 ]) ?>
             </div>
         </div>
 
         <div class="card-footer d-flex justify-content-end">
-            <!-- Cancel Button -->
             <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], ['class' => 'btn btn-secondary me-2']) ?>
-
-            <!-- Delete Form (inline) -->
             <?= Html::beginForm(['delete', 'id' => $model->id], 'post', [
                 'class' => 'd-inline',
                 'id' => 'delete-confirmation-form'

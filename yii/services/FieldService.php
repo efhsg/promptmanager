@@ -33,16 +33,28 @@ class FieldService
 
     private function mapFields(array $fields): array
     {
-        return array_reduce($fields, function (array $fieldsMap, Field $field) {
-            $prefix = $field->project_id ? 'PRJ:' : 'GEN:';
-            $placeholder = $prefix . '{{' . $field->name . '}}';
-            $label = $field->label ?: $field->name;
-            $fieldsMap[$placeholder] = [
-                'label' => $label,
-                'isProjectSpecific' => $field->project_id !== null,
-            ];
-            return $fieldsMap;
-        }, []);
+        $mappedFields = [];
+
+        foreach ($fields as $field) {
+            $mappedFields[$this->createPlaceholder($field)] = $this->createFieldData($field);
+        }
+
+        return $mappedFields;
+    }
+
+    private function createPlaceholder(Field $field): string
+    {
+        $prefixType = $field->project_id ? 'PRJ:' : 'GEN:';
+        return sprintf('%s{{%s}}', $prefixType, $field->name);
+    }
+
+    private function createFieldData(Field $field): array
+    {
+        return [
+            'id' => $field->id,
+            'label' => $field->label ?: $field->name,
+            'isProjectSpecific' => $field->project_id !== null,
+        ];
     }
 
     public function saveFieldWithOptions(Field $field, array $options): bool

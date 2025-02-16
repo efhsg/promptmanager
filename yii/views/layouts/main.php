@@ -4,10 +4,8 @@
 
 /** @var string $content */
 
-use app\models\Project;
 use app\widgets\Alert;
 use yii\bootstrap5\{Breadcrumbs, Html, Nav, NavBar};
-use yii\helpers\ArrayHelper;
 
 $this->beginContent('@app/views/layouts/_base.php'); ?>
 
@@ -21,7 +19,7 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
 
         echo '<div class="d-flex align-items-center">';
 
-         echo Nav::widget([
+        echo Nav::widget([
             'options' => ['class' => 'navbar-nav me-auto ms-1'],
             'activateParents' => true,
             'activateItems' => true,
@@ -51,7 +49,11 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                 ],
                 [
                     'label' => 'Generate',
-                    'url' => ['/generate/generate'],
+                    'url' => ['/prompt-instance/create'],
+                ],
+                [
+                    'label' => 'History',
+                    'url' => ['/prompt-instance/index'],
                 ],
             ],
         ]);

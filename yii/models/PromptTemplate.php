@@ -1,11 +1,9 @@
-<?php /** @noinspection RequiredAttributes */
-
-/** @noinspection HtmlRequiredAltAttribute */
-
+<?php
 namespace app\models;
 
 use app\models\traits\TimestampTrait;
 use Yii;
+use yii\base\InvalidConfigException;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -22,10 +20,10 @@ use yii\db\ActiveRecord;
  *
  * @property Project $project
  * @property PromptInstance[] $promptInstances
+ * @property Field[] $fields   <-- New virtual attribute for related fields
  */
 class PromptTemplate extends ActiveRecord
 {
-
     use TimestampTrait;
 
     /**
@@ -106,6 +104,20 @@ class PromptTemplate extends ActiveRecord
         return $this->hasMany(PromptInstance::class, ['template_id' => 'id']);
     }
 
+    /**
+     * Gets query for the [[Field]] models related via the pivot table.
+     *
+     * This virtual attribute will return all the fields associated with this prompt template.
+     *
+     * @return ActiveQuery
+     * @throws InvalidConfigException
+     */
+    public function getFields(): ActiveQuery
+    {
+        return $this->hasMany(Field::class, ['id' => 'field_id'])
+            ->viaTable('{{%template_field}}', ['template_id' => 'id']);
+    }
+
     public function init(): void
     {
         parent::init();
@@ -129,6 +141,4 @@ class PromptTemplate extends ActiveRecord
 
         return true;
     }
-
-
 }

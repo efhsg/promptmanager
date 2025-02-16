@@ -1,30 +1,28 @@
-<?php /** @noinspection JSDeprecatedSymbols */
+<?php
 /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\widgets\ContentViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
-use app\widgets\CopyToClipboardWidget;
 
 /** @var yii\web\View $this */
 /** @var app\models\Context $model */
 
-$this->title = 'View ' . $model->name;
+$this->title = 'View - ' . $model->name;
 echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => $this->title,
 ]);
+
 ?>
 
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
-        <div>
-            <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
-            <?= Html::a('Delete', ['delete', 'id' => $model->id], [
-                'class' => 'btn btn-danger me-2',
-                'data' => ['method' => 'post'],
-            ]) ?>
-        </div>
+    <div class="d-flex justify-content-end align-items-center mb-4">
+        <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
+        <?= Html::a('Delete', ['delete', 'id' => $model->id], [
+            'class' => 'btn btn-danger me-2',
+            'data' => ['method' => 'post'],
+        ]) ?>
     </div>
 
     <div class="card mb-4">
@@ -48,25 +46,15 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'content',
                         'format' => 'raw',
                         'value' => function ($model) {
-                            $textareaId = 'context-content';
-                            $textarea = Html::textarea('content', $model->content, [
-                                'id' => $textareaId,
-                                'class' => 'form-control',
-                                'rows' => 10,
-                                'readonly' => true,
-                                'style' => 'resize: none;',
-                            ]);
-                            $copyButton = CopyToClipboardWidget::widget([
-                                'targetSelector' => '#' . $textareaId,
-                                'buttonOptions' => [
+                            return ContentViewerWidget::widget([
+                                'content' => $model->content,
+                                'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',
                                     'style' => 'bottom: 10px; right: 20px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy content to clipboard',
                                 ],
-                                'label' => '<i class="bi bi-clipboard"></i>',
                             ]);
-                            return '<div class="position-relative">' . $textarea . $copyButton . '</div>';
                         },
                     ],
                     [
@@ -79,6 +67,8 @@ echo $this->render('_breadcrumbs', [
                     ],
                 ],
             ]) ?>
+
+
         </div>
     </div>
 </div>

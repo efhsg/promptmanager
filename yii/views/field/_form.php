@@ -1,6 +1,9 @@
-<?php
+<?php /** @noinspection BadExpressionStatementJS */
+
+/** @noinspection JSUnresolvedReference */
 
 use common\constants\FieldConstants;
+use app\assets\QuillAsset;
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 
@@ -10,6 +13,7 @@ use yii\widgets\ActiveForm;
 /** @var array $projects */
 /** @var yii\widgets\ActiveForm $form */
 
+QuillAsset::register($this);
 ?>
 
 <?php if ($modelField->hasErrors()): ?>
@@ -25,7 +29,7 @@ use yii\widgets\ActiveForm;
     </div>
 <?php endif; ?>
 
-<div class="field-form">
+<div class="field-form focus-on-first-field">
     <?php $form = ActiveForm::begin(['id' => 'field-form']); ?>
 
     <?= $form->field($modelField, 'project_id')->dropDownList(
@@ -48,17 +52,26 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($modelField, 'label')->textInput(['maxlength' => true])->label('Label (Optional)') ?>
 
+    <!-- Field Content using Quill editor (visible only when type === "text") -->
     <div id="field-content-wrapper" style="display: none;">
-        <?= $form->field($modelField, 'content')->textarea(['rows' => 10])->label('Content') ?>
+        <!-- Hidden input for the content value -->
+        <?= $form->field($modelField, 'content')->hiddenInput(['id' => 'field-content'])->label(false) ?>
+        <!-- Quill Editor Container -->
+        <div class="resizable-editor-container mb-3">
+            <div id="editor" class="resizable-editor">
+                <?= $modelField->content ?>
+            </div>
+        </div>
     </div>
 
+    <!-- Field Options (shown only for select/multi-select) -->
     <div id="field-options-wrapper" style="display: none;">
         <?php
         echo $this->render('_fieldOptionsForm', [
-            'form' => $form,
-            'modelField' => $modelField,
+            'form'              => $form,
+            'modelField'        => $modelField,
             'modelsFieldOption' => $modelsFieldOption,
-        ]);;
+        ]);
         ?>
     </div>
 
@@ -76,13 +89,14 @@ use yii\widgets\ActiveForm;
         const optionsWrapper = document.getElementById('field-options-wrapper');
         const optionInputs   = optionsWrapper.querySelectorAll('input, textarea, select');
 
-        // Show/hide the "Content" field
+        // Show/hide the "Content" field (Quill editor)
         if (value === 'text') {
             contentWrapper.style.display = 'block';
-            contentWrapper.querySelector('textarea').disabled = false;
+            // Enable the hidden input for content
+            document.querySelector('#field-content').disabled = false;
         } else {
             contentWrapper.style.display = 'none';
-            contentWrapper.querySelector('textarea').disabled = true;
+            document.querySelector('#field-content').disabled = true;
         }
 
         // Show/hide the "Options" form
@@ -98,3 +112,41 @@ use yii\widgets\ActiveForm;
     }
     toggleFieldOptions('<?= $modelField->type ?>');
 </script>
+
+<?php
+$templateContent = json_encode($modelField->content);
+$script = <<<JS
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    modules: {
+        toolbar: [
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'indent': '-1' }, { 'indent': '+1' }],
+            [{ 'direction': 'rtl' }],
+            [{ 'size': ['small', false, 'large', 'huge'] }],
+            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'font': [] }],
+            [{ 'align': [] }],
+            ['link', 'image'],
+            ['clean']
+        ]
+    }
+});
+
+try {
+    quill.clipboard.dangerouslyPasteHTML($templateContent)
+} catch (error) {
+    console.error('Error injecting content:', error);
+}
+
+quill.on('text-change', function() {
+    document.querySelector('#field-content').value = quill.root.innerHTML;
+});
+JS;
+$this->registerJs($script);
+?>
+
+

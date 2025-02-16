@@ -19,9 +19,6 @@ use yii\web\Response;
 
 class PromptTemplateController extends Controller
 {
-    /**
-     * @var array
-     */
     private array $actionPermissionMap;
 
     public function __construct(
@@ -36,7 +33,6 @@ class PromptTemplateController extends Controller
     )
     {
         parent::__construct($id, $module, $config);
-        // Retrieve the permission map for the "promptTemplate" entity
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('promptTemplate');
     }
 
@@ -46,13 +42,11 @@ class PromptTemplateController extends Controller
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
-                    // Allow direct access to index
                     [
                         'actions' => ['index'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
-                    // For all other actions, use RBAC checks based on the permission map
                     [
                         'allow' => true,
                         'roles' => ['@'],
@@ -77,21 +71,26 @@ class PromptTemplateController extends Controller
     }
 
     /**
-     * Displays a single PromptTemplate model.
+     * Converts the stored template back to the user-friendly markup before display.
      *
-     * @param int $id
-     * @return string
-     * @throws NotFoundHttpException if the model cannot be found or is not owned by the current user.
+     * @throws NotFoundHttpException
      */
     public function actionView(int $id): string
     {
-        return $this->render('view', ['model' => $this->findModel($id)]);
+        /** @var PromptTemplate $model */
+        $model = $this->findModel($id);
+        $userId = Yii::$app->user->id;
+        $generalFieldsMap = $this->fieldService->fetchFieldsMap($userId, null);
+        $projectFieldsMap = $this->fieldService->fetchFieldsMap($userId, $model->project_id ?: null);
+        $fieldsMapping = array_merge($generalFieldsMap, $projectFieldsMap);
+        $model->template_body = $this->promptTemplateService->convertPlaceholdersToLabels(
+            $model->template_body,
+            $fieldsMapping
+        );
+        return $this->render('view', ['model' => $model]);
     }
 
     /**
-     * Creates a new PromptTemplate model.
-     *
-     * @return Response|string
      * @throws Exception
      */
     public function actionCreate(): Response|string
@@ -100,12 +99,7 @@ class PromptTemplateController extends Controller
     }
 
     /**
-     * Updates an existing PromptTemplate model.
-     *
-     * @param int $id
-     * @return Response|string
-     * @throws NotFoundHttpException
-     * @throws Exception
+     * @throws NotFoundHttpException|Exception
      */
     public function actionUpdate(int $id): Response|string
     {
@@ -115,34 +109,45 @@ class PromptTemplateController extends Controller
     }
 
     /**
-     * Handles the common form logic for create and update actions.
+     * Renders the create/update form.
+     * For update requests (non-POST), converts the stored template back to its original markup.
      *
-     * @param PromptTemplate $model
-     * @return Response|string
      * @throws Exception
      */
     private function handleForm(PromptTemplate $model): Response|string
     {
-        if ($this->promptTemplateService->saveModel($model, Yii::$app->request->post())) {
+        $userId = Yii::$app->user->id;
+        $generalFieldsMap = $this->fieldService->fetchFieldsMap($userId, null);
+        $projectFieldsMap = $this->fieldService->fetchFieldsMap($userId, $model->project_id ?: null);
+        $fieldsMapping = array_merge($generalFieldsMap, $projectFieldsMap);
+        $view = $model->isNewRecord ? 'create' : 'update';
+        if (!Yii::$app->request->isPost) {
+            if (!$model->isNewRecord) {
+                $model->template_body = $this->promptTemplateService->convertPlaceholdersToLabels(
+                    $model->template_body,
+                    $fieldsMapping
+                );
+            }
+            return $this->render($view, [
+                'model' => $model,
+                'projects' => $this->projectService->fetchProjectsList($userId),
+                'generalFieldsMap' => $generalFieldsMap,
+                'projectFieldsMap' => $projectFieldsMap,
+            ]);
+        }
+        $postData = Yii::$app->request->post();
+        if ($this->promptTemplateService->saveTemplateWithFields($model, $postData, $fieldsMapping)) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
-
-        $userId = Yii::$app->user->id;
-        $view   = $model->isNewRecord ? 'create' : 'update';
-
         return $this->render($view, [
-            'model'            => $model,
-            'projects'         => $this->projectService->fetchProjectsList($userId),
-            'generalFieldsMap' => $this->fieldService->fetchFieldsMap($userId, null),
-            'projectFieldsMap' => $this->fieldService->fetchFieldsMap($userId, $model->project_id ?: null),
+            'model' => $model,
+            'projects' => $this->projectService->fetchProjectsList($userId),
+            'generalFieldsMap' => $generalFieldsMap,
+            'projectFieldsMap' => $projectFieldsMap,
         ]);
     }
 
     /**
-     * Deletes an existing PromptTemplate model.
-     *
-     * @param int $id
-     * @return Response|string
      * @throws NotFoundHttpException
      */
     public function actionDelete(int $id): Response|string

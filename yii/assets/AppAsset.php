@@ -12,7 +12,9 @@ class AppAsset extends AssetBundle
         'css/spacelab.min.css',
         'css/site.css',
     ];
-    public $js = [];
+    public $js       = [
+        'js/form.js',
+    ];
     public $depends = [
         'yii\web\YiiAsset',
         'yii\bootstrap5\BootstrapAsset',

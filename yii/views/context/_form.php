@@ -1,5 +1,8 @@
-<?php
+<?php /** @noinspection BadExpressionStatementJS */
 
+/** @noinspection JSUnresolvedReference */
+
+use app\assets\QuillAsset;
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 
@@ -8,26 +11,71 @@ use yii\widgets\ActiveForm;
 /** @var yii\widgets\ActiveForm $form */
 /** @var array $projects */
 
+QuillAsset::register($this);
 ?>
 
-<div class="context-form">
+    <div class="context-form focus-on-first-field">
+        <?php $form = ActiveForm::begin([
+            'id' => 'context-form',
+            'enableClientValidation' => true,
+        ]); ?>
 
-    <?php $form = ActiveForm::begin(['id' => 'context-form']); ?>
+        <?= $form->field($model, 'project_id')->dropDownList(
+            $projects,
+            ['prompt' => 'Select a Project']
+        )->label('Project') ?>
 
-    <?= $form->field($model, 'project_id')->dropDownList(
-        $projects,
-        ['prompt' => 'Select a Project'])->label('Project')
-    ?>
+        <?= $form->field($model, 'name')->textInput(['maxlength' => true])->label('Context Name') ?>
 
-    <?= $form->field($model, 'name')->textInput(['maxlength' => true])->label('Context Name') ?>
+        <?= $form->field($model, 'content')->hiddenInput(['id' => 'context-content'])->label(false) ?>
 
-    <?= $form->field($model, 'content')->textarea(['rows' => 10])->label('Content') ?>
+        <div class="resizable-editor-container mb-3">
+            <div id="editor" class="resizable-editor">
+                <?= $model->content ?>
+            </div>
+        </div>
 
-    <div class="form-group mt-4 text-end">
-        <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
-        <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
+        <div class="form-group mt-4 text-end">
+            <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
+            <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
+        </div>
+
+        <?php ActiveForm::end(); ?>
     </div>
 
-    <?php ActiveForm::end(); ?>
+<?php
+$templateBody = json_encode($model->content);
+$script = <<<JS
+var quill = new Quill('#editor', {
+    theme: 'snow',
+    modules: {
+        toolbar: [
+            ['bold', 'italic', 'underline', 'strike'],
+            ['blockquote', 'code-block'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            [{ 'indent': '-1' }, { 'indent': '+1' }],
+            [{ 'direction': 'rtl' }],
+            [{ 'size': ['small', false, 'large', 'huge'] }],
+            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+            [{ 'color': [] }, { 'background': [] }],
+            [{ 'font': [] }],
+            [{ 'align': [] }],
+            ['link', 'image'],            
+            ['clean']
+        ]
+    }
+});
 
-</div>
+try {
+    quill.clipboard.dangerouslyPasteHTML($templateBody)
+} catch (error) {
+    console.error('Error injecting template body:', error);
+}
+
+quill.on('text-change', function() {
+    document.querySelector('#context-content').value = quill.root.innerHTML;
+});
+
+JS;
+$this->registerJs($script);
+?>

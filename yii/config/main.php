@@ -73,7 +73,14 @@ $config = [
         ],
         'assetManager' => [
             'basePath' => __DIR__ . '/../web/assets',
-            'bundles' => [],
+            'bundles' => [
+                'yii\bootstrap\BootstrapAsset' => [
+                    'class' => 'yii\bootstrap5\BootstrapAsset',
+                ],
+                'yii\bootstrap\BootstrapPluginAsset' => [
+                    'class' => 'yii\bootstrap5\BootstrapPluginAsset',
+                ],
+            ],
         ],
         'user' => [
             'class' => 'yii\web\User',

@@ -8,7 +8,7 @@ use yii\widgets\ActiveForm;
 /** @var yii\widgets\ActiveForm $form */
 ?>
 
-<div class="project-form">
+<div class="project-form focus-on-first-field">
 
     <?php $form = ActiveForm::begin(['id' => 'project-form']); ?>
 

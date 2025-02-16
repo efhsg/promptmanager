@@ -17,7 +17,7 @@ QuillAsset::register($this);
 
 ?>
 
-<div class="prompt-template-form">
+<div class="prompt-template-form focus-on-first-field">
     <?php $form = ActiveForm::begin([
         'id' => 'prompt-template-form',
         'enableClientValidation' => true,
@@ -25,22 +25,22 @@ QuillAsset::register($this);
 
     <div class="accordion" id="formAccordion">
 
+        <!-- Basic Information Accordion -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingBasicInfo">
-                <button class="accordion-button"
+                <button class="accordion-button <?= $model->isNewRecord ? '' : 'collapsed' ?>"
                         type="button"
                         data-bs-toggle="collapse"
                         data-bs-target="#collapseBasicInfo"
-                        aria-expanded="true"
-                aria-controls="collapseBasicInfo">
-                Basic Information
+                        aria-expanded="<?= $model->isNewRecord ? 'true' : 'false' ?>"
+                        aria-controls="collapseBasicInfo">
+                    Basic Information
                 </button>
             </h2>
             <div id="collapseBasicInfo"
-                 class="accordion-collapse collapse show"
+                 class="accordion-collapse collapse <?= $model->isNewRecord ? 'show' : '' ?>"
                  aria-labelledby="headingBasicInfo"
                  data-bs-parent="#formAccordion">
-
                 <div class="accordion-body">
                     <?= $form->field($model, 'project_id')->dropDownList($projects, [
                         'prompt' => 'Select a Project'
@@ -53,22 +53,22 @@ QuillAsset::register($this);
             </div>
         </div>
 
+        <!-- Body Accordion -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingEditor">
-                <button class="accordion-button collapsed"
+                <button class="accordion-button <?= $model->isNewRecord ? 'collapsed' : '' ?>"
                         type="button"
                         data-bs-toggle="collapse"
                         data-bs-target="#collapseEditor"
-                        aria-expanded="false"
+                        aria-expanded="<?= $model->isNewRecord ? 'false' : 'true' ?>"
                         aria-controls="collapseEditor">
                     Body
                 </button>
             </h2>
             <div id="collapseEditor"
-                 class="accordion-collapse collapse"
+                 class="accordion-collapse collapse <?= $model->isNewRecord ? '' : 'show' ?>"
                  aria-labelledby="headingEditor"
                  data-bs-parent="#formAccordion">
-
                 <div class="accordion-body">
                     <?= $form->field($model, 'template_body')->hiddenInput(['id' => 'template-body'])->label(false) ?>
 
@@ -92,6 +92,7 @@ QuillAsset::register($this);
 </div>
 
 <?php
+// (Your existing JavaScript for initializing Quill and handling events remains unchanged)
 $generalFieldsJson = json_encode($generalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $projectFieldsJson = json_encode($projectFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -192,9 +193,7 @@ quill.on('text-change', function() {
 });
 JS;
 $this->registerJs($script);
-?>
 
-<?php
 $script = <<<JS
 $('#prompt-template-form').on('afterValidate', function (event, messages, errorAttributes) {
     if (!$(this).data('yiiActiveForm').submitting) {
@@ -222,5 +221,3 @@ $('#prompt-template-form').on('afterValidate', function (event, messages, errorA
 JS;
 $this->registerJs($script);
 ?>
-
-

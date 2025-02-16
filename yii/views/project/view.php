@@ -2,14 +2,15 @@
 
 use yii\helpers\Html;
 use yii\widgets\DetailView;
+use app\widgets\ContentViewerWidget;  // include the widget
 
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 
-$this->title = 'View ' . $model->name;
+$this->title = 'View - ' . $model->name;
 echo $this->render('_breadcrumbs', [
     'model' => null,
-    'actionLabel' => $this->title ,
+    'actionLabel' => $this->title,
 ]);
 ?>
 
@@ -37,7 +38,18 @@ echo $this->render('_breadcrumbs', [
                     'name',
                     [
                         'attribute' => 'description',
-                        'format' => 'ntext',
+                        'format' => 'raw',
+                        'value' => function ($model) {
+                            return ContentViewerWidget::widget([
+                                'content' => $model->description,
+                                'copyButtonOptions' => [
+                                    'class' => 'btn btn-sm position-absolute',
+                                    'style' => 'bottom: 10px; right: 20px;',
+                                    'title' => 'Copy to clipboard',
+                                    'aria-label' => 'Copy content to clipboard',
+                                ],
+                            ]);
+                        },
                     ],
                     [
                         'attribute' => 'created_at',

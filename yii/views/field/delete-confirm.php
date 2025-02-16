@@ -1,5 +1,6 @@
 <?php
 
+use app\widgets\ContentViewerWidget;
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
@@ -7,7 +8,7 @@ use yii\helpers\Html;
 
 $this->title = 'Delete ' . $model->name;
 echo $this->render('_breadcrumbs', [
-    'model' => null,
+    'model'       => null,
     'actionLabel' => $this->title,
 ]);
 ?>
@@ -19,7 +20,17 @@ echo $this->render('_breadcrumbs', [
         </div>
         <div class="card-body">
             <div class="field-content mb-3">
-                Project: <?= $model->project ? Html::encode($model->project->name) : Yii::$app->formatter->nullDisplay ?>
+                <p>
+                    <strong>Project:</strong>
+                    <?= $model->project ? Html::encode($model->project->name) : Yii::$app->formatter->nullDisplay ?>
+                </p>
+                <?php if ($model->type === 'text' && !empty($model->content)): ?>
+                    <p><strong>Field Content:</strong></p>
+                    <?= ContentViewerWidget::widget([
+                        'content'    => $model->content,
+                        'enableCopy' => false,
+                    ]) ?>
+                <?php endif; ?>
             </div>
         </div>
 

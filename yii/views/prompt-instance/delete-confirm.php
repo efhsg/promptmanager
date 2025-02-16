@@ -5,30 +5,29 @@ use app\widgets\ContentViewerWidget;
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\Context $model */
+/** @var app\models\PromptInstance $model */
 
-$this->title = 'Delete ' . $model->name;
+$this->title = 'Delete Prompt Instance: ' . Html::encode(substr($model->final_prompt, 0, 50));
 echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => $this->title,
 ]);
 ?>
-<div class="context-delete-confirm container py-4">
-
+<div class="prompt-instance-delete-confirm container py-4">
     <div class="card">
         <div class="card-header">
-            <strong>Are you sure you want to delete the context: <?= Html::encode($model->name) ?>?</strong>
+            <strong>Are you sure you want to delete the prompt
+                instance: <?= Html::encode(substr($model->final_prompt, 0, 50)) ?>?</strong>
         </div>
         <div class="card-body">
-            <div class="context-content mb-3">
-                <strong>Content:</strong>
+            <div class="prompt-instance-details mb-3">
+                <strong>Final Prompt:</strong>
                 <?= ContentViewerWidget::widget([
-                    'content'    => $model->content,
+                    'content' => $model->final_prompt,
                     'enableCopy' => false,
                 ]) ?>
             </div>
         </div>
-
         <div class="card-footer d-flex justify-content-end">
             <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], ['class' => 'btn btn-secondary me-2']) ?>
             <?= Html::beginForm(['delete', 'id' => $model->id], 'post', [

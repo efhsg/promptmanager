@@ -3,7 +3,7 @@
 /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\assets\QuillAsset;
-use app\widgets\CopyToClipboardWidget;
+use app\widgets\ContentViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
@@ -19,8 +19,7 @@ echo $this->render('_breadcrumbs', [
 ]);
 ?>
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
+    <div class="d-flex justify-content-end align-items-center mb-4">
         <div>
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
@@ -57,21 +56,21 @@ echo $this->render('_breadcrumbs', [
                     [
                         'attribute' => 'template_body',
                         'format' => 'raw',
-                        'label' => 'Template Body',
+                        'label' => 'Body',
                         'value' => function ($model) {
-                            $editorContainerId = 'editor-container';
-                            $editorContainer = '<div id="' . $editorContainerId . '" style="height: 300px;"></div>';
-                            $copyButton = CopyToClipboardWidget::widget([
-                                'targetSelector' => '#' . $editorContainerId,
-                                'buttonOptions' => [
+                            return ContentViewerWidget::widget([
+                                'content' => $model->template_body,
+                                'viewerOptions' => [
+                                    'id' => 'editor-container',
+                                    'style' => 'height: 300px;',
+                                ],
+                                'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',
                                     'style' => 'bottom: 10px; right: 10px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy template content to clipboard',
                                 ],
-                                'label' => '<i class="bi bi-clipboard"></i>',
                             ]);
-                            return '<div class="position-relative">' . $editorContainer . $copyButton . '</div>';
                         },
                     ],
                     [
