@@ -11,7 +11,7 @@ use yii\widgets\DetailView;
 /** @var yii\web\View $this */
 /** @var app\models\PromptInstance $model */
 
-$this->title = 'View - ' . $model->id;
+$this->title = 'View - ' . Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i:s');
 echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => $this->title,
@@ -60,7 +60,7 @@ echo $this->render('_breadcrumbs', [
                                 ],
                                 'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',
-                                    'style' => 'bottom: 10px; right: 10px;',
+                                    'style' => 'bottom: 10px; right: 20px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy template content to clipboard',
                                 ],

@@ -1,4 +1,5 @@
-<?php /** @noinspection BadExpressionStatementJS */
+<?php /** @noinspection PhpUnhandledExceptionInspection */
+/** @noinspection BadExpressionStatementJS */
 /** @noinspection JSUnresolvedReference */
 /** @noinspection JSUnnecessarySemicolon */
 
@@ -29,14 +30,7 @@ echo $this->render('_breadcrumbs', [
 
                 <?= $form->field($model, 'final_prompt')->hiddenInput(['id' => 'final-prompt'])->label(false) ?>
 
-                <div class="form-group">
-                    <table class="table table-borderless" style="margin-bottom: 0;">
-                        <tr>
-                            <th style="width: 20%;">Template</th>
-                            <td><?= Html::encode($model->template->name ?? 'N/A') ?></td>
-                        </tr>
-                    </table>
-                </div>
+                <div class="form-group"><?= Html::encode($model->template->name ?? 'N/A') ?></div>
 
                 <div class="resizable-editor-container mb-3">
                     <div id="editor" class="resizable-editor">
