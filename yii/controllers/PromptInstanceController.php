@@ -13,7 +13,6 @@ use app\services\ModelService;
 use app\services\PromptInstanceService;
 use app\services\PromptTemplateService;
 use Yii;
-use yii\db\ActiveRecord;
 use yii\db\Exception;
 use yii\filters\AccessControl;
 use yii\helpers\Url;
@@ -90,7 +89,11 @@ class PromptInstanceController extends Controller
     public function actionIndex(): string
     {
         $searchModel = new PromptInstanceSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, Yii::$app->user->id);
+        $dataProvider = $searchModel->search(
+            Yii::$app->request->queryParams,
+            Yii::$app->user->id,
+            (Yii::$app->projectContext)->getCurrentProject()?->id
+        );
         return $this->render('index', compact('searchModel', 'dataProvider'));
     }
 
@@ -290,11 +293,11 @@ class PromptInstanceController extends Controller
             if (isset($fieldsValues[$fieldKey])) {
                 $value = $fieldsValues[$fieldKey];
                 if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
-                    return $this->codeFormatterService->wrapCode(is_array($value) ? implode(', ', $value) : $value, false);
+                    return $this->codeFormatterService->wrapCode(is_array($value) ? implode(', ', $value) : $value);
                 }
                 $valueStr = is_array($value) ? implode(', ', $value) : $value;
                 return $this->codeFormatterService->detectCode($valueStr)
-                    ? $this->codeFormatterService->wrapCode($valueStr, false)
+                    ? $this->codeFormatterService->wrapCode($valueStr)
                     : $valueStr;
             }
             return $matches[0];

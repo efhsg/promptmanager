@@ -96,8 +96,7 @@ class Context extends ActiveRecord
         parent::init();
 
         if ($this->isNewRecord && $this->project_id === null) {
-            $projectContext = Yii::$app->projectContext;
-            $currentProject = $projectContext->getCurrentProject();
+            $currentProject = (Yii::$app->projectContext)->getCurrentProject();
             $this->project_id = $currentProject ? $currentProject['id'] : null;
         }
     }

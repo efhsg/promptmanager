@@ -66,7 +66,7 @@ class ContextController extends Controller
     public function actionIndex(): string
     {
         $searchModel = new ContextSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, Yii::$app->user->id);
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, Yii::$app->user->id, (Yii::$app->projectContext)->getCurrentProject()?->id);
         return $this->render('index', compact('searchModel', 'dataProvider'));
     }
 

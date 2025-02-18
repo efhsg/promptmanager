@@ -38,17 +38,22 @@ class PromptTemplateSearch extends PromptTemplate
      *
      * @param array $params
      * @param int|null $userId
+     * @param int|null $projectId
      * @return ActiveDataProvider
      */
-    public function search(array $params, ?int $userId = null): ActiveDataProvider
+    public function search(array $params, ?int $userId = null, ?int $projectId = null): ActiveDataProvider
     {
         if (!$userId) {
             throw new InvalidArgumentException('User ID is required.');
         }
 
         $query = PromptTemplate::find()
-            ->joinWith('project p') // Assuming `PromptTemplate` has a `project` relation
+            ->joinWith('project p')
             ->andWhere(['p.user_id' => $userId]);
+
+        if ($projectId !== null) {
+            $query->andWhere(['p.id' => $projectId]);
+        }
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

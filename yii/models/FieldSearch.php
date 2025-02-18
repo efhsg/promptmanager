@@ -12,7 +12,6 @@ use yii\db\ActiveRecord;
  */
 class FieldSearch extends Field
 {
-
     public string $projectName = "";
 
     /**
@@ -39,44 +38,41 @@ class FieldSearch extends Field
      * Creates data provider instance with search query applied
      *
      * @param array $params
-     * @param int|null $userId If filtering by the currently logged-in user, for example
+     * @param int|null $userId
+     * @param int|null $projectId
      * @return ActiveDataProvider
      */
-    public function search(array $params, ?int $userId = null): ActiveDataProvider
+    public function search(array $params, ?int $userId = null, ?int $projectId = null): ActiveDataProvider
     {
         if (!$userId) {
             throw new InvalidArgumentException('User ID must be provided for ContextSearch.');
         }
-
         $query = Field::find()
-            ->joinWith('user u',false, 'INNER JOIN')
+            ->joinWith('user u', false, 'INNER JOIN')
             ->joinWith('project')
-            ->andWhere(['u.id' => $userId]);;
-
+            ->andWhere(['u.id' => $userId]);
+        if ($projectId !== null) {
+            $query->andWhere(['project.id' => $projectId]);
+        }
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [
                 'pageSize' => 20,
             ],
         ]);
-
         $dataProvider->sort->attributes['projectName'] = [
             'asc' => ['project.name' => SORT_ASC],
             'desc' => ['project.name' => SORT_DESC],
         ];
-
         $this->load($params);
-
         if (!$this->validate()) {
             return $dataProvider;
         }
-
         $query
             ->andFilterWhere(['like', 'name', $this->name])
             ->andFilterWhere(['like', 'content', $this->content])
             ->andFilterWhere(['like', 'type', $this->type])
             ->andFilterWhere(['like', 'project.name', $this->projectName]);
-
         return $dataProvider;
     }
 

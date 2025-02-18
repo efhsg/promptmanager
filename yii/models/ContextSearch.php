@@ -38,9 +38,10 @@ class ContextSearch extends Context
      *
      * @param array $params
      * @param int|null $userId
+     * @param int|null $projectId
      * @return ActiveDataProvider
      */
-    public function search(array $params, ?int $userId = null): ActiveDataProvider
+    public function search(array $params, ?int $userId = null, ?int $projectId = null): ActiveDataProvider
     {
         if (!$userId) {
             throw new InvalidArgumentException('User ID must be provided for ContextSearch.');
@@ -49,6 +50,10 @@ class ContextSearch extends Context
         $query = Context::find()
             ->joinWith('project p')
             ->andWhere(['p.user_id' => $userId]);
+
+        if ($projectId !== null) {
+            $query->andWhere(['p.id' => $projectId]);
+        }
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

@@ -44,10 +44,11 @@ class PromptInstanceSearch extends PromptInstance
      *
      * @param array $params
      * @param int|null $userId
+     * @param int|null $projectId
      * @return ActiveDataProvider
      * @throws InvalidArgumentException if no user ID is provided.
      */
-    public function search(array $params, ?int $userId = null): ActiveDataProvider
+    public function search(array $params, ?int $userId = null, ?int $projectId = null): ActiveDataProvider
     {
         if (!$userId) {
             throw new InvalidArgumentException('User ID is required.');
@@ -57,6 +58,10 @@ class PromptInstanceSearch extends PromptInstance
             ->joinWith(['template.project p'])
             ->andWhere(['p.user_id' => $userId]);
 
+        if ($projectId !== null) {
+            $query->andWhere(['p.id' => $projectId]);
+        }
+
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
             'pagination' => [
@@ -64,7 +69,6 @@ class PromptInstanceSearch extends PromptInstance
             ],
         ]);
 
-        // Allow sorting by the related project's name.
         $dataProvider->sort->attributes['projectName'] = [
             'asc' => ['p.name' => SORT_ASC],
             'desc' => ['p.name' => SORT_DESC],
@@ -77,7 +81,7 @@ class PromptInstanceSearch extends PromptInstance
         }
 
         $query->andFilterWhere(['like', 'final_prompt', $this->final_prompt])
-            ->andFilterWhere(['like', 'p.name', $this->projectName]);
+              ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;
     }
