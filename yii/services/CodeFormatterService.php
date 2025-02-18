@@ -6,25 +6,13 @@ use yii\base\Component;
 
 class CodeFormatterService extends Component
 {
-    /**
-     * Detects if the given value contains PHP code.
-     *
-     * @param string $value
-     * @return bool
-     */
     public function detectCode(string $value): bool
     {
         return stripos($value, '<?php') !== false;
     }
 
-    /**
-     * Wraps the given code value in pre and code tags.
-     *
-     * @param string $value
-     * @return string
-     */
-    public function wrapCode(string $value): string
+    public function wrapCode(string $value, bool $encode = true): string
     {
-        return '<pre><code>' . htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</code></pre>';
+        return '<pre><code>' . ($encode ? htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : $value) . '</code></pre>';
     }
 }

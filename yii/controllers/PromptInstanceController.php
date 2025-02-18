@@ -285,16 +285,17 @@ class PromptInstanceController extends Controller
         $fieldIds = array_keys($fieldsValues);
         /** @var Field[] $fields */
         $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
-        $codeFormatter = $this->codeFormatterService;
-        $generatedPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields, $codeFormatter): string {
+        $generatedPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
             $fieldKey = $matches[1];
             if (isset($fieldsValues[$fieldKey])) {
                 $value = $fieldsValues[$fieldKey];
                 if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
-                    return $codeFormatter->wrapCode(is_array($value) ? implode(', ', $value) : $value);
+                    return $this->codeFormatterService->wrapCode(is_array($value) ? implode(', ', $value) : $value, false);
                 }
                 $valueStr = is_array($value) ? implode(', ', $value) : $value;
-                return $codeFormatter->detectCode($valueStr) ? $codeFormatter->wrapCode($valueStr) : $valueStr;
+                return $this->codeFormatterService->detectCode($valueStr)
+                    ? $this->codeFormatterService->wrapCode($valueStr, false)
+                    : $valueStr;
             }
             return $matches[0];
         }, $templateBody);
