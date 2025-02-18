@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\widgets\ContentViewerWidget;
 use yii\helpers\Html;
@@ -24,7 +24,7 @@ echo $this->render('_breadcrumbs', [
                     <strong>Project:</strong>
                     <?= $model->project ? Html::encode($model->project->name) : Yii::$app->formatter->nullDisplay ?>
                 </p>
-                <?php if ($model->type === 'text' && !empty($model->content)): ?>
+                <?php if (($model->type === 'text' || $model->type === 'code') && !empty($model->content)): ?>
                     <p><strong>Field Content:</strong></p>
                     <?= ContentViewerWidget::widget([
                         'content'    => $model->content,

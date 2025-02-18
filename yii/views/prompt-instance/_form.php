@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnhandledExceptionInspection */
+<?php /** @noinspection JSUnresolvedReference */
+
+/** @noinspection PhpUnhandledExceptionInspection */
 
 use app\helpers\TooltipHelper;
 use app\models\PromptInstanceForm;
@@ -10,10 +12,10 @@ use yii\widgets\ActiveForm;
 
 /* @var View $this */
 /* @var PromptInstanceForm $model */
-/* @var array $templates             List of prompt templates */
-/* @var array $templatesDescription  Tooltip descriptions for each template */
-/* @var array $contexts              List of contexts */
-/* @var array $contextsContent       Content for each context tooltip */
+/* @var array $templates */
+/* @var array $templatesDescription */
+/* @var array $contexts */
+/* @var array $contextsContent */
 
 $maxContentLength = 1000;
 $contextTooltipTexts = TooltipHelper::prepareTexts($contextsContent, $maxContentLength);
@@ -29,12 +31,12 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
         'enableClientValidation' => true,
     ]); ?>
     <div class="accordion" id="promptInstanceAccordion">
-        <!-- Step 1: Select Context(s) & Template -->
+
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingSelection">
                 <button class="accordion-button" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapseSelection" aria-expanded="true" aria-controls="collapseSelection">
-                    1. Select Context(s) &amp; Template
+                    1. Select Context(s) & Template
                 </button>
             </h2>
             <div id="collapseSelection" class="accordion-collapse collapse show" aria-labelledby="headingSelection"
@@ -44,40 +46,40 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
                     $contextSelect2Settings = [
                         'minimumResultsForSearch' => new JsExpression("Infinity"),
                         'templateResult' => new JsExpression("
-                            function(state) {
-                                if (!state.id) return state.text;
-                                var tooltip = contextTooltipTexts[state.id] || '';
-                                var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
-                                return \$el;
-                            }
-                        "),
+                        function(state) {
+                            if (!state.id) return state.text;
+                            var tooltip = contextTooltipTexts[state.id] || '';
+                            var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
+                            return \$el;
+                        }
+                    "),
                         'templateSelection' => new JsExpression("
-                            function(state) {
-                                if (!state.id) return state.text;
-                                var tooltip = contextTooltipTexts[state.id] || '';
-                                var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
-                                return \$el;
-                            }
-                        "),
+                        function(state) {
+                            if (!state.id) return state.text;
+                            var tooltip = contextTooltipTexts[state.id] || '';
+                            var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
+                            return \$el;
+                        }
+                    "),
                     ];
                     $templateSelect2Settings = [
                         'minimumResultsForSearch' => 0,
                         'templateResult' => new JsExpression("
-                            function(state) {
-                                if (!state.id) return state.text;
-                                var tooltip = templateTooltipTexts[state.id] || '';
-                                var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
-                                return \$el;
-                            }
-                        "),
+                        function(state) {
+                            if (!state.id) return state.text;
+                            var tooltip = templateTooltipTexts[state.id] || '';
+                            var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
+                            return \$el;
+                        }
+                    "),
                         'templateSelection' => new JsExpression("
-                            function(state) {
-                                if (!state.id) return state.text;
-                                var tooltip = templateTooltipTexts[state.id] || '';
-                                var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
-                                return \$el;
-                            }
-                        "),
+                        function(state) {
+                            if (!state.id) return state.text;
+                            var tooltip = templateTooltipTexts[state.id] || '';
+                            var \$el = $('<span></span>').text(state.text).attr('title', tooltip);
+                            return \$el;
+                        }
+                    "),
                     ];
                     echo $form->field($model, 'context_ids')
                         ->label('Context(s)')
@@ -97,7 +99,7 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
                 </div>
             </div>
         </div>
-        <!-- Step 2: Complete Template -->
+
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingGeneration">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
@@ -108,47 +110,120 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
             <div id="collapseGeneration" class="accordion-collapse collapse" aria-labelledby="headingGeneration"
                  data-bs-parent="#promptInstanceAccordion">
                 <div class="accordion-body">
-                    <!-- This container will be populated with the prompt form via AJAX.
-                         It must include a hidden input with id "original-template" that contains the template with placeholders. -->
                     <div id="template-instance-container"></div>
                 </div>
             </div>
         </div>
-        <!-- Step 3: Final Prompt -->
+
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingFinalPrompt">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                         data-bs-target="#collapseFinalPrompt" aria-expanded="false" aria-controls="collapseFinalPrompt">
-                    3. Final Prompt
+                    3. Generated Prompt
                 </button>
             </h2>
             <div id="collapseFinalPrompt" class="accordion-collapse collapse" aria-labelledby="headingFinalPrompt"
                  data-bs-parent="#promptInstanceAccordion">
                 <div class="accordion-body">
-                    <div id="final-prompt-container"></div>
+                    <div id="final-prompt-container">
+                        <?= app\widgets\ContentViewerWidget::widget([
+                            'content' => '',
+                            'copyButtonOptions' => [
+                                'class' => 'btn btn-sm position-absolute',
+                                'style' => 'bottom: 10px; right: 20px;',
+                                'title' => 'Copy to clipboard',
+                                'aria-label' => 'Copy content to clipboard',
+                            ],
+                        ]) ?>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     <div class="form-group mt-4 text-end">
-        <?= Html::submitButton('Next', ['class' => 'btn btn-primary']) ?>
+        <?= Html::button('Previous', [
+            'class' => 'btn btn-secondary me-2 d-none',
+            'id' => 'previous-button'
+        ]) ?>
+        <?= Html::submitButton('Next', [
+            'class' => 'btn btn-primary',
+            'id' => 'form-submit-button'
+        ]) ?>
     </div>
     <?php ActiveForm::end(); ?>
 </div>
 
 <?php
-$script = <<<JS
-// A flag to determine whether the prompt form (step 2) has been loaded.
+$script = <<<'JS'
 var step2Loaded = false;
+var currentStep = 1;
+var $nextButton = $('#form-submit-button');
+var $prevButton = $('#previous-button');
+var $finalPromptContainer = $('#final-prompt-container');
 
+function updateButtonState(step) {
+    currentStep = step;
+    if (step === 1) {
+        $nextButton.text('Next').attr('data-action', 'next');
+        $prevButton.addClass('d-none');
+    } else if (step === 2) {
+        $nextButton.text('Next').attr('data-action', 'next');
+        $prevButton.removeClass('d-none');
+    } else if (step === 3) {
+        $nextButton.text('Save').attr('data-action', 'save');
+        $prevButton.removeClass('d-none');
+    }
+}
+
+function goToPreviousStep() {
+    if (currentStep === 2) {
+        $('#collapseSelection').collapse('show');
+        step2Loaded = false;
+        $('#template-instance-container').empty();
+        updateButtonState(1);
+    } else if (currentStep === 3) {
+        $('#collapseGeneration').collapse('show');
+        $finalPromptContainer.find('.content-viewer').empty();
+        $finalPromptContainer.find('textarea').text('');
+        updateButtonState(2);
+    }
+}
+
+$prevButton.on('click', function() {
+    goToPreviousStep();
+});
 $('#prompt-instance-form').on('beforeSubmit', function(e) {
     e.preventDefault();
     var form = $(this);
     var container = $('#template-instance-container');
-    
-    // If the prompt form (step 2) is not loaded, load it via AJAX.
+    var button = $('#form-submit-button');
+    var action = button.attr('data-action');
+    var templateId = form.find('#promptinstanceform-template_id').val();
+    if (action === 'save') {
+        var finalPrompt = $('#final-prompt-container').find('textarea').val();
+        $.ajax({
+            url: '/prompt-instance/save-final-prompt',
+            type: 'POST',
+            data: { 
+                prompt: finalPrompt,
+                template_id: templateId,
+                _csrf: yii.getCsrfToken()
+            },
+            success: function(response) {
+                if (response.success) {
+                    window.location.href = response.redirectUrl;
+                } else {
+                    alert('Error saving the prompt. Please try again.');
+                }
+            },
+            error: function() {
+                alert('Error saving the prompt. Please try again.');
+            }
+        });
+        return false;
+    }
     if (!step2Loaded) {
-        var templateId = form.find('#promptinstanceform-template_id').val();
+        console.log(templateId);
         if (!templateId) {
             alert('Please select a valid prompt template.');
             return false;
@@ -161,11 +236,8 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
                 _csrf: yii.getCsrfToken()
             },
             success: function(response) {
-                // The response should include the prompt form and a hidden input with id "original-template".
                 container.html(response);
                 $('#collapseGeneration').collapse('show');
-
-                // Reinitialize Select2 for any multi-select fields inside the container.
                 container.find('select[multiple]').each(function() {
                     $(this).select2({
                         minimumResultsForSearch: 0,
@@ -179,36 +251,38 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
                         }
                     });
                 });
-
-                // Set focus to the first rendered field.
                 var firstField = container.find('input.form-control, select.form-control, textarea.form-control').first();
                 if (firstField.length) {
                     firstField.focus();
                 }
-                // Mark step 2 as loaded.
                 step2Loaded = true;
+                updateButtonState(2);
             },
             error: function() {
                 alert('Error generating the prompt form. Please try again.');
             }
         });
-} else {
+    } else {
+        console.log(form.find('#promptinstanceform-template_id').val());
         var data = (form.find('select[name^="PromptInstanceForm[context_ids]"]').val() || [])
             .map(id => ({ name: 'context_ids[]', value: id }))
             .concat({
                 name: 'template_id',
-                value: form.find('select[name="PromptInstanceForm[template_id]"]').val()
+                value: form.find('#promptinstanceform-template_id').val()
             })
             .concat(container.find(':input').serializeArray());
         data.push({ name: '_csrf', value: yii.getCsrfToken() });
-    
+
         $.ajax({
             url: '/prompt-instance/generate-final-prompt',
             type: 'POST',
             data: data,
-            success: function(response) {
-                $('#final-prompt-container').html(response);
+            success: function(response){
+                var container = $('#final-prompt-container');
+                container.find('.content-viewer').html(response);
+                container.find('textarea').text(response);
                 $('#collapseFinalPrompt').collapse('show');
+                updateButtonState(3);
             },
             error: function() {
                 alert('Error generating the final prompt. Please try again.');
@@ -216,6 +290,12 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
         });
     }
     return false;
+});
+$('.accordion-button').prop('disabled', true);
+$('#promptinstanceform-template_id').on('change', function() {
+    if (!step2Loaded) {
+        $('#prompt-instance-form').submit();
+    }
 });
 JS;
 $this->registerJs($script);

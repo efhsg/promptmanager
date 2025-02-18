@@ -2,9 +2,11 @@
 
 namespace app\controllers;
 
+use app\models\Field;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
+use app\services\CodeFormatterService;
 use app\services\ContextService;
 use app\services\EntityPermissionService;
 use app\services\ModelService;
@@ -14,6 +16,7 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\db\Exception;
 use yii\filters\AccessControl;
+use yii\helpers\Url;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -33,6 +36,7 @@ class PromptInstanceController extends Controller
         private readonly PromptTemplateService $promptTemplateService,
         private readonly EntityPermissionService $permissionService,
         private readonly ContextService $contextService,
+        private readonly CodeFormatterService $codeFormatterService,
         $config = []
     )
     {
@@ -56,7 +60,7 @@ class PromptInstanceController extends Controller
                         'roles' => ['@'],
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
-                            if ($action->id === 'generate-prompt-form' || $action->id === 'generate-final-prompt') {
+                            if (in_array($action->id, ['generate-prompt-form', 'generate-final-prompt', 'save-final-prompt'])) {
                                 $callback = function () {
                                     $templateId = Yii::$app->request->post('template_id');
                                     if ($templateId) {
@@ -66,7 +70,7 @@ class PromptInstanceController extends Controller
                                 };
                                 return $this->permissionService->hasActionPermission('promptTemplate', 'view', $callback);
                             } elseif ($this->permissionService->isModelBasedAction($action->id)) {
-                                $callback = fn() => $this->findModel((int)Yii::$app->request->get('id'));
+                                $callback = fn() => $this->promptInstanceService->findModelWithOwner((int)Yii::$app->request->get('id'), Yii::$app->user->id);
                             } else {
                                 $callback = null;
                             }
@@ -99,7 +103,7 @@ class PromptInstanceController extends Controller
      */
     public function actionView(int $id): string
     {
-        return $this->render('view', ['model' => $this->findModel($id)]);
+        return $this->render('view', ['model' => $this->promptInstanceService->findModelWithOwner($id, Yii::$app->user->id)]);
     }
 
     /**
@@ -111,7 +115,6 @@ class PromptInstanceController extends Controller
     public function actionCreate(): Response|string
     {
         $formModel = new PromptInstanceForm();
-
         if ($formModel->load(Yii::$app->request->post()) && $formModel->validate()) {
             if ($formModel->save()) {
                 /** @var PromptInstance|null $newInstance */
@@ -127,13 +130,11 @@ class PromptInstanceController extends Controller
                 }
             }
         }
-
         $userId = Yii::$app->user->id;
         $templates = $this->promptTemplateService->getTemplatesByUser($userId);
         $templatesDescription = $this->promptTemplateService->getTemplatesDescriptionByUser($userId);
         $contexts = $this->contextService->fetchContexts($userId);
         $contextsContent = $this->contextService->fetchContextsContent($userId);
-
         return $this->render('create', [
             'model' => $formModel,
             'templates' => $templates,
@@ -168,7 +169,6 @@ class PromptInstanceController extends Controller
         if ($this->promptInstanceService->saveModel($model, Yii::$app->request->post())) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
-
         $view = $model->isNewRecord ? 'create' : 'update';
         $data = ['model' => $model];
         if ($model->isNewRecord) {
@@ -178,10 +178,8 @@ class PromptInstanceController extends Controller
             $data['contexts'] = $this->contextService->fetchContexts($userId);
             $data['contextsContent'] = $this->contextService->fetchContextsContent($userId);
         }
-
         return $this->render($view, $data);
     }
-
 
     /**
      * Deletes an existing PromptInstance model.
@@ -194,17 +192,14 @@ class PromptInstanceController extends Controller
     {
         /** @var PromptInstance $model */
         $model = $this->modelService->findModelById($id, PromptInstance::class);
-
         if (!Yii::$app->request->post('confirm')) {
             return $this->render('delete-confirm', ['model' => $model]);
         }
-
         if ($this->modelService->deleteModelSafely($model)) {
             Yii::$app->session->setFlash('success', "Prompt instance deleted successfully.");
         } else {
             Yii::$app->session->setFlash('error', 'Unable to delete the prompt instance. Please try again later.');
         }
-
         return $this->redirect(['index']);
     }
 
@@ -218,13 +213,10 @@ class PromptInstanceController extends Controller
     public function actionGetTemplate(int $template_id): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-
         $template = $this->promptTemplateService->getTemplateById($template_id, Yii::$app->user->id);
-
         if (!$template) {
             throw new NotFoundHttpException("Template not found or access denied.");
         }
-
         return ['template_body' => $template->template_body];
     }
 
@@ -233,8 +225,6 @@ class PromptInstanceController extends Controller
         $templateId = Yii::$app->request->post('template_id');
         $template = $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
         $templateBody = $template->template_body;
-
-        // Retrieve the field definitions via the pivot relation (PromptTemplate::getFields())
         $fields = [];
         foreach ($template->fields as $field) {
             $fieldKey = (string)$field->id;
@@ -242,40 +232,31 @@ class PromptInstanceController extends Controller
                 'type' => $field->type,
                 'label' => $field->label,
             ];
-
             if (in_array($field->type, ['select', 'multi-select'])) {
-                // Build options from the FieldOption records.
                 $options = [];
                 $default = [];
                 foreach ($field->fieldOptions as $option) {
-                    // Use the option's value as key; if label is set, use it as the display text.
                     $options[$option->value] = $option->label ?: $option->value;
                     if ($option->selected_by_default) {
                         $default[] = $option->value;
                     }
                 }
                 $fieldData['options'] = $options;
-                // For multi-select, default is an array; for single select, pick the first default if available.
                 $fieldData['default'] = $field->type === 'multi-select'
                     ? $default
                     : (count($default) ? reset($default) : null);
             } elseif ($field->type === 'text') {
-                // Use the content attribute as the default value for text fields.
                 $fieldData['default'] = $field->content;
             } else {
-                // Fallback for any other types (set empty default)
                 $fieldData['default'] = '';
             }
-
             $fields[$fieldKey] = $fieldData;
         }
-
         return $this->renderPartial('_template_form', [
             'templateBody' => $templateBody,
             'fields' => $fields,
         ]);
     }
-
 
     /**
      * Generates the final prompt based on submitted data.
@@ -289,38 +270,34 @@ class PromptInstanceController extends Controller
     public function actionGenerateFinalPrompt(): string
     {
         Yii::$app->response->format = Response::FORMAT_RAW;
-
-        // Retrieve top-level parameters.
         $templateId = Yii::$app->request->post('template_id');
         $selectedContextIds = Yii::$app->request->post('context_ids') ?? [];
-
         if (!$templateId) {
             throw new NotFoundHttpException("Template ID not provided.");
         }
-
-        // Retrieve the prompt template.
         $template = $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
         if (!$template) {
             throw new NotFoundHttpException("Template not found or access denied.");
         }
         $templateBody = $template->template_body;
-
-        // Retrieve field values from the generated prompt form.
-        // (These are still inside the PromptInstanceForm array.)
         $postData = Yii::$app->request->post('PromptInstanceForm');
         $fieldsValues = $postData['fields'] ?? [];
-
-        // Replace placeholders in the template with submitted field values.
-        $generatedPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues) {
+        $fieldIds = array_keys($fieldsValues);
+        /** @var Field[] $fields */
+        $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
+        $codeFormatter = $this->codeFormatterService;
+        $generatedPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields, $codeFormatter): string {
             $fieldKey = $matches[1];
             if (isset($fieldsValues[$fieldKey])) {
                 $value = $fieldsValues[$fieldKey];
-                return is_array($value) ? implode(', ', $value) : $value;
+                if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
+                    return $codeFormatter->wrapCode(is_array($value) ? implode(', ', $value) : $value);
+                }
+                $valueStr = is_array($value) ? implode(', ', $value) : $value;
+                return $codeFormatter->detectCode($valueStr) ? $codeFormatter->wrapCode($valueStr) : $valueStr;
             }
             return $matches[0];
         }, $templateBody);
-
-        // Retrieve all context contents for the user.
         $allContextsContent = $this->contextService->fetchContextsContent(Yii::$app->user->id);
         $contextsArr = [];
         foreach ($selectedContextIds as $id) {
@@ -329,28 +306,31 @@ class PromptInstanceController extends Controller
             }
         }
         $contextsText = !empty($contextsArr) ? implode("\n\n", $contextsArr) : '';
-
-        // Prepend the contexts' text to the generated prompt (if any contexts are selected).
         return $contextsText ? $contextsText . "\n\n" . $generatedPrompt : $generatedPrompt;
     }
 
-
     /**
-     * Finds the PromptInstance model based on its primary key value and verifies that it belongs
-     * to the current user (via its associated prompt template and project).
+     * Saves a new PromptInstance using the generated final prompt.
      *
-     * @param int $id
-     * @return ActiveRecord
-     * @throws NotFoundHttpException if the model is not found or not owned by the user.
+     * @return array
+     * @throws Exception
      */
-    protected function findModel(int $id): ActiveRecord
+    public function actionSaveFinalPrompt(): array
     {
-        return PromptInstance::find()
-            ->joinWith(['template.project'])
-            ->where([
-                'prompt_instance.id' => $id,
-                'project.user_id' => Yii::$app->user->id,
-            ])
-            ->one() ?? throw new NotFoundHttpException('The requested prompt instance does not exist or is not yours.');
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $finalPrompt = Yii::$app->request->post('prompt');
+        $templateId = Yii::$app->request->post('template_id');
+        if (!$finalPrompt) {
+            return ['success' => false];
+        }
+        $model = new PromptInstance();
+        if ($templateId) {
+            $model->template_id = $templateId;
+        }
+        $model->final_prompt = $finalPrompt;
+        if ($model->save()) {
+            return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];
+        }
+        return ['success' => false];
     }
 }

@@ -52,11 +52,8 @@ QuillAsset::register($this);
 
     <?= $form->field($modelField, 'label')->textInput(['maxlength' => true])->label('Label (Optional)') ?>
 
-    <!-- Field Content using Quill editor (visible only when type === "text") -->
     <div id="field-content-wrapper" style="display: none;">
-        <!-- Hidden input for the content value -->
         <?= $form->field($modelField, 'content')->hiddenInput(['id' => 'field-content'])->label(false) ?>
-        <!-- Quill Editor Container -->
         <div class="resizable-editor-container mb-3">
             <div id="editor" class="resizable-editor">
                 <?= $modelField->content ?>
@@ -64,7 +61,6 @@ QuillAsset::register($this);
         </div>
     </div>
 
-    <!-- Field Options (shown only for select/multi-select) -->
     <div id="field-options-wrapper" style="display: none;">
         <?php
         echo $this->render('_fieldOptionsForm', [
@@ -87,26 +83,21 @@ QuillAsset::register($this);
     function toggleFieldOptions(value) {
         const contentWrapper = document.getElementById('field-content-wrapper');
         const optionsWrapper = document.getElementById('field-options-wrapper');
-        const optionInputs   = optionsWrapper.querySelectorAll('input, textarea, select');
+        const optionInputs   = optionsWrapper.querySelectorAll('input, textarea, select, code');
 
-        // Show/hide the "Content" field (Quill editor)
-        if (value === 'text') {
+        if (value === 'text' || value === 'code') {
             contentWrapper.style.display = 'block';
-            // Enable the hidden input for content
             document.querySelector('#field-content').disabled = false;
         } else {
             contentWrapper.style.display = 'none';
             document.querySelector('#field-content').disabled = true;
         }
 
-        // Show/hide the "Options" form
         if (['select', 'multi-select'].includes(value)) {
             optionsWrapper.style.display = 'block';
-            // Enable all fields so they are validated & submitted
             optionInputs.forEach(el => el.disabled = false);
         } else {
             optionsWrapper.style.display = 'none';
-            // Disable all fields to prevent validation & submission
             optionInputs.forEach(el => el.disabled = true);
         }
     }

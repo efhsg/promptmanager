@@ -118,6 +118,7 @@ return [
                 'delete' => 'deletePromptInstance',
                 'generate-prompt-form' => 'generatePrompt',
                 'generate-final-prompt' => 'generatePrompt',
+                'save-final-prompt' => 'generatePrompt',
             ],
             'permissions' => [
                 'createPromptInstance' => [
@@ -139,7 +140,7 @@ return [
                 'generatePrompt' => [
                     'description' => 'Generate a Prompt Instance',
                     'rule' => 'app\rbac\PromptTemplateOwnerRule',
-                ]
+                ],
             ],
         ],
     ],
@@ -177,4 +178,3 @@ return [
         ],
     ],
 ];
-
