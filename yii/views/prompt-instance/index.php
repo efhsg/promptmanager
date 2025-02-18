@@ -19,7 +19,6 @@ echo $this->render('_breadcrumbs', [
 <div class="prompt-instance-index container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
-        <?= Html::a('Create Prompt Instance', ['create'], ['class' => 'btn btn-primary']) ?>
     </div>
 
     <div class="card">
@@ -31,11 +30,7 @@ echo $this->render('_breadcrumbs', [
                 'dataProvider'    => $dataProvider,
                 'summary'         => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',
                 'summaryOptions'  => ['class' => 'text-start m-2'],
-                'layout'          => "{items}"
-                    . "<div class='card-footer position-relative py-3 px-2'>"
-                    . "<div class='position-absolute start-0 top-50 translate-middle-y'>{summary}</div>"
-                    . "<div class='text-center'>{pager}</div>"
-                    . "</div>",
+                'layout'          => "{items}<div class='card-footer position-relative py-3 px-2'><div class='position-absolute start-0 top-50 translate-middle-y'>{summary}</div><div class='text-center'>{pager}</div></div>",
                 'tableOptions'    => [
                     'class'            => 'table table-striped table-hover mb-0',
                     'data-responsive'  => 'true',
@@ -57,7 +52,7 @@ echo $this->render('_breadcrumbs', [
                     'activePageCssClass'               => 'active',
                     'disabledPageCssClass'             => 'disabled',
                 ],
-                'rowOptions'      => function ($model) {
+                'rowOptions'      => function ($model): array {
                     $id = is_array($model) ? $model['id'] : $model->id;
                     return [
                         'onclick' => 'window.location.href = "' . Url::to(['view', 'id' => $id]) . '";',
@@ -69,7 +64,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute'     => 'template_id',
                         'label'         => 'Template Name',
                         'enableSorting' => true,
-                        'value'         => function ($model) {
+                        'value'         => function ($model): string {
                             return $model->template ? $model->template->name : 'N/A';
                         },
                     ],
@@ -77,7 +72,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'final_prompt',
                         'label'     => 'Final Prompt',
                         'format'    => 'ntext',
-                        'value'     => function ($model) {
+                        'value'     => function ($model): string {
                             $text = strip_tags($model->final_prompt);
                             return (strlen($text) > 100) ? substr($text, 0, 100) . '...' : $text;
                         },
@@ -89,7 +84,7 @@ echo $this->render('_breadcrumbs', [
                     ],
                     [
                         'class'      => ActionColumn::class,
-                        'urlCreator' => function ($action, $model) {
+                        'urlCreator' => function ($action, $model): string {
                             $id = is_array($model) ? $model['id'] : $model->id;
                             return Url::toRoute([$action, 'id' => $id]);
                         },

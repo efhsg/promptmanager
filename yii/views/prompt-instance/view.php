@@ -1,40 +1,82 @@
 <?php
+/** @noinspection JSUnresolvedReference */
+/** @noinspection DuplicatedCode */
 
+/** @noinspection PhpUnhandledExceptionInspection */
+
+use app\widgets\ContentViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
 /** @var app\models\PromptInstance $model */
 
-$this->title = $model->id;
-$this->params['breadcrumbs'][] = ['label' => 'Prompt Instances', 'url' => ['index']];
-$this->params['breadcrumbs'][] = $this->title;
-\yii\web\YiiAsset::register($this);
+$this->title = 'View - ' . $model->id;
+echo $this->render('_breadcrumbs', [
+    'model' => null,
+    'actionLabel' => $this->title,
+]);
 ?>
-<div class="prompt-instance-view">
+<div class="container py-4">
+    <div class="d-flex justify-content-end align-items-center mb-4">
+        <div>
+            <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
+            <?= Html::a('Delete', ['delete', 'id' => $model->id], [
+                'class' => 'btn btn-danger me-2',
+                'data' => [
+                    'method' => 'post',
+                ],
+            ]) ?>
+        </div>
+    </div>
 
-    <h1><?= Html::encode($this->title) ?></h1>
 
-    <p>
-        <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
-        <?= Html::a('Delete', ['delete', 'id' => $model->id], [
-            'class' => 'btn btn-danger',
-            'data' => [
-                'confirm' => 'Are you sure you want to delete this item?',
-                'method' => 'post',
-            ],
-        ]) ?>
-    </p>
-
-    <?= DetailView::widget([
-        'model' => $model,
-        'attributes' => [
-            'id',
-            'template_id',
-            'final_prompt:ntext',
-            'created_at',
-            'updated_at',
-        ],
-    ]) ?>
-
+    <div class="card mb-4">
+        <div class="card-header">
+            <strong>Prompt Instance Details</strong>
+        </div>
+        <div class="card-body">
+            <?= DetailView::widget([
+                'model' => $model,
+                'options' => ['class' => 'table table-borderless'],
+                'attributes' => [
+                    [
+                        'attribute' => 'template_name',
+                        'label' => 'Template',
+                        'value' => function ($model) {
+                            return $model->template ? $model->template->name : 'N/A';
+                        },
+                    ],
+                    [
+                        'attribute' => 'final_prompt',
+                        'format' => 'raw',
+                        'label' => 'Prompt',
+                        'value' => function ($model) {
+                            return ContentViewerWidget::widget([
+                                'content' => $model->final_prompt,
+                                'viewerOptions' => [
+                                    'id' => 'editor-container',
+                                    'style' => 'height: 300px;',
+                                ],
+                                'copyButtonOptions' => [
+                                    'class' => 'btn btn-sm position-absolute',
+                                    'style' => 'bottom: 10px; right: 10px;',
+                                    'title' => 'Copy to clipboard',
+                                    'aria-label' => 'Copy template content to clipboard',
+                                ],
+                            ]);
+                        },
+                    ],
+                    [
+                        'attribute' => 'created_at',
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
+                    ],
+                    [
+                        'attribute' => 'updated_at',
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
+                    ],
+                ],
+            ]) ?>
+        </div>
+    </div>
 </div>

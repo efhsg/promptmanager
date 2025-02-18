@@ -10,8 +10,6 @@ use yii\widgets\DetailView;
 /** @var yii\web\View $this */
 /** @var app\models\PromptTemplate $model */
 
-QuillAsset::register($this);
-
 $this->title = 'View - ' . $model->name;
 echo $this->render('_breadcrumbs', [
     'model' => null,
@@ -86,18 +84,3 @@ echo $this->render('_breadcrumbs', [
         </div>
     </div>
 </div>
-
-<?php
-$templateBody = json_encode($model->template_body);
-$script = <<<JS
-var quill = new Quill('#editor-container', {
-    theme: 'snow',
-    readOnly: true,
-    modules: {
-        toolbar: false
-    }
-});
-quill.root.innerHTML = $templateBody;
-JS;
-$this->registerJs($script);
-?>

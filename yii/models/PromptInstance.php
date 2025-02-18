@@ -54,9 +54,9 @@ class PromptInstance extends ActiveRecord
         return [
             'id' => 'ID',
             'template_id' => 'Template',
-            'final_prompt' => 'Final Prompt',
-            'created_at' => 'Created At',
-            'updated_at' => 'Updated At',
+            'final_prompt' => 'Prompt',
+            'created_at' => 'Created',
+            'updated_at' => 'Updated',
         ];
     }
 

@@ -7,7 +7,8 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\PromptInstance $model */
 
-$this->title = 'Delete Prompt Instance: ' . Html::encode(substr($model->final_prompt, 0, 50));
+// Use updated_at for the title
+$this->title = 'Delete Prompt Instance - ' . Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i:s');
 echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => $this->title,
@@ -16,16 +17,21 @@ echo $this->render('_breadcrumbs', [
 <div class="prompt-instance-delete-confirm container py-4">
     <div class="card">
         <div class="card-header">
-            <strong>Are you sure you want to delete the prompt
-                instance: <?= Html::encode(substr($model->final_prompt, 0, 50)) ?>?</strong>
+            <strong>Are you sure you want to delete the prompt instance?</strong>
         </div>
         <div class="card-body">
             <div class="prompt-instance-details mb-3">
-                <strong>Final Prompt:</strong>
-                <?= ContentViewerWidget::widget([
-                    'content' => $model->final_prompt,
-                    'enableCopy' => false,
-                ]) ?>
+                <div class="form-group">
+                    <strong>Template:</strong>
+                    <p><?= Html::encode($model->template->name ?? 'N/A') ?></p>
+                </div>
+                <div class="form-group">
+                    <strong>Prompt:</strong>
+                    <?= ContentViewerWidget::widget([
+                        'content' => $model->final_prompt,
+                        'enableCopy' => false,
+                    ]) ?>
+                </div>
             </div>
         </div>
         <div class="card-footer d-flex justify-content-end">
