@@ -19,12 +19,30 @@ class PromptTransformationService extends Component
     public function transformForAIModel(string $prompt): string
     {
         $decoded = html_entity_decode($prompt, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $decoded = str_replace(
-            ['<pre><code>', '</code></pre>', '<p>', '</p>'],
-            ['', '', '', "\n\n"],
-            $decoded
-        );
+        $replacements = [
+            '<pre><code>'   => "```\n",
+            '</code></pre>'  => "\n```",
+            '<p>'            => '',
+            '</p>'           => "\n\n",
+            '<strong>'       => '**',
+            '</strong>'      => '**',
+            '<em>'           => '*',
+            '</em>'          => '*',
+            '<br>'           => "\n",
+            '<br/>'          => "\n",
+            '<br />'         => "\n",
+            '<ol>'           => '',
+            '</ol>'          => "\n",
+            '<ul>'           => '',
+            '</ul>'          => "\n",
+            '<li>'           => '- ',
+            '</li>'          => "\n"
+        ];
+        $decoded = strtr($decoded, $replacements);
+        $decoded = preg_replace('/<(?!\?php)(\/?)[a-zA-Z][^>]*>/', '', $decoded);
+        $decoded = preg_replace("/\n{3,}/", "\n\n", $decoded);
         return trim($decoded);
     }
+
 
 }

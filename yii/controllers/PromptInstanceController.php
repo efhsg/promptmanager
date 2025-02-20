@@ -261,62 +261,63 @@ class PromptInstanceController extends Controller
         ]);
     }
 
-    /**
-     * Generates the final prompt based on submitted data.
-     * This implementation replaces each placeholder (e.g. {{1}}) in the original template
-     * with the corresponding value from POST data (under PromptInstanceForm[fields]),
-     * and prepends the selected contexts' content to the generated prompt.
-     *
-     * @return array
-     * @throws NotFoundHttpException if the template cannot be found.
-     */
-    public function actionGenerateFinalPrompt(): array
-    {
-        Yii::$app->response->format = Response::FORMAT_JSON;
-        $templateId = Yii::$app->request->post('template_id');
-        $selectedContextIds = Yii::$app->request->post('context_ids') ?? [];
-        if (!$templateId) {
-            throw new NotFoundHttpException("Template ID not provided.");
-        }
-        $template = $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
-        if (!$template) {
-            throw new NotFoundHttpException("Template not found or access denied.");
-        }
-        $templateBody = $template->template_body;
-        $postData = Yii::$app->request->post('PromptInstanceForm');
-        $fieldsValues = $postData['fields'] ?? [];
-        $fieldIds = array_keys($fieldsValues);
-        /** @var Field[] $fields */
-        $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
-        $displayPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
-            $fieldKey = $matches[1];
-            if (isset($fieldsValues[$fieldKey])) {
-                $value = $fieldsValues[$fieldKey];
-                if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
-                    return $this->promptTransformationService->wrapCode(is_array($value) ? implode(', ', $value) : $value);
-                }
-                $valueStr = is_array($value) ? implode(', ', $value) : $value;
-                return $this->promptTransformationService->detectCode($valueStr)
-                    ? $this->promptTransformationService->wrapCode($valueStr)
-                    : $valueStr;
-            }
-            return $matches[0];
-        }, $templateBody);
-        $allContextsContent = $this->contextService->fetchContextsContent(Yii::$app->user->id);
-        $contextsArr = [];
-        foreach ($selectedContextIds as $id) {
-            if (!empty($allContextsContent[$id])) {
-                $contextsArr[] = $allContextsContent[$id];
-            }
-        }
-        $contextsText = !empty($contextsArr) ? implode("\n\n", $contextsArr) : '';
-        $displayPrompt = $contextsText ? $contextsText . "\n\n" . $displayPrompt : $displayPrompt;
-        $aiPrompt = $this->promptTransformationService->transformForAIModel($displayPrompt);
-        return [
-            'displayPrompt' => $displayPrompt,
-            'aiPrompt' => $aiPrompt,
-        ];
+/**
+ * Generates the final prompt based on submitted data.
+ * This implementation replaces each placeholder (e.g. {{1}}) in the original template
+ * with the corresponding value from POST data (under PromptInstanceForm[fields]),
+ * and prepends the selected contexts' content to the generated prompt.
+ *
+ * @return array
+ * @throws NotFoundHttpException if the template cannot be found.
+ */
+public function actionGenerateFinalPrompt(): array
+{
+    Yii::$app->response->format = Response::FORMAT_JSON;
+    $templateId = Yii::$app->request->post('template_id');
+    $selectedContextIds = Yii::$app->request->post('context_ids') ?? [];
+    if (!$templateId) {
+        throw new NotFoundHttpException("Template ID not provided.");
     }
+    $template = $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
+    if (!$template) {
+        throw new NotFoundHttpException("Template not found or access denied.");
+    }
+    $templateBody = $template->template_body;
+    $postData = Yii::$app->request->post('PromptInstanceForm');
+    $fieldsValues = $postData['fields'] ?? [];
+    $fieldIds = array_keys($fieldsValues);
+    /** @var Field[] $fields */
+    $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
+    $displayPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
+        $fieldKey = $matches[1];
+        if (!empty($fieldsValues[$fieldKey])) {
+            $value = $fieldsValues[$fieldKey];
+            if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
+                return $this->promptTransformationService->wrapCode(is_array($value) ? implode(', ', $value) : $value);
+            }
+            $valueStr = is_array($value) ? implode(', ', $value) : $value;
+            return $this->promptTransformationService->detectCode($valueStr)
+                ? $this->promptTransformationService->wrapCode($valueStr)
+                : $valueStr;
+        }
+        return '';
+    }, $templateBody);
+    $allContextsContent = $this->contextService->fetchContextsContent(Yii::$app->user->id);
+    $contextsArr = [];
+    foreach ($selectedContextIds as $id) {
+        if (!empty($allContextsContent[$id])) {
+            $contextsArr[] = $allContextsContent[$id];
+        }
+    }
+    $contextsText = !empty($contextsArr) ? implode("\n\n", $contextsArr) : '';
+    $displayPrompt = $contextsText ? $contextsText . "\n\n" . $displayPrompt : $displayPrompt;
+    $aiPrompt = $this->promptTransformationService->transformForAIModel($displayPrompt);
+    return [
+        'displayPrompt' => $displayPrompt,
+        'aiPrompt' => $aiPrompt,
+    ];
+}
+
 
     /**
      * Saves a new PromptInstance using the generated final prompt.
