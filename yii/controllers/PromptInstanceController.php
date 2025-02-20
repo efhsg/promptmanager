@@ -6,12 +6,12 @@ use app\models\Field;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
-use app\services\CodeFormatterService;
 use app\services\ContextService;
 use app\services\EntityPermissionService;
 use app\services\ModelService;
 use app\services\PromptInstanceService;
 use app\services\PromptTemplateService;
+use app\services\PromptTransformationService;
 use Yii;
 use yii\db\Exception;
 use yii\filters\AccessControl;
@@ -35,7 +35,7 @@ class PromptInstanceController extends Controller
         private readonly PromptTemplateService $promptTemplateService,
         private readonly EntityPermissionService $permissionService,
         private readonly ContextService $contextService,
-        private readonly CodeFormatterService $codeFormatterService,
+        private readonly PromptTransformationService $promptTransformationService,
         $config = []
     )
     {
@@ -267,12 +267,12 @@ class PromptInstanceController extends Controller
      * with the corresponding value from POST data (under PromptInstanceForm[fields]),
      * and prepends the selected contexts' content to the generated prompt.
      *
-     * @return string
+     * @return array
      * @throws NotFoundHttpException if the template cannot be found.
      */
-    public function actionGenerateFinalPrompt(): string
+    public function actionGenerateFinalPrompt(): array
     {
-        Yii::$app->response->format = Response::FORMAT_RAW;
+        Yii::$app->response->format = Response::FORMAT_JSON;
         $templateId = Yii::$app->request->post('template_id');
         $selectedContextIds = Yii::$app->request->post('context_ids') ?? [];
         if (!$templateId) {
@@ -288,16 +288,16 @@ class PromptInstanceController extends Controller
         $fieldIds = array_keys($fieldsValues);
         /** @var Field[] $fields */
         $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
-        $generatedPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
+        $displayPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
             $fieldKey = $matches[1];
             if (isset($fieldsValues[$fieldKey])) {
                 $value = $fieldsValues[$fieldKey];
                 if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
-                    return $this->codeFormatterService->wrapCode(is_array($value) ? implode(', ', $value) : $value);
+                    return $this->promptTransformationService->wrapCode(is_array($value) ? implode(', ', $value) : $value);
                 }
                 $valueStr = is_array($value) ? implode(', ', $value) : $value;
-                return $this->codeFormatterService->detectCode($valueStr)
-                    ? $this->codeFormatterService->wrapCode($valueStr)
+                return $this->promptTransformationService->detectCode($valueStr)
+                    ? $this->promptTransformationService->wrapCode($valueStr)
                     : $valueStr;
             }
             return $matches[0];
@@ -310,7 +310,12 @@ class PromptInstanceController extends Controller
             }
         }
         $contextsText = !empty($contextsArr) ? implode("\n\n", $contextsArr) : '';
-        return $contextsText ? $contextsText . "\n\n" . $generatedPrompt : $generatedPrompt;
+        $displayPrompt = $contextsText ? $contextsText . "\n\n" . $displayPrompt : $displayPrompt;
+        $aiPrompt = $this->promptTransformationService->transformForAIModel($displayPrompt);
+        return [
+            'displayPrompt' => $displayPrompt,
+            'aiPrompt' => $aiPrompt,
+        ];
     }
 
     /**

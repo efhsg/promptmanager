@@ -223,7 +223,6 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
         return false;
     }
     if (!step2Loaded) {
-        console.log(templateId);
         if (!templateId) {
             alert('Please select a valid prompt template.');
             return false;
@@ -263,7 +262,6 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             }
         });
     } else {
-        console.log(form.find('#promptinstanceform-template_id').val());
         var data = (form.find('select[name^="PromptInstanceForm[context_ids]"]').val() || [])
             .map(id => ({ name: 'context_ids[]', value: id }))
             .concat({
@@ -277,10 +275,10 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             url: '/prompt-instance/generate-final-prompt',
             type: 'POST',
             data: data,
-            success: function(response){
+            success: function(response) {
                 var container = $('#final-prompt-container');
-                container.find('.content-viewer').html(response);
-                container.find('textarea').text(response);
+                container.find('.content-viewer').html(response.displayPrompt);
+                container.find('textarea').text(response.aiPrompt);
                 $('#collapseFinalPrompt').collapse('show');
                 updateButtonState(3);
             },
