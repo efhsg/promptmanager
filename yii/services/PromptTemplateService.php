@@ -49,16 +49,18 @@ class PromptTemplateService
      * mapping template id to template name.
      *
      * @param int $userId
+     * @param int|null $projectId
      * @return array
      */
-    public function getTemplatesByUser(int $userId): array
+    public function getTemplatesByUser(int $userId, ?int $projectId = null): array
     {
-        $templates = PromptTemplate::find()
+        $query = PromptTemplate::find()
             ->joinWith('project')
-            ->where(['project.user_id' => $userId])
-            ->orderBy(['name' => SORT_ASC])
-            ->all();
-
+            ->where(['project.user_id' => $userId]);
+        if ($projectId !== null) {
+            $query->andWhere(['project.id' => $projectId]);
+        }
+        $templates = $query->orderBy(['name' => SORT_ASC])->all();
         return ArrayHelper::map($templates, 'id', 'name');
     }
 
@@ -67,15 +69,18 @@ class PromptTemplateService
      * mapping template id to template description.
      *
      * @param int $userId
+     * @param int|null $projectId
      * @return array
      */
-    public function getTemplatesDescriptionByUser(int $userId): array
+    public function getTemplatesDescriptionByUser(int $userId, ?int $projectId = null): array
     {
-        $templates = PromptTemplate::find()
+        $query = PromptTemplate::find()
             ->joinWith('project')
-            ->where(['project.user_id' => $userId])
-            ->all();
-
+            ->where(['project.user_id' => $userId]);
+        if ($projectId !== null) {
+            $query->andWhere(['project.id' => $projectId]);
+        }
+        $templates = $query->all();
         return ArrayHelper::map($templates, 'id', 'description');
     }
 

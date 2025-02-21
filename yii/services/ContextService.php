@@ -69,4 +69,22 @@ class ContextService extends Component
         return ArrayHelper::map($contexts, 'id', 'content');
     }
 
+    /**
+     * Fetches all contexts belonging to the given user and project.
+     *
+     * @param int $userId The ID of the user.
+     * @param int|null $projectId The ID of the project.
+     * @return array An associative array of contexts mapped as [id => name].
+     */
+    public function fetchProjectContexts(int $userId, ?int $projectId): array
+    {
+        $query = Context::find()
+            ->joinWith('project')
+            ->where(['project.user_id' => $userId]);
+        if ($projectId !== null) {
+            $query->andWhere(['project.id' => $projectId]);
+        }
+        $contexts = $query->orderBy(['name' => SORT_ASC])->all();
+        return ArrayHelper::map($contexts, 'id', 'name');
+    }
 }
