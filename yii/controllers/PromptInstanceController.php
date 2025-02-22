@@ -227,36 +227,39 @@ class PromptInstanceController extends Controller
         $templateBody = $template->template_body;
         $fields = [];
         foreach ($template->fields as $field) {
-            $fieldKey = (string)$field->id;
-            $fieldData = [
-                'type' => $field->type,
-                'label' => $field->label,
-            ];
-            if (in_array($field->type, ['select', 'multi-select'])) {
-                $options = [];
-                $default = [];
-                foreach ($field->fieldOptions as $option) {
-                    $options[$option->value] = $option->label ?: $option->value;
-                    if ($option->selected_by_default) {
-                        $default[] = $option->value;
-                    }
-                }
-                $fieldData['options'] = $options;
-                $fieldData['default'] = $field->type === 'multi-select'
-                    ? $default
-                    : (count($default) ? reset($default) : null);
-            } elseif ($field->type === 'text') {
-                $fieldData['default'] = $field->content;
-            } else {
-                $fieldData['default'] = '';
-            }
-            $fields[$fieldKey] = $fieldData;
+            $fields[(string)$field->id] = $this->getFieldData($field);
         }
         return $this->renderPartial('_template_form', [
             'templateBody' => $templateBody,
             'fields' => $fields,
         ]);
     }
+
+    private function getFieldData($field): array
+    {
+        $fieldData = [
+            'type' => $field->type,
+            'label' => $field->label,
+        ];
+        if (in_array($field->type, ['select', 'multi-select'])) {
+            $options = [];
+            $default = [];
+            foreach ($field->fieldOptions as $option) {
+                $options[$option->value] = $option->label ?: $option->value;
+                if ($option->selected_by_default) {
+                    $default[] = $option->value;
+                }
+            }
+            $fieldData['options'] = $options;
+            $fieldData['default'] = $field->type === 'multi-select'
+                ? $default
+                : (count($default) ? reset($default) : null);
+        } else {
+            $fieldData['default'] = $this->promptTransformationService->transformForAIModel($field->content);
+        }
+        return $fieldData;
+    }
+
 
 /**
  * Generates the final prompt based on submitted data.
@@ -285,7 +288,7 @@ public function actionGenerateFinalPrompt(): array
     $fieldIds = array_keys($fieldsValues);
     /** @var Field[] $fields */
     $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
-    $displayPrompt = preg_replace_callback('/(?:GEN:)?\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
+    $displayPrompt = preg_replace_callback('/\b(?:GEN|PRJ):\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
         $fieldKey = $matches[1];
         if (!empty($fieldsValues[$fieldKey])) {
             $value = $fieldsValues[$fieldKey];
