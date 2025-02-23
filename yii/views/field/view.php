@@ -1,6 +1,7 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\widgets\ContentViewerWidget;
+use common\constants\FieldConstants;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
@@ -9,7 +10,7 @@ use yii\widgets\DetailView;
 
 $this->title = 'View ' . $model->name;
 echo $this->render('_breadcrumbs', [
-    'model'       => null,
+    'model' => null,
     'actionLabel' => $this->title,
 ]);
 ?>
@@ -31,14 +32,14 @@ echo $this->render('_breadcrumbs', [
         </div>
         <div class="card-body">
             <?= DetailView::widget([
-                'model'   => $model,
+                'model' => $model,
                 'options' => ['class' => 'table table-borderless'],
                 'attributes' => array_filter([
                     [
                         'attribute' => 'projectName',
-                        'label'     => 'Project Name',
-                        'format'    => 'raw',
-                        'value'     => function ($model) {
+                        'label' => 'Project Name',
+                        'format' => 'raw',
+                        'value' => function ($model) {
                             return $model->project
                                 ? Html::encode($model->project->name)
                                 : Yii::$app->formatter->nullDisplay;
@@ -48,30 +49,31 @@ echo $this->render('_breadcrumbs', [
                     'type',
                     [
                         'attribute' => 'selected_by_default',
-                        'value'     => $model->selected_by_default ? 'Yes' : 'No',
+                        'value' => $model->selected_by_default ? 'Yes' : 'No',
                     ],
                     'label',
                     [
                         'attribute' => 'created_at',
-                        'format'    => ['datetime', 'php:Y-m-d H:i:s'],
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
                     [
                         'attribute' => 'updated_at',
-                        'format'    => ['datetime', 'php:Y-m-d H:i:s'],
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
-                    // If the field is of type "text" and content is available, use the ContentViewerWidget
-                    $model->type === 'text' && !empty($model->content) ? [
+                    // Show content for text or select-invert types.
+                    (in_array($model->type, [FieldConstants::TYPES[0], FieldConstants::TYPES[4]]) && !empty($model->content))
+                        ? [
                         'attribute' => 'content',
-                        'format'    => 'raw',
-                        'label'     => 'Field Content',
-                        'value'     => function ($model) {
+                        'format' => 'raw',
+                        'label' => 'Field Content',
+                        'value' => function ($model) {
                             return ContentViewerWidget::widget([
-                                'content'    => $model->content,
-                                // Adjust enableCopy as needed. For example, you may enable it for copy functionality.
+                                'content' => $model->content,
                                 'enableCopy' => true,
                             ]);
                         },
-                    ] : null,
+                    ]
+                        : null,
                 ]),
             ]) ?>
         </div>

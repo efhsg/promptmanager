@@ -1,13 +1,12 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
-use yii\helpers\Html;
 use conquer\select2\Select2Widget;
+use yii\helpers\Html;
 use yii\web\JsExpression;
 
 /* @var string $templateBody */
 /* @var array $fields */
 
-// Replace each placeholder with its corresponding input element.
 $templateRendered = preg_replace_callback('/(?:GEN:|PRJ:)\{\{(\d+)}}/', function ($matches) use ($fields) {
     $placeholder = $matches[1];
     if (!isset($fields[$placeholder])) {
@@ -34,7 +33,7 @@ $templateRendered = preg_replace_callback('/(?:GEN:|PRJ:)\{\{(\d+)}}/', function
     ];
 
     return match ($field['type']) {
-        'select', 'multi-select' => Select2Widget::widget([
+        'select', 'multi-select', 'select-invert' => Select2Widget::widget([
             'name' => $field['type'] === 'multi-select' ? $name . '[]' : $name,
             'value' => $field['default'],
             'items' => $field['options'],
@@ -57,7 +56,6 @@ $templateRendered = preg_replace_callback('/(?:GEN:|PRJ:)\{\{(\d+)}}/', function
     };
 
 }, $templateBody);
-
 ?>
 
 <div class="generated-prompt-form">

@@ -62,13 +62,11 @@ QuillAsset::register($this);
     </div>
 
     <div id="field-options-wrapper" style="display: none;">
-        <?php
-        echo $this->render('_fieldOptionsForm', [
+        <?= $this->render('_fieldOptionsForm', [
             'form'              => $form,
             'modelField'        => $modelField,
             'modelsFieldOption' => $modelsFieldOption,
-        ]);
-        ?>
+        ]) ?>
     </div>
 
     <div class="form-group mt-4 text-end">
@@ -83,9 +81,10 @@ QuillAsset::register($this);
     function toggleFieldOptions(value) {
         const contentWrapper = document.getElementById('field-content-wrapper');
         const optionsWrapper = document.getElementById('field-options-wrapper');
-        const optionInputs   = optionsWrapper.querySelectorAll('input, textarea, select, code');
+        const nonOptionFieldElements = optionsWrapper.querySelectorAll(<?= json_encode(FieldConstants::NO_OPTION_FIELD_TYPES) ?>);
+        const optionTypes = <?= json_encode(FieldConstants::OPTION_FIELD_TYPES) ?>;
 
-        if (value === 'text' || value === 'code') {
+        if (value === 'text' || value === 'code' || value === 'select-invert') {
             contentWrapper.style.display = 'block';
             document.querySelector('#field-content').disabled = false;
         } else {
@@ -93,12 +92,12 @@ QuillAsset::register($this);
             document.querySelector('#field-content').disabled = true;
         }
 
-        if (['select', 'multi-select'].includes(value)) {
+        if (optionTypes.includes(value)) {
             optionsWrapper.style.display = 'block';
-            optionInputs.forEach(el => el.disabled = false);
+            nonOptionFieldElements.forEach((el) => el.disabled = false);
         } else {
             optionsWrapper.style.display = 'none';
-            optionInputs.forEach(el => el.disabled = true);
+            nonOptionFieldElements.forEach((el) => el.disabled = true);
         }
     }
     toggleFieldOptions('<?= $modelField->type ?>');
@@ -139,5 +138,3 @@ quill.on('text-change', function() {
 JS;
 $this->registerJs($script);
 ?>
-
-
