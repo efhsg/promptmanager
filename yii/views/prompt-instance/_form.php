@@ -2,6 +2,7 @@
 
 /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\assets\QuillAsset;
 use app\helpers\TooltipHelper;
 use app\models\PromptInstanceForm;
 use conquer\select2\Select2Widget;
@@ -16,6 +17,9 @@ use yii\widgets\ActiveForm;
 /* @var array $templatesDescription */
 /* @var array $contexts */
 /* @var array $contextsContent */
+
+
+QuillAsset::register($this);
 
 $maxContentLength = 1000;
 $contextTooltipTexts = TooltipHelper::prepareTexts($contextsContent, $maxContentLength);
@@ -126,15 +130,20 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
                  data-bs-parent="#promptInstanceAccordion">
                 <div class="accordion-body">
                     <div id="final-prompt-container">
-                        <?= app\widgets\ContentViewerWidget::widget([
-                            'content' => '',
-                            'copyButtonOptions' => [
-                                'class' => 'btn btn-sm position-absolute',
-                                'style' => 'bottom: 10px; right: 20px;',
-                                'title' => 'Copy to clipboard',
-                                'aria-label' => 'Copy content to clipboard',
-                            ],
-                        ]) ?>
+                        <div id="final-prompt-container-view">
+                            <?= app\widgets\ContentViewerWidget::widget([
+                                'content' => '',
+                                'copyButtonOptions' => [
+                                    'class' => 'btn btn-sm position-absolute',
+                                    'style' => 'bottom: 10px; right: 20px;',
+                                    'title' => 'Copy to clipboard',
+                                    'aria-label' => 'Copy content to clipboard',
+                                ],
+                            ]) ?>
+                        </div>
+                        <div id="final-prompt-container-edit" class="d-none">
+                            <div id="quill-editor"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -144,6 +153,10 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
         <?= Html::button('Previous', [
             'class' => 'btn btn-secondary me-2 d-none',
             'id' => 'previous-button'
+        ]) ?>
+        <?= Html::button('Edit', [
+            'class' => 'btn btn-secondary me-2 d-none',
+            'id' => 'edit-button'
         ]) ?>
         <?= Html::submitButton('Next', [
             'class' => 'btn btn-primary',
@@ -159,6 +172,7 @@ var step2Loaded = false;
 var currentStep = 1;
 var $nextButton = $('#form-submit-button');
 var $prevButton = $('#previous-button');
+var $editButton = $('#edit-button');
 var $finalPromptContainer = $('#final-prompt-container');
 
 function updateButtonState(step) {
@@ -166,12 +180,15 @@ function updateButtonState(step) {
     if (step === 1) {
         $nextButton.text('Next').attr('data-action', 'next');
         $prevButton.addClass('d-none');
+        $editButton.addClass('d-none');
     } else if (step === 2) {
         $nextButton.text('Next').attr('data-action', 'next');
         $prevButton.removeClass('d-none');
+        $editButton.addClass('d-none');
     } else if (step === 3) {
         $nextButton.text('Save').attr('data-action', 'save');
         $prevButton.removeClass('d-none');
+        $editButton.removeClass('d-none');
     }
 }
 
@@ -270,7 +287,6 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             })
             .concat(container.find(':input').serializeArray());
         data.push({ name: '_csrf', value: yii.getCsrfToken() });
-
         $.ajax({
             url: '/prompt-instance/generate-final-prompt',
             type: 'POST',
@@ -278,7 +294,7 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             success: function(response) {
                 var container = $('#final-prompt-container');
                 container.find('.content-viewer').html(response.displayPrompt);
-                container.find('textarea').text(response.aiPrompt);
+                container.find('textarea').text(transformForAIModel(response.displayPrompt));
                 $('#collapseFinalPrompt').collapse('show');
                 updateButtonState(3);
             },
@@ -293,6 +309,81 @@ $('.accordion-button').prop('disabled', true);
 $('#promptinstanceform-template_id').on('change', function() {
     if (!step2Loaded) {
         $('#prompt-instance-form').submit();
+    }
+});
+
+function transformForAIModel(prompt) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = prompt;
+    const markdown = Array.from(tempDiv.childNodes).map(convertToMarkdown).join('');
+    return markdown.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function convertToMarkdown(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'p') {
+            return Array.from(node.childNodes).map(convertToMarkdown).join('') + '\n\n';
+        } else if (tag === 'strong') {
+            return '**' + Array.from(node.childNodes).map(convertToMarkdown).join('') + '**';
+        } else if (tag === 'em') {
+            return '*' + Array.from(node.childNodes).map(convertToMarkdown).join('') + '*';
+        } else if (tag === 'br') {
+            return '\n';
+        } else if (tag === 'pre' && node.firstChild && node.firstChild.tagName && node.firstChild.tagName.toLowerCase() === 'code') {
+            return '```\n' + node.firstChild.textContent + '\n```';
+        } else if (tag === 'ul' || tag === 'ol') {
+            return Array.from(node.childNodes).map(child => {
+                if (child.tagName && child.tagName.toLowerCase() === 'li') {
+                    return '- ' + Array.from(child.childNodes).map(convertToMarkdown).join('') + '\n';
+                }
+            }).join('');
+        } else {
+            return node.outerHTML;
+        }
+    }
+    return '';
+}
+
+let quillEditor = null;
+
+function initQuillEditor() {
+    if (!quillEditor) {
+        quillEditor = new Quill('#quill-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean']
+                ]
+            }
+        });
+    }
+}
+
+$editButton.on('click', function() {
+    const isEditing = $(this).text() === 'Edit';
+    const $viewContainer = $('#final-prompt-container-view');
+    const $editContainer = $('#final-prompt-container-edit');
+    if (isEditing) {
+        initQuillEditor();
+        const encodedHtml = $viewContainer.find('.content-viewer').html();
+        quillEditor.clipboard.dangerouslyPasteHTML(encodedHtml);
+        $viewContainer.addClass('d-none');
+        $editContainer.removeClass('d-none');
+        $('.ql-toolbar').show();
+        $(this).text('View');
+    } else {
+        const updatedContent = quillEditor.root.innerHTML;
+        $viewContainer.find('.content-viewer').html(updatedContent);
+        $viewContainer.find('textarea').val(updatedContent);
+        $editContainer.addClass('d-none');
+        $('.ql-toolbar').hide();
+        $viewContainer.removeClass('d-none');
+        $(this).text('Edit');
     }
 });
 JS;

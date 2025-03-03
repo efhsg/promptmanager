@@ -330,11 +330,8 @@ class PromptInstanceController extends Controller
         }
         $contextsText = !empty($contextsArr) ? implode("\n\n", $contextsArr) : '';
         $displayPrompt = $contextsText ? $contextsText . "\n\n" . $displayPrompt : $displayPrompt;
-        $aiPrompt = $this->promptTransformationService->transformForAIModel($displayPrompt);
-        return [
-            'displayPrompt' => $displayPrompt,
-            'aiPrompt' => $aiPrompt,
-        ];
+
+        return ['displayPrompt' => $displayPrompt];
     }
 
     /**

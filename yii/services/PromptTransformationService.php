@@ -39,7 +39,8 @@ class PromptTransformationService extends Component
             '</li>'          => "\n"
         ];
         $decoded = strtr($decoded, $replacements);
-        $decoded = preg_replace('/<(?!\?php)(\/?)[a-zA-Z][^>]*>/', '', $decoded);
+        $decoded = preg_replace('/<\s*pre\s*>\s*<\s*code\s*>/i', '', $decoded);
+        $decoded = preg_replace('/<\s*\/\s*code\s*>\s*<\s*\/\s*pre\s*>/i', '', $decoded);
         $decoded = preg_replace("/\n{3,}/", "\n\n", $decoded);
         return trim($decoded);
     }
