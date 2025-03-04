@@ -7,9 +7,12 @@
 namespace app\widgets;
 
 use app\assets\QuillAsset;
+use Exception;
+use Yii;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
+use yii\web\View;
 
 class ContentViewerWidget extends Widget
 {
@@ -70,7 +73,6 @@ class ContentViewerWidget extends Widget
     {
         parent::init();
 
-        // Process content if it's in Delta format
         $this->processContent();
 
         $defaultCopyButtonOptions = [
@@ -86,9 +88,6 @@ class ContentViewerWidget extends Widget
         Html::addCssClass($this->viewerOptions, 'content-viewer');
     }
 
-    /**
-     * Detects and processes Delta format content
-     */
     protected function processContent(): void
     {
         if (empty($this->content)) {
@@ -96,54 +95,58 @@ class ContentViewerWidget extends Widget
             return;
         }
 
-        // Check if content is in Delta format
         try {
-            if (is_string($this->content)) {
-                $decoded = Json::decode($this->content);
-                $this->isDeltaFormat = is_array($decoded) && isset($decoded['ops']) && is_array($decoded['ops']);
+            $decoded = Json::decode($this->content);
+            $this->isDeltaFormat = is_array($decoded) && isset($decoded['ops']) && is_array($decoded['ops']);
 
-                if ($this->isDeltaFormat) {
-                    // Register QuillAsset for Delta format conversion
-                    QuillAsset::register($this->getView());
-
-                    // Create a placeholder for the converted content
-                    $id = 'delta-content-' . $this->getId();
-                    $this->processedContent = '<div id="' . $id . '">Loading formatted content...</div>';
-
-                    // Register JavaScript to convert Delta to HTML
-                    $js = <<<JS
-                    document.addEventListener('DOMContentLoaded', function() {
-                        try {
-                            var deltaContent = {$this->content};
-                            var converter = new QuillDeltaToHtmlConverter(deltaContent.ops, {
-                                inlineStyles: true
-                            });
-                            var convertedHtml = converter.convert();
-                            document.getElementById('{$id}').innerHTML = convertedHtml;
-                            
-                            // Update the hidden textarea for copy functionality
-                            var hiddenTextarea = document.getElementById('{$this->getId()}-hidden');
-                            if (hiddenTextarea) {
-                                hiddenTextarea.value = convertedHtml;
-                            }
-                        } catch (error) {
-                            console.error('Error converting Delta to HTML:', error);
-                            document.getElementById('{$id}').innerHTML = 
-                                '<div class="alert alert-danger">Error converting content format</div>';
-                        }
-                    });
-                    JS;
-
-                    $this->getView()->registerJs($js, \yii\web\View::POS_END);
-                    return;
-                }
+            if ($this->isDeltaFormat) {
+                $this->processDeltaFormat($decoded);
+                return;
             }
-        } catch (\Exception $e) {
-            // Not valid JSON, not in Delta format
+        } catch (Exception $e) {
+            Yii::warning('Error processing content: ' . $e->getMessage(), __METHOD__);
         }
 
-        // If not Delta format or processing failed, use original content
         $this->processedContent = $this->content;
+    }
+
+    protected function processDeltaFormat(array $deltaContent): void
+    {
+        QuillAsset::register($this->getView());
+
+        $id = 'delta-content-' . $this->getId();
+        $this->processedContent = '<div id="' . $id . '">Loading formatted content...</div>';
+
+        $js = $this->generateDeltaConversionJs($id, $deltaContent);
+        $this->getView()->registerJs($js, View::POS_END);
+    }
+
+    protected function generateDeltaConversionJs(string $elementId, array $deltaContent): string
+    {
+        $jsonContent = Json::encode($deltaContent);
+        $hiddenId = $this->getId() . '-hidden';
+
+        return <<<JS
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                var deltaContent = $jsonContent;
+                var converter = new QuillDeltaToHtmlConverter(deltaContent.ops, {
+                    inlineStyles: true
+                });
+                var convertedHtml = converter.convert();
+                document.getElementById('$elementId').innerHTML = convertedHtml;
+                
+                var hiddenTextarea = document.getElementById('$hiddenId');
+                if (hiddenTextarea) {
+                    hiddenTextarea.value = convertedHtml;
+                }
+            } catch (error) {
+                console.error('Error converting Delta to HTML:', error);
+                document.getElementById('$elementId').innerHTML = 
+                    '<div class="alert alert-danger">Error converting content format</div>';
+            }
+        });
+        JS;
     }
 
     public function run(): string
