@@ -8,9 +8,13 @@
         "build": "cd quill/packages/quill && npm run build && cp -r dist/dist/* /yii/web/quill/",
         "minify": "npx uglify-js /yii/web/quill/quill.js -o /yii/web/quill/quill.min.js",
         "clean": "rm -rf quill",
-        "build-and-minify": "npm run build && npm run minify"
+        "minify-delta": "mkdir -p /yii/web/quill/quill-delta-to-html && npx uglify-js node_modules/quill-delta-to-html/dist/browser/QuillDeltaToHtmlConverter.bundle.js -o /yii/web/quill/quill-delta-to-html/quill-delta-to-html.min.js",
+        "build-and-minify": "npm run build && npm run minify && npm run minify-delta"
     },
     "devDependencies": {
         "uglify-js": "^3.19.3"
+    },
+    "dependencies": {
+        "quill-delta-to-html": "^0.12.1"
     }
 }

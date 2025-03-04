@@ -60,22 +60,19 @@ var quill = new Quill('#editor', {
             [{ 'color': [] }, { 'background': [] }],
             [{ 'font': [] }],
             [{ 'align': [] }],
-            ['link', 'image'],            
+            ['link', 'image'],
             ['clean']
         ]
     }
 });
-
 try {
-    quill.clipboard.dangerouslyPasteHTML($templateBody)
+    quill.setContents(JSON.parse($templateBody))
 } catch (error) {
-    console.error('Error injecting template body:', error);
+    console.error('Error injecting template body:', error)
 }
-
 quill.on('text-change', function() {
-    document.querySelector('#context-content').value = quill.root.innerHTML;
+    document.querySelector('#context-content').value = JSON.stringify(quill.getContents())
 });
-
 JS;
 $this->registerJs($script);
 ?>
