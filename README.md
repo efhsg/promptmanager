@@ -1,5 +1,8 @@
 <p style="text-align: center;">
-  <img src="https://github.com/efhsg/promptmanager/blob/main/yii/web/images/prompt-manager-logo.png" alt="MoneyMonkey logo" style="width: 50%;">
+  <img 
+    src="https://github.com/efhsg/promptmanager/blob/main/yii/web/images/prompt-manager-logo.png" 
+    alt="MoneyMonkey logo" 
+    style="display: block; margin: 0 auto; width: 40%;">
 </p>
 
 # PromtpManager: Automate Your AI Prompts
