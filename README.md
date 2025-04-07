@@ -37,6 +37,12 @@ Dive in and start automating your AI prompts today!
   ```
 - **Set your API keys in the `.env` file**
 
+### NPM
+  ```
+  docker compose run --entrypoint bash pma_npm -c "npm run setup"
+  docker compose run --entrypoint bash pma_npm -c "npm run prebuild"
+  docker compose run --entrypoint bash pma_npm -c "npm run build"
+  ```
 
 ### Setup using Docker:
   ```
