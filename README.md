@@ -11,7 +11,7 @@ Welcome to **PromtpManager**, a new software project dedicated to streamlining y
 
 PromtpManager is designed to automate the creation, management, and integration of prompts used in large language model (LLM) software development. Our tool leverages a structured approach using a combination of projects, contexts, and prompt templates with customizable fields, ensuring that your prompts are both organized and dynamically assembled as needed.
 
-## Why PromtpManager?
+## Why PromptManager?
 
 - **Efficiency:** Eliminate the tedious process of manually piecing together prompt components.
 - **Automation:** Seamlessly manage and update your prompts with an automated system.
@@ -38,10 +38,25 @@ Dive in and start automating your AI prompts today!
 - **Set your API keys in the `.env` file**
 
 
-### Setup using Docker (recommended for ease of use):
+### Setup using Docker:
   ```
   docker-compose up -d
   ```
+
+### Composer install
+  ```
+   docker exec -it pma_yii bash -c "composer install"
+  ```
+### Migrations
+  ```
+  docker exec pma_yii yii migrate --migrationPath=@app/modules/identity/migrations --interactive=0 && docker exec pma_yii yii_test migrate --migrationPath=@app/modules/identity/migrations --interactive=0
+  docker exec pma_yii yii migrate --interactive=0 && docker exec pma_yii yii_test migrate --interactive=0 && docker exec pma_yii yii migrate --migrationPath=@yii/log/migrations/ --interactive=0
+  docker exec pma_yii yii migrate --migrationPath=@yii/rbac/migrations --interactive=0 && docker exec pma_yii yii rbac/init && docker exec pma_yii yii_test migrate --migrationPath=@yii/rbac/migrations --interactive=0
+  ```
+
+### Default user (or create one with Signup in the app)
+
+docker exec -it pma_yii bash -c "yii identity/user/create user user@user.com user"
 
 ### To view the app:
 - Open your web browser and navigate to `http://localhost:8503/`
