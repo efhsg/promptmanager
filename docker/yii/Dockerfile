@@ -27,6 +27,11 @@ RUN apt-get update && apt-get install -y \
     vim --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update \
+ && apt-get install -y iputils-ping \
+ && apt-get install -y netcat-openbsd \
+ && rm -rf /var/lib/apt/lists/*
+
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd intl pdo_pgsql
@@ -41,11 +46,13 @@ RUN pecl install imagick && docker-php-ext-enable imagick
 RUN pecl install xdebug && docker-php-ext-enable xdebug
 
 # Create Xdebug configuration file
+ARG XDEBUG_CLIENT_HOST
+ARG XDEBUG_PORT
 RUN echo "zend_extension=xdebug.so" > /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
     echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
     echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
-    echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
-    echo "xdebug.client_port=9003" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    echo "xdebug.client_host=${XDEBUG_CLIENT_HOST}" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
+    echo "xdebug.client_port=${XDEBUG_PORT}" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
 # Set max_execution_time
 RUN echo "max_execution_time=300" > /usr/local/etc/php/conf.d/custom.ini

@@ -7,6 +7,8 @@ services:
         - USER_ID=${USER_ID:-1000}
         - USER_NAME=${USER_NAME:-appuser}
         - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}
+        - XDEBUG_PORT=${XDEBUG_PORT:-9003}
+        - XDEBUG_CLIENT_HOST=${XDEBUG_CLIENT_HOST:-host.docker.internal}
     container_name: pma_yii
     working_dir: /var/www/html/yii
     environment:
