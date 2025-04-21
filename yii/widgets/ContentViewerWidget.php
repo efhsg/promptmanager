@@ -3,7 +3,7 @@
 /**
  * ContentViewerWidget
  *
- * Server-side rendering of Quill Delta content using nadar/quill-delta-parser
+ * Server-side rendering of Quill Delta content
  */
 
 namespace app\widgets;
@@ -44,6 +44,11 @@ class ContentViewerWidget extends Widget
      * @var string The label for the copy button. Defaults to an icon.
      */
     public string $copyButtonLabel = '<i class="bi bi-clipboard"></i>';
+
+    /**
+     * @var string The format to copy: 'delta', 'html', or 'markdown'.
+     */
+    public string $copyFormat = 'html';
 
     /**
      * @var string CSS for the content viewer. Can be overridden to change styling.
@@ -235,15 +240,19 @@ class ContentViewerWidget extends Widget
      */
     public function run(): string
     {
+        $containerId = $this->getId() . '-viewer';
         $display   = $this->processedContent ?? $this->content;
         $hiddenId = $this->getId() . '-hidden';
+
+        // Hidden textarea holds the original delta JSON for fallbacks
         $hidden    = Html::tag('textarea', $this->content, ['id' => $hiddenId, 'style' => 'display:none;']);
-        $viewerDiv = Html::tag('div', $display, $this->viewerOptions);
+        $viewerDiv = Html::tag('div', $display, array_merge($this->viewerOptions, ['id' => $containerId]));
 
         $copyBtn = '';
         if ($this->enableCopy) {
             $copyBtn = CopyToClipboardWidget::widget([
-                'targetSelector' => "#$hiddenId",
+                'targetSelector' => "#$containerId",
+                'copyFormat'     => $this->copyFormat,
                 'buttonOptions'  => $this->copyButtonOptions,
                 'label'          => $this->copyButtonLabel,
             ]);

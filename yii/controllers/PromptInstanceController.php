@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnused */
 
 namespace app\controllers;
 
@@ -13,13 +13,18 @@ use app\services\PromptInstanceService;
 use app\services\PromptTemplateService;
 use app\services\PromptTransformationService;
 use common\constants\FieldConstants;
+use HTMLPurifier;
+use HTMLPurifier_Config;
+use nadar\quill\Lexer;
 use Yii;
 use yii\db\Exception;
 use yii\filters\AccessControl;
+use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
+
 
 class PromptInstanceController extends Controller
 {
@@ -298,38 +303,35 @@ class PromptInstanceController extends Controller
         $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
         $displayPrompt = preg_replace_callback('/\b(?:GEN|PRJ):\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
             $fieldKey = $matches[1];
-            if (!empty($fieldsValues[$fieldKey])) {
-                $value = $fieldsValues[$fieldKey];
-                if (isset($fields[$fieldKey])) {
-                    if ($fields[$fieldKey]->type === 'code') {
-                        return $this->promptTransformationService->wrapCode(is_array($value) ? implode(', ', $value) : $value);
-                    } elseif ($fields[$fieldKey]->type === 'select-invert') {
-                        $selected = is_array($value) ? implode(', ', $value) : $value;
-                        $allOptions = [];
-                        foreach ($fields[$fieldKey]->fieldOptions as $option) {
-                            $allOptions[] = $option->value;
-                        }
-                        $invertOptions = array_diff($allOptions, [$selected]);
-                        $invertStr = implode(', ', $invertOptions);
-                        return $selected . ' ' . $this->promptTransformationService->transformForAIModel($fields[$fieldKey]->content ?? " ") . ' ' . $invertStr;
-                    }
-                }
-                $valueStr = is_array($value) ? implode(', ', $value) : $value;
-                return $this->promptTransformationService->detectCode($valueStr)
-                    ? $this->promptTransformationService->wrapCode($valueStr)
-                    : $valueStr;
+            if (empty($fieldsValues[$fieldKey])) {
+                return '';
             }
-            return '';
-        }, $templateBody);
-        $allContextsContent = $this->contextService->fetchContextsContent(Yii::$app->user->id);
-        $contextsArr = [];
-        foreach ($selectedContextIds as $id) {
-            if (!empty($allContextsContent[$id])) {
-                $contextsArr[] = $allContextsContent[$id];
+            $value = $fieldsValues[$fieldKey];
+            $val = is_array($value) ? implode(', ', $value) : $value;
+            if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
+                return $this->promptTransformationService->wrapCode($val);
             }
+            return $this->promptTransformationService->detectCode($val)
+                ? $this->promptTransformationService->wrapCode($val)
+                : $val;
+        },
+            $templateBody
+        );
+
+        $allContexts = $this->contextService->fetchContextsContent(Yii::$app->user->id);
+        $contextsHtml = [];
+        foreach ($selectedContextIds as $contextId) {
+            if (empty($allContexts[$contextId])) {
+                continue;
+            }
+            $delta = Json::decode($allContexts[$contextId]);
+            $html = (new Lexer(Json::encode($delta)))->render();
+            $clean = (new HTMLPurifier(HTMLPurifier_Config::createDefault()))->purify($html);
+            $contextsHtml[] = $clean;
         }
-        $contextsText = !empty($contextsArr) ? implode("\n\n", $contextsArr) : '';
-        $displayPrompt = $contextsText ? $contextsText . "\n\n" . $displayPrompt : $displayPrompt;
+
+        $contextsBlock = $contextsHtml ? implode("\n\n", $contextsHtml) . "\n\n" : '';
+        $displayPrompt = $contextsBlock . $displayPrompt;
 
         return ['displayPrompt' => $displayPrompt];
     }
