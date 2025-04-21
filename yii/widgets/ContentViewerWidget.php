@@ -1,4 +1,5 @@
-<?php
+<?php /** @noinspection CssUnusedSymbol */
+
 /**
  * ContentViewerWidget
  *
@@ -8,6 +9,7 @@
 namespace app\widgets;
 
 use Exception;
+use Throwable;
 use Yii;
 use yii\base\Widget;
 use yii\helpers\Html;
@@ -189,12 +191,12 @@ class ContentViewerWidget extends Widget
             $this->codeLanguage = 'php';
             return;
         }
-        if (preg_match('/function\s+\w+\s*\(/s', $content) || preg_match('/\{\s*\}/', $content)) {
+        if (preg_match('/function\s+\w+\s*\(/', $content) || preg_match('/\{\s*}/', $content)) {
             $this->isCode = true;
             $this->codeLanguage = 'javascript';
             return;
         }
-        if (preg_match('/^\s*[\[{]/', $content) && preg_match('/[\]}]\s*$/', $content)) {
+        if (preg_match('/^\s*[\[{]/', $content) && preg_match('/[]}]\s*$/', $content)) {
             $this->isCode = true;
             $this->codeLanguage = 'json';
         }
@@ -228,6 +230,9 @@ class ContentViewerWidget extends Widget
         $this->processedContent = Html::tag('div', $cleanHtml, $this->viewerOptions);
     }
 
+    /**
+     * @throws Throwable
+     */
     public function run(): string
     {
         $display   = $this->processedContent ?? $this->content;
