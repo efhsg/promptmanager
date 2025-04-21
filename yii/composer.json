@@ -21,7 +21,7 @@
         "luoxiaojun1992/yii2-tinker": "*",
         "yii2-extensions/dynamicform": "^1.0.0",
         "conquer/select2": "^1.4",
-        "nadar/quill-delta-parser": "^3.4"
+        "nadar/quill-delta-parser": "^3.5"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",

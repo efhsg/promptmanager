@@ -1,23 +1,25 @@
-<?php /** @noinspection JSUnusedAssignment */
-/** @noinspection JSUnresolvedReference */
-/** @noinspection PhpUnhandledExceptionInspection */
-
-/** @noinspection CssUnusedSymbol */
+<?php
+/**
+ * ContentViewerWidget
+ *
+ * Server-side rendering of Quill Delta content using nadar/quill-delta-parser
+ */
 
 namespace app\widgets;
 
-use app\assets\QuillAsset;
 use Exception;
 use Yii;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
-use yii\web\View;
+use nadar\quill\Lexer;
+use HTMLPurifier;
+use HTMLPurifier_Config;
 
 class ContentViewerWidget extends Widget
 {
     /**
-     * @var string The main text/content to display.
+     * @var string The main text/content to display (Quill Delta JSON or raw HTML/code).
      */
     public string $content;
 
@@ -113,8 +115,10 @@ class ContentViewerWidget extends Widget
     {
         parent::init();
 
+        // Determine how to render content
         $this->processContent();
 
+        // Setup copy button defaults
         $defaultCopyButtonOptions = [
             'class' => 'btn btn-sm position-absolute',
             'style' => 'bottom: 10px; right: 20px;',
@@ -123,6 +127,7 @@ class ContentViewerWidget extends Widget
         ];
         $this->copyButtonOptions = array_merge($defaultCopyButtonOptions, $this->copyButtonOptions);
 
+        // Register CSS for viewer
         $this->getView()->registerCss($this->viewerCss);
 
         Html::addCssClass($this->viewerOptions, 'content-viewer');
@@ -135,20 +140,18 @@ class ContentViewerWidget extends Widget
             return;
         }
 
-        // Try to process as Delta format
+        // Attempt Quill Delta parsing
         try {
             $decoded = Json::decode($this->content);
-            $isDeltaFormat = is_array($decoded) && isset($decoded['ops']) && is_array($decoded['ops']);
-
-            if ($isDeltaFormat) {
+            if (is_array($decoded) && isset($decoded['ops']) && is_array($decoded['ops'])) {
                 $this->processDeltaFormat($decoded);
                 return;
             }
         } catch (Exception $e) {
-            Yii::warning('Error processing content as Delta: ' . $e->getMessage(), __METHOD__);
+            Yii::warning('Error decoding Delta JSON: ' . $e->getMessage(), __METHOD__);
         }
 
-        // Check if content is code
+        // Fallback: detect code blocks
         $this->detectCode();
 
         if ($this->isCode) {
@@ -156,6 +159,7 @@ class ContentViewerWidget extends Widget
             return;
         }
 
+        // Default: treat as raw HTML/text
         $this->processedContent = $this->content;
     }
 
@@ -163,50 +167,34 @@ class ContentViewerWidget extends Widget
     {
         $content = $this->content;
 
-        // Check for common code block markers
+        // Similar heuristics as before...
         if (preg_match('/^```(\w*)[\r\n]+(.*?)```$/s', $content, $matches)) {
             $this->isCode = true;
             $this->codeLanguage = !empty($matches[1]) ? $matches[1] : 'plain';
             $this->content = $matches[2];
             return;
         }
-
-        // Check for XML/HTML code blocks
-        if (preg_match('/<pre(?:\s+.*?)?>\s*(?:<code(?:\s+.*?)?>)?(.*?)(?:<\/code>)?\s*<\/pre>/s', $content, $matches)) {
+        if (preg_match('/<pre(?:[^>]+)?>\s*(?:<code[^>]+)?>?(.*?)(?:<\/code>)?\s*<\/pre>/s', $content, $m)) {
             $this->isCode = true;
-
-            // Try to detect language from class attribute
-            if (preg_match('/class=["\'](.*?)language-(\w+)(.*?)["\']/i', $content, $langMatches)) {
-                $this->codeLanguage = $langMatches[2];
+            if (preg_match('/class=["\'].*?language-(\w+).*?["\']/i', $content, $lm)) {
+                $this->codeLanguage = $lm[1];
             } else {
                 $this->codeLanguage = 'html';
             }
-
-            $this->content = html_entity_decode($matches[1]);
+            $this->content = html_entity_decode($m[1]);
             return;
         }
-
-        // Heuristic detection for PHP code
-        if (preg_match('/^<\?php/i', trim($content)) &&
-            (str_contains($content, ';') || str_contains($content, 'class ') || str_contains($content, 'function '))) {
+        if (preg_match('/^<\?php/i', trim($content))) {
             $this->isCode = true;
             $this->codeLanguage = 'php';
             return;
         }
-
-        // Heuristic detection for JavaScript
-        if ((preg_match('/function\s+\w+\s*\(.*?\)\s*{/s', $content) ||
-                preg_match('/const|let|var\s+\w+\s*=/', $content) ||
-                preg_match('/\w+\s*\.\s*\w+\s*\(/', $content)) &&
-            str_contains($content, ';')) {
+        if (preg_match('/function\s+\w+\s*\(/s', $content) || preg_match('/\{\s*\}/', $content)) {
             $this->isCode = true;
             $this->codeLanguage = 'javascript';
             return;
         }
-
-        // Heuristic detection for JSON
-        if (preg_match('/^\s*[{\[]/', $content) && preg_match('/[}\]]\s*$/', $content) &&
-            (str_contains($content, '":') || str_contains($content, '",'))) {
+        if (preg_match('/^\s*[\[{]/', $content) && preg_match('/[\]}]\s*$/', $content)) {
             $this->isCode = true;
             $this->codeLanguage = 'json';
         }
@@ -214,77 +202,48 @@ class ContentViewerWidget extends Widget
 
     protected function processCodeFormat(): void
     {
-        $language = $this->codeLanguage ?: 'plain';
+        $lang        = $this->codeLanguage ?: 'plain';
         $escapedCode = Html::encode($this->content);
-
-        $this->processedContent = <<<HTML
-        <pre class="code-$language"><code>$escapedCode</code></pre>
-        HTML;
+        $this->processedContent = Html::tag('pre', Html::tag('code', $escapedCode), ['class' => "code-$lang"]);
     }
 
     protected function processDeltaFormat(array $deltaContent): void
     {
-        QuillAsset::register($this->getView());
-
-        $id = 'delta-content-' . $this->getId();
-        $this->processedContent = '<div id="' . $id . '">Loading formatted content...</div>';
-
-        $js = $this->generateDeltaConversionJs($id, $deltaContent);
-        $this->getView()->registerJs($js, View::POS_END);
-    }
-
-    protected function generateDeltaConversionJs(string $elementId, array $deltaContent): string
-    {
-        $jsonContent = Json::encode($deltaContent);
-        $hiddenId = $this->getId() . '-hidden';
-
-        return <<<JS
-        document.addEventListener('DOMContentLoaded', function() {
             try {
-                var deltaContent = $jsonContent;
-                var converter = new QuillDeltaToHtmlConverter(deltaContent.ops, {
-                    inlineStyles: true
-                });
-                var convertedHtml = converter.convert();
-                document.getElementById('$elementId').innerHTML = convertedHtml;
+            // Convert Delta JSON to HTML
+            $jsonDelta = Json::encode($deltaContent);
+            $lexer     = new Lexer($jsonDelta);
+            $html      = $lexer->render();
+        } catch (Exception $e) {
+            Yii::warning("Delta parsing error: {$e->getMessage()}", __METHOD__);
+            $html = '<div class="alert alert-danger">Error converting content format</div>';
+        }
+
+        // Sanitize the HTML output
+        $config    = HTMLPurifier_Config::createDefault();
+        $purifier  = new HTMLPurifier($config);
+        $cleanHtml = $purifier->purify($html);
                 
-                var hiddenTextarea = document.getElementById('$hiddenId');
-                if (hiddenTextarea) {
-                    hiddenTextarea.value = convertedHtml;
-                }
-            } catch (error) {
-                console.error('Error converting Delta to HTML:', error);
-                document.getElementById('$elementId').innerHTML = 
-                    '<div class="alert alert-danger">Error converting content format</div>';
-            }
-        });
-        JS;
+        // Wrap in viewer container markup
+        $this->processedContent = Html::tag('div', $cleanHtml, $this->viewerOptions);
     }
 
     public function run(): string
     {
-        $displayContent = $this->processedContent ?? $this->content;
-        $originalContent = $this->content;
-
+        $display   = $this->processedContent ?? $this->content;
         $hiddenId = $this->getId() . '-hidden';
-        $hidden = Html::tag('textarea', $originalContent, [
-            'id' => $hiddenId,
-            'style' => 'display:none;',
-        ]);
+        $hidden    = Html::tag('textarea', $this->content, ['id' => $hiddenId, 'style' => 'display:none;']);
+        $viewerDiv = Html::tag('div', $display, $this->viewerOptions);
 
-        $viewer = Html::tag('div', $displayContent, $this->viewerOptions);
-
-        $copyButton = '';
+        $copyBtn = '';
         if ($this->enableCopy) {
-            $copyButton = CopyToClipboardWidget::widget([
-                'targetSelector' => '#' . $hiddenId,
+            $copyBtn = CopyToClipboardWidget::widget([
+                'targetSelector' => "#$hiddenId",
                 'buttonOptions'  => $this->copyButtonOptions,
                 'label'          => $this->copyButtonLabel,
             ]);
         }
 
-        return Html::tag('div', $hidden . $viewer . $copyButton, [
-            'class' => 'position-relative',
-        ]);
+        return Html::tag('div', $hidden . $viewerDiv . $copyBtn, ['class' => 'position-relative']);
     }
 }

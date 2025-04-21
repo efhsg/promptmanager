@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c63ce1c8cad3042afda09a9f3afae37b",
+    "content-hash": "96d83570789a6cfc17f29ae48183897d",
     "packages": [
         {
             "name": "bower-asset/bootstrap",
@@ -613,16 +613,16 @@
         },
         {
             "name": "nadar/quill-delta-parser",
-            "version": "3.4.2",
+            "version": "3.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nadar/quill-delta-parser.git",
-                "reference": "c8fbe3d0b0f73bd1e4f86141498c035a2d1de472"
+                "reference": "6033cd68a115b7220a85a3fd03ea6e7df469e191"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nadar/quill-delta-parser/zipball/c8fbe3d0b0f73bd1e4f86141498c035a2d1de472",
-                "reference": "c8fbe3d0b0f73bd1e4f86141498c035a2d1de472",
+                "url": "https://api.github.com/repos/nadar/quill-delta-parser/zipball/6033cd68a115b7220a85a3fd03ea6e7df469e191",
+                "reference": "6033cd68a115b7220a85a3fd03ea6e7df469e191",
                 "shasum": ""
             },
             "require": {
@@ -664,7 +664,7 @@
             ],
             "support": {
                 "issues": "https://github.com/nadar/quill-delta-parser/issues",
-                "source": "https://github.com/nadar/quill-delta-parser/tree/3.4.2"
+                "source": "https://github.com/nadar/quill-delta-parser/tree/3.5.0"
             },
             "funding": [
                 {
@@ -672,7 +672,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-04-05T14:44:40+00:00"
+            "time": "2025-03-27T13:10:27+00:00"
         },
         {
             "name": "nikic/php-parser",
