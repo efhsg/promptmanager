@@ -293,8 +293,51 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             data: data,
             success: function(response) {
                 var container = $('#final-prompt-container');
-                container.find('.content-viewer').html(response.displayPrompt);
-                container.find('textarea').text(transformForAIModel(response.displayPrompt));
+                
+                // Parse the delta object from the string
+                var deltaObj;
+                try {
+                    deltaObj = JSON.parse(response.displayPrompt);
+                } catch (error) {
+                    console.error("Error parsing delta", error);
+                    deltaObj = { ops: [{ insert: "Error rendering content" }] };
+                }
+                
+                // Use the displayHtml for the content viewer
+                if (response.displayHtml) {
+                    container.find('.content-viewer').html(response.displayHtml);
+                } else {
+                    // If displayHtml is not available, create a temporary Quill instance to render the delta
+                    var tempContainer = document.createElement('div');
+                    var tempQuill = new Quill(tempContainer, {
+                        readOnly: true,
+                        theme: 'bubble',
+                        modules: { toolbar: false }
+                    });
+                    
+                    tempQuill.setContents(deltaObj);
+                    container.find('.content-viewer').html(tempContainer.querySelector('.ql-editor').innerHTML);
+                }
+                
+                // Use displayText for the textarea if available, otherwise extract from delta
+                if (response.displayText) {
+                    container.find('textarea').text(response.displayText);
+                } else {
+                    // Extract text from delta
+                    var text = '';
+                    if (deltaObj && deltaObj.ops) {
+                        deltaObj.ops.forEach(function(op) {
+                            if (typeof op.insert === 'string') {
+                                text += op.insert;
+                            }
+                        });
+                    }
+                    container.find('textarea').text(text);
+                }
+                
+                // Store the delta object for the edit functionality
+                container.data('deltaObj', deltaObj);
+                
                 $('#collapseFinalPrompt').collapse('show');
                 updateButtonState(3);
             },
@@ -368,18 +411,36 @@ $editButton.on('click', function() {
     const isEditing = $(this).text() === 'Edit';
     const $viewContainer = $('#final-prompt-container-view');
     const $editContainer = $('#final-prompt-container-edit');
+    
     if (isEditing) {
         initQuillEditor();
-        const encodedHtml = $viewContainer.find('.content-viewer').html();
-        quillEditor.clipboard.dangerouslyPasteHTML(encodedHtml);
+        
+        // Use the stored delta object
+        const delta = $('#final-prompt-container').data('deltaObj');
+        if (delta && delta.ops) {
+            quillEditor.setContents(delta);
+        } else {
+            // Fallback to HTML
+            quillEditor.clipboard.dangerouslyPasteHTML($viewContainer.find('.content-viewer').html());
+        }
+        
         $viewContainer.addClass('d-none');
         $editContainer.removeClass('d-none');
         $('.ql-toolbar').show();
         $(this).text('View');
     } else {
-        const updatedContent = quillEditor.root.innerHTML;
-        $viewContainer.find('.content-viewer').html(updatedContent);
-        $viewContainer.find('textarea').val(updatedContent);
+        // Get the updated delta
+        const delta = quillEditor.getContents();
+        const updatedHtml = quillEditor.root.innerHTML;
+        
+        // Update the view
+        $viewContainer.find('.content-viewer').html(updatedHtml);
+        $('#final-prompt-container').data('deltaObj', delta);
+        
+        // Update the text for copying
+        const plainText = quillEditor.getText();
+        $viewContainer.find('textarea').text(plainText);
+        
         $editContainer.addClass('d-none');
         $('.ql-toolbar').hide();
         $viewContainer.removeClass('d-none');

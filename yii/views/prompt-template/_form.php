@@ -25,7 +25,6 @@ QuillAsset::register($this);
 
     <div class="accordion" id="formAccordion">
 
-        <!-- Basic Information Accordion -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingBasicInfo">
                 <button class="accordion-button <?= $model->isNewRecord ? '' : 'collapsed' ?>"
@@ -53,7 +52,6 @@ QuillAsset::register($this);
             </div>
         </div>
 
-        <!-- Body Accordion -->
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingEditor">
                 <button class="accordion-button <?= $model->isNewRecord ? 'collapsed' : '' ?>"
@@ -73,13 +71,11 @@ QuillAsset::register($this);
                     <?= $form->field($model, 'template_body')->hiddenInput(['id' => 'template-body'])->label(false) ?>
 
                     <div class="resizable-editor-container">
-                        <div id="editor" class="resizable-editor">
-                            <?= Html::encode($model->template_body) ?>
+                        <div id="editor" class="resizable-editor"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
     </div>
 
@@ -92,7 +88,6 @@ QuillAsset::register($this);
 </div>
 
 <?php
-// (Your existing JavaScript for initializing Quill and handling events remains unchanged)
 $generalFieldsJson = json_encode($generalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $projectFieldsJson = json_encode($projectFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
@@ -136,7 +131,7 @@ projectFieldDropdown.innerHTML = '<option value="" selected disabled>Project Fie
 var generalFields = $generalFieldsJson;
 Object.keys(generalFields).forEach(function(key) {
     var option = document.createElement('option');
-    option.setAttribute('value', key);
+    option.value=key;
     option.textContent = generalFields[key].label;
     generalFieldDropdown.appendChild(option);
 });
@@ -144,80 +139,59 @@ Object.keys(generalFields).forEach(function(key) {
 var projectFields = $projectFieldsJson;
 Object.keys(projectFields).forEach(function(key) {
     var option = document.createElement('option');
-    option.setAttribute('value', key);
+    option.value=key;
     option.textContent = projectFields[key].label;
     projectFieldDropdown.appendChild(option);
 });
-
-generalFieldDropdown.classList.add('ql-picker', 'ql-font');
-projectFieldDropdown.classList.add('ql-picker', 'ql-font');
 
 toolbarContainer.querySelector('.ql-insertGeneralField').replaceWith(generalFieldDropdown);
 toolbarContainer.querySelector('.ql-insertProjectField').replaceWith(projectFieldDropdown);
 
 generalFieldDropdown.addEventListener('change', function () {
-    var value = this.value;
-    if (value) {
-        const cursorPosition = quill.getSelection().index;
-        quill.insertText(cursorPosition, value);
-        quill.setSelection(cursorPosition + value.length);
+    var v=this.value;
+    if(v){
+        var pos=quill.getSelection().index;
+        quill.insertText(pos,v);
+        quill.setSelection(pos+v.length);
         this.value = '';
-        this.querySelector('option[value=""]').selected = true;
     }
 });
 
 projectFieldDropdown.addEventListener('change', function () {
-    var value = this.value;
-    if (value) {
-        const cursorPosition = quill.getSelection().index;
-        quill.insertText(cursorPosition, value);
-        quill.setSelection(cursorPosition + value.length);
+    var v=this.value;
+    if(v){
+        var pos=quill.getSelection().index;
+        quill.insertText(pos,v);
+        quill.setSelection(pos+v.length);
         this.value = '';
-        this.querySelector('option[value=""]').selected = true;
     }
 });
 
 JS;
 $this->registerJs($script);
 
-$templateBody = json_encode($model->template_body);
+$initialDelta = $model->template_body ?: '{}';
 $script = <<<JS
-try {
-    quill.clipboard.dangerouslyPasteHTML($templateBody)
-} catch (error) {
-    console.error('Error injecting template body:', error);
-}
-
+quill.setContents($initialDelta)
 quill.on('text-change', function() {
-    document.querySelector('#template-body').value = quill.root.innerHTML;
+    document.getElementById('template-body').value = JSON.stringify(quill.getContents());
 });
 JS;
 $this->registerJs($script);
 
 $script = <<<JS
-$('#prompt-template-form').on('afterValidate', function (event, messages, errorAttributes) {
-    if (!$(this).data('yiiActiveForm').submitting) {
-        return;
-    }
-
-    if (errorAttributes.length > 0) {
-        let firstErrorField = $(this).find('.has-error').first();
-        if (firstErrorField.length) {
-            let accordionPanel = firstErrorField.closest('.accordion-collapse');
-            if (accordionPanel.length) {
-                let collapseInstance = bootstrap.Collapse.getOrCreateInstance(accordionPanel[0], {
-                    toggle: false
-                });
-                collapseInstance.show();
-
-                let accordionButton = accordionPanel.siblings('.accordion-header').find('button');
-                if (accordionButton.length) {
-                    accordionButton.removeClass('collapsed').attr('aria-expanded', true);
-                }
-            }
+$('#prompt-template-form').on('afterValidate',function(e,m,errors){
+    if(!$(this).data('yiiActiveForm').submitting) return;
+    if(errors.length){
+        var fld=$(this).find('.has-error').first();
+        if(fld.length){
+            var panel=fld.closest('.accordion-collapse');
+            var inst=bootstrap.Collapse.getOrCreateInstance(panel[0],{toggle:false});
+            inst.show();
+            panel.siblings('.accordion-header').find('button').removeClass('collapsed').attr('aria-expanded',true);
         }
     }
 });
 JS;
 $this->registerJs($script);
-?>
+?>```

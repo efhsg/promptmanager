@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnused */
 
 namespace app\services;
 
@@ -15,7 +15,7 @@ class PromptTemplateService
      */
     public function saveTemplateWithFields(PromptTemplate $model, array $postData, array $fieldsMapping): bool
     {
-        $originalTemplate = $postData['PromptTemplate']['template_body'] ?? '';
+        $originalTemplate = $postData['PromptTemplate']['template_body'] ?? '{"ops":[{"insert":"\n"}]}';
         $convertedTemplate = $this->convertPlaceholdersToIds($originalTemplate, $fieldsMapping);
         $postData['PromptTemplate']['template_body'] = $convertedTemplate;
         if (!$model->load($postData) || !$model->save()) {
@@ -31,9 +31,23 @@ class PromptTemplateService
     private function updateTemplateFields(PromptTemplate $model, string $template): void
     {
         TemplateField::deleteAll(['template_id' => $model->id]);
-        if (!preg_match_all('/(GEN|PRJ):\{\{(\d+)}}/', $template, $matches)) {
+
+        $delta = json_decode($template, true);
+        if (!$delta || !isset($delta['ops'])) {
             return;
         }
+
+        $content = '';
+        foreach ($delta['ops'] as $op) {
+            if (isset($op['insert']) && is_string($op['insert'])) {
+                $content .= $op['insert'];
+            }
+        }
+
+        if (!preg_match_all('/(GEN|PRJ):\{\{(\d+)}}/', $content, $matches)) {
+            return;
+        }
+
         foreach ($matches[2] as $fieldId) {
             $fieldRecord = new TemplateField();
             $fieldRecord->template_id = $model->id;
@@ -117,15 +131,28 @@ class PromptTemplateService
 
     public function convertPlaceholdersToIds(string $template, array $fieldsMapping): string
     {
+        $delta = json_decode($template, true);
+        if (!$delta || !isset($delta['ops'])) {
+            // Fallback for non-delta format or invalid JSON
+            return $template;
+        }
+
         $mapping = $this->normalizeFieldsMapping($fieldsMapping);
-        return preg_replace_callback('/(GEN|PRJ):\{\{(.+?)}}/', function ($matches) use ($mapping) {
-            $prefix = $matches[1];
-            $placeholderName = $matches[2];
-            if (isset($mapping[$prefix][$placeholderName])) {
-                return "$prefix:{{{$mapping[$prefix][$placeholderName]['id']}}}";
+
+        foreach ($delta['ops'] as &$op) {
+            if (isset($op['insert']) && is_string($op['insert'])) {
+                $op['insert'] = preg_replace_callback('/(GEN|PRJ):\{\{(.+?)}}/', function ($matches) use ($mapping) {
+                    $prefix = $matches[1];
+                    $placeholderName = $matches[2];
+                    if (isset($mapping[$prefix][$placeholderName])) {
+                        return "$prefix:{{{$mapping[$prefix][$placeholderName]['id']}}}";
+                    }
+                    return $matches[0];
+                }, $op['insert']);
             }
-            return $matches[0];
-        }, $template);
+        }
+
+        return json_encode($delta);
     }
 
     private function normalizeFieldsMapping(array $fieldsMapping): array
@@ -139,17 +166,14 @@ class PromptTemplateService
         return $normalized;
     }
 
+    function convertPlaceholdersToLabels(string $template, array $fieldsMapping): string
+    {
+        $delta = json_decode($template, true);
+        if (!$delta || !isset($delta['ops'])) {
+            // Fallback for non-delta format or invalid JSON
+            return $template;
+        }
 
-    /**
-     * Converts internal ID placeholders in a template back to descriptive placeholders.
-     * For example, "GEN:{{3}}" becomes "GEN:{{codeType}}" if field ID 3 corresponds to "codeType".
-     *
-     * @param string $template The stored template content.
-     * @param array  $fieldsMapping An associative array where keys are placeholders (e.g. "GEN:{{codeType}}")
-     *                              and values include at least ['id' => <field_id>].
-     * @return string The transformed template for display.
-     */
-    function convertPlaceholdersToLabels(string $template, array $fieldsMapping): string {
         $normalizedMapping = [];
         foreach ($fieldsMapping as $placeholder => $data) {
             if (preg_match('/^(GEN|PRJ):\{\{(.+)}}$/', $placeholder, $matches)) {
@@ -160,18 +184,20 @@ class PromptTemplateService
             }
         }
 
-        // Replace ID-based placeholders with descriptive ones.
-        return preg_replace_callback('/(GEN|PRJ):\{\{(\d+)}}/', function ($matches) use ($normalizedMapping) {
-            $prefix = $matches[1];
-            $fieldId = (int)$matches[2];
-            if (isset($normalizedMapping[$prefix][$fieldId])) {
-                $fieldName = $normalizedMapping[$prefix][$fieldId];
-                return "$prefix:{{{$fieldName}}}";
+        foreach ($delta['ops'] as &$op) {
+            if (isset($op['insert']) && is_string($op['insert'])) {
+                $op['insert'] = preg_replace_callback('/(GEN|PRJ):\{\{(\d+)}}/', function ($matches) use ($normalizedMapping) {
+                    $prefix = $matches[1];
+                    $fieldId = (int)$matches[2];
+                    if (isset($normalizedMapping[$prefix][$fieldId])) {
+                        $fieldName = $normalizedMapping[$prefix][$fieldId];
+                        return "$prefix:{{{$fieldName}}}";
+                    }
+                    return $matches[0];
+                }, $op['insert']);
             }
-            // If not found, return the original match.
-            return $matches[0];
-        }, $template);
+        }
+
+        return json_encode($delta);
     }
-
-
 }

@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnused */
 
 namespace app\controllers;
 
@@ -91,7 +91,11 @@ class PromptTemplateController extends Controller
             $model->template_body,
             $fieldsMapping
         );
-        return $this->render('view', ['model' => $model]);
+
+        return $this->render('view', [
+            'model' => $model,
+            'isDeltaFormat' => true
+        ]);
     }
 
     /**
@@ -99,7 +103,9 @@ class PromptTemplateController extends Controller
      */
     public function actionCreate(): Response|string
     {
-        return $this->handleForm(new PromptTemplate());
+        $model = new PromptTemplate();
+        $model->template_body = '{"ops":[{"insert":"\n"}]}';
+        return $this->handleForm($model);
     }
 
     /**
@@ -126,7 +132,9 @@ class PromptTemplateController extends Controller
         $fieldsMapping = array_merge($generalFieldsMap, $projectFieldsMap);
         $view = $model->isNewRecord ? 'create' : 'update';
         if (!Yii::$app->request->isPost) {
-            if (!$model->isNewRecord) {
+            if ($model->isNewRecord && empty($model->template_body)) {
+                $model->template_body = '{"ops":[{"insert":"\n"}]}';
+            } elseif (!$model->isNewRecord) {
                 $model->template_body = $this->promptTemplateService->convertPlaceholdersToLabels(
                     $model->template_body,
                     $fieldsMapping

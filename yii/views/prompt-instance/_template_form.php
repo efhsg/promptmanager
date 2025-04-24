@@ -7,6 +7,20 @@ use yii\web\JsExpression;
 /* @var string $templateBody */
 /* @var array $fields */
 
+$delta = json_decode($templateBody, true);
+if (!$delta || !isset($delta['ops'])) {
+    throw new \InvalidArgumentException("Template is not in valid Delta format.");
+}
+
+// Extract text content from the delta
+    $templateText = '';
+    foreach ($delta['ops'] as $op) {
+        if (isset($op['insert']) && is_string($op['insert'])) {
+            $templateText .= $op['insert'];
+        }
+    }
+
+// Apply replacements to the extracted text content
 $templateRendered = preg_replace_callback('/(?:GEN:|PRJ:)\{\{(\d+)}}/', function ($matches) use ($fields) {
     $placeholder = $matches[1];
     if (!isset($fields[$placeholder])) {
@@ -54,8 +68,7 @@ $templateRendered = preg_replace_callback('/(?:GEN:|PRJ:)\{\{(\d+)}}/', function
             ]
         ),
     };
-
-}, $templateBody);
+}, $templateText);
 ?>
 
 <div class="generated-prompt-form">

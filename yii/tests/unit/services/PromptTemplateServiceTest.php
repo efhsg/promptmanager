@@ -26,19 +26,25 @@ class PromptTemplateServiceTest extends Unit
         $model = $this->getMockBuilder(PromptTemplate::class)
             ->onlyMethods(['load', 'save'])
             ->getMock();
+
+        // Delta format input
+        $deltaInput = '{"ops":[{"insert":"Hello, GEN:{{codeType}} and PRJ:{{projectType}}!\n"}]}';
         $postData = [
             'PromptTemplate' => [
-                'template_body' => "Hello, GEN:{{codeType}} and PRJ:{{projectType}}!"
+                'template_body' => $deltaInput
             ]
         ];
         $fieldsMapping = [
             'GEN:{{codeType}}' => ['id' => 3],
             'PRJ:{{projectType}}' => ['id' => 7]
         ];
-        $convertedTemplate = "Hello, GEN:{{3}} and PRJ:{{7}}!";
+
+        // Expected converted delta format
+        $expectedDelta = '{"ops":[{"insert":"Hello, GEN:{{3}} and PRJ:{{7}}!\n"}]}';
+
         $model->expects($this->once())
             ->method('load')
-            ->with(['PromptTemplate' => ['template_body' => $convertedTemplate]])
+            ->with(['PromptTemplate' => ['template_body' => $expectedDelta]])
             ->willReturn(true);
         $model->expects($this->once())
             ->method('save')
@@ -60,7 +66,7 @@ class PromptTemplateServiceTest extends Unit
             ->getMock();
         $postData = [
             'PromptTemplate' => [
-                'template_body' => "Hello, GEN:{{codeType}}!"
+                'template_body' => '{"ops":[{"insert":"Hello, GEN:{{codeType}}!\n"}]}'
             ]
         ];
         $fieldsMapping = [];
@@ -80,6 +86,8 @@ class PromptTemplateServiceTest extends Unit
         $mockQuery->method('joinWith')->willReturnSelf();
         $mockQuery->method('where')->willReturnSelf();
         $mockQuery->method('all')->willReturn([]);
+        $mockQuery->method('orderBy')->willReturnSelf();
+
         Yii::configure((object)PromptTemplate::class, ['find' => fn() => $mockQuery]);
         $result = $this->service->getTemplatesByUser(999);
         $this->assertEquals([], $result);
@@ -87,39 +95,65 @@ class PromptTemplateServiceTest extends Unit
 
     public function testConvertPlaceholdersToIdsWithMultipleFields(): void
     {
-        $template = "Hello, GEN:{{codeType}} and PRJ:{{projectType}}!";
+        $template = '{"ops":[{"insert":"Hello, GEN:{{codeType}} and PRJ:{{projectType}}!\n"}]}';
+
         $fieldsMapping = [
             'GEN:{{codeType}}' => ['id' => 3],
             'PRJ:{{projectType}}' => ['id' => 7]
         ];
         $result = $this->service->convertPlaceholdersToIds($template, $fieldsMapping);
-        $this->assertEquals("Hello, GEN:{{3}} and PRJ:{{7}}!", $result);
+
+        $expected = '{"ops":[{"insert":"Hello, GEN:{{3}} and PRJ:{{7}}!\n"}]}';
+
+        $this->assertEquals($expected, $result);
     }
 
     public function testConvertPlaceholdersToIdsReturnsOriginalWhenMappingMissing(): void
     {
-        $template = "Hello, GEN:{{codeType}}!";
+        $template = '{"ops":[{"insert":"Hello, GEN:{{codeType}}!\n"}]}';
+
         $fieldsMapping = [];
         $result = $this->service->convertPlaceholdersToIds($template, $fieldsMapping);
-        $this->assertEquals("Hello, GEN:{{codeType}}!", $result);
+
+        $this->assertEquals($template, $result);
     }
 
     public function testConvertPlaceholdersToLabelsWithMultipleFields(): void
     {
-        $template = "Welcome, GEN:{{3}} and PRJ:{{7}}!";
+        $template = '{"ops":[{"insert":"Welcome, GEN:{{3}} and PRJ:{{7}}!\n"}]}';
+
         $fieldsMapping = [
             'GEN:{{codeType}}' => ['id' => 3],
             'PRJ:{{projectType}}' => ['id' => 7]
         ];
         $result = $this->service->convertPlaceholdersToLabels($template, $fieldsMapping);
-        $this->assertEquals("Welcome, GEN:{{codeType}} and PRJ:{{projectType}}!", $result);
+
+        $expected = '{"ops":[{"insert":"Welcome, GEN:{{codeType}} and PRJ:{{projectType}}!\n"}]}';
+
+        $this->assertEquals($expected, $result);
     }
 
     public function testConvertPlaceholdersToLabelsReturnsOriginalWhenMappingMissing(): void
     {
-        $template = "Welcome, GEN:{{3}}!";
+        $template = '{"ops":[{"insert":"Welcome, GEN:{{3}}!\n"}]}';
+
         $fieldsMapping = [];
         $result = $this->service->convertPlaceholdersToLabels($template, $fieldsMapping);
-        $this->assertEquals("Welcome, GEN:{{3}}!", $result);
+
+        $this->assertEquals($template, $result);
+    }
+
+    public function testFallbackToLegacyFormat(): void
+    {
+        $template = "Hello, GEN:{{codeType}} and PRJ:{{projectType}}!";
+
+        $fieldsMapping = [
+            'GEN:{{codeType}}' => ['id' => 3],
+            'PRJ:{{projectType}}' => ['id' => 7]
+        ];
+
+        $result = $this->service->convertPlaceholdersToIds($template, $fieldsMapping);
+
+        $this->assertEquals($template, $result);
     }
 }
