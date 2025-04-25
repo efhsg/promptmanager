@@ -1,143 +1,127 @@
-<?php /** @noinspection CssUnusedSymbol */
+<?php /** @noinspection BadExpressionStatementJS */
+/** @noinspection JSUnresolvedReference */
 
-/**
- * ContentViewerWidget
- *
- * Server-side rendering of Quill Delta content
- */
+/** @noinspection CssUnusedSymbol */
 
 namespace app\widgets;
 
+use app\assets\QuillAsset;
 use Exception;
 use Throwable;
 use Yii;
+use yii\base\InvalidConfigException;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
-use nadar\quill\Lexer;
-use HTMLPurifier;
-use HTMLPurifier_Config;
+use yii\web\View;
 
 class ContentViewerWidget extends Widget
 {
-    /**
-     * @var string The main text/content to display (Quill Delta JSON or raw HTML/code).
-     */
     public string $content;
-
-    /**
-     * @var array HTML options for the container that displays the content text.
-     */
     public array $viewerOptions = [];
-
-    /**
-     * @var bool Whether to show the copy-to-clipboard button.
-     */
     public bool $enableCopy = true;
-
-    /**
-     * @var array Options to pass to CopyToClipboardWidget for the button.
-     */
     public array $copyButtonOptions = [];
-
-    /**
-     * @var string The label for the copy button. Defaults to an icon.
-     */
-    public string $copyButtonLabel = '<i class="bi bi-clipboard"></i>';
-
-    /**
-     * @var string The format to copy: 'delta', 'html', or 'markdown'.
-     */
+    public string $copyButtonLabel = '<i class="bi bi-clipboard"> </i>';
     public string $copyFormat = 'html';
 
-    /**
-     * @var string CSS for the content viewer. Can be overridden to change styling.
-     */
-    public string $viewerCss = <<<CSS
-        .content-viewer {
-            border: 1px solid #e0e0e0;
-            border-radius: 4px;
-            padding: 10px;
-            background: #fafafa;
-            min-height: 100px;
-            max-height: 300px;
-            overflow: auto;
-        }
-        .content-viewer p {
-            padding: 0;
-        }
-        .content-viewer pre {
-            background: #2d2d2d;
-            color: #f8f8f2;
-            border-radius: 4px;
-            padding: 16px;
-            margin: 10px 0;
-            overflow: auto;
-            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            tab-size: 4;
-        }
-        .content-viewer pre code {
-            background: transparent;
-            padding: 0;
-            white-space: pre;
-        }
-        .content-viewer .code-php {
-            border-left: 3px solid #8892BF;
-        }
-        .content-viewer .code-javascript {
-            border-left: 3px solid #F0DB4F;
-        }
-        .content-viewer .code-html {
-            border-left: 3px solid #E44D26;
-        }
-        .content-viewer .code-css {
-            border-left: 3px solid #264DE4;
-        }
-        .content-viewer .code-json {
-            border-left: 3px solid #1C59A5;
-        }
-        .content-viewer .code-plain {
-            border-left: 3px solid #9E9E9E;
-        }
-    CSS;
+    public array $cssOptions = [
+        'height' => '300px',
+        'border' => '1px solid #e0e0e0',
+        'border-radius' => '4px',
+        'background' => '#fafafa',
+        'padding' => '10px',
+        'overflow' => 'auto',
+    ];
 
-    /**
-     * @var bool Whether content is code
-     */
-    private bool $isCode = false;
-
-    /**
-     * @var string|null Detected code language
-     */
-    private ?string $codeLanguage = null;
-
-    /**
-     * @var string|null Processed content after format conversion
-     */
     private ?string $processedContent = null;
+    private bool $isQuillDelta = false;
+    private ?array $deltaContent = null;
 
+    /**
+     * @throws InvalidConfigException
+     */
     public function init(): void
     {
         parent::init();
-
-        // Determine how to render content
         $this->processContent();
 
-        // Setup copy button defaults
-        $defaultCopyButtonOptions = [
-            'class' => 'btn btn-sm position-absolute',
-            'style' => 'bottom: 10px; right: 20px;',
+        $defaultBtn = [
+            'class' => 'btn btn-sm btn-outline-secondary',
             'title' => 'Copy to clipboard',
             'aria-label' => 'Copy content to clipboard',
         ];
-        $this->copyButtonOptions = array_merge($defaultCopyButtonOptions, $this->copyButtonOptions);
+        $this->copyButtonOptions = array_merge($defaultBtn, $this->copyButtonOptions);
 
-        // Register CSS for viewer
-        $this->getView()->registerCss($this->viewerCss);
-
+        $this->registerAssets();
         Html::addCssClass($this->viewerOptions, 'content-viewer');
+    }
+
+    /**
+     * @throws InvalidConfigException
+     */
+    protected function registerAssets(): void
+    {
+        $view = $this->getView();
+        $view->registerCss($this->getContainerCss());
+
+        if ($this->isQuillDelta && $this->deltaContent !== null) {
+            $view->registerCssFile(
+                'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css'
+            );
+            $view->registerJsFile(
+                'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js',
+                ['position' => View::POS_HEAD]
+            );
+
+            QuillAsset::register($view);
+            $this->registerQuillJs();
+        }
+    }
+
+    protected function getContainerCss(): string
+    {
+        // Base viewer styles
+        $css = ".content-viewer {\n";
+        foreach ($this->cssOptions as $k => $v) {
+            $css .= "    $k: $v;\n";
+        }
+        $css .= "}\n";
+
+        // Quill overrides + button‐wrapper
+        $css .= <<<CSS
+.content-viewer .ql-editor { padding: 0; white-space: normal; }
+.content-viewer .ql-toolbar { display: none; }
+
+/* pin the copy‐button wrapper in the bottom‐right */
+.copy-button-container {
+    position: absolute;
+    bottom: 10px;
+    right: 20px;
+    z-index: 100;
+}
+CSS;
+
+        return $css;
+    }
+
+    protected function registerQuillJs(): void
+    {
+        $id = $this->getId();
+        $viewerId = "$id-viewer";
+        $deltaJson = Json::htmlEncode($this->deltaContent);
+
+        $js = <<<JS
+document.addEventListener('DOMContentLoaded', function() {
+    const quill = new Quill('#$viewerId', {
+        readOnly: true,
+        modules: { syntax: true, toolbar: false },
+        theme: 'snow'
+    });
+    quill.setContents($deltaJson)
+});
+JS;
+
+        $this->getView()->registerJs($js, View::POS_END);
     }
 
     protected function processContent(): void
@@ -147,92 +131,18 @@ class ContentViewerWidget extends Widget
             return;
         }
 
-        // Attempt Quill Delta parsing
         try {
             $decoded = Json::decode($this->content);
-            if (is_array($decoded) && isset($decoded['ops']) && is_array($decoded['ops'])) {
-                $this->processDeltaFormat($decoded);
+            if (is_array($decoded) && isset($decoded['ops'])) {
+                $this->isQuillDelta = true;
+                $this->deltaContent = $decoded;
                 return;
             }
         } catch (Exception $e) {
-            Yii::warning('Error decoding Delta JSON: ' . $e->getMessage(), __METHOD__);
+            Yii::warning("Invalid Delta JSON: {$e->getMessage()}", __METHOD__);
         }
 
-        // Fallback: detect code blocks
-        $this->detectCode();
-
-        if ($this->isCode) {
-            $this->processCodeFormat();
-            return;
-        }
-
-        // Default: treat as raw HTML/text
         $this->processedContent = $this->content;
-    }
-
-    protected function detectCode(): void
-    {
-        $content = $this->content;
-
-        // Similar heuristics as before...
-        if (preg_match('/^```(\w*)[\r\n]+(.*?)```$/s', $content, $matches)) {
-            $this->isCode = true;
-            $this->codeLanguage = !empty($matches[1]) ? $matches[1] : 'plain';
-            $this->content = $matches[2];
-            return;
-        }
-        if (preg_match('/<pre(?:[^>]+)?>\s*(?:<code[^>]+)?>?(.*?)(?:<\/code>)?\s*<\/pre>/s', $content, $m)) {
-            $this->isCode = true;
-            if (preg_match('/class=["\'].*?language-(\w+).*?["\']/i', $content, $lm)) {
-                $this->codeLanguage = $lm[1];
-            } else {
-                $this->codeLanguage = 'html';
-            }
-            $this->content = html_entity_decode($m[1]);
-            return;
-        }
-        if (preg_match('/^<\?php/i', trim($content))) {
-            $this->isCode = true;
-            $this->codeLanguage = 'php';
-            return;
-        }
-        if (preg_match('/function\s+\w+\s*\(/', $content) || preg_match('/\{\s*}/', $content)) {
-            $this->isCode = true;
-            $this->codeLanguage = 'javascript';
-            return;
-        }
-        if (preg_match('/^\s*[\[{]/', $content) && preg_match('/[]}]\s*$/', $content)) {
-            $this->isCode = true;
-            $this->codeLanguage = 'json';
-        }
-    }
-
-    protected function processCodeFormat(): void
-    {
-        $lang        = $this->codeLanguage ?: 'plain';
-        $escapedCode = Html::encode($this->content);
-        $this->processedContent = Html::tag('pre', Html::tag('code', $escapedCode), ['class' => "code-$lang"]);
-    }
-
-    protected function processDeltaFormat(array $deltaContent): void
-    {
-            try {
-            // Convert Delta JSON to HTML
-            $jsonDelta = Json::encode($deltaContent);
-            $lexer     = new Lexer($jsonDelta);
-            $html      = $lexer->render();
-        } catch (Exception $e) {
-            Yii::warning("Delta parsing error: {$e->getMessage()}", __METHOD__);
-            $html = '<div class="alert alert-danger">Error converting content format</div>';
-        }
-
-        // Sanitize the HTML output
-        $config    = HTMLPurifier_Config::createDefault();
-        $purifier  = new HTMLPurifier($config);
-        $cleanHtml = $purifier->purify($html);
-                
-        // Wrap in viewer container markup
-        $this->processedContent = Html::tag('div', $cleanHtml, $this->viewerOptions);
     }
 
     /**
@@ -240,24 +150,37 @@ class ContentViewerWidget extends Widget
      */
     public function run(): string
     {
-        $containerId = $this->getId() . '-viewer';
-        $display   = $this->processedContent ?? $this->content;
-        $hiddenId = $this->getId() . '-hidden';
+        $id = $this->getId();
+        $viewerId = "$id-viewer";
+        $hiddenId = "$id-hidden";
 
-        // Hidden textarea holds the original delta JSON for fallbacks
-        $hidden    = Html::tag('textarea', $this->content, ['id' => $hiddenId, 'style' => 'display:none;']);
-        $viewerDiv = Html::tag('div', $display, array_merge($this->viewerOptions, ['id' => $containerId]));
+        // Render the viewer itself
+        $viewerHtml = $this->isQuillDelta
+            ? Html::tag('div', '', array_merge($this->viewerOptions, ['id' => $viewerId]))
+            : Html::tag('div', $this->processedContent, array_merge($this->viewerOptions, ['id' => $viewerId]));
 
-        $copyBtn = '';
+        // Hidden textarea (source for copy)
+        $hidden = Html::tag('textarea', $this->content, [
+            'id' => $hiddenId,
+            'style' => 'display:none;',
+        ]);
+
+        // Copy button, wrapped in the container that our CSS will pin
+        $copyBtnHtml = '';
         if ($this->enableCopy) {
-            $copyBtn = CopyToClipboardWidget::widget([
-                'targetSelector' => "#$containerId",
-                'copyFormat'     => $this->copyFormat,
-                'buttonOptions'  => $this->copyButtonOptions,
-                'label'          => $this->copyButtonLabel,
+            $btn = CopyToClipboardWidget::widget([
+                'targetSelector' => "#$viewerId",
+                'copyFormat' => $this->copyFormat,
+                'buttonOptions' => $this->copyButtonOptions, // your widget’s real API
+                'label' => $this->copyButtonLabel,   // your widget’s real API
             ]);
+
+            $copyBtnHtml = Html::tag('div', $btn, ['class' => 'copy-button-container']);
         }
 
-        return Html::tag('div', $hidden . $viewerDiv . $copyBtn, ['class' => 'position-relative']);
+        // Wrap everything in a relative container so our absolute wrapper can position itself
+        return Html::tag('div', $hidden . $viewerHtml . $copyBtnHtml, [
+            'class' => 'position-relative',
+        ]);
     }
 }
