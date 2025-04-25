@@ -1,8 +1,7 @@
 FROM node:20-slim
 
 RUN apt-get update && \
-    apt-get install -y git && \
-    apt-get install -y git bash && \
+    apt-get install -y git bash curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

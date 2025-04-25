@@ -16,5 +16,6 @@ class QuillAsset extends AssetBundle
     ];
     public $depends = [
         'yii\web\YiiAsset',
+        'app\assets\HighlightAsset',
     ];
 }

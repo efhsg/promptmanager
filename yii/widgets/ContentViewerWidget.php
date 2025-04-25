@@ -56,23 +56,12 @@ class ContentViewerWidget extends Widget
         Html::addCssClass($this->viewerOptions, 'content-viewer');
     }
 
-    /**
-     * @throws InvalidConfigException
-     */
     protected function registerAssets(): void
     {
         $view = $this->getView();
         $view->registerCss($this->getContainerCss());
 
         if ($this->isQuillDelta && $this->deltaContent !== null) {
-            $view->registerCssFile(
-                'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css'
-            );
-            $view->registerJsFile(
-                'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js',
-                ['position' => View::POS_HEAD]
-            );
-
             QuillAsset::register($view);
             $this->registerQuillJs();
         }
