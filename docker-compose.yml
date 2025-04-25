@@ -72,7 +72,7 @@ services:
     volumes:
       - ./npm:/app:rw
       - ./yii/web/quill:/yii/web/quill:rw
-    command: ["npm", "run", "build"]
+    command: ["npm", "run", "build-and-minify"]
     networks:
       - promptmanager_network
 

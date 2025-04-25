@@ -6,10 +6,10 @@
         "setup": "git clone https://github.com/quilljs/quill.git && cd quill && npm install",
         "prebuild": "[ -d \"/yii/web/quill\" ] && find /yii/web/quill -mindepth 1 -delete && mkdir -p /yii/web/quill && mkdir -p /yii/web/quill/highlight",
         "build-highlight": "mkdir -p /yii/web/quill/highlight && curl -o /yii/web/quill/highlight/default.min.css https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css && curl -o /yii/web/quill/highlight/highlight.min.js https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js",
-        "build": "npm run build-highlight && cd quill/packages/quill && npm run build && cp -r dist/dist/* /yii/web/quill/",
-        "minify": "npx uglify-js /yii/web/quill/quill.js -o /yii/web/quill/quill.min.js",
+        "build": "cd quill/packages/quill && npm install && npm run build -- --format=umd --modules=formula,syntax && cp -r dist/dist/* /yii/web/quill/",
+        "minify": "node ./node_modules/uglify-js/bin/uglifyjs /yii/web/quill/quill.js -o /yii/web/quill/quill.min.js",
         "clean": "rm -rf quill",
-        "minify-delta": "mkdir -p /yii/web/quill/quill-delta-to-html && npx uglify-js node_modules/quill-delta-to-html/dist/browser/QuillDeltaToHtmlConverter.bundle.js -o /yii/web/quill/quill-delta-to-html/quill-delta-to-html.min.js",
+        "minify-delta": "mkdir -p /yii/web/quill/quill-delta-to-html && node ./node_modules/uglify-js/bin/uglifyjs node_modules/quill-delta-to-html/dist/browser/QuillDeltaToHtmlConverter.bundle.js -o /yii/web/quill/quill-delta-to-html/quill-delta-to-html.min.js",
         "build-and-minify": "npm run build && npm run minify && npm run minify-delta && npm run build-highlight"
     },
     "devDependencies": {
