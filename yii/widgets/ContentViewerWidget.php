@@ -9,7 +9,6 @@ use app\assets\QuillAsset;
 use Exception;
 use Throwable;
 use Yii;
-use yii\base\InvalidConfigException;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
@@ -38,7 +37,6 @@ class ContentViewerWidget extends Widget
     private ?array $deltaContent = null;
 
     /**
-     * @throws InvalidConfigException
      */
     public function init(): void
     {
@@ -100,15 +98,15 @@ CSS;
         $deltaJson = Json::htmlEncode($this->deltaContent);
 
         $js = <<<JS
-document.addEventListener('DOMContentLoaded', function() {
-    const quill = new Quill('#$viewerId', {
-        readOnly: true,
-        modules: { syntax: true, toolbar: false },
-        theme: 'snow'
-    });
-    quill.setContents($deltaJson)
-});
-JS;
+            document.addEventListener('DOMContentLoaded', function() {
+                const quill = new Quill('#$viewerId', {
+                    readOnly: true,
+                    modules: { syntax: true, toolbar: false },
+                    theme: 'snow'
+                });
+                quill.setContents($deltaJson)
+            });
+        JS;
 
         $this->getView()->registerJs($js, View::POS_END);
     }
