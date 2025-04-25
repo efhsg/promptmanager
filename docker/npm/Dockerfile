@@ -2,6 +2,7 @@ FROM node:20-slim
 
 RUN apt-get update && \
     apt-get install -y git && \
+    apt-get install -y git bash && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -13,5 +14,3 @@ USER ${USER_ID}
 COPY --chown=${USER_ID}:${GROUP_ID} package*.json ./
 
 RUN npm install
-
-CMD ["npm", "run", "build"]
