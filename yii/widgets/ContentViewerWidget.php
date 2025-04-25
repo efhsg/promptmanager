@@ -21,7 +21,7 @@ class ContentViewerWidget extends Widget
     public bool $enableCopy = true;
     public array $copyButtonOptions = [];
     public string $copyButtonLabel = '<i class="bi bi-clipboard"> </i>';
-    public string $copyFormat = 'html';
+    public string $copyFormat = 'text';
 
     public array $cssOptions = [
         'height' => '300px',
@@ -35,6 +35,7 @@ class ContentViewerWidget extends Widget
     private ?string $processedContent = null;
     private bool $isQuillDelta = false;
     private ?array $deltaContent = null;
+    private ?string $markdownContent = null;
 
     /**
      */
@@ -42,6 +43,11 @@ class ContentViewerWidget extends Widget
     {
         parent::init();
         $this->processContent();
+
+        if (isset($this->copyButtonOptions['copyFormat'])) {
+            $this->copyFormat = $this->copyButtonOptions['copyFormat'];
+            unset($this->copyButtonOptions['copyFormat']);
+        }
 
         $defaultBtn = [
             'class' => 'btn btn-sm btn-outline-secondary',
@@ -74,19 +80,18 @@ class ContentViewerWidget extends Widget
         }
         $css .= "}\n";
 
-        // Quill overrides + button‐wrapper
         $css .= <<<CSS
-.content-viewer .ql-editor { padding: 0; white-space: normal; }
-.content-viewer .ql-toolbar { display: none; }
-
-/* pin the copy‐button wrapper in the bottom‐right */
-.copy-button-container {
-    position: absolute;
-    bottom: 10px;
-    right: 20px;
-    z-index: 100;
-}
-CSS;
+            .content-viewer .ql-editor { padding: 0; white-space: normal; }
+            .content-viewer .ql-toolbar { display: none; }
+            
+            /* pin the copy‐button wrapper in the bottom‐right */
+            .copy-button-container {
+                position: absolute;
+                bottom: 10px;
+                right: 20px;
+                z-index: 100;
+            }
+        CSS;
 
         return $css;
     }
@@ -111,10 +116,57 @@ CSS;
         $this->getView()->registerJs($js, View::POS_END);
     }
 
+    /**
+     * Post-processes Markdown content to fix common conversion issues
+     * @param string $markdown The raw markdown content
+     * @return string Processed markdown content
+     */
+    protected function postProcessMarkdown(string $markdown): string
+    {
+        // First fix code blocks
+        $pattern = '/```(.*?)```(\s*?)```(.*?)```/s';
+        while (preg_match($pattern, $markdown)) {
+            $markdown = preg_replace($pattern, "```$1$2$3```", $markdown);
+        }
+
+        // Simple direct string replacements - force double newlines in key locations
+        $rules = [
+            // After headers
+            '/^(# .+)$/m' => "$1\n\n",
+            '/^(## .+)$/m' => "$1\n\n",
+            '/^(### .+)$/m' => "$1\n\n",
+
+            // Before and after lists
+            '/\n([^-\n]+)\n(- )/' => "\n$1\n\n$2",
+            '/\n([^0-9\n]+)\n([0-9]+\. )/' => "\n$1\n\n$2",
+
+            // Before and after blockquotes
+            '/([^\n>])\n(> )/' => "$1\n\n$2",
+            '/^(>.+)$/m' => "$1\n\n",
+
+            // Before and after code blocks
+            '/([^\n])\n```/' => "$1\n\n```",
+            '/```\n([^\n])/' => "```\n\n$1",
+
+            // Between paragraphs (text followed by text)
+            '/([a-zA-Z0-9.,:;!?"\'])(\n)([a-zA-Z0-9])/' => "$1\n\n$3",
+        ];
+
+        foreach ($rules as $pattern => $replacement) {
+            $markdown = preg_replace($pattern, $replacement, $markdown);
+        }
+
+        // Fix any triple or more newlines (replace with double newlines)
+        $markdown = preg_replace('/\n{3,}/', "\n\n", $markdown);
+
+        return $markdown;
+    }
+
     protected function processContent(): void
     {
         if (empty($this->content)) {
             $this->processedContent = '<div class="alert alert-info">No content available</div>';
+            $this->markdownContent = 'No content available';
             return;
         }
 
@@ -123,6 +175,28 @@ CSS;
             if (is_array($decoded) && isset($decoded['ops'])) {
                 $this->isQuillDelta = true;
                 $this->deltaContent = $decoded;
+
+                // Generate HTML from Delta if needed for Markdown conversion
+                try {
+                    // Use nadar/quill-delta-parser to get HTML
+                    $parser = new \nadar\quill\Lexer($this->content);
+                    $html = $parser->render();
+
+                    // Convert HTML to Markdown using league/html-to-markdown
+                    $converter = new \League\HTMLToMarkdown\HtmlConverter([
+                        'strip_tags' => false,
+                        'header_style' => 'atx', // Use # style headers instead of underlines
+                        'use_autolinks' => true,
+                    ]);
+                    $markdownContent = $converter->convert($html);
+
+                    // Apply post-processing to fix common conversion issues
+                    $this->markdownContent = $this->postProcessMarkdown($markdownContent);
+                } catch (\Exception $e) {
+                    Yii::warning("Error converting delta to markdown: {$e->getMessage()}", __METHOD__);
+                    $this->markdownContent = 'Error converting content to markdown';
+                }
+
                 return;
             }
         } catch (Exception $e) {
@@ -130,6 +204,22 @@ CSS;
         }
 
         $this->processedContent = $this->content;
+
+        // If it's HTML content, convert to Markdown
+        try {
+            $converter = new \League\HTMLToMarkdown\HtmlConverter([
+                'strip_tags' => false,
+                'header_style' => 'atx', // # style headers
+                'use_autolinks' => true,
+            ]);
+            $markdownContent = $converter->convert($this->content);
+
+            // Apply post-processing to fix common conversion issues
+            $this->markdownContent = $this->postProcessMarkdown($markdownContent);
+        } catch (\Exception $e) {
+            Yii::warning("Error converting HTML to markdown: {$e->getMessage()}", __METHOD__);
+            $this->markdownContent = strip_tags($this->content); // Fallback to plain text
+        }
     }
 
     /**
@@ -141,10 +231,17 @@ CSS;
         $viewerId = "$id-viewer";
         $hiddenId = "$id-hidden";
 
+        // Prepare viewer options with data attributes for different formats
+        $viewerOptions = array_merge($this->viewerOptions, [
+            'id' => $viewerId,
+            'data-md-content' => $this->markdownContent ?? '',
+            'data-delta-content' => $this->isQuillDelta ? Json::encode($this->deltaContent) : '',
+        ]);
+
         // Render the viewer itself
         $viewerHtml = $this->isQuillDelta
-            ? Html::tag('div', '', array_merge($this->viewerOptions, ['id' => $viewerId]))
-            : Html::tag('div', $this->processedContent, array_merge($this->viewerOptions, ['id' => $viewerId]));
+            ? Html::tag('div', '', $viewerOptions)
+            : Html::tag('div', $this->processedContent, $viewerOptions);
 
         // Hidden textarea (source for copy)
         $hidden = Html::tag('textarea', $this->content, [
@@ -158,8 +255,8 @@ CSS;
             $btn = CopyToClipboardWidget::widget([
                 'targetSelector' => "#$viewerId",
                 'copyFormat' => $this->copyFormat,
-                'buttonOptions' => $this->copyButtonOptions, // your widget’s real API
-                'label' => $this->copyButtonLabel,   // your widget’s real API
+                'buttonOptions' => $this->copyButtonOptions,
+                'label' => $this->copyButtonLabel,
             ]);
 
             $copyBtnHtml = Html::tag('div', $btn, ['class' => 'copy-button-container']);

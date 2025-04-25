@@ -53,6 +53,7 @@ echo $this->render('_breadcrumbs', [
                                     'style' => 'bottom: 10px; right: 20px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy content to clipboard',
+                                    'copyFormat' => 'md',
                                 ],
                             ]);
                         },
