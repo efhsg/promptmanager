@@ -227,8 +227,7 @@ class PromptInstanceController extends Controller
 
     public function actionGeneratePromptForm(): string
     {
-        $templateId = Yii::$app->request->post('template_id');
-        $template = $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
+        $template = $this->promptTemplateService->getTemplateById(Yii::$app->request->post('template_id'), Yii::$app->user->id);
         $templateBody = $template->template_body;
         $fields = [];
         foreach ($template->fields as $field) {
