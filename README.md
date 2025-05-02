@@ -42,6 +42,7 @@ Dive in and start automating your AI prompts today!
   docker compose run --entrypoint bash pma_npm -c "npm run setup"
   docker compose run --entrypoint bash pma_npm -c "npm run prebuild"
   docker compose run --entrypoint bash pma_npm -c "npm run build"
+  docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"  
   ```
 
 ### Setup using Docker:
