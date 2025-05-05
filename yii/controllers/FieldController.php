@@ -80,7 +80,7 @@ class FieldController extends Controller
 
     public function actionCreate(): Response|string
     {
-        return $this->handleCreateOrUpdate(new Field(['user_id' => Yii::$app->user->id]), [new FieldOption()]);
+        return $this->handleCreateOrUpdate(new Field(['user_id' => Yii::$app->user->id]), []);
     }
 
     /**
@@ -97,8 +97,14 @@ class FieldController extends Controller
     {
         $postData = Yii::$app->request->post();
         if ($modelField->load($postData)) {
-            $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
-            Model::loadMultiple($modelsFieldOption, $postData);
+            if (isset($postData['FieldOption']) && is_array($postData['FieldOption'])) {
+                $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
+                Model::loadMultiple($modelsFieldOption, $postData);
+            } else {
+                // No field options in POST data
+                $modelsFieldOption = [];
+            }
+
             if ($this->fieldService->saveFieldWithOptions($modelField, $modelsFieldOption)) {
                 return $this->redirect(['view', 'id' => $modelField->id]);
             }
