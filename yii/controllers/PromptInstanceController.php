@@ -2,23 +2,20 @@
 
 namespace app\controllers;
 
-use app\models\Field;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
 use app\services\ContextService;
 use app\services\EntityPermissionService;
 use app\services\ModelService;
+use app\services\PromptGenerationService;
 use app\services\PromptInstanceService;
 use app\services\PromptTemplateService;
 use app\services\PromptTransformationService;
 use common\constants\FieldConstants;
-use InvalidArgumentException;
-use League\HTMLToMarkdown\HtmlConverter;
 use Yii;
 use yii\db\Exception;
 use yii\filters\AccessControl;
-use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -32,6 +29,8 @@ class PromptInstanceController extends Controller
      */
     private array $actionPermissionMap;
 
+    private PromptGenerationService $promptGenerationService;
+
     public function __construct(
         $id,
         $module,
@@ -41,11 +40,13 @@ class PromptInstanceController extends Controller
         private readonly EntityPermissionService $permissionService,
         private readonly ContextService $contextService,
         private readonly PromptTransformationService $promptTransformationService,
+        PromptGenerationService $promptGenerationService,
         $config = []
     )
     {
         parent::__construct($id, $module, $config);
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('promptInstance');
+        $this->promptGenerationService = $promptGenerationService;
     }
 
     public function behaviors(): array
@@ -273,94 +274,18 @@ class PromptInstanceController extends Controller
     }
 
     /**
-     * Generates the final prompt based on submitted data.
-     * This implementation replaces each placeholder (e.g. {{1}}) in the original template
-     * with the corresponding value from POST data (under PromptInstanceForm[fields]),
-     * and prepends the selected contexts' content to the generated prompt.
-     *
-     * @return array
-     * @throws NotFoundHttpException if the template cannot be found.
+     * @throws NotFoundHttpException
      */
     public function actionGenerateFinalPrompt(): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $templateId = Yii::$app->request->post('template_id');
-        $selectedContextIds = Yii::$app->request->post('context_ids') ?? [];
-        if (!$templateId) {
-            throw new NotFoundHttpException("Template ID not provided.");
-        }
-        $template = $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
-        if (!$template) {
-            throw new NotFoundHttpException("Template not found or access denied.");
-        }
 
-        $delta = json_decode($template->template_body, true);
-        if (!$delta || !isset($delta['ops'])) {
-            throw new InvalidArgumentException("Template is not in valid Delta format.");
-        }
-
-        $postData = Yii::$app->request->post('PromptInstanceForm');
-        $fieldsValues = $postData['fields'] ?? [];
-        $fieldIds = array_keys($fieldsValues);
-        /** @var Field[] $fields */
-        $fields = Field::find()->where(['id' => $fieldIds])->indexBy('id')->all();
-
-        foreach ($delta['ops'] as &$op) {
-            if (isset($op['insert']) && is_string($op['insert'])) {
-                $op['insert'] = preg_replace_callback('/\b(?:GEN|PRJ):\{\{(\d+)}}/', function ($matches) use ($fieldsValues, $fields): string {
-                    $fieldKey = $matches[1];
-                    if (empty($fieldsValues[$fieldKey])) {
-                        return '';
-                    }
-                    $value = $fieldsValues[$fieldKey];
-                    $val = is_array($value) ? implode(', ', $value) : $value;
-                    if (isset($fields[$fieldKey]) && $fields[$fieldKey]->type === 'code') {
-                        return $this->promptTransformationService->wrapCode($val);
-                    }
-                    return $this->promptTransformationService->detectCode($val)
-                        ? $this->promptTransformationService->wrapCode($val)
-                        : $val;
-                }, $op['insert']);
-            }
-        }
-
-        $allContexts = $this->contextService->fetchContextsContent(Yii::$app->user->id);
-        $contextDeltaOps = [];
-
-        foreach ($selectedContextIds as $contextId) {
-            if (empty($allContexts[$contextId])) {
-                continue;
-            }
-
-            $contextDelta = Json::decode($allContexts[$contextId]);
-            if (!empty($contextDelta['ops'])) {
-                $contextDeltaOps = array_merge($contextDeltaOps, $contextDelta['ops']);
-
-                $contextDeltaOps[] = ['insert' => "\n\n"];
-            }
-        }
-
-        if (!empty($contextDeltaOps)) {
-            $finalDelta = [
-                'ops' => array_merge($contextDeltaOps, $delta['ops'])
-            ];
-        } else {
-            $finalDelta = $delta;
-        }
-
-        $deltaJson = json_encode($finalDelta);
-
-        $lexer = new \nadar\quill\Lexer($deltaJson);
-        $html = $lexer->render();
-
-        $converter = new HtmlConverter();
-        $markdown = $converter->convert($html);
-
-        return [
-            'displayPrompt' => $deltaJson,
-            'displayHtml' => $html,
-            'displayText' => $markdown
-        ];
+        return $this->promptGenerationService->generateFinalPrompt(
+            Yii::$app->request->post('template_id'),
+            Yii::$app->request->post('context_ids') ?? [],
+            Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [],
+            Yii::$app->user->id
+        );
     }
 
     /**
