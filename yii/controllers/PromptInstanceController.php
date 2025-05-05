@@ -280,12 +280,14 @@ class PromptInstanceController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        return $this->promptGenerationService->generateFinalPrompt(
+        $prompt = $this->promptGenerationService->generateFinalPrompt(
             Yii::$app->request->post('template_id'),
             Yii::$app->request->post('context_ids') ?? [],
             Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [],
             Yii::$app->user->id
         );
+
+        return $prompt;
     }
 
     /**
