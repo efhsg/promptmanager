@@ -1,9 +1,11 @@
-<?php /** @noinspection JSUnresolvedReference */
+<?php
+/** @noinspection JSUnresolvedReference */
+
 /** @noinspection DuplicatedCode */
+
 /** @noinspection PhpUnhandledExceptionInspection */
 
-use app\assets\QuillAsset;
-use app\widgets\ContentViewerWidget;
+use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
@@ -56,12 +58,8 @@ echo $this->render('_breadcrumbs', [
                         'format' => 'raw',
                         'label' => 'Body',
                         'value' => function ($model) {
-                            return ContentViewerWidget::widget([
+                            return QuillViewerWidget::widget([
                                 'content' => $model->template_body,
-                                'viewerOptions' => [
-                                    'id' => 'editor-container',
-                                    'style' => 'height: 300px;',
-                                ],
                                 'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',
                                     'style' => 'bottom: 10px; right: 10px;',

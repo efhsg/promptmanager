@@ -24,6 +24,11 @@ use yii\web\Response;
 
 class PromptInstanceController extends Controller
 {
+
+    private const FORMAT_HTML = 'displayHtml';
+    private const FORMAT_MARKDOWN = 'displayText';
+    private const FORMAT_DELTA = 'displayDelta';
+
     /**
      * @var array
      */
@@ -280,14 +285,21 @@ class PromptInstanceController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $prompt = $this->promptGenerationService->generateFinalPrompt(
-            Yii::$app->request->post('template_id'),
-            Yii::$app->request->post('context_ids') ?? [],
-            Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [],
-            Yii::$app->user->id
+        $userId = Yii::$app->user->id;
+        $templateId = (int)Yii::$app->request->post('template_id');
+        $contextIds = Yii::$app->request->post('context_ids') ?? [];
+        $fieldValues = Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [];
+
+        $deltaJson = $this->promptGenerationService->generateFinalPrompt(
+            $templateId,
+            $this->contextService->fetchContextsContentById($userId, $contextIds),
+            $fieldValues,
+            $userId
         );
 
-        return $prompt;
+        return [
+            'displayDelta' => $deltaJson,
+        ];
     }
 
     /**

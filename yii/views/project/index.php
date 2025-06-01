@@ -3,6 +3,7 @@
 use app\models\ProjectSearch;
 use yii\grid\GridView;
 use yii\helpers\Html;
+use yii\helpers\StringHelper;
 use yii\helpers\Url;
 
 /** @var yii\web\View $this */
@@ -69,8 +70,22 @@ echo $this->render('_breadcrumbs', [
                     'name',
                     [
                         'attribute' => 'description',
-                        'format' => 'ntext',
-                        'contentOptions' => ['style' => 'white-space: pre-wrap;'],
+                        'label'     => 'Description',
+                        'format'    => 'text',
+                        'value'     => function($model) {
+                            $delta = @json_decode($model->description, true);
+                            if (!is_array($delta) || !isset($delta['ops'])) {
+                                return '';
+                            }
+                            $plain = '';
+                            foreach ($delta['ops'] as $op) {
+                                if (isset($op['insert']) && is_string($op['insert'])) {
+                                    $plain .= $op['insert'];
+                                }
+                            }
+
+                            return StringHelper::truncate($plain, 50);
+                        },
                     ],
                     [
                         'class' => yii\grid\ActionColumn::class,

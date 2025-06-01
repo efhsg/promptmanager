@@ -292,55 +292,47 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             type: 'POST',
             data: data,
             success: function(response) {
-                var container = $('#final-prompt-container');
-                
-                // Parse the delta object from the string
-                var deltaObj;
-                try {
-                    deltaObj = JSON.parse(response.displayPrompt);
-                } catch (error) {
-                    console.error("Error parsing delta", error);
-                    deltaObj = { ops: [{ insert: "Error rendering content" }] };
-                }
-                
-                // Use the displayHtml for the content viewer
-                if (response.displayHtml) {
-                    container.find('.content-viewer').html(response.displayHtml);
-                } else {
-                    // If displayHtml is not available, create a temporary Quill instance to render the delta
-                    var tempContainer = document.createElement('div');
-                    var tempQuill = new Quill(tempContainer, {
-                        readOnly: true,
-                        theme: 'bubble',
-                        modules: { toolbar: false }
-                    });
-                    
-                    tempQuill.setContents(deltaObj);
-                    container.find('.content-viewer').html(tempContainer.querySelector('.ql-editor').innerHTML);
-                }
-                
-                // Use displayText for the textarea if available, otherwise extract from delta
-                if (response.displayText) {
-                    container.find('textarea').text(response.displayText);
-                } else {
-                    // Extract text from delta
-                    var text = '';
-                    if (deltaObj && deltaObj.ops) {
-                        deltaObj.ops.forEach(function(op) {
-                            if (typeof op.insert === 'string') {
-                                text += op.insert;
-                            }
-                        });
-                    }
-                    container.find('textarea').text(text);
-                }
-                
-                // Store the delta object for the edit functionality
-                container.data('deltaObj', deltaObj);
-                
-                $('#collapseFinalPrompt').collapse('show');
-                updateButtonState(3);
-            },
+    var container = $('#final-prompt-container');
+    
+    // Parse the delta object from the string
+    var deltaObj;
+    try {
+        deltaObj = JSON.parse(response.displayDelta);
+    } catch (error) {
+        console.error("Error parsing delta", error);
+        deltaObj = { ops: [{ insert: "Error rendering content" }] };
+    }
+    
+    // Create a temporary container with Quill classes
+    var tempContainer = document.createElement('div');
+    tempContainer.className = 'ql-container ql-snow';
+    
+    var tempEditor = document.createElement('div');
+    tempEditor.className = 'ql-editor';
+    tempContainer.appendChild(tempEditor);
+    
+    var tempQuill = new Quill(tempEditor, {
+        readOnly: true,
+        theme: 'snow',
+        modules: { toolbar: false }
+    });
+    
+    tempQuill.setContents(deltaObj);
+    
+    // Get the entire container to preserve Quill styling
+    var renderedHtml = tempContainer.outerHTML;
+    container.find('.content-viewer').html(renderedHtml);
+    
+    // Extract plain text for the textarea
+    var plainText = tempQuill.getText();
+    container.find('textarea').text(plainText);
+    
+    // Store the delta object for the edit functionality
+    container.data('deltaObj', deltaObj);
+    
+    $('#collapseFinalPrompt').collapse('show');
+    updateButtonState(3);
+},
             error: function() {
                 alert('Error generating the final prompt. Please try again.');
             }
@@ -354,42 +346,6 @@ $('#promptinstanceform-template_id').on('change', function() {
         $('#prompt-instance-form').submit();
     }
 });
-
-function transformForAIModel(prompt) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = prompt;
-    const markdown = Array.from(tempDiv.childNodes).map(convertToMarkdown).join('');
-    return markdown.replace(/\n{3,}/g, '\n\n').trim();
-}
-
-function convertToMarkdown(node) {
-    if (node.nodeType === Node.TEXT_NODE) {
-        return node.textContent;
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const tag = node.tagName.toLowerCase();
-        if (tag === 'p') {
-            return Array.from(node.childNodes).map(convertToMarkdown).join('') + '\n\n';
-        } else if (tag === 'strong') {
-            return '**' + Array.from(node.childNodes).map(convertToMarkdown).join('') + '**';
-        } else if (tag === 'em') {
-            return '*' + Array.from(node.childNodes).map(convertToMarkdown).join('') + '*';
-        } else if (tag === 'br') {
-            return '\n';
-        } else if (tag === 'pre' && node.firstChild && node.firstChild.tagName && node.firstChild.tagName.toLowerCase() === 'code') {
-            return '```\n' + node.firstChild.textContent + '\n```';
-        } else if (tag === 'ul' || tag === 'ol') {
-            return Array.from(node.childNodes).map(child => {
-                if (child.tagName && child.tagName.toLowerCase() === 'li') {
-                    return '- ' + Array.from(child.childNodes).map(convertToMarkdown).join('') + '\n';
-                }
-            }).join('');
-        } else {
-            return node.outerHTML;
-        }
-    }
-    return '';
-}
-
 let quillEditor = null;
 
 function initQuillEditor() {

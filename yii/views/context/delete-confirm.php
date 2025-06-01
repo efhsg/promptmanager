@@ -2,6 +2,7 @@
 /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\widgets\ContentViewerWidget;
+use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
@@ -22,7 +23,7 @@ echo $this->render('_breadcrumbs', [
         <div class="card-body">
             <div class="context-content mb-3">
                 <strong>Content:</strong>
-                <?= ContentViewerWidget::widget([
+                <?= QuillViewerWidget::widget([
                     'content'    => $model->content,
                     'enableCopy' => false,
                 ]) ?>

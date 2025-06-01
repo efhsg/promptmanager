@@ -1,8 +1,11 @@
-<?php /** @noinspection PhpUnhandledExceptionInspection */
+<?php
+/** @noinspection PhpUnhandledExceptionInspection */
 
+use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
-use app\widgets\ContentViewerWidget;  // include the widget
+
+// include the widget
 
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
@@ -40,7 +43,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'description',
                         'format' => 'raw',
                         'value' => function ($model) {
-                            return ContentViewerWidget::widget([
+                            return QuillViewerWidget::widget([
                                 'content' => $model->description,
                                 'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',

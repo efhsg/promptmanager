@@ -87,4 +87,20 @@ class ContextService extends Component
         $contexts = $query->orderBy(['name' => SORT_ASC])->all();
         return ArrayHelper::map($contexts, 'id', 'name');
     }
+
+    public function fetchContextsContentById(int $userId, array $contextIds): array
+    {
+        if (empty($contextIds)) {
+            return [];
+        }
+
+        $contexts = Context::find()
+            ->joinWith('project')
+            ->where(['project.user_id' => $userId])
+            ->andWhere(['context.id' => $contextIds])
+            ->all();
+
+        return ArrayHelper::map($contexts, 'id', 'content');
+    }
+
 }

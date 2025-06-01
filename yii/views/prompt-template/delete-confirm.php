@@ -1,6 +1,8 @@
-<?php /** @noinspection PhpUnhandledExceptionInspection */
+<?php
+/** @noinspection PhpUnhandledExceptionInspection */
 
 use app\widgets\ContentViewerWidget;
+use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
@@ -22,13 +24,13 @@ echo $this->render('_breadcrumbs', [
             <div class="template-description mb-3">
                 <strong>Description:</strong>
                 <?= ContentViewerWidget::widget([
-                    'content'    => $model->description,
+                    'content' => $model->description,
                     'enableCopy' => false,
                 ]) ?>
 
                 <strong>Content:</strong>
-                <?= ContentViewerWidget::widget([
-                    'content'    => $model->template_body,
+                <?= QuillViewerWidget::widget([
+                    'content' => $model->template_body,
                     'enableCopy' => false,
                 ]) ?>
             </div>

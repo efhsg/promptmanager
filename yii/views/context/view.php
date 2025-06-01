@@ -1,7 +1,7 @@
 <?php
 /** @noinspection PhpUnhandledExceptionInspection */
 
-use app\widgets\ContentViewerWidget;
+use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
@@ -46,7 +46,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'content',
                         'format' => 'raw',
                         'value' => function ($model) {
-                            return ContentViewerWidget::widget([
+                            return QuillViewerWidget::widget([
                                 'content' => $model->content,
                                 'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',
