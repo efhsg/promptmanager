@@ -14,7 +14,6 @@ use yii\db\ActiveRecord;
  * @property int $project_id
  * @property string $name
  * @property string $template_body
- * @property string|null $description
  * @property int $created_at
  * @property int $updated_at
  *
@@ -42,7 +41,7 @@ class PromptTemplate extends ActiveRecord
         return [
             [['project_id', 'name'], 'required'],
             [['project_id', 'created_at', 'updated_at'], 'integer'],
-            [['template_body', 'description'], 'string'],
+            [['template_body'], 'string'],
             [['name'], 'string', 'max' => 255],
             [
                 ['name', 'project_id'],
@@ -68,7 +67,6 @@ class PromptTemplate extends ActiveRecord
             'project_id' => 'Project',
             'name' => 'Name',
             'template_body' => 'Template Body',
-            'description' => 'Description',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];

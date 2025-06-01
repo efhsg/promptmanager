@@ -77,7 +77,6 @@ echo $this->render('_breadcrumbs', [
                         'label' => 'Template Name',
                         'enableSorting' => true,
                     ],
-                    'description:ntext',
                     [
                         'class' => yii\grid\ActionColumn::class,
                         'urlCreator' => function ($action, $model) {

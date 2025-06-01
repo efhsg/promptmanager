@@ -20,7 +20,7 @@ class PromptTemplateSearch extends PromptTemplate
     {
         return [
             [['id', 'project_id', 'created_at', 'updated_at'], 'integer'],
-            [['name', 'template_body', 'description'], 'safe'],
+            [['name', 'template_body'], 'safe'],
             ['projectName', 'safe'],
         ];
     }
@@ -76,7 +76,6 @@ class PromptTemplateSearch extends PromptTemplate
         $query
             ->andFilterWhere(['like', 'name', $this->name])
             ->andFilterWhere(['like', 'template_body', $this->template_body])
-            ->andFilterWhere(['like', 'description', $this->description])
             ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;

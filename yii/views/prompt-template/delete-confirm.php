@@ -21,19 +21,10 @@ echo $this->render('_breadcrumbs', [
             <strong>Are you sure you want to delete the template: <?= Html::encode($model->name) ?>?</strong>
         </div>
         <div class="card-body">
-            <div class="template-description mb-3">
-                <strong>Description:</strong>
-                <?= ContentViewerWidget::widget([
-                    'content' => $model->description,
-                    'enableCopy' => false,
-                ]) ?>
-
-                <strong>Content:</strong>
                 <?= QuillViewerWidget::widget([
                     'content' => $model->template_body,
                     'enableCopy' => false,
                 ]) ?>
-            </div>
         </div>
 
         <div class="card-footer d-flex justify-content-end">
