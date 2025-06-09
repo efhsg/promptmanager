@@ -58,6 +58,11 @@ class ContentViewerWidget extends Widget
         foreach ($this->cssOptions as $k => $v) {
             $css .= "    $k: $v;\n";
         }
+        $css .= "}\n\n";
+
+        $css .= ".content-viewer .ql-container.ql-snow {\n";
+        $css .= "    border: none !important;\n";
+        $css .= "    box-shadow: none !important;\n";
         $css .= "}\n";
 
         return $css;
