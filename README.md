@@ -1,4 +1,4 @@
-<p style="text-align: center;">
+<p align="center">
   <img src="https://github.com/efhsg/promptmanager/blob/main/yii/web/images/prompt-manager-logo.png" alt="MoneyMonkey logo" width="200">
 </p>
 
