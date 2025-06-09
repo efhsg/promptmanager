@@ -1,4 +1,4 @@
-<p align="center">
+<p style="text-align: center;">
   <img src="https://github.com/efhsg/promptmanager/blob/main/yii/web/images/prompt-manager-logo.png" alt="MoneyMonkey logo" width="200">
 </p>
 
@@ -57,7 +57,7 @@ Dive in and start automating your AI prompts today!
 ### Migrations
   ```
   docker exec pma_yii yii migrate --migrationPath=@app/modules/identity/migrations --interactive=0 && docker exec pma_yii yii_test migrate --migrationPath=@app/modules/identity/migrations --interactive=0
-  docker exec pma_yii yii migrate --interactive=0 && docker exec pma_yii yii_test migrate --interactive=0 && docker exec pma_yii yii migrate --migrationPath=@yii/log/migrations/ --interactive=0
+  docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0 && docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0 && docker exec pma_yii yii migrate --migrationPath=@yii/log/migrations/ --interactive=0
   docker exec pma_yii yii migrate --migrationPath=@yii/rbac/migrations --interactive=0 && docker exec pma_yii yii rbac/init && docker exec pma_yii yii_test migrate --migrationPath=@yii/rbac/migrations --interactive=0
   ```
 

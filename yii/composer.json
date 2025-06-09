@@ -79,6 +79,7 @@
     ],
     "autoload-dev": {
         "psr-4": {
+            "app\\": "yii/",
             "tests\\": "tests/",
             "identity\\tests\\": "modules/identity/tests/",
             "common\\": "common/"

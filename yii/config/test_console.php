@@ -15,6 +15,12 @@ $config = [
         '@npm' => '@vendor/npm-asset',
         '@tests' => '@app/tests',
     ],
+    'controllerMap' => [
+        'migrate' => [
+            'class' => 'yii\console\controllers\MigrateController',
+            'migrationPath' => null,
+        ],
+    ],
     'components' => [
         'cache' => [
             'class' => 'yii\caching\FileCache',

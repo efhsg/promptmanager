@@ -1,4 +1,7 @@
 <?php
+
+namespace app\migrations;
+
 use yii\db\Migration;
 use common\constants\FieldConstants;
 

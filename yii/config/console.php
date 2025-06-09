@@ -10,6 +10,12 @@ $config = [
     'aliases' => [
         '@tests' => '@app/tests',
     ],
+    'controllerMap' => [
+        'migrate' => [
+            'class' => 'yii\console\controllers\MigrateController',
+            'migrationPath' => null,
+        ],
+    ],
     'components' => [
         'db' => require __DIR__ . '/db.php',
     ],

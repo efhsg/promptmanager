@@ -49,11 +49,6 @@ echo $this->render('_breadcrumbs', [
                     ],
                     'name',
                     [
-                        'attribute' => 'description',
-                        'format' => 'ntext',
-                        'label' => 'Description',
-                    ],
-                    [
                         'attribute' => 'template_body',
                         'format' => 'raw',
                         'label' => 'Body',

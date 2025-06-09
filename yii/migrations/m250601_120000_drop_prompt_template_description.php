@@ -1,5 +1,7 @@
 <?php
 
+namespace app\migrations;
+
 use yii\db\Migration;
 
 class m250601_120000_drop_prompt_template_description extends Migration

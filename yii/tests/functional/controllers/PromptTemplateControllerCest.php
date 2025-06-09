@@ -60,13 +60,13 @@ class PromptTemplateControllerCest
     {
         $I->amOnRoute('/prompt-template/create');
         $I->seeResponseCodeIs(200);
-        $I->see('Basic information');
-
+        $I->see('Create Template');
+        $I->see('Project');
+        $I->see('Name');
         $I->submitForm('#prompt-template-form', [
             'PromptTemplate[name]' => 'New Test Template',
             'PromptTemplate[project_id]' => 1,
             'PromptTemplate[template_body]' => 'This is a new test prompt template.',
-            'PromptTemplate[description]' => 'A description for the new template.',
         ]);
 
         $I->seeResponseCodeIsSuccessful();
@@ -98,8 +98,9 @@ class PromptTemplateControllerCest
     {
         $I->amOnRoute('/prompt-template/update', ['id' => 1]);
         $I->seeResponseCodeIs(200);
-        $I->see('Basic information');
-
+        $I->see('Update - Default Template');
+        $I->see('Project');
+        $I->see('Name');
         $I->submitForm('#prompt-template-form', [
             'PromptTemplate[name]' => 'Updated Test Template',
             'PromptTemplate[template_body]' => 'Updated content for test prompt template.',

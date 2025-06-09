@@ -1,5 +1,7 @@
 <?php /** @noinspection DuplicatedCode */
 
+namespace app\migrations;
+
 use yii\db\Migration;
 
 class m230101_000002_simplify_template_field extends Migration

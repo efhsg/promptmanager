@@ -1,6 +1,8 @@
 <?php
 /** @noinspection PhpUnused */
 
+namespace app\migrations;
+
 use common\constants\FieldConstants;
 use yii\db\Migration;
 

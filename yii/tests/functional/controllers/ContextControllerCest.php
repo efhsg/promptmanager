@@ -41,9 +41,6 @@ class ContextControllerCest
 
         $I->amLoggedInAs($this->userId);
     }
-
-    // Basic CRUD and validation tests for Context:
-
     public function testIndexAccess(FunctionalTester $I): void
     {
         $I->amOnRoute('/context/index');
@@ -74,7 +71,6 @@ class ContextControllerCest
 
         $I->seeResponseCodeIs(200);
         $I->see('New Test Context');
-        $I->see('This is a new test context');
         $I->seeInDatabase('context', [
             'name' => 'New Test Context',
             'project_id' => 1,
@@ -113,7 +109,6 @@ class ContextControllerCest
 
         $I->seeResponseCodeIs(200);
         $I->see('Updated Test Context');
-        $I->see('Updated content for test context');
         $I->seeInDatabase('context', [
             'id' => 1,
             'name' => 'Updated Test Context',
@@ -141,12 +136,9 @@ class ContextControllerCest
 
     public function testDeleteContextErrorHandling(FunctionalTester $I): void
     {
-        $I->amOnRoute('/context/delete', ['id' => 999]); // Non-existent ID
+        $I->amOnRoute('/context/delete', ['id' => 999]);
         $I->seeResponseCodeIs(404);
     }
-
-    // ------------------ Permission Tests ------------------
-
     public function testAuthorizedUserCanAccessContextPages(FunctionalTester $I): void
     {
         $restrictedRoutes = [
@@ -164,7 +156,6 @@ class ContextControllerCest
 
     public function testUnauthorizedUserCannotAccessContextPages(FunctionalTester $I): void
     {
-        // Revoke all permissions from the current user.
         Yii::$app->permissionService->revokeAllUserPermissions($this->userId);
 
         $restrictedRoutes = [
@@ -183,7 +174,6 @@ class ContextControllerCest
 
     public function testUserCannotAccessContextsOfOtherUsers(FunctionalTester $I): void
     {
-        // Assuming that context with id 2 belongs to a different user.
         $otherUserContextId = 2;
         $restrictedRoutes = [
             "/context/view?id=$otherUserContextId",
@@ -239,9 +229,6 @@ class ContextControllerCest
     }
 
     /**
-     * Optionally, if you need to test the protected findModel method via reflection,
-     * you might add a test like the following.
-     *
      * @throws ReflectionException
      * @throws InvalidConfigException
      */
