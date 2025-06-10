@@ -6,6 +6,7 @@
  * @var array $templatesDescription // [id => description]
  * @var array $contexts // [id => name]
  * @var array $contextsContent // [id => content]
+ * @var array $defaultContextIds
  */
 
 use app\models\PromptInstanceForm;
@@ -28,6 +29,7 @@ echo $this->render('_breadcrumbs', [
                         'templatesDescription' => $templatesDescription,
                         'contexts' => $contexts,
                         'contextsContent' => $contextsContent,
+                        'defaultContextIds' => $defaultContextIds,
                     ]) ?>
                 </div>
             </div>

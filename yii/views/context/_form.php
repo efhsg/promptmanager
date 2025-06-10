@@ -27,6 +27,10 @@ QuillAsset::register($this);
 
         <?= $form->field($model, 'name')->textInput(['maxlength' => true])->label('Context Name') ?>
 
+        <?= $form->field($model, 'is_default')->dropDownList(
+            [0 => 'No', 1 => 'Yes']
+        )->label('Default on') ?>
+
         <?= $form->field($model, 'content')->hiddenInput(['id' => 'context-content'])->label(false) ?>
 
         <div class="resizable-editor-container mb-3">

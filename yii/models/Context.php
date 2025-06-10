@@ -14,6 +14,7 @@ use yii\db\ActiveRecord;
  * @property int $project_id
  * @property string $name
  * @property string|null $content
+ * @property bool $is_default
  * @property int $created_at
  * @property int $updated_at
  *
@@ -41,6 +42,7 @@ class Context extends ActiveRecord
             [['name', 'project_id'], 'required'],
             [['project_id', 'created_at', 'updated_at'], 'integer'],
             [['content'], 'string'],
+            [['is_default'], 'boolean'],
             [['name'], 'string', 'max' => 255],
             [
                 ['project_id', 'name'],
@@ -66,6 +68,7 @@ class Context extends ActiveRecord
             'project_id' => 'Project',
             'name' => 'Name',
             'content' => 'Content',
+            'is_default' => 'Default',
             'created_at' => 'Created',
             'updated_at' => 'Updated',
         ];

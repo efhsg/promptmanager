@@ -103,4 +103,15 @@ class ContextService extends Component
         return ArrayHelper::map($contexts, 'id', 'content');
     }
 
+    public function fetchDefaultContextIds(int $userId, ?int $projectId): array
+    {
+        $query = Context::find()
+            ->select('context.id')
+            ->joinWith('project')
+            ->where(['project.user_id' => $userId, 'context.is_default' => 1]);
+        if ($projectId !== null) {
+            $query->andWhere(['project.id' => $projectId]);
+        }
+        return $query->column();
+    }
 }

@@ -43,6 +43,13 @@ echo $this->render('_breadcrumbs', [
                     ],
                     'name',
                     [
+                        'attribute' => 'is_default',
+                        'label' => 'Default',
+                        'value' => function ($model) {
+                            return $model->is_default ? 'Yes' : 'No';
+                        },
+                    ],
+                    [
                         'attribute' => 'content',
                         'format' => 'raw',
                         'value' => function ($model) {

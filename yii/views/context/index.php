@@ -80,6 +80,15 @@ echo $this->render('_breadcrumbs', [
                     ],
 
                     [
+                        'attribute' => 'is_default',
+                        'label' => 'Default on',
+                        'enableSorting' => true,
+                        'value' => function ($model) {
+                            return $model->is_default ? 'Yes' : 'No';
+                        },
+                    ],
+
+                    [
                         'class' => yii\grid\ActionColumn::class,
                         'urlCreator' => function ($action, $model) {
                             $id = is_array($model) ? $model['id'] : $model->id;

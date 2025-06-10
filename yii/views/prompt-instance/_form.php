@@ -17,6 +17,7 @@ use yii\widgets\ActiveForm;
 /* @var array $templatesDescription */
 /* @var array $contexts */
 /* @var array $contextsContent */
+/* @var array $defaultContextIds */
 
 
 QuillAsset::register($this);
@@ -89,7 +90,11 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
                         ->label('Context(s)')
                         ->widget(Select2Widget::class, [
                             'items' => $contexts,
-                            'options' => ['placeholder' => 'Select one or more contexts...', 'multiple' => true],
+                            'options' => [
+                                'placeholder' => 'Select one or more contexts...',
+                                'multiple' => true,
+                                'value' => $defaultContextIds
+                            ],
                             'settings' => $contextSelect2Settings,
                         ]);
                     echo $form->field($model, 'template_id')

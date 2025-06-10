@@ -146,12 +146,14 @@ class PromptInstanceController extends Controller
         }
         $userId = Yii::$app->user->id;
         $projectId = (Yii::$app->projectContext)->getCurrentProject()?->id;
+
         return $this->render('create', [
             'model' => $formModel,
             'templates' => $this->promptTemplateService->getTemplatesByUser($userId, $projectId),
             'templatesDescription' => $this->promptTemplateService->getTemplatesDescriptionByUser($userId, $projectId),
             'contexts' => $this->contextService->fetchProjectContexts($userId, $projectId),
             'contextsContent' => $this->contextService->fetchContextsContent($userId),
+            'defaultContextIds' => $this->contextService->fetchDefaultContextIds($userId, $projectId),
         ]);
     }
 
