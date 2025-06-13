@@ -1,8 +1,11 @@
-<?php /** @noinspection PhpUnhandledExceptionInspection */
+<?php
+/** @noinspection PhpUnhandledExceptionInspection */
 
+use app\presenters\PromptInstancePresenter;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
+use yii\helpers\StringHelper;
 use yii\helpers\Url;
 
 /** @var yii\web\View $this */
@@ -11,7 +14,7 @@ use yii\helpers\Url;
 
 $this->title = 'Prompt Instances';
 echo $this->render('_breadcrumbs', [
-    'model'       => null,
+    'model' => null,
     'actionLabel' => null,
 ]);
 ?>
@@ -28,72 +31,72 @@ echo $this->render('_breadcrumbs', [
         </div>
         <div class="card-body p-0">
             <?= GridView::widget([
-                'dataProvider'    => $dataProvider,
-                'summary'         => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',
-                'summaryOptions'  => ['class' => 'text-start m-2'],
-                'layout'          => "{items}"
+                'dataProvider' => $dataProvider,
+                'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',
+                'summaryOptions' => ['class' => 'text-start m-2'],
+                'layout' => "{items}"
                     . "<div class='card-footer position-relative py-3 px-2'>"
                     . "<div class='position-absolute start-0 top-50 translate-middle-y'>{summary}</div>"
                     . "<div class='text-center'>{pager}</div>"
                     . "</div>",
-                'tableOptions'    => [
-                    'class'            => 'table table-striped table-hover mb-0',
-                    'data-responsive'  => 'true',
-                    'aria-label'       => 'Prompt Instance Table',
+                'tableOptions' => [
+                    'class' => 'table table-striped table-hover mb-0',
+                    'data-responsive' => 'true',
+                    'aria-label' => 'Prompt Instance Table',
                 ],
-                'pager'           => [
-                    'options'                          => ['class' => 'pagination justify-content-center m-3'],
-                    'linkOptions'                      => ['class' => 'page-link'],
-                    'disabledListItemSubTagOptions'    => ['class' => 'page-link'],
-                    'prevPageLabel'                    => 'Previous',
-                    'nextPageLabel'                    => 'Next',
-                    'firstPageLabel'                   => 'First',
-                    'lastPageLabel'                    => 'Last',
-                    'pageCssClass'                     => 'page-item',
-                    'firstPageCssClass'                => 'page-item',
-                    'lastPageCssClass'                 => 'page-item',
-                    'nextPageCssClass'                 => 'page-item',
-                    'prevPageCssClass'                 => 'page-item',
-                    'activePageCssClass'               => 'active',
-                    'disabledPageCssClass'             => 'disabled',
+                'pager' => [
+                    'options' => ['class' => 'pagination justify-content-center m-3'],
+                    'linkOptions' => ['class' => 'page-link'],
+                    'disabledListItemSubTagOptions' => ['class' => 'page-link'],
+                    'prevPageLabel' => 'Previous',
+                    'nextPageLabel' => 'Next',
+                    'firstPageLabel' => 'First',
+                    'lastPageLabel' => 'Last',
+                    'pageCssClass' => 'page-item',
+                    'firstPageCssClass' => 'page-item',
+                    'lastPageCssClass' => 'page-item',
+                    'nextPageCssClass' => 'page-item',
+                    'prevPageCssClass' => 'page-item',
+                    'activePageCssClass' => 'active',
+                    'disabledPageCssClass' => 'disabled',
                 ],
-                'rowOptions'      => function ($model) {
+                'rowOptions' => function ($model) {
                     $id = is_array($model) ? $model['id'] : $model->id;
                     return [
                         'onclick' => 'window.location.href = "' . Url::to(['view', 'id' => $id]) . '";',
-                        'style'   => 'cursor: pointer;',
+                        'style' => 'cursor: pointer;',
                     ];
                 },
-                'columns'         => [
+                'columns' => [
                     [
-                        'attribute'     => 'template_id',
-                        'label'         => 'Template Name',
+                        'attribute' => 'template_id',
+                        'label' => 'Template Name',
                         'enableSorting' => true,
-                        'value'         => function ($model) {
+                        'value' => function ($model) {
                             return $model->template ? $model->template->name : 'N/A';
                         },
                     ],
                     [
                         'attribute' => 'final_prompt',
-                        'label'     => 'Final Prompt',
-                        'format'    => 'ntext',
-                        'value'     => function ($model) {
-                            $text = strip_tags($model->final_prompt);
-                            return (strlen($text) > 100) ? substr($text, 0, 100) . '...' : $text;
+                        'label' => 'Final Prompt',
+                        'format' => 'ntext',
+                        'value' => static function ($model): string {
+                            $plain = PromptInstancePresenter::extractPlain($model->final_prompt);
+                            return StringHelper::truncate($plain, 100, '...');
                         },
                     ],
                     [
                         'attribute' => 'updated_at',
-                        'format'    => ['datetime', 'php:Y-m-d H:i:s'],
-                        'label'     => 'Updated At',
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
+                        'label' => 'Updated At',
                     ],
                     [
-                        'class'      => ActionColumn::class,
+                        'class' => ActionColumn::class,
                         'urlCreator' => function ($action, $model) {
                             $id = is_array($model) ? $model['id'] : $model->id;
                             return Url::toRoute([$action, 'id' => $id]);
                         },
-                        'template'   => '{update} {delete}',
+                        'template' => '{update} {delete}',
                         'buttonOptions' => ['data-confirm' => false],
                     ],
                 ],
