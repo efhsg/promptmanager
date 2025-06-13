@@ -390,22 +390,18 @@ $editButton.on('click', function() {
         $('.ql-toolbar').show();
         $(this).text('View');
     } else {
-        // Get the updated delta
-        const delta = quillEditor.getContents();
-        const updatedHtml = quillEditor.root.innerHTML;
-        
-        // Update the view
-        $viewContainer.find('.content-viewer').html(updatedHtml);
+        const delta      = quillEditor.getContents();
+        const innerHtml  = quillEditor.root.innerHTML;
+        const $rendered  = $('<div>', { class: 'ql-container ql-snow' })
+            .append($('<div>', { class: 'ql-editor', html: innerHtml }));
+        $viewContainer.find('.content-viewer').html($rendered);
         $('#final-prompt-container').data('deltaObj', delta);
-        
-        // Update the text for copying
-        const plainText = quillEditor.getText();
+        const plainText  = quillEditor.getText();
         $viewContainer.find('textarea').text(plainText);
-        
         $editContainer.addClass('d-none');
         $('.ql-toolbar').hide();
         $viewContainer.removeClass('d-none');
-        $(this).text('Edit');
+            $(this).text('Edit');
     }
 });
 JS;
