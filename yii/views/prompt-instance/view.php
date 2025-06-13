@@ -1,16 +1,16 @@
 <?php
 /** @noinspection JSUnresolvedReference */
+
 /** @noinspection DuplicatedCode */
 
 /** @noinspection PhpUnhandledExceptionInspection */
 
-use app\widgets\ContentViewerWidget;
+use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
 /** @var app\models\PromptInstance $model */
-
 $this->title = 'View - ' . Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i:s');
 echo $this->render('_breadcrumbs', [
     'model' => null,
@@ -29,8 +29,6 @@ echo $this->render('_breadcrumbs', [
             ]) ?>
         </div>
     </div>
-
-
     <div class="card mb-4">
         <div class="card-header">
             <strong>Prompt Instance Details</strong>
@@ -52,10 +50,9 @@ echo $this->render('_breadcrumbs', [
                         'format' => 'raw',
                         'label' => 'Prompt',
                         'value' => function ($model) {
-                            return ContentViewerWidget::widget([
+                            return QuillViewerWidget::widget([
                                 'content' => $model->final_prompt,
-                                'viewerOptions' => [
-                                    'id' => 'editor-container',
+                                'options' => [
                                     'style' => 'height: 300px;',
                                 ],
                                 'copyButtonOptions' => [

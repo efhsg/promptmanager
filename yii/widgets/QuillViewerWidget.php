@@ -1,11 +1,15 @@
 <?php
 
+declare(strict_types=1);
+
 namespace app\widgets;
 
 use app\assets\QuillAsset;
+use Yii;
+use yii\base\InvalidArgumentException;
 use yii\base\Widget;
 use yii\helpers\Html;
-use yii\web\View;
+use yii\helpers\Json;
 
 class QuillViewerWidget extends Widget
 {
@@ -20,7 +24,6 @@ class QuillViewerWidget extends Widget
     public function init(): void
     {
         parent::init();
-
         QuillAsset::register($this->getView());
 
         if (isset($this->copyButtonOptions['copyFormat'])) {
@@ -40,85 +43,73 @@ class QuillViewerWidget extends Widget
     public function run(): string
     {
         $id = $this->getId();
-        $viewerId = "{$id}-viewer";
-        $hiddenId = "{$id}-hidden";
+        $viewerId = "$id-viewer";
+        $hiddenId = "$id-hidden";
 
         if (trim($this->content) === '') {
             return Html::tag('div', '<p>No content available.</p>', $this->options);
         }
 
-        // 1) Render the (empty) Quill container:
-        $viewerOptions = array_merge($this->options, [
-            'id' => $viewerId,
-            'style' => ($this->options['style'] ?? '') . ';overflow:auto;',
-        ]);
-        $viewerDiv = Html::tag('div', '', $viewerOptions);
+        /* viewer shell */
+        $style = rtrim(($this->options['style'] ?? ''), ';') . ';overflow:auto;';
+        $viewerDiv = Html::tag(
+            'div',
+            '',
+            array_merge(
+                $this->options,
+                ['id' => $viewerId, 'style' => $style]
+            )
+        );
 
-        // 2) If copyFormat ≠ 'md', render a hidden textarea with raw JSON:
-        $hiddenTextarea = '';
-        if ($this->enableCopy && $this->copyFormat !== 'md') {
-            $hiddenTextarea = Html::tag(
-                'textarea',
-                $this->content,
-                [
-                    'id' => $hiddenId,
-                    'style' => 'display:none;',
-                ]
-            );
-        }
+        /* hidden raw JSON for copy-as-text */
+        $hiddenTextarea = $this->enableCopy && $this->copyFormat !== 'md'
+            ? Html::tag('textarea', $this->content, ['id' => $hiddenId, 'style' => 'display:none;'])
+            : '';
 
-        // 3) Render the copy button (target either .ql-editor or the hidden <textarea>):
-        $copyBtnHtml = '';
-        if ($this->enableCopy) {
-            $targetSelector = ($this->copyFormat === 'md')
-                ? "#{$viewerId} .ql-editor"
-                : "#{$hiddenId}";
-
-            $copyBtnHtml = CopyToClipboardWidget::widget([
-                'targetSelector' => $targetSelector,
+        /* copy button */
+        $copyBtnHtml = $this->enableCopy
+            ? CopyToClipboardWidget::widget([
+                'targetSelector' => $this->copyFormat === 'md' ? "#$viewerId .ql-editor" : "#$hiddenId",
                 'copyFormat' => $this->copyFormat,
                 'buttonOptions' => $this->copyButtonOptions,
                 'label' => $this->copyButtonLabel,
-            ]);
-        }
+            ])
+            : '';
 
-        // 4) Wrap everything in a position-relative container:
-        $container = Html::tag('div', $hiddenTextarea . $viewerDiv . $copyBtnHtml, [
-            'class' => 'position-relative',
-        ]);
+        /* container */
+        $html = Html::tag('div', $hiddenTextarea . $viewerDiv . $copyBtnHtml, ['class' => 'position-relative']);
 
-        // 5) Init Quill (without toolbar) on the viewer DIV:
+        /* initialise Quill with decoded delta */
         $this->registerInitScript($viewerId, $this->content, $this->theme);
 
-        return $container;
+        return $html;
     }
 
+    /**
+     * Initialise Quill viewer with the stored delta.
+     */
     protected function registerInitScript(string $containerId, string $jsonString, string $theme): void
     {
-        $encoded = json_encode($jsonString, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-        $js = <<<JS
-(function() {
-    let delta;
-    try {
-        delta = JSON.parse({$encoded})
-    } catch (e) {
-        console.error('QuillViewerWidget: Invalid JSON Delta.', e);
-        return;
-    }
-
-    // Instantiate Quill in read-only mode with NO toolbar
-    const quill = new Quill('#{$containerId}', {
-        readOnly: true,
-        theme: '{$theme}',
-        modules: {
-            toolbar: false    // ← disables the entire toolbar
+        try {
+            $delta = Json::decode($jsonString, true, 512, JSON_THROW_ON_ERROR);
+        } catch (InvalidArgumentException $e) {
+            Yii::error("Invalid QuillViewerWidget JSON: " . $e->getMessage());
+            return;
         }
-    });
 
-    quill.setContents(delta);
+        $encoded = Json::htmlEncode($delta);
+
+        $this->getView()->registerJs(
+            <<<JS
+(function () {
+    const quill = new Quill('#$containerId', {
+        readOnly: true,
+        theme: '$theme',
+        modules: { toolbar: false }
+    });
+    quill.setContents({$encoded})
 })();
-JS;
-        $this->getView()->registerJs($js, View::POS_READY);
+JS
+        );
     }
 }

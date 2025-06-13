@@ -222,7 +222,10 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     var action = button.attr('data-action');
     var templateId = form.find('#promptinstanceform-template_id').val();
     if (action === 'save') {
-        var finalPrompt = $('#final-prompt-container').find('textarea').val();
+        const deltaObj   = (typeof quillEditor !== 'undefined' && quillEditor)
+        ? quillEditor.getContents()                         
+        : $('#final-prompt-container').data('deltaObj') || {}; 
+        const finalPrompt = JSON.stringify(deltaObj); 
         $.ajax({
             url: '/prompt-instance/save-final-prompt',
             type: 'POST',

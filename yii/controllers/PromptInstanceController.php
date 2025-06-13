@@ -1,4 +1,5 @@
-<?php /** @noinspection PhpUnused */
+<?php
+/** @noinspection PhpUnused */
 
 namespace app\controllers;
 
@@ -16,6 +17,7 @@ use common\constants\FieldConstants;
 use Yii;
 use yii\db\Exception;
 use yii\filters\AccessControl;
+use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -47,8 +49,7 @@ class PromptInstanceController extends Controller
         private readonly PromptTransformationService $promptTransformationService,
         PromptGenerationService $promptGenerationService,
         $config = []
-    )
-    {
+    ) {
         parent::__construct($id, $module, $config);
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('promptInstance');
         $this->promptGenerationService = $promptGenerationService;
@@ -70,21 +71,38 @@ class PromptInstanceController extends Controller
                         'roles' => ['@'],
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
-                            if (in_array($action->id, ['generate-prompt-form', 'generate-final-prompt', 'save-final-prompt'])) {
+                            if (in_array(
+                                $action->id,
+                                ['generate-prompt-form', 'generate-final-prompt', 'save-final-prompt']
+                            )) {
                                 $callback = function () {
                                     $templateId = Yii::$app->request->post('template_id');
                                     if ($templateId) {
-                                        return $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
+                                        return $this->promptTemplateService->getTemplateById(
+                                            $templateId,
+                                            Yii::$app->user->id
+                                        );
                                     }
                                     return null;
                                 };
-                                return $this->permissionService->hasActionPermission('promptTemplate', 'view', $callback);
+                                return $this->permissionService->hasActionPermission(
+                                    'promptTemplate',
+                                    'view',
+                                    $callback
+                                );
                             } elseif ($this->permissionService->isModelBasedAction($action->id)) {
-                                $callback = fn() => $this->promptInstanceService->findModelWithOwner((int)Yii::$app->request->get('id'), Yii::$app->user->id);
+                                $callback = fn() => $this->promptInstanceService->findModelWithOwner(
+                                    (int)Yii::$app->request->get('id'),
+                                    Yii::$app->user->id
+                                );
                             } else {
                                 $callback = null;
                             }
-                            return $this->permissionService->hasActionPermission('promptInstance', $action->id, $callback);
+                            return $this->permissionService->hasActionPermission(
+                                'promptInstance',
+                                $action->id,
+                                $callback
+                            );
                         },
                     ],
                 ],
@@ -117,7 +135,10 @@ class PromptInstanceController extends Controller
      */
     public function actionView(int $id): string
     {
-        return $this->render('view', ['model' => $this->promptInstanceService->findModelWithOwner($id, Yii::$app->user->id)]);
+        return $this->render(
+            'view',
+            ['model' => $this->promptInstanceService->findModelWithOwner($id, Yii::$app->user->id)]
+        );
     }
 
     /**
@@ -235,7 +256,10 @@ class PromptInstanceController extends Controller
 
     public function actionGeneratePromptForm(): string
     {
-        $template = $this->promptTemplateService->getTemplateById(Yii::$app->request->post('template_id'), Yii::$app->user->id);
+        $template = $this->promptTemplateService->getTemplateById(
+            Yii::$app->request->post('template_id'),
+            Yii::$app->user->id
+        );
         $templateBody = $template->template_body;
         $fields = [];
         foreach ($template->fields as $field) {
@@ -314,18 +338,29 @@ class PromptInstanceController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         $finalPrompt = Yii::$app->request->post('prompt');
-        $templateId = Yii::$app->request->post('template_id');
-        if (!$finalPrompt) {
+        if ($finalPrompt === null) {
             return ['success' => false];
         }
-        $model = new PromptInstance();
-        if ($templateId) {
-            $model->template_id = $templateId;
+
+        try {
+            $delta = Json::decode($finalPrompt, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException|\yii\base\InvalidArgumentException $e) {
+            return ['success' => false];
         }
-        $model->final_prompt = $finalPrompt;
-        if ($model->save()) {
-            return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];
+
+        if (!isset($delta['ops']) || !is_array($delta['ops'])) {
+            return ['success' => false];
         }
-        return ['success' => false];
+
+        $model = new PromptInstance([
+            'template_id' => (int)Yii::$app->request->post('template_id'),
+            'final_prompt' => $finalPrompt,
+        ]);
+
+        if (!$model->save()) {
+            return ['success' => false];
+        }
+
+        return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];
     }
 }
