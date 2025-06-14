@@ -19,37 +19,35 @@ echo $this->render('_breadcrumbs', [
     'actionLabel' => $this->title,
 ]);
 ?>
-<div class="prompt-instance-update container py-4">
-    <div class="row justify-content-center">
-        <div class="col-12 col-md-10 col-lg-10">
-            <div class="border rounded p-4 shadow bg-white mt-4">
-                <?php $form = ActiveForm::begin([
-                    'id' => 'prompt-instance-update-form',
-                    'enableClientValidation' => true,
-                ]); ?>
+    <div class="prompt-instance-update container py-4">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-10 col-lg-10">
+                <div class="border rounded p-4 shadow bg-white mt-4">
+                    <?php $form = ActiveForm::begin([
+                        'id' => 'prompt-instance-update-form',
+                        'enableClientValidation' => true,
+                    ]); ?>
 
-                <?= $form->field($model, 'final_prompt')->hiddenInput(['id' => 'final-prompt'])->label(false) ?>
+                    <?= $form->field($model, 'final_prompt')->hiddenInput(['id' => 'final-prompt'])->label(false) ?>
 
-                <div class="form-group"><?= Html::encode($model->template->name ?? 'N/A') ?></div>
+                    <div class="form-group"><?= Html::encode($model->template->name ?? 'N/A') ?></div>
 
-                <div class="resizable-editor-container mb-3">
-                    <div id="editor" class="resizable-editor">
-                        <?= $model->final_prompt ?>
+                    <div class="resizable-editor-container mb-3">
+                        <div id="editor" class="resizable-editor">
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-group mt-4 text-end">
-                    <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
-                    <?= Html::submitButton('Update', ['class' => 'btn btn-primary']) ?>
-                </div>
+                    <div class="form-group mt-4 text-end">
+                        <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
+                        <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
+                    </div>
 
-                <?php ActiveForm::end(); ?>
+                    <?php ActiveForm::end(); ?>
+                </div>
             </div>
         </div>
     </div>
-</div>
 <?php
-$templateBody = json_encode($model->final_prompt);
 $script = <<<JS
 var quill = new Quill('#editor', {
     theme: 'snow',
@@ -70,13 +68,22 @@ var quill = new Quill('#editor', {
         ]
     }
 });
+
+var finalPromptData = $model->final_prompt;
 try {
-    quill.clipboard.dangerouslyPasteHTML($templateBody);
+    if (finalPromptData && typeof finalPromptData === 'object' && finalPromptData.ops) {
+        quill.setContents(finalPromptData);
+    } else {
+        quill.clipboard.dangerouslyPasteHTML(finalPromptData);
+    }
 } catch (error) {
-    console.error('Error injecting template body:', error);
+    console.error('Error loading delta data, falling back to HTML:', error);
+    quill.clipboard.dangerouslyPasteHTML(finalPromptData);
 }
+
 quill.on('text-change', function() {
-    document.querySelector('#final-prompt').value = quill.root.innerHTML;
+    var deltaObj = quill.getContents();
+    document.querySelector('#final-prompt').value = JSON.stringify(deltaObj);
 });
 JS;
 $this->registerJs($script);
