@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 namespace app\widgets;
@@ -51,7 +50,12 @@ class QuillViewerWidget extends Widget
         }
 
         /* viewer shell */
-        $style = rtrim(($this->options['style'] ?? ''), ';') . ';overflow:auto;';
+        $style = rtrim(($this->options['style'] ?? ''), ';');
+        // Only add overflow if not already specified in style
+        if (!str_contains($style, 'overflow:')) {
+            $style .= ';overflow:hidden;';
+        }
+
         $viewerDiv = Html::tag(
             'div',
             '',
@@ -98,7 +102,6 @@ class QuillViewerWidget extends Widget
         }
 
         $encoded = Json::htmlEncode($delta);
-
         $this->getView()->registerJs(
             <<<JS
 (function () {

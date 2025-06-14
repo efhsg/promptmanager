@@ -191,7 +191,7 @@ class PromptGenerationService
 
             // If it's a sequential array, join the elements with commas
             if (array_keys($fieldValue) === range(0, count($fieldValue) - 1)) {
-                $text = implode(', ', $fieldValue);
+                $text = implode("\n", $fieldValue);
                 $ops[] = ['insert' => $text];
             } else {
                 // For associative arrays, format as key-value pairs
