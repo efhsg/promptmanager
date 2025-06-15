@@ -49,16 +49,20 @@ class QuillViewerWidget extends Widget
             return Html::tag('div', '<p>No content available.</p>', $this->options);
         }
 
-        /* viewer shell */
+        /* viewer shell with fallback content */
         $style = rtrim(($this->options['style'] ?? ''), ';');
         // Only add overflow if not already specified in style
         if (!str_contains($style, 'overflow:')) {
             $style .= ';overflow:hidden;';
         }
 
+        // Extract plain text as fallback for when JavaScript is not available
+        $fallbackContent = $this->extractPlainText($this->content);
+
         $viewerDiv = Html::tag(
             'div',
-            '',
+            Html::tag('noscript', Html::encode($fallbackContent)) .
+            Html::tag('div', '', ['class' => 'ql-editor', 'style' => 'display:none;']),
             array_merge(
                 $this->options,
                 ['id' => $viewerId, 'style' => $style]
@@ -90,6 +94,29 @@ class QuillViewerWidget extends Widget
     }
 
     /**
+     * Extract plain text from Quill Delta JSON for fallback display
+     */
+    private function extractPlainText(string $jsonString): string
+    {
+        try {
+            $delta = Json::decode($jsonString, true, 512, JSON_THROW_ON_ERROR);
+            if (!isset($delta['ops']) || !is_array($delta['ops'])) {
+                return '';
+            }
+
+            $text = '';
+            foreach ($delta['ops'] as $op) {
+                if (isset($op['insert']) && is_string($op['insert'])) {
+                    $text .= $op['insert'];
+                }
+            }
+            return trim($text);
+        } catch (InvalidArgumentException) {
+            return '';
+        }
+    }
+
+    /**
      * Initialise Quill viewer with the stored delta.
      */
     protected function registerInitScript(string $containerId, string $jsonString, string $theme): void
@@ -105,6 +132,15 @@ class QuillViewerWidget extends Widget
         $this->getView()->registerJs(
             <<<JS
 (function () {
+    const container = document.getElementById('$containerId');
+    if (!container) return;
+    
+    // Hide noscript fallback and show editor
+    const noscript = container.querySelector('noscript');
+    const editor = container.querySelector('.ql-editor');
+    if (noscript) noscript.style.display = 'none';
+    if (editor) editor.style.display = 'block';
+    
     const quill = new Quill('#$containerId', {
         readOnly: true,
         theme: '$theme',
