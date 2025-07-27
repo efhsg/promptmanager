@@ -188,11 +188,13 @@ class PromptGenerationService
         // Handle array field values (non-JSON strings)
         if (is_array($fieldValue)) {
             $ops = [];
-
-            // If it's a sequential array, join the elements with commas
+            // If it's a sequential array, present each value as a dot-ended list item
             if (array_keys($fieldValue) === range(0, count($fieldValue) - 1)) {
-                $text = implode(', ', $fieldValue);
-                $ops[] = ['insert' => $text];
+                foreach ($fieldValue as $value) {
+                    $trimmed = rtrim($value);
+                    $suffix = str_ends_with($trimmed, '.') ? "\n" : ".\n";
+                    $ops[] = ['insert' => $trimmed . $suffix];
+                }
             } else {
                 // For associative arrays, format as key-value pairs
                 foreach ($fieldValue as $key => $value) {
