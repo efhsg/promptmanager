@@ -1,6 +1,6 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
-use app\widgets\ContentViewerWidget;
+use app\widgets\QuillViewerWidget;
 use common\constants\FieldConstants;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
@@ -39,7 +39,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'projectName',
                         'label' => 'Project Name',
                         'format' => 'raw',
-                        'value' => function ($model) {
+                        'value' => static function ($model): string {
                             return $model->project
                                 ? Html::encode($model->project->name)
                                 : Yii::$app->formatter->nullDisplay;
@@ -60,16 +60,21 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'updated_at',
                         'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
-                    // Show content for text or select-invert types.
-                    (in_array($model->type, [FieldConstants::TYPES[0], FieldConstants::TYPES[4]]) && !empty($model->content))
+                    (in_array($model->type, [FieldConstants::TYPES[0], FieldConstants::TYPES[4]], true) && !empty($model->content))
                         ? [
                         'attribute' => 'content',
                         'format' => 'raw',
                         'label' => 'Field Content',
-                        'value' => function ($model) {
-                            return ContentViewerWidget::widget([
+                            'value' => static function ($model): string {
+                                return QuillViewerWidget::widget([
                                 'content' => $model->content,
-                                'enableCopy' => true,
+                                    'copyButtonOptions' => [
+                                        'class' => 'btn btn-sm position-absolute',
+                                        'style' => 'bottom: 10px; right: 20px;',
+                                        'title' => 'Copy to clipboard',
+                                        'aria-label' => 'Copy content to clipboard',
+                                        'copyFormat' => 'md',
+                                    ],
                             ]);
                         },
                     ]

@@ -55,12 +55,9 @@ QuillAsset::register($this);
     <div id="field-content-wrapper" style="display: none;">
         <?= $form->field($modelField, 'content')->hiddenInput(['id' => 'field-content'])->label(false) ?>
         <div class="resizable-editor-container mb-3">
-            <div id="editor" class="resizable-editor">
-                <?= $modelField->content ?>
+            <div id="editor" class="resizable-editor"></div>
             </div>
         </div>
-    </div>
-
     <div id="field-options-wrapper" style="display: none;">
         <?= $this->render('_fieldOptionsForm', [
             'form'              => $form,
@@ -127,13 +124,13 @@ var quill = new Quill('#editor', {
 });
 
 try {
-    quill.clipboard.dangerouslyPasteHTML($templateContent)
+    quill.setContents(JSON.parse($templateContent))
 } catch (error) {
     console.error('Error injecting content:', error);
 }
 
 quill.on('text-change', function() {
-    document.querySelector('#field-content').value = quill.root.innerHTML;
+    document.querySelector('#field-content').value = JSON.stringify(quill.getContents());
 });
 JS;
 $this->registerJs($script);
