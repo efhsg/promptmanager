@@ -6,6 +6,7 @@ use app\models\Project;
 use app\services\UserPreferenceService;
 use InvalidArgumentException;
 use Throwable;
+use Yii;
 use yii\base\BaseObject;
 use yii\db\ActiveRecord;
 use yii\db\Exception;
@@ -51,12 +52,36 @@ class ProjectContext extends BaseObject
     {
         $projectId = $this->getSessionProjectId();
 
-        if (!$projectId && $this->isUserLoggedIn()) {
-            $projectId = $this->getUserPreferenceProjectId();
-            $this->setSessionProjectId($projectId);
+        if ($projectId !== null) {
+            $project = $this->getValidatedProject($projectId);
+            if ($project !== null) {
+                return $project;
+            }
+            $this->clearCurrentProject();
         }
 
-        return $projectId ? $this->getValidatedProject($projectId) : null;
+        if (!$this->isUserLoggedIn()) {
+            return null;
+        }
+
+        $projectId = $this->getUserPreferenceProjectId();
+        if ($projectId === null) {
+            return null;
+        }
+
+        $project = $this->getValidatedProject($projectId);
+        if ($project !== null) {
+            $this->setSessionProjectId($projectId);
+            return $project;
+        }
+
+        try {
+            $this->removeUserPreferenceProjectId();
+        } catch (Throwable $e) {
+            Yii::warning($e->getMessage(), __METHOD__);
+        }
+
+        return null;
     }
 
     /**
