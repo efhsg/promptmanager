@@ -31,12 +31,11 @@ class ProjectContext extends BaseObject
      * and the Yii WebUser (for user checks) via the constructor.
      */
     public function __construct(
-        Session               $session,
+        Session $session,
         UserPreferenceService $userPreference,
-        WebUser               $webUser,
-                              $config = []
-    )
-    {
+        WebUser $webUser,
+        $config = []
+    ) {
         $this->session = $session;
         $this->userPreference = $userPreference;
         $this->webUser = $webUser;
@@ -44,7 +43,7 @@ class ProjectContext extends BaseObject
     }
 
     /**
-     * Retrieve the current project from session or user preferences, and cache it in session.
+     * Retrieve the current project from session or user preferences and cache it in session.
      *
      * @return array|ActiveRecord|null
      */
@@ -92,7 +91,7 @@ class ProjectContext extends BaseObject
      */
     public function setCurrentProject(int $projectId): void
     {
-        // Handle "no project" scenario
+        // Handle the "no project" scenario
         if ($projectId === 0) {
             $this->clearCurrentProject();
             if ($this->isUserLoggedIn()) {
@@ -116,7 +115,7 @@ class ProjectContext extends BaseObject
     }
 
     /**
-     * Clear the current project from session (useful on logout).
+     * Clear the current project from the session (useful on logout).
      */
     public function clearCurrentProject(): void
     {
