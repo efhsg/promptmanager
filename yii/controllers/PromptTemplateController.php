@@ -63,7 +63,7 @@ class PromptTemplateController extends Controller
         ];
     }
 
-    public function actionIndex(): string
+    public function actionIndex(): string|array
     {
         $searchModel = new PromptTemplateSearch();
         $dataProvider = $searchModel->search(
@@ -71,6 +71,23 @@ class PromptTemplateController extends Controller
             Yii::$app->user->id,
             (Yii::$app->projectContext)->getCurrentProject()?->id
         );
+    
+        if (Yii::$app->request->get('debug') === 'json') {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            $models = $dataProvider->getModels();
+            $pagination = $dataProvider->getPagination();
+            return [
+                'models' => $models,
+                'count' => $dataProvider->getCount(),
+                'totalCount' => $dataProvider->getTotalCount(),
+                'pagination' => $pagination ? [
+                    'page' => $pagination->getPage(),
+                    'pageSize' => $pagination->getPageSize(),
+                    'pageCount' => $pagination->getPageCount(),
+                ] : null,
+            ];
+        }
+
         return $this->render('index', compact('searchModel', 'dataProvider'));
     }
 

@@ -62,6 +62,10 @@ class PromptTemplateSearch extends PromptTemplate
             ],
         ]);
 
+        $dataProvider->sort->defaultOrder = [
+            'name' => SORT_ASC,
+        ];
+
         $dataProvider->sort->attributes['projectName'] = [
             'asc' => ['p.name' => SORT_ASC],
             'desc' => ['p.name' => SORT_DESC],
