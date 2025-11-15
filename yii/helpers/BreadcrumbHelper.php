@@ -95,9 +95,8 @@ class BreadcrumbHelper
             return $candidate;
         }
 
-        // __toString fallback
         if (method_exists($model, '__toString')) {
-            $asString = (string) $model;
+            $asString = (string)$model;
             if ($asString !== '') {
                 return $asString;
             }
@@ -110,6 +109,7 @@ class BreadcrumbHelper
     }
 
     /**
+     * @param object $model
      * @return int|string|null
      */
     private static function resolveModelId(object $model): int|string|null
