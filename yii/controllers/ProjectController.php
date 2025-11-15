@@ -1,4 +1,4 @@
-<?php /** @noinspection DuplicatedCode */
+<?php
 
 namespace app\controllers;
 
@@ -16,6 +16,11 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
+/**
+ * Controller that provides CRUD actions for Project models and handles the
+ * user's current project context. It enforces permissions and renders views
+ * for listing, creating, updating and deleting projects.
+ */
 class ProjectController extends Controller
 {
     private ProjectContext $projectContext;

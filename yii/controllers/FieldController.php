@@ -16,6 +16,10 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use Yii2\Extensions\DynamicForm\Models\Model;
 
+/**
+ * Controller for managing Field entities: listing, creating, updating and
+ * deleting fields and their options within a user's projects.
+ */
 class FieldController extends Controller
 {
     private array $actionPermissionMap;
@@ -101,7 +105,6 @@ class FieldController extends Controller
                 $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
                 Model::loadMultiple($modelsFieldOption, $postData);
             } else {
-                // No field options in POST data
                 $modelsFieldOption = [];
             }
 

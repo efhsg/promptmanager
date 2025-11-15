@@ -16,6 +16,10 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
+/**
+ * Controller for managing Context entities: provides CRUD operations and ensures
+ * contexts are tied to the user's projects and permission checks are enforced.
+ */
 class ContextController extends Controller
 {
     /**
