@@ -1,4 +1,5 @@
-<?php /** @noinspection PhpUnused */
+<?php
+/** @noinspection PhpUnused */
 
 namespace app\controllers;
 
@@ -30,8 +31,7 @@ class PromptTemplateController extends Controller
         private readonly PromptTemplateService $promptTemplateService,
         private readonly EntityPermissionService $permissionService,
         $config = []
-    )
-    {
+    ) {
         parent::__construct($id, $module, $config);
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('promptTemplate');
     }
@@ -55,7 +55,11 @@ class PromptTemplateController extends Controller
                             $callback = $this->permissionService->isModelBasedAction($action->id)
                                 ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
                                 : null;
-                            return $this->permissionService->hasActionPermission('promptTemplate', $action->id, $callback);
+                            return $this->permissionService->hasActionPermission(
+                                'promptTemplate',
+                                $action->id,
+                                $callback
+                            );
                         },
                     ],
                 ],
@@ -71,7 +75,12 @@ class PromptTemplateController extends Controller
             Yii::$app->user->id,
             (Yii::$app->projectContext)->getCurrentProject()?->id
         );
-    
+
+        // Default sort by template name if no explicit sort is provided
+        if (!Yii::$app->request->get('sort') && $dataProvider->getSort()) {
+            $dataProvider->getSort()->defaultOrder = ['name' => SORT_ASC];
+        }
+
         if (Yii::$app->request->get('debug') === 'json') {
             Yii::$app->response->format = Response::FORMAT_JSON;
             $models = $dataProvider->getModels();
@@ -101,9 +110,10 @@ class PromptTemplateController extends Controller
         /** @var PromptTemplate $model */
         $model = $this->findModel($id);
         $userId = Yii::$app->user->id;
-        $generalFieldsMap = $this->fieldService->fetchFieldsMap($userId, null);
-        $projectFieldsMap = $this->fieldService->fetchFieldsMap($userId, $model->project_id ?: null);
-        $fieldsMapping = array_merge($generalFieldsMap, $projectFieldsMap);
+        [$generalFieldsMap, $projectFieldsMap, $fieldsMapping] = $this->getFieldsMaps(
+            $userId,
+            $model->project_id ?: null
+        );
         $model->template_body = $this->promptTemplateService->convertPlaceholdersToLabels(
             $model->template_body,
             $fieldsMapping
@@ -144,9 +154,10 @@ class PromptTemplateController extends Controller
     private function handleForm(PromptTemplate $model): Response|string
     {
         $userId = Yii::$app->user->id;
-        $generalFieldsMap = $this->fieldService->fetchFieldsMap($userId, null);
-        $projectFieldsMap = $this->fieldService->fetchFieldsMap($userId, $model->project_id ?: null);
-        $fieldsMapping = array_merge($generalFieldsMap, $projectFieldsMap);
+        [$generalFieldsMap, $projectFieldsMap, $fieldsMapping] = $this->getFieldsMaps(
+            $userId,
+            $model->project_id ?: null
+        );
         $view = $model->isNewRecord ? 'create' : 'update';
         if (!Yii::$app->request->isPost) {
             if ($model->isNewRecord && empty($model->template_body)) {
@@ -201,11 +212,10 @@ class PromptTemplateController extends Controller
     }
 
     /**
-     * Finds the PromptTemplate model based on its primary key value and verifies that it belongs
-     * to the current user (via its associated project).
+     * Finds a PromptTemplate model by ID and ensures it belongs to the current user.
      *
      * @param int $id
-     * @return ActiveRecord
+     * @return PromptTemplate
      * @throws NotFoundHttpException if the model cannot be found or is not owned by the user.
      */
     protected function findModel(int $id): ActiveRecord
@@ -217,5 +227,13 @@ class PromptTemplateController extends Controller
                 'project.user_id' => Yii::$app->user->id,
             ])
             ->one() ?? throw new NotFoundHttpException('The requested prompt template does not exist or is not yours.');
+    }
+
+    // Centralized helper for fields maps
+    private function getFieldsMaps(int $userId, ?int $projectId): array
+    {
+        $generalFieldsMap = $this->fieldService->fetchFieldsMap($userId, null);
+        $projectFieldsMap = $this->fieldService->fetchFieldsMap($userId, $projectId);
+        return [$generalFieldsMap, $projectFieldsMap, array_merge($generalFieldsMap, $projectFieldsMap)];
     }
 }
