@@ -21,7 +21,7 @@ class BreadcrumbHelper
 
         foreach ($breadcrumbParts as $index => $part) {
             if (!is_array($part)) {
-                throw new InvalidArgumentException("Breadcrumb part at index {$index} must be an array.");
+                throw new InvalidArgumentException("Breadcrumb part at index $index must be an array.");
             }
             $breadcrumbs[] = self::normalizePart($part, $index);
         }
@@ -54,12 +54,12 @@ class BreadcrumbHelper
     private static function normalizePart(array $part, int $index): array
     {
         if (!array_key_exists('label', $part) || !is_string($part['label']) || $part['label'] === '') {
-            throw new InvalidArgumentException("Breadcrumb part at index {$index} must have a non-empty 'label' string.");
+            throw new InvalidArgumentException("Breadcrumb part at index $index must have a non-empty 'label' string.");
         }
 
         $url = $part['url'] ?? null;
         if (!is_null($url) && !is_string($url) && !is_array($url)) {
-            throw new InvalidArgumentException("Breadcrumb part 'url' at index {$index} must be array|string|null.");
+            throw new InvalidArgumentException("Breadcrumb part 'url' at index $index must be array|string|null.");
         }
 
         return [
@@ -106,7 +106,7 @@ class BreadcrumbHelper
         // Final fallback: class short name with optional id
         $short = substr(strrchr('\\' . get_class($model), '\\') ?: '', 1) ?: 'Model';
         $id = self::resolveModelId($model);
-        return $id !== null ? "{$short} #{$id}" : $short;
+        return $id !== null ? $short . ' #' . $id : $short;
     }
 
     /**
