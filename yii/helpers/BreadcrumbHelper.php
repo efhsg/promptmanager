@@ -5,6 +5,11 @@ namespace app\helpers;
 use InvalidArgumentException;
 use yii\db\BaseActiveRecord;
 
+/**
+ * Provides utilities to build breadcrumbs for model-based views.
+ *
+ * Normalizes breadcrumb parts and derives readable labels and IDs from models.
+ */
 class BreadcrumbHelper
 {
     /**
@@ -70,7 +75,6 @@ class BreadcrumbHelper
 
     private static function resolveModelLabel(object $model): string
     {
-        // Prefer explicit attributes for Yii AR
         if ($model instanceof BaseActiveRecord) {
             $name = $model->getAttribute('name');
             if (is_string($name) && $name !== '') {
@@ -82,8 +86,6 @@ class BreadcrumbHelper
             }
         }
 
-        // Generic object properties
-        /** @var mixed $candidate */
         $candidate = null;
         if (isset($model->name) && is_string($model->name) && $model->name !== '') {
             $candidate = $model->name;
@@ -102,7 +104,6 @@ class BreadcrumbHelper
             }
         }
 
-        // Final fallback: class short name with optional id
         $short = substr(strrchr('\\' . get_class($model), '\\') ?: '', 1) ?: 'Model';
         $id = self::resolveModelId($model);
         return $id !== null ? $short . ' #' . $id : $short;
@@ -115,7 +116,6 @@ class BreadcrumbHelper
     private static function resolveModelId(object $model): int|string|null
     {
         if ($model instanceof BaseActiveRecord) {
-            /** @var mixed $pk */
             $pk = $model->getPrimaryKey();
             return is_scalar($pk) ? $pk : null;
         }
