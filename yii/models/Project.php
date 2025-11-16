@@ -49,7 +49,7 @@ class Project extends ActiveRecord
             [
                 ['root_directory'],
                 'match',
-                'pattern' => '/^(?:[A-Za-z]:\\\\|\\\\\\\\[\w.\- \$]+\\\\|\/)?(?:[\w.\- \$]+(?:\/|\\\\)?)*$/',
+                'pattern' => '~^(?:(?:[A-Za-z]:\\\\|\\\\\\\\[\w.\- \$]+\\\\|/)(?:[\w.\- \$]+(?:[\/\\\\][\w.\- \$]+)*)?|[\w.\- \$]+(?:[\/\\\\][\w.\- \$]+)*)$~',
                 'message' => 'Root directory must be a valid path.',
             ],
             [['name'], 'string', 'max' => 255],
