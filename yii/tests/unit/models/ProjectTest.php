@@ -178,9 +178,11 @@ class ProjectTest extends Unit
             'null value' => [null, true],
             'unix path' => ['/var/www/project', true],
             'windows drive' => ['C:\\Projects\\Sample', true],
+            'windows root' => ['C:\\', true],
             'unc path' => ['\\\\wsl$\\Ubuntu\\home\\erwin\\projects\\promptmanager', true],
             'invalid character' => ['invalid|path', false],
             'at character' => ['@', false],
+            'windows illegal char' => ['C:\\Projects\\Sam?ple', false],
             'trailing invalid char' => ['C:\\invalid|', false],
         ];
     }
