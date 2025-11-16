@@ -177,6 +177,7 @@ class ProjectTest extends Unit
         return [
             'null value' => [null, true],
             'unix path' => ['/var/www/project', true],
+            'unix path trailing slash' => ['/home/erwin/projects/promptmanager/', true],
             'windows drive' => ['C:\\Projects\\Sample', true],
             'windows root' => ['C:\\', true],
             'unc path' => ['\\\\wsl$\\Ubuntu\\home\\erwin\\projects\\promptmanager', true],
