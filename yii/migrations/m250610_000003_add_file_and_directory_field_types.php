@@ -1,11 +1,11 @@
 <?php
 
-declare(strict_types=1);
-
 namespace app\migrations;
 
 use common\constants\FieldConstants;
+use RuntimeException;
 use yii\db\Migration;
+use yii\db\Query;
 
 class m250610_000003_add_file_and_directory_field_types extends Migration
 {
@@ -20,7 +20,7 @@ class m250610_000003_add_file_and_directory_field_types extends Migration
         $enumValues = implode(
             ',',
             array_map(
-                static fn (string $type): string => "'$type'",
+                static fn(string $type): string => "'$type'",
                 FieldConstants::TYPES
             )
         );
@@ -30,6 +30,18 @@ class m250610_000003_add_file_and_directory_field_types extends Migration
 
     public function safeDown(): void
     {
+        $hasNewTypes = (new Query())
+            ->from('{{%field}}')
+            ->where(['type' => ['file', 'directory']])
+            ->exists($this->db);
+
+        if ($hasNewTypes) {
+            throw new RuntimeException(
+                'Cannot downgrade: there are fields with type "file" or "directory". ' .
+                'Please migrate their type first.'
+            );
+        }
+
         $oldTypes = [
             'text',
             'select',
@@ -41,7 +53,7 @@ class m250610_000003_add_file_and_directory_field_types extends Migration
         $enumValuesOld = implode(
             ',',
             array_map(
-                static fn (string $type): string => "'$type'",
+                static fn(string $type): string => "'$type'",
                 $oldTypes
             )
         );
@@ -50,4 +62,5 @@ class m250610_000003_add_file_and_directory_field_types extends Migration
 
         $this->dropColumn('{{%project}}', 'root_directory');
     }
+
 }
