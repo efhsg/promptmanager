@@ -39,6 +39,7 @@ echo $this->render('_breadcrumbs', [
                 'options' => ['class' => 'table table-borderless'],
                 'attributes' => [
                     'name',
+                    'root_directory',
                     [
                         'attribute' => 'description',
                         'format' => 'raw',

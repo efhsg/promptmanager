@@ -68,6 +68,7 @@ echo $this->render('_breadcrumbs', [
                 },
                 'columns' => [
                     'name',
+                    'root_directory',
                     [
                         'attribute' => 'description',
                         'label'     => 'Description',

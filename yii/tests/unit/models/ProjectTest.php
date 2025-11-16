@@ -152,5 +152,36 @@ class ProjectTest extends Unit
         verify($user->id)->equals($project->user_id);
     }
 
+    /**
+     * @dataProvider rootDirectoryProvider
+     */
+    public function testRootDirectoryValidation(?string $rootDirectory, bool $isValid)
+    {
+        $project = new Project();
+        $project->name = 'Root Directory Validation';
+        $project->user_id = 1;
+        $project->root_directory = $rootDirectory;
 
+        $result = $project->validate();
+        verify($result)->equals($isValid);
+
+        if ($isValid) {
+            verify(array_key_exists('root_directory', $project->errors))->false();
+        } else {
+            verify(array_key_exists('root_directory', $project->errors))->true();
+        }
+    }
+
+    public static function rootDirectoryProvider(): array
+    {
+        return [
+            'null value' => [null, true],
+            'unix path' => ['/var/www/project', true],
+            'windows drive' => ['C:\\Projects\\Sample', true],
+            'unc path' => ['\\\\wsl$\\Ubuntu\\home\\erwin\\projects\\promptmanager', true],
+            'invalid character' => ['invalid|path', false],
+            'at character' => ['@', false],
+            'trailing invalid char' => ['C:\\invalid|', false],
+        ];
+    }
 }
