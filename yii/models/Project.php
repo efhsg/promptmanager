@@ -46,6 +46,12 @@ class Project extends ActiveRecord
             [['user_id', 'created_at', 'updated_at', 'deleted_at'], 'integer'],
             [['description'], 'string'],
             [['root_directory'], 'string', 'max' => 1024],
+            [
+                ['root_directory'],
+                'match',
+                'pattern' => '/^(?:[A-Za-z]:\\\\|\\\\\\\\[\w.\- \$]+\\\\|\/)?(?:[\w.\- \$]+(?:\/|\\\\)?)*$/',
+                'message' => 'Root directory must be a valid path.',
+            ],
             [['name'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
         ];

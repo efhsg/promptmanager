@@ -18,6 +18,8 @@ QuillAsset::register($this);
 
     <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
 
+    <?= $form->field($model, 'root_directory')->textInput(['maxlength' => true]) ?>
+
     <?= $form->field($model, 'description')
         ->hiddenInput(['id' => 'project-description'])
         ->label('Description') ?>
