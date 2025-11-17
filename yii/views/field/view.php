@@ -18,6 +18,58 @@ echo $this->render('_breadcrumbs', [
 
 HighlightAsset::register($this);
 
+$this->registerCss(<<<CSS
+#path-preview-modal .modal-content {
+    background-color: #2b2b2b;
+    color: #dcdcdc;
+    border: 1px solid #3c3f41;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+}
+
+#path-preview-modal .modal-header {
+    background: linear-gradient(180deg, #3c3f41 0%, #313335 100%);
+    border-bottom: 1px solid #4c5052;
+    color: #e0e0e0;
+}
+
+#path-preview-modal .modal-title {
+    font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+}
+
+#path-preview-modal .badge {
+    background-color: #4c5052;
+    color: #f0f0f0;
+}
+
+#path-preview-modal .modal-body {
+    background-color: #2b2b2b;
+    border-top: 1px solid #1f1f1f;
+    padding: 1.5rem;
+}
+
+#path-preview-modal pre {
+    font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    background-color: #2b2b2b;
+    color: #dcdcdc;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #3a3d40;
+    max-height: 70vh;
+}
+
+#path-preview-modal code {
+    color: inherit;
+    white-space: pre;
+}
+
+#path-preview-modal .btn-close-white {
+    filter: invert(1) grayscale(100%);
+}
+CSS);
+
 $resolveLanguage = static function (string $path): array {
     $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION) ?: '');
     return match ($extension) {
@@ -183,9 +235,9 @@ echo <<<HTML
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body bg-dark text-light">
-                <pre class="mb-0 border-0 bg-transparent text-light">
-<code id="path-preview-content" class="font-monospace text-light"></code>
+            <div class="modal-body">
+                <pre class="mb-0 border-0">
+                    <code id="path-preview-content" class="font-monospace"></code>
                 </pre>
             </div>
         </div>
