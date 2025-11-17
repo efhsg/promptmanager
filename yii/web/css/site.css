@@ -160,37 +160,65 @@ a.desc:after {
     cursor: pointer;
 }
 
-/* Dark theme for path preview modal */
+/* Path preview modal styles moved from field/view.php */
 #path-preview-modal .modal-dialog {
     max-width: 80vw;
 }
 
 #path-preview-modal .modal-content {
     background-color: #2b2b2b;
-    color: #f8f8f2;
+    color: #dcdcdc;
+    border: 1px solid #3c3f41;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
 }
 
-#path-preview-modal .modal-header,
-#path-preview-modal .modal-body {
-    border-color: #3c3f41;
-    background-color: #2b2b2b;
-    color: #f8f8f2;
+#path-preview-modal .modal-header {
+    background: linear-gradient(180deg, #3c3f41 0%, #313335 100%);
+    border-bottom: 1px solid #4c5052;
+    color: #e0e0e0;
 }
 
 #path-preview-modal .modal-title {
-    color: #f8f8f2;
+    font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+}
+
+#path-preview-modal .badge {
+    background-color: #4c5052;
+    color: #f0f0f0;
+}
+
+#path-preview-modal .modal-body {
+    background-color: #2b2b2b;
+    border-top: 1px solid #1f1f1f;
+    padding: 1.5rem;
 }
 
 #path-preview-modal pre {
+    font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    font-size: 0.9rem;
     background-color: #2b2b2b;
-    color: #f8f8f2;
-    border: none;
+    color: #dcdcdc;
+    padding: 1rem;
+    border-radius: 6px;
+    border: 1px solid #3a3d40;
+    max-height: 70vh;
+}
+
+#path-preview-modal code {
+    color: inherit;
+    white-space: pre;
+}
+
+#path-preview-modal .btn-close-white {
+    filter: invert(1) grayscale(100%);
 }
 
 /* highlight.js base inside modal */
 #path-preview-modal .hljs {
     background-color: #2b2b2b !important;
-    color: #f8f8f2;
+    color: #dcdcdc;
 }
 
 /* keywords (public, function, namespace, use, etc.) + <?php meta */
