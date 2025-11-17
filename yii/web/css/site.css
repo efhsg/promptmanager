@@ -159,3 +159,75 @@ a.desc:after {
     border-radius: 3px;
     cursor: pointer;
 }
+
+/* Dark theme for path preview modal */
+#path-preview-modal .modal-dialog {
+    max-width: 80vw;
+}
+
+#path-preview-modal .modal-content {
+    background-color: #2b2b2b;
+    color: #f8f8f2;
+}
+
+#path-preview-modal .modal-header,
+#path-preview-modal .modal-body {
+    border-color: #3c3f41;
+    background-color: #2b2b2b;
+    color: #f8f8f2;
+}
+
+#path-preview-modal .modal-title {
+    color: #f8f8f2;
+}
+
+#path-preview-modal pre {
+    background-color: #2b2b2b;
+    color: #f8f8f2;
+    border: none;
+}
+
+/* highlight.js base inside modal */
+#path-preview-modal .hljs {
+    background-color: #2b2b2b !important;
+    color: #f8f8f2;
+}
+
+/* keywords (public, function, namespace, use, etc.) + <?php meta */
+#path-preview-modal .hljs-keyword,
+#path-preview-modal .hljs-selector-tag,
+#path-preview-modal .hljs-meta,
+#path-preview-modal .hljs-meta .hljs-keyword {
+    color: #ce6d3c;
+    font-weight: normal;
+}
+
+/* strings */
+#path-preview-modal .hljs-string {
+    color: #6a8759;
+}
+
+/* class / namespace / FQN names: app\migrations, yii\db\Migration */
+#path-preview-modal .hljs-title,
+#path-preview-modal .hljs-name {
+    color: #b1b8bb;
+    font-weight: normal;
+}
+
+/* variables, attributes, numbers etc. blijven zoals ze waren */
+#path-preview-modal .hljs-variable,
+#path-preview-modal .hljs-attr,
+#path-preview-modal .hljs-number {
+    color: #6897bb;
+}
+
+#path-preview-modal .hljs-comment,
+#path-preview-modal .hljs-quote {
+    color: #808080;
+    font-style: italic;
+}
+
+#path-preview-modal .hljs-built_in,
+#path-preview-modal .hljs-literal {
+    color: #d0d0ff;
+}
