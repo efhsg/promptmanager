@@ -196,10 +196,14 @@ HTML;
 $js = <<<JS
 function pathPreview() {
     var modalElement = document.getElementById('path-preview-modal');
+    if (!modalElement || !window.bootstrap) {
+        return;
+    }
     var modalBody = document.getElementById('path-preview-content');
     var modalTitle = document.getElementById('path-preview-title');
     var modal = new bootstrap.Modal(modalElement);
     var languageBadge = document.getElementById('path-preview-language');
+    var defaultErrorMessage = 'Preview error: Unable to load preview.';
 
     function resetLanguageBadge() {
         if (!languageBadge) {
@@ -229,6 +233,11 @@ function pathPreview() {
         }
     }
 
+    function showError(message) {
+        resetLanguageBadge();
+        setPreviewContent(message ? 'Preview error: ' + message : defaultErrorMessage);
+    }
+
     document.querySelectorAll('.path-preview').forEach(function (button) {
         button.addEventListener('click', function () {
             var language = button.getAttribute('data-language') || 'plaintext';
@@ -244,19 +253,15 @@ function pathPreview() {
                 .then(function (response) { return response.json(); })
                 .then(function (data) {
                     if (!data.success) {
-                        resetLanguageBadge();
-                        setPreviewContent('Preview error: ' + (data.message || 'Unable to load preview.'));
+                        showError(data.message || '');
                         return;
                     }
                     updateLanguageBadge(languageLabel);
                     setPreviewContent(data.preview);
-                    if (modalTitle) {
-                        modalTitle.textContent = button.getAttribute('data-path-label');
-                    }
                 })
                 .catch(function (error) {
-                    resetLanguageBadge();
-                    setPreviewContent('Preview error: ' + error.message);
+                    console.error('Path preview failed:', error);
+                    showError('');
                 });
         });
     });
