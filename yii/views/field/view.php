@@ -183,10 +183,8 @@ echo <<<HTML
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body bg-dark text-light">
-                <pre class="mb-0 border-0 bg-transparent text-light">
-<code id="path-preview-content" class="font-monospace text-light"></code>
-                </pre>
+            <div class="modal-body">
+                <pre class="mb-0 border-0"><code id="path-preview-content" class="font-monospace"></code></pre>
             </div>
         </div>
     </div>

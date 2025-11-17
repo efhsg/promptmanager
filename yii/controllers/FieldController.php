@@ -168,7 +168,7 @@ class FieldController extends Controller
             return ['success' => false, 'message' => 'File not accessible.'];
         }
 
-        $preview = @file_get_contents($absolutePath, false, null, 0, 4000);
+        $preview = @file_get_contents($absolutePath, false, null, 0, 100000);
         if ($preview === false) {
             return ['success' => false, 'message' => 'Unable to read file content.'];
         }
