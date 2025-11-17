@@ -214,7 +214,7 @@ a.desc:after {
     font-weight: normal;
 }
 
-/* variables, attributes, numbers etc. blijven zoals ze waren */
+/* variables, attributes, numbers etc. remain as they were */
 #path-preview-modal .hljs-variable,
 #path-preview-modal .hljs-attr,
 #path-preview-modal .hljs-number {
