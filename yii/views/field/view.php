@@ -13,6 +13,32 @@ echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => $this->title,
 ]);
+
+$isPathBasedField = in_array($model->type, ['file', 'directory'], true);
+$pathPreviewItems = [];
+
+if ($isPathBasedField) {
+    $rootDirectory = $model->project?->root_directory;
+    $normalizePath = static function (?string $basePath, string $relativePath): string {
+        $basePath = $basePath ? rtrim($basePath, "\\/\t\n\r") : null;
+        $relativePath = trim($relativePath);
+
+        if ($relativePath === '') {
+            return $basePath ?? '';
+        }
+
+        $relativePath = ltrim($relativePath, "\\/");
+        return $basePath ? $basePath . '/' . $relativePath : $relativePath;
+    };
+
+    if (!empty($model->fieldOptions)) {
+        foreach ($model->fieldOptions as $option) {
+            $pathPreviewItems[] = $normalizePath($rootDirectory, (string)$option->value);
+        }
+    } elseif ($rootDirectory) {
+        $pathPreviewItems[] = $rootDirectory;
+    }
+}
 ?>
 
 <div class="container py-4">
@@ -110,6 +136,45 @@ echo $this->render('_breadcrumbs', [
                     <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($isPathBasedField): ?>
+        <div class="card mb-4">
+            <div class="card-header">
+                <strong>Path Preview</strong>
+            </div>
+            <div class="card-body">
+                <?php if (!empty($pathPreviewItems)): ?>
+                    <?php foreach ($pathPreviewItems as $path): ?>
+                        <?php
+                        $normalizedPath = str_replace('\\', '/', $path);
+                        $fileName = basename($normalizedPath);
+                        $directoryName = dirname($normalizedPath);
+                        if ($directoryName === '.') {
+                            $directoryName = '/';
+                        }
+                        ?>
+                        <div class="path-preview mb-3">
+                            <div class="path-preview__meta">
+                                <div class="path-preview__window-controls" aria-hidden="true">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                                <div class="path-preview__labels">
+                                    <div class="path-preview__filename"><?= Html::encode($fileName ?: $directoryName) ?></div>
+                                    <div class="path-preview__directory text-truncate"><?= Html::encode($directoryName) ?></div>
+                                </div>
+                                <span class="badge bg-secondary text-uppercase path-preview__badge"><?= Html::encode($model->type) ?></span>
+                            </div>
+                            <pre class="path-preview__body mb-0"><?= Html::encode($normalizedPath ?: 'Path will appear here once configured.') ?></pre>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <p class="text-muted mb-0">Add options or configure a project root directory to preview the final path.</p>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
