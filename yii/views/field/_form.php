@@ -69,7 +69,7 @@ QuillAsset::register($this);
         </div>
         <div class="form-text">
             <span>Root:</span>
-            <span id="field-path-root"><?= Html::encode($modelField->project->root_directory ?? '') ?></span>
+            <span id="field-path-root"><?= Html::encode($modelField->project?->root_directory ?? '') ?></span>
             <span id="field-path-status" class="ms-2 text-danger"></span>
         </div>
     </div>
@@ -197,12 +197,7 @@ QuillAsset::register($this);
             }
 
             if (targetValue) {
-                let exists = false;
-                Array.from(pathSelect.options).forEach((option) => {
-                    if (option.value === targetValue) {
-                        exists = true;
-                    }
-                });
+                const exists = Array.from(pathSelect.options).some((option) => option.value === targetValue);
                 if (!exists) {
                     const customOption = document.createElement('option');
                     customOption.value = targetValue;
