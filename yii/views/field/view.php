@@ -37,7 +37,8 @@ $resolveLanguage = static function (string $path): array {
 };
 
 $showPath = in_array($model->type, FieldConstants::PATH_FIELD_TYPES, true) && !empty($model->content);
-$pathLanguage = $showPath ? $resolveLanguage($model->content) : null;
+$canPreviewPath = $showPath && in_array($model->type, FieldConstants::PATH_PREVIEWABLE_FIELD_TYPES, true);
+$pathLanguage = $canPreviewPath ? $resolveLanguage($model->content) : null;
 ?>
 
 <div class="container py-4">
@@ -89,21 +90,30 @@ $pathLanguage = $showPath ? $resolveLanguage($model->content) : null;
                         ? [
                         'label' => 'Path',
                         'format' => 'raw',
-                        'value' => Html::button(
-                            Html::encode($model->content),
-                            [
-                                'type' => 'button',
-                                'class' => 'btn btn-link p-0 text-decoration-underline path-preview font-monospace',
-                                'data-url' => Url::to([
-                                    'field/path-preview',
-                                    'id' => $model->id,
-                                    'path' => $model->content,
-                                ]),
-                                'data-language' => $pathLanguage[0] ?? 'plaintext',
-                                'data-language-label' => $pathLanguage[1] ?? 'Plain Text',
-                                'data-path-label' => $model->content,
-                            ]
-                        ),
+                            'value' => $canPreviewPath
+                                ? Html::button(
+                                    Html::encode($model->content),
+                                    [
+                                        'type' => 'button',
+                                        'class' => 'btn btn-link p-0 text-decoration-underline path-preview font-monospace',
+                                        'data-url' => Url::to([
+                                            'field/path-preview',
+                                            'id' => $model->id,
+                                            'path' => $model->content,
+                                        ]),
+                                        'data-language' => $pathLanguage[0] ?? 'plaintext',
+                                        'data-language-label' => $pathLanguage[1] ?? 'Plain Text',
+                                        'data-path-label' => $model->content,
+                                    ]
+                                )
+                                : Html::tag(
+                                    'span',
+                                    Html::encode($model->content),
+                                    [
+                                        'class' => 'font-monospace text-break',
+                                        'title' => $model->content,
+                                    ]
+                                ),
                     ]
                         : null,
                     (in_array($model->type, FieldConstants::CONTENT_FIELD_TYPES, true) && !empty($model->content))

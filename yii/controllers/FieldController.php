@@ -29,6 +29,8 @@ use Yii2\Extensions\DynamicForm\Models\Model;
  */
 class FieldController extends Controller
 {
+    private const PATH_LIST_MAX_DEPTH = 10;
+
     private array $actionPermissionMap;
 
     public function __construct(
@@ -152,7 +154,7 @@ class FieldController extends Controller
         /** @var Field $field */
         $field = $this->findModel($id);
 
-        if ($field->type !== 'file' || $field->project === null || empty($field->project->root_directory)) {
+        if (!in_array($field->type, FieldConstants::PATH_PREVIEWABLE_FIELD_TYPES, true) || $field->project === null || empty($field->project->root_directory)) {
             return ['success' => false, 'message' => 'Preview unavailable for this field.'];
         }
 
@@ -241,6 +243,7 @@ class FieldController extends Controller
             new RecursiveDirectoryIterator($resolvedRoot, FilesystemIterator::SKIP_DOTS),
             RecursiveIteratorIterator::SELF_FIRST
         );
+        $iterator->setMaxDepth(self::PATH_LIST_MAX_DEPTH);
 
         /** @var SplFileInfo $item */
         foreach ($iterator as $item) {

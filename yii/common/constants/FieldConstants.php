@@ -8,5 +8,6 @@ class FieldConstants
     public const OPTION_FIELD_TYPES = ['select', 'multi-select', 'select-invert'];
     public const CONTENT_FIELD_TYPES = ['text', 'code', 'select-invert'];
     public const PATH_FIELD_TYPES = ['file', 'directory'];
+    public const PATH_PREVIEWABLE_FIELD_TYPES = ['file'];
     public const NO_OPTION_FIELD_TYPES = 'input, textarea, select, code';
 }
