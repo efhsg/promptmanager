@@ -19,7 +19,8 @@ main > .container {
 }
 
 /* add sorting icons to gridview sort links */
-a.asc:after, a.desc:after {
+a.asc:after,
+a.desc:after {
     content: '';
     left: 3px;
     display: inline-block;
@@ -125,10 +126,10 @@ a.desc:after {
 .resizable-editor-container {
     border: 1px solid #ced4da;
     padding: 10px;
-    resize: vertical; /* or both, if you want horizontal resizing as well */
+    resize: vertical;
     overflow: auto;
     min-height: 150px;
-    max-height: 800px; /* optional: prevents it from growing too large */
+    max-height: 800px;
 }
 
 .resizable-editor {
@@ -151,16 +152,16 @@ a.desc:after {
 
 /* Remove the native arrow and add a simple chevron background image */
 .ql-snow .ql-toolbar select.ql-picker {
-    -webkit-appearance: none; /* hide default arrow in Chrome/Safari */
-    -moz-appearance: none; /* hide default arrow in Firefox       */
+    -webkit-appearance: none;
+    -moz-appearance: none;
     background: #fff url("data:image/svg+xml;charset=US-ASCII,%3Csvg fill='none' stroke='%23ccc' viewBox='0 0 18 18'%3E%3Cpolyline points='5 7 9 11 13 7'%3E%3C/polyline%3E%3C/svg%3E") no-repeat right 8px center/9px 9px;
-    padding-right: 26px; /* leave space for the arrow */
-    border: 1px solid #ccc; /* match Quill’s border color */
+    padding-right: 26px;
+    border: 1px solid #ccc;
     border-radius: 3px;
     cursor: pointer;
 }
 
-/* Path preview modal styles moved from field/view.php */
+/* Path preview modal styles */
 #path-preview-modal .modal-dialog {
     max-width: 80vw;
 }
@@ -183,7 +184,6 @@ a.desc:after {
     font-size: 0.95rem;
     letter-spacing: 0.02em;
     color: #f0f0f0;
-
 }
 
 #path-preview-modal .badge {
@@ -244,20 +244,33 @@ a.desc:after {
     font-weight: normal;
 }
 
-/* variables, attributes, numbers etc. remain as they were */
+/* variables, attributes, numbers etc. */
 #path-preview-modal .hljs-variable,
 #path-preview-modal .hljs-attr,
 #path-preview-modal .hljs-number {
     color: #6897bb;
 }
 
+/* comments (incl. @noinspection ...) */
 #path-preview-modal .hljs-comment,
 #path-preview-modal .hljs-quote {
-    color: #808080;
+    color: #6a8759 !important; /* groen zoals in je IDE */
     font-style: italic;
 }
 
+/* builtins / literals */
 #path-preview-modal .hljs-built_in,
 #path-preview-modal .hljs-literal {
     color: #d0d0ff;
+}
+
+/* “PhpUnused” uit @noinspection – licht */
+#path-preview-modal .hljs-inspection-name {
+    color: #f0f0f0;
+    font-style: normal;
+}
+
+/* class-/namespace-namen zoals app\modules\identity\services; */
+#path-preview-modal .hljs-title.class_ {
+    color: #f0f0f0 !important;
 }

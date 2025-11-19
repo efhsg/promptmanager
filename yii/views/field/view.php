@@ -12,8 +12,8 @@ use yii\widgets\DetailView;
 
 $this->title = 'View ' . $model->name;
 echo $this->render('_breadcrumbs', [
-    'model' => null,
-    'actionLabel' => $this->title,
+        'model' => null,
+        'actionLabel' => $this->title,
 ]);
 
 HighlightAsset::register($this);
@@ -47,7 +47,7 @@ $pathLanguage = $canPreviewPath ? $resolveLanguage($model->content) : null;
         <div>
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
-                'class' => 'btn btn-danger me-2',
+                    'class' => 'btn btn-danger me-2',
             ]) ?>
         </div>
     </div>
@@ -58,84 +58,84 @@ $pathLanguage = $canPreviewPath ? $resolveLanguage($model->content) : null;
         </div>
         <div class="card-body">
             <?= DetailView::widget([
-                'model' => $model,
-                'options' => ['class' => 'table table-borderless'],
-                'attributes' => array_filter([
-                    [
-                        'attribute' => 'projectName',
-                        'label' => 'Project Name',
-                        'format' => 'raw',
-                        'value' => static function ($model): string {
-                            return $model->project
-                                ? Html::encode($model->project->name)
-                                : Yii::$app->formatter->nullDisplay;
-                        },
-                    ],
-                    'name',
-                    'type',
-                    [
-                        'attribute' => 'selected_by_default',
-                        'value' => $model->selected_by_default ? 'Yes' : 'No',
-                    ],
-                    'label',
-                    [
-                        'attribute' => 'created_at',
-                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
-                    ],
-                    [
-                        'attribute' => 'updated_at',
-                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
-                    ],
-                    ($showPath)
-                        ? [
-                        'label' => 'Path',
-                        'format' => 'raw',
-                            'value' => $canPreviewPath
-                                ? Html::button(
-                                    Html::encode($model->content),
-                                    [
-                                        'type' => 'button',
-                                        'class' => 'btn btn-link p-0 text-decoration-underline path-preview font-monospace',
-                                        'data-url' => Url::to([
-                                            'field/path-preview',
-                                            'id' => $model->id,
-                                            'path' => $model->content,
-                                        ]),
-                                        'data-language' => $pathLanguage[0] ?? 'plaintext',
-                                        'data-language-label' => $pathLanguage[1] ?? 'Plain Text',
-                                        'data-path-label' => $model->content,
-                                    ]
-                                )
-                                : Html::tag(
-                                    'span',
-                                    Html::encode($model->content),
-                                    [
-                                        'class' => 'font-monospace text-break',
-                                        'title' => $model->content,
-                                    ]
-                                ),
-                    ]
-                        : null,
-                    (in_array($model->type, FieldConstants::CONTENT_FIELD_TYPES, true) && !empty($model->content))
-                        ? [
-                        'attribute' => 'content',
-                        'format' => 'raw',
-                        'label' => 'Field Content',
-                            'value' => static function ($model): string {
-                                return QuillViewerWidget::widget([
-                                'content' => $model->content,
-                                    'copyButtonOptions' => [
-                                        'class' => 'btn btn-sm position-absolute',
-                                        'style' => 'bottom: 10px; right: 20px;',
-                                        'title' => 'Copy to clipboard',
-                                        'aria-label' => 'Copy content to clipboard',
-                                        'copyFormat' => 'md',
-                                    ],
-                            ]);
-                        },
-                    ]
-                        : null,
-                ]),
+                    'model' => $model,
+                    'options' => ['class' => 'table table-borderless'],
+                    'attributes' => array_filter([
+                            [
+                                    'attribute' => 'projectName',
+                                    'label' => 'Project Name',
+                                    'format' => 'raw',
+                                    'value' => static function ($model): string {
+                                        return $model->project
+                                                ? Html::encode($model->project->name)
+                                                : Yii::$app->formatter->nullDisplay;
+                                    },
+                            ],
+                            'name',
+                            'type',
+                            [
+                                    'attribute' => 'selected_by_default',
+                                    'value' => $model->selected_by_default ? 'Yes' : 'No',
+                            ],
+                            'label',
+                            [
+                                    'attribute' => 'created_at',
+                                    'format' => ['datetime', 'php:Y-m-d H:i:s'],
+                            ],
+                            [
+                                    'attribute' => 'updated_at',
+                                    'format' => ['datetime', 'php:Y-m-d H:i:s'],
+                            ],
+                            ($showPath)
+                                    ? [
+                                    'label' => 'Path',
+                                    'format' => 'raw',
+                                    'value' => $canPreviewPath
+                                            ? Html::button(
+                                                    Html::encode($model->content),
+                                                    [
+                                                            'type' => 'button',
+                                                            'class' => 'btn btn-link p-0 text-decoration-underline path-preview font-monospace',
+                                                            'data-url' => Url::to([
+                                                                    'field/path-preview',
+                                                                    'id' => $model->id,
+                                                                    'path' => $model->content,
+                                                            ]),
+                                                            'data-language' => $pathLanguage[0] ?? 'plaintext',
+                                                            'data-language-label' => $pathLanguage[1] ?? 'Plain Text',
+                                                            'data-path-label' => $model->content,
+                                                    ]
+                                            )
+                                            : Html::tag(
+                                                    'span',
+                                                    Html::encode($model->content),
+                                                    [
+                                                            'class' => 'font-monospace text-break',
+                                                            'title' => $model->content,
+                                                    ]
+                                            ),
+                            ]
+                                    : null,
+                            (in_array($model->type, FieldConstants::CONTENT_FIELD_TYPES, true) && !empty($model->content))
+                                    ? [
+                                    'attribute' => 'content',
+                                    'format' => 'raw',
+                                    'label' => 'Field Content',
+                                    'value' => static function ($model): string {
+                                        return QuillViewerWidget::widget([
+                                                'content' => $model->content,
+                                                'copyButtonOptions' => [
+                                                        'class' => 'btn btn-sm position-absolute',
+                                                        'style' => 'bottom: 10px; right: 20px;',
+                                                        'title' => 'Copy to clipboard',
+                                                        'aria-label' => 'Copy content to clipboard',
+                                                        'copyFormat' => 'md',
+                                                ],
+                                        ]);
+                                    },
+                            ]
+                                    : null,
+                    ]),
             ]) ?>
         </div>
     </div>
@@ -197,6 +197,7 @@ function pathPreview() {
     if (!modalElement || !window.bootstrap) {
         return;
     }
+
     var modalBody = document.getElementById('path-preview-content');
     var modalTitle = document.getElementById('path-preview-title');
     var modal = new bootstrap.Modal(modalElement);
@@ -224,10 +225,74 @@ function pathPreview() {
         modalBody.className = classes.join(' ');
     }
 
+    /**
+     * Binnen comments als:
+     *   /** @noinspection PhpUnused *\/
+     * zet dit script "PhpUnused" in een eigen span zodat de CSS
+     * het anders kan kleuren dan de rest van de comment.
+     */
+    function tweakPhpSuppressions(root) {
+        if (!root) {
+            return;
+        }
+
+        root.querySelectorAll('.hljs-comment').forEach(function (commentEl) {
+            // alleen comments met een @noinspection-doctag
+            if (!commentEl.querySelector('.hljs-doctag')) {
+                return;
+            }
+
+            var walker = document.createTreeWalker(
+                commentEl,
+                NodeFilter.SHOW_TEXT,
+                null
+            );
+
+            var textNodes = [];
+            while (walker.nextNode()) {
+                textNodes.push(walker.currentNode);
+            }
+
+            textNodes.forEach(function (node) {
+                var text = node.nodeValue;
+                var target = 'PhpUnused';
+                var index = text.indexOf(target);
+
+                if (index === -1) {
+                    return;
+                }
+
+                var before = text.slice(0, index);
+                var after = text.slice(index + target.length);
+
+                var span = document.createElement('span');
+                span.className = 'hljs-inspection-name';
+                span.textContent = target;
+
+                var parent = node.parentNode;
+                if (!parent) {
+                    return;
+                }
+
+                if (before) {
+                    parent.insertBefore(document.createTextNode(before), node);
+                }
+                parent.insertBefore(span, node);
+                if (after) {
+                    parent.insertBefore(document.createTextNode(after), node);
+                }
+
+                parent.removeChild(node);
+            });
+        });
+    }
+
     function setPreviewContent(text) {
         modalBody.textContent = text;
+
         if (window.hljs) {
             window.hljs.highlightElement(modalBody);
+            tweakPhpSuppressions(modalBody);
         }
     }
 
@@ -240,13 +305,16 @@ function pathPreview() {
         button.addEventListener('click', function () {
             var language = button.getAttribute('data-language') || 'plaintext';
             var languageLabel = button.getAttribute('data-language-label') || language.toUpperCase();
+
             if (modalTitle) {
                 modalTitle.textContent = button.getAttribute('data-path-label') || 'File Preview';
             }
+
             resetLanguageBadge();
             applyLanguageClass(language);
             setPreviewContent('Loading...');
             modal.show();
+
             fetch(button.getAttribute('data-url'), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                 .then(function (response) { return response.json(); })
                 .then(function (data) {
@@ -266,5 +334,6 @@ function pathPreview() {
 }
 pathPreview();
 JS;
+
 $this->registerJs($js);
 ?>
