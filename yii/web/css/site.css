@@ -182,6 +182,7 @@ a.desc:after {
     font-family: "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
     font-size: 0.95rem;
     letter-spacing: 0.02em;
+    color: #ffffff;
 }
 
 #path-preview-modal .badge {
@@ -238,20 +239,31 @@ a.desc:after {
 /* class / namespace / FQN names: app\migrations, yii\db\Migration */
 #path-preview-modal .hljs-title,
 #path-preview-modal .hljs-name {
-    color: #b1b8bb;
+    color: #c578f0;
     font-weight: normal;
+}
+
+/* function names such as __construct */
+#path-preview-modal .hljs-function .hljs-title,
+#path-preview-modal .hljs-function > .hljs-title,
+#path-preview-modal .hljs-title.function_ {
+    color: #5394ec;
 }
 
 /* variables, attributes, numbers etc. remain as they were */
 #path-preview-modal .hljs-variable,
-#path-preview-modal .hljs-attr,
+#path-preview-modal .hljs-attr {
+    color: #9876aa;
+}
+
 #path-preview-modal .hljs-number {
     color: #6897bb;
 }
 
 #path-preview-modal .hljs-comment,
-#path-preview-modal .hljs-quote {
-    color: #808080;
+#path-preview-modal .hljs-quote,
+#path-preview-modal .hljs-doctag {
+    color: #6a8759;
     font-style: italic;
 }
 
