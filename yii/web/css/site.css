@@ -239,7 +239,7 @@ a.desc:after {
 /* class / namespace / FQN names: app\migrations, yii\db\Migration */
 #path-preview-modal .hljs-title,
 #path-preview-modal .hljs-name {
-    color: #c578f0;
+    color: #dcdcdc;
     font-weight: normal;
 }
 
@@ -270,4 +270,9 @@ a.desc:after {
 #path-preview-modal .hljs-built_in,
 #path-preview-modal .hljs-literal {
     color: #d0d0ff;
+}
+
+/* custom type hints (e.g., ?UserDataSeederInterface) */
+#path-preview-modal .hljs-custom-type {
+    color: #c578f0;
 }

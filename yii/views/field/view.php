@@ -224,10 +224,54 @@ function pathPreview() {
         modalBody.className = classes.join(' ');
     }
 
+    function highlightTypeHints() {
+        if (!modalBody.classList.contains('language-php')) {
+            return;
+        }
+
+        var typePattern = /(\??[A-Z][\w\\]*)(?=\s+\$)/g;
+        var walker = document.createTreeWalker(modalBody, NodeFilter.SHOW_TEXT);
+        var nodes = [];
+        var textNode;
+
+        while ((textNode = walker.nextNode())) {
+            if (typePattern.test(textNode.textContent)) {
+                nodes.push(textNode);
+            }
+            typePattern.lastIndex = 0;
+        }
+
+        nodes.forEach(function (node) {
+            var text = node.textContent;
+            var fragment = document.createDocumentFragment();
+            var lastIndex = 0;
+            var match;
+
+            while ((match = typePattern.exec(text)) !== null) {
+                if (match.index > lastIndex) {
+                    fragment.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+                }
+                var span = document.createElement('span');
+                span.className = 'hljs-custom-type';
+                span.textContent = match[1];
+                fragment.appendChild(span);
+                lastIndex = typePattern.lastIndex;
+            }
+
+            if (lastIndex < text.length) {
+                fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+            }
+
+            node.parentNode.replaceChild(fragment, node);
+            typePattern.lastIndex = 0;
+        });
+    }
+
     function setPreviewContent(text) {
         modalBody.textContent = text;
         if (window.hljs) {
             window.hljs.highlightElement(modalBody);
+            highlightTypeHints();
         }
     }
 
