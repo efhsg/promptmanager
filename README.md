@@ -4,8 +4,7 @@ A web-based prompt management system built with **Yii2**, **MySQL**, and a Boots
 
 PromptManager organizes prompts into projects, contexts, fields, and reusable templates so teams can assemble high-quality LLM prompts without copy/paste sprawl.
 
-![PromptManager UI](yii/web/images/prompt-manager-logo.png)
-*Add a UI screenshot here when available.*
+![PromptManager UI](yii/web/images/screenshot.png)
 
 ---
 
