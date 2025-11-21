@@ -4,6 +4,8 @@ namespace app\services;
 
 use app\models\PromptTemplate;
 use app\models\TemplateField;
+use Throwable;
+use Yii;
 use yii\db\Exception;
 use yii\helpers\ArrayHelper;
 
@@ -18,11 +20,24 @@ class PromptTemplateService
         $originalTemplate = $postData['PromptTemplate']['template_body'] ?? '{"ops":[{"insert":"\n"}]}';
         $convertedTemplate = $this->convertPlaceholdersToIds($originalTemplate, $fieldsMapping);
         $postData['PromptTemplate']['template_body'] = $convertedTemplate;
-        if (!$model->load($postData) || !$model->save()) {
-            return false;
+        $transaction = Yii::$app->db->beginTransaction();
+
+        try {
+            if (!$model->load($postData) || !$model->save()) {
+                $transaction->rollBack();
+                return false;
+            }
+
+            $this->updateTemplateFields($model, $convertedTemplate);
+            $transaction->commit();
+            return true;
+        } catch (Throwable $e) {
+            if ($transaction->isActive) {
+                $transaction->rollBack();
+            }
+            Yii::error($e->getMessage(), 'database');
+            throw $e;
         }
-        $this->updateTemplateFields($model, $convertedTemplate);
-        return true;
     }
 
     /**
