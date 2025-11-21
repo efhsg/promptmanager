@@ -131,8 +131,10 @@ class FieldController extends Controller
             return ['success' => false, 'message' => 'The configured root directory is not accessible.'];
         }
 
+        $allowedExtensions = $project->getAllowedFileExtensions();
+
         try {
-            $paths = $this->collectPaths($project->root_directory, $type === 'directory');
+            $paths = $this->collectPaths($project->root_directory, $type === 'directory', $allowedExtensions);
         } catch (UnexpectedValueException $e) {
             Yii::error($e->getMessage(), __METHOD__);
             return ['success' => false, 'message' => 'Unable to read the project root directory.'];
@@ -166,6 +168,10 @@ class FieldController extends Controller
         $absolutePath = $this->resolveRequestedPath($field->project->root_directory, $path);
         if ($absolutePath === null || !is_file($absolutePath) || !is_readable($absolutePath)) {
             return ['success' => false, 'message' => 'File not accessible.'];
+        }
+
+        if (!$field->project->isFileExtensionAllowed(pathinfo($absolutePath, PATHINFO_EXTENSION))) {
+            return ['success' => false, 'message' => 'File extension not allowed for this project.'];
         }
 
         $preview = @file_get_contents($absolutePath, false, null, 0, 100000);
@@ -233,7 +239,7 @@ class FieldController extends Controller
         ])->one() ?? throw new NotFoundHttpException('The requested field does not exist or is not yours.');
     }
 
-    private function collectPaths(string $rootDirectory, bool $directoriesOnly): array
+    private function collectPaths(string $rootDirectory, bool $directoriesOnly, array $allowedFileExtensions = []): array
     {
         $resolvedRoot = $this->resolveRootDirectory($rootDirectory);
         $normalizedBase = str_replace('\\', '/', $resolvedRoot);
@@ -252,6 +258,13 @@ class FieldController extends Controller
             }
             if (!$directoriesOnly && !$item->isFile()) {
                 continue;
+            }
+
+            if (!$directoriesOnly && $allowedFileExtensions !== []) {
+                $extension = strtolower($item->getExtension());
+                if ($extension === '' || !in_array($extension, $allowedFileExtensions, true)) {
+                    continue;
+                }
             }
 
             $relative = $this->makeRelativePath($normalizedBase, $item->getPathname());

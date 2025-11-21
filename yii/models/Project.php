@@ -18,6 +18,7 @@ use yii\db\ActiveRecord;
  * @property string $name
  * @property string|null $description
  * @property string|null $root_directory
+ * @property string|null $allowed_file_extensions
  * @property int $created_at
  * @property int $updated_at
  * @property int|null $deleted_at
@@ -52,6 +53,8 @@ class Project extends ActiveRecord
                 'pattern' => '~^(?:(?:[A-Za-z]:\\\\|\\\\\\\\[\w.\- \$]+\\\\|/)(?:[\w.\- \$]+(?:[\/\\\\][\w.\- \$]+)*)?[\/\\\\]?|[\w.\- \$]+(?:[\/\\\\][\w.\- \$]+)*[\/\\\\]?)$~',
                 'message' => 'Root directory must be a valid path.',
             ],
+            [['allowed_file_extensions'], 'string', 'max' => 255],
+            [['allowed_file_extensions'], 'validateAllowedFileExtensions'],
             [['name'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
         ];
@@ -68,10 +71,84 @@ class Project extends ActiveRecord
             'name' => 'Name',
             'description' => 'Description',
             'root_directory' => 'Root Directory',
+            'allowed_file_extensions' => 'Allowed File Extensions',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
             'deleted_at' => 'Deleted At',
         ];
+    }
+
+    public function beforeValidate(): bool
+    {
+        if (!parent::beforeValidate()) {
+            return false;
+        }
+
+        $this->normalizeAllowedFileExtensionsField();
+
+        return true;
+    }
+
+    public function validateAllowedFileExtensions(string $attribute): void
+    {
+        if ($this->$attribute === null || $this->$attribute === '') {
+            return;
+        }
+
+        foreach (explode(',', $this->$attribute) as $extension) {
+            $normalized = ltrim(strtolower(trim($extension)), '.');
+            if ($normalized === '') {
+                $this->addError($attribute, 'Provide at least one file extension or leave this field blank.');
+                return;
+            }
+
+            if (!preg_match('/^[a-z0-9][a-z0-9._-]*$/', $normalized)) {
+                $this->addError(
+                    $attribute,
+                    'File extensions may only contain letters, numbers, dots, underscores or hyphens.'
+                );
+                return;
+            }
+        }
+    }
+
+    public function getAllowedFileExtensions(): array
+    {
+        if (empty($this->allowed_file_extensions)) {
+            return [];
+        }
+
+        $parts = explode(',', $this->allowed_file_extensions);
+        $normalized = array_map(
+            static fn(string $extension): string => ltrim(strtolower(trim($extension)), '.'),
+            $parts
+        );
+
+        return array_values(array_unique(array_filter(
+            $normalized,
+            static fn(string $value): bool => $value !== ''
+        )));
+    }
+
+    public function isFileExtensionAllowed(?string $extension): bool
+    {
+        $whitelist = $this->getAllowedFileExtensions();
+        if ($whitelist === []) {
+            return true;
+        }
+
+        $normalized = ltrim(strtolower((string)$extension), '.');
+        if ($normalized === '') {
+            return false;
+        }
+
+        return in_array($normalized, $whitelist, true);
+    }
+
+    private function normalizeAllowedFileExtensionsField(): void
+    {
+        $extensions = $this->getAllowedFileExtensions();
+        $this->allowed_file_extensions = $extensions === [] ? null : implode(',', $extensions);
     }
 
     public function getUser(): ActiveQuery
@@ -85,6 +162,7 @@ class Project extends ActiveRecord
             return false;
         }
 
+        $this->normalizeAllowedFileExtensionsField();
         $this->handleTimestamps($insert);
 
         return true;

@@ -41,6 +41,14 @@ echo $this->render('_breadcrumbs', [
                     'name',
                     'root_directory',
                     [
+                        'attribute' => 'allowed_file_extensions',
+                        'label' => 'Allowed File Extensions',
+                        'value' => static function ($model) {
+                            $extensions = $model->getAllowedFileExtensions();
+                            return $extensions === [] ? 'All extensions allowed' : implode(', ', $extensions);
+                        },
+                    ],
+                    [
                         'attribute' => 'description',
                         'format' => 'raw',
                         'value' => function ($model) {

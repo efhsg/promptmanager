@@ -20,6 +20,10 @@ QuillAsset::register($this);
 
     <?= $form->field($model, 'root_directory')->textInput(['maxlength' => true]) ?>
 
+    <?= $form->field($model, 'allowed_file_extensions')
+        ->textInput(['maxlength' => true, 'placeholder' => 'php,scss,html'])
+        ->hint('Comma-separated extensions; leave blank to allow all.') ?>
+
     <?= $form->field($model, 'description')
         ->hiddenInput(['id' => 'project-description'])
         ->label('Description') ?>
