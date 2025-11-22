@@ -6,6 +6,7 @@ use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
+use UnexpectedValueException;
 
 class PathService
 {
@@ -22,6 +23,9 @@ class PathService
     ): array
     {
         $resolvedRoot = $this->resolveRootDirectory($rootDirectory);
+        if (!is_dir($resolvedRoot)) {
+            throw new UnexpectedValueException('Root directory does not exist or is not accessible.');
+        }
         $normalizedBase = str_replace('\\', '/', $resolvedRoot);
         $normalizedBlacklist = $this->normalizeBlacklistedDirectories($blacklistedDirectories);
         $paths = $directoriesOnly ? ['/'] : [];

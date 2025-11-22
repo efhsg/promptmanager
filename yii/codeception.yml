@@ -14,3 +14,15 @@ modules:
     config:
         Yii2:
             configFile: 'config/test.php'
+
+coverage:
+  enabled: true
+  remote: false        # <<< important: use local Xdebug coverage
+  include:
+    - models/*
+    - components/*
+    - controllers/*
+    - modules/*        # or be more specific if you like
+  exclude:
+    - vendor/*
+    - tests/*
