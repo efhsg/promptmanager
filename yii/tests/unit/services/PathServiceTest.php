@@ -49,6 +49,20 @@ class PathServiceTest extends Unit
         $this->assertSame(['keep.txt', 'nested/readme.TXT'], $paths);
     }
 
+    public function testCollectPathsSkipsBlacklistedDirectories(): void
+    {
+        $vendor = new vfsStreamDirectory('vendor');
+        $vendor->addChild(new vfsStreamDirectory('package'));
+        $src = new vfsStreamDirectory('src');
+        $src->addChild(new vfsStreamFile('keep.md'));
+        $this->root->addChild($vendor);
+        $this->root->addChild($src);
+
+        $paths = $this->service->collectPaths($this->root->url(), false, [], ['vendor']);
+
+        $this->assertSame(['src/keep.md'], $paths);
+    }
+
     public function testCollectPathsThrowsWhenRootMissing(): void
     {
         $this->expectException(UnexpectedValueException::class);
@@ -66,5 +80,16 @@ class PathServiceTest extends Unit
         $resolved = $this->service->resolveRequestedPath($this->root->url(), 'dir\\file.txt');
 
         $this->assertSame($this->root->url() . '/dir/file.txt', $resolved);
+    }
+
+    public function testResolveRequestedPathReturnsNullForBlacklistedPath(): void
+    {
+        $logs = new vfsStreamDirectory('logs');
+        $logs->addChild(new vfsStreamFile('app.log'));
+        $this->root->addChild($logs);
+
+        $resolved = $this->service->resolveRequestedPath($this->root->url(), 'logs/app.log', ['logs']);
+
+        $this->assertNull($resolved);
     }
 }

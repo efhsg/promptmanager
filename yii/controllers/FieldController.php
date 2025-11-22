@@ -128,9 +128,15 @@ class FieldController extends Controller
         }
 
         $allowedExtensions = $project->getAllowedFileExtensions();
+        $blacklistedDirectories = $project->getBlacklistedDirectories();
 
         try {
-            $paths = $this->pathService->collectPaths($project->root_directory, $type === 'directory', $allowedExtensions);
+            $paths = $this->pathService->collectPaths(
+                $project->root_directory,
+                $type === 'directory',
+                $allowedExtensions,
+                $blacklistedDirectories
+            );
         } catch (UnexpectedValueException $e) {
             Yii::error($e->getMessage(), __METHOD__);
             return ['success' => false, 'message' => 'Unable to read the project root directory.'];
@@ -161,7 +167,11 @@ class FieldController extends Controller
             return ['success' => false, 'message' => 'Invalid file path.'];
         }
 
-        $absolutePath = $this->pathService->resolveRequestedPath($field->project->root_directory, $path);
+        $absolutePath = $this->pathService->resolveRequestedPath(
+            $field->project->root_directory,
+            $path,
+            $field->project->getBlacklistedDirectories()
+        );
         if ($absolutePath === null || !is_file($absolutePath) || !is_readable($absolutePath)) {
             return ['success' => false, 'message' => 'File not accessible.'];
         }

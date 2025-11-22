@@ -19,6 +19,7 @@ use yii\db\ActiveRecord;
  * @property string|null $description
  * @property string|null $root_directory
  * @property string|null $allowed_file_extensions
+ * @property string|null $blacklisted_directories
  * @property int $created_at
  * @property int $updated_at
  * @property int|null $deleted_at
@@ -55,6 +56,7 @@ class Project extends ActiveRecord
             ],
             [['allowed_file_extensions'], 'string', 'max' => 255],
             [['allowed_file_extensions'], 'validateAllowedFileExtensions'],
+            [['blacklisted_directories'], 'string'],
             [['name'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
         ];
@@ -72,6 +74,7 @@ class Project extends ActiveRecord
             'description' => 'Description',
             'root_directory' => 'Root Directory',
             'allowed_file_extensions' => 'Allowed File Extensions',
+            'blacklisted_directories' => 'Blacklisted Directories',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
             'deleted_at' => 'Deleted At',
@@ -85,6 +88,7 @@ class Project extends ActiveRecord
         }
 
         $this->normalizeAllowedFileExtensionsField();
+        $this->normalizeBlacklistedDirectoriesField();
 
         return true;
     }
@@ -145,10 +149,34 @@ class Project extends ActiveRecord
         return in_array($normalized, $whitelist, true);
     }
 
+    public function getBlacklistedDirectories(): array
+    {
+        if (empty($this->blacklisted_directories)) {
+            return [];
+        }
+
+        $parts = explode(',', $this->blacklisted_directories);
+        $normalized = array_map(
+            static fn(string $directory): string => trim(str_replace('\\', '/', $directory), " \t\n\r\0\x0B/"),
+            $parts
+        );
+
+        return array_values(array_filter(
+            $normalized,
+            static fn(string $value): bool => $value !== ''
+        ));
+    }
+
     private function normalizeAllowedFileExtensionsField(): void
     {
         $extensions = $this->getAllowedFileExtensions();
         $this->allowed_file_extensions = $extensions === [] ? null : implode(',', $extensions);
+    }
+
+    private function normalizeBlacklistedDirectoriesField(): void
+    {
+        $directories = $this->getBlacklistedDirectories();
+        $this->blacklisted_directories = $directories === [] ? null : implode(',', $directories);
     }
 
     public function getUser(): ActiveQuery
@@ -163,6 +191,7 @@ class Project extends ActiveRecord
         }
 
         $this->normalizeAllowedFileExtensionsField();
+        $this->normalizeBlacklistedDirectoriesField();
         $this->handleTimestamps($insert);
 
         return true;

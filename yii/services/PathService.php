@@ -14,10 +14,16 @@ class PathService
     /**
      * @throws \UnexpectedValueException
      */
-    public function collectPaths(string $rootDirectory, bool $directoriesOnly, array $allowedFileExtensions = []): array
+    public function collectPaths(
+        string $rootDirectory,
+        bool $directoriesOnly,
+        array $allowedFileExtensions = [],
+        array $blacklistedDirectories = []
+    ): array
     {
         $resolvedRoot = $this->resolveRootDirectory($rootDirectory);
         $normalizedBase = str_replace('\\', '/', $resolvedRoot);
+        $normalizedBlacklist = $this->normalizeBlacklistedDirectories($blacklistedDirectories);
         $paths = $directoriesOnly ? ['/'] : [];
 
         $iterator = new RecursiveIteratorIterator(
@@ -28,6 +34,14 @@ class PathService
 
         /** @var SplFileInfo $item */
         foreach ($iterator as $item) {
+            $relative = $this->makeRelativePath($normalizedBase, $item->getPathname());
+            if ($relative !== '/' && $this->isBlacklistedPath($relative, $normalizedBlacklist)) {
+                if ($item->isDir()) {
+                    $iterator->skipChildren();
+                }
+                continue;
+            }
+
             if ($directoriesOnly && !$item->isDir()) {
                 continue;
             }
@@ -42,7 +56,6 @@ class PathService
                 }
             }
 
-            $relative = $this->makeRelativePath($normalizedBase, $item->getPathname());
             if ($relative === '/') {
                 continue;
             }
@@ -56,7 +69,11 @@ class PathService
         return $paths;
     }
 
-    public function resolveRequestedPath(string $rootDirectory, string $relativePath): ?string
+    public function resolveRequestedPath(
+        string $rootDirectory,
+        string $relativePath,
+        array $blacklistedDirectories = []
+    ): ?string
     {
         $base = $this->resolveRootDirectory($rootDirectory);
         $normalizedBase = str_replace('\\', '/', $base);
@@ -66,6 +83,14 @@ class PathService
         $normalizedCandidate = str_replace('\\', '/', $realPath);
 
         if (!str_starts_with($normalizedCandidate, $normalizedBase . '/') && $normalizedCandidate !== $normalizedBase) {
+            return null;
+        }
+
+        $normalizedBlacklist = $this->normalizeBlacklistedDirectories($blacklistedDirectories);
+        if (
+            $normalizedBlacklist !== [] &&
+            $this->isBlacklistedPath($this->makeRelativePath($normalizedBase, $normalizedCandidate), $normalizedBlacklist)
+        ) {
             return null;
         }
 
@@ -88,5 +113,37 @@ class PathService
         $relative = ltrim(substr($normalizedPath, strlen($normalizedBase)), '/');
 
         return $relative === '' ? '/' : $relative;
+    }
+
+    private function normalizeBlacklistedDirectories(array $blacklistedDirectories): array
+    {
+        $normalized = array_map(
+            static function (string $directory): string {
+                $cleaned = trim(str_replace('\\', '/', $directory), " \t\n\r\0\x0B/");
+                return strtolower($cleaned);
+            },
+            $blacklistedDirectories
+        );
+
+        $filtered = array_filter($normalized, static fn(string $value): bool => $value !== '');
+
+        return array_values(array_unique($filtered));
+    }
+
+    private function isBlacklistedPath(string $relativePath, array $blacklistedDirectories): bool
+    {
+        if ($blacklistedDirectories === []) {
+            return false;
+        }
+
+        $normalizedPath = strtolower(ltrim($relativePath, '/'));
+
+        foreach ($blacklistedDirectories as $directory) {
+            if ($normalizedPath === $directory || str_starts_with($normalizedPath, $directory . '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
