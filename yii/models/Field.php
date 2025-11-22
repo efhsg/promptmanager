@@ -4,6 +4,7 @@ namespace app\models;
 
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
+use app\services\PathService;
 use common\constants\FieldConstants;
 use Yii;
 use yii\db\ActiveQuery;
@@ -53,6 +54,7 @@ class Field extends ActiveRecord
             [['name', 'label'], 'string', 'max' => 255],
             ['name', 'validateUniqueNameWithinProject', 'skipOnError' => true],
             [['content'], 'string'],
+            [['content'], 'validatePathContent'],
             [['project_id'],
                 'exist',
                 'skipOnError' => true,
@@ -170,6 +172,67 @@ class Field extends ActiveRecord
         }
     }
 
+    public function validatePathContent(string $attribute): void
+    {
+        if (!in_array($this->type, FieldConstants::PATH_FIELD_TYPES, true)) {
+            return;
+        }
 
+        $relativePath = trim((string)$this->$attribute);
+        if ($relativePath === '') {
+            return;
+        }
+
+        $project = $this->project;
+        if ($project === null && $this->project_id !== null) {
+            $project = Project::findOne($this->project_id);
+        }
+
+        if ($project === null || $project->user_id !== $this->user_id) {
+            $this->addError('project_id', 'Select a valid project for file and directory fields.');
+            return;
+        }
+
+        if (empty($project->root_directory)) {
+            $this->addError('project_id', 'The selected project must have a root directory.');
+            return;
+        }
+
+        if (!is_dir($project->root_directory)) {
+            $this->addError('project_id', 'The configured project root directory is not accessible.');
+            return;
+        }
+
+        $pathService = new PathService();
+        $absolutePath = $pathService->resolveRequestedPath(
+            $project->root_directory,
+            $relativePath,
+            $project->getBlacklistedDirectories()
+        );
+
+        if ($absolutePath === null) {
+            $this->addError($attribute, 'The selected path is not allowed for this project.');
+            return;
+        }
+
+        if ($this->type === 'directory') {
+            if (!is_dir($absolutePath)) {
+                $this->addError($attribute, 'The selected directory does not exist.');
+                return;
+            }
+        } else {
+            if (!is_file($absolutePath)) {
+                $this->addError($attribute, 'The selected file does not exist.');
+                return;
+            }
+
+            if (!$project->isFileExtensionAllowed(pathinfo($absolutePath, PATHINFO_EXTENSION))) {
+                $this->addError($attribute, 'File extension not allowed for this project.');
+                return;
+            }
+        }
+
+        $this->$attribute = ltrim(str_replace('\\', '/', $relativePath), '/');
+    }
 
 }

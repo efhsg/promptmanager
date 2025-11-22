@@ -26,41 +26,65 @@ class PathService
         $normalizedBlacklist = $this->normalizeBlacklistedDirectories($blacklistedDirectories);
         $paths = $directoriesOnly ? ['/'] : [];
 
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($resolvedRoot, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
-        $iterator->setMaxDepth(self::PATH_LIST_MAX_DEPTH);
+        $queue = [
+            [
+                'path' => $resolvedRoot,
+                'depth' => 0,
+            ],
+        ];
 
-        /** @var SplFileInfo $item */
-        foreach ($iterator as $item) {
-            $relative = $this->makeRelativePath($normalizedBase, $item->getPathname());
-            if ($relative !== '/' && $this->isBlacklistedPath($relative, $normalizedBlacklist)) {
-                if ($item->isDir()) {
-                    $iterator->skipChildren();
-                }
+        while ($queue !== []) {
+            $current = array_shift($queue);
+            $currentPath = $current['path'];
+            $depth = $current['depth'];
+
+            $children = @scandir($currentPath);
+            if ($children === false) {
                 continue;
             }
 
-            if ($directoriesOnly && !$item->isDir()) {
-                continue;
-            }
-            if (!$directoriesOnly && !$item->isFile()) {
-                continue;
-            }
-
-            if (!$directoriesOnly && $allowedFileExtensions !== []) {
-                $extension = strtolower($item->getExtension());
-                if ($extension === '' || !in_array($extension, $allowedFileExtensions, true)) {
+            foreach ($children as $child) {
+                if ($child === '.' || $child === '..') {
                     continue;
                 }
-            }
 
-            if ($relative === '/') {
-                continue;
-            }
+                $childPath = $currentPath . DIRECTORY_SEPARATOR . $child;
+                $relative = $this->makeRelativePath($normalizedBase, $childPath);
 
-            $paths[] = $relative;
+                if ($relative !== '/' && $this->isBlacklistedPath($relative, $normalizedBlacklist)) {
+                    continue;
+                }
+
+                $isDir = is_dir($childPath);
+
+                if ($isDir && $depth < self::PATH_LIST_MAX_DEPTH) {
+                    $queue[] = [
+                        'path' => $childPath,
+                        'depth' => $depth + 1,
+                    ];
+                }
+
+                if ($relative === '/') {
+                    continue;
+                }
+
+                if ($directoriesOnly) {
+                    if ($isDir) {
+                        $paths[] = $relative;
+                    }
+                    continue;
+                }
+
+                if (!$isDir) {
+                    if ($allowedFileExtensions !== []) {
+                        $extension = strtolower(pathinfo($childPath, PATHINFO_EXTENSION));
+                        if ($extension === '' || !in_array($extension, $allowedFileExtensions, true)) {
+                            continue;
+                        }
+                    }
+                    $paths[] = $relative;
+                }
+            }
         }
 
         $paths = array_values(array_unique($paths));

@@ -57,6 +57,7 @@ class Project extends ActiveRecord
             [['allowed_file_extensions'], 'string', 'max' => 255],
             [['allowed_file_extensions'], 'validateAllowedFileExtensions'],
             [['blacklisted_directories'], 'string'],
+            [['blacklisted_directories'], 'validateBlacklistedDirectories'],
             [['name'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
         ];
@@ -161,10 +162,12 @@ class Project extends ActiveRecord
             $parts
         );
 
-        return array_values(array_filter(
+        $filtered = array_filter(
             $normalized,
             static fn(string $value): bool => $value !== ''
-        ));
+        );
+
+        return array_values(array_unique($filtered));
     }
 
     private function normalizeAllowedFileExtensionsField(): void
@@ -177,6 +180,35 @@ class Project extends ActiveRecord
     {
         $directories = $this->getBlacklistedDirectories();
         $this->blacklisted_directories = $directories === [] ? null : implode(',', $directories);
+    }
+
+    public function validateBlacklistedDirectories(string $attribute): void
+    {
+        if ($this->$attribute === null || $this->$attribute === '') {
+            return;
+        }
+
+        foreach (explode(',', (string)$this->$attribute) as $directory) {
+            $normalized = trim(str_replace('\\', '/', $directory), " \t\n\r\0\x0B/");
+
+            if ($normalized === '') {
+                $this->addError($attribute, 'Provide at least one directory or leave this field blank.');
+                return;
+            }
+
+            if (str_contains($normalized, '..')) {
+                $this->addError($attribute, 'Blacklisted directories must be relative to the project root.');
+                return;
+            }
+
+            if (!preg_match('~^[\\w.\\- ]+(?:/[\\w.\\- ]+)*$~', $normalized)) {
+                $this->addError(
+                    $attribute,
+                    'Directory names may include letters, numbers, dots, underscores, hyphens, spaces, and slashes only.'
+                );
+                return;
+            }
+        }
     }
 
     public function getUser(): ActiveQuery

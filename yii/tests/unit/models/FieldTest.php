@@ -5,6 +5,7 @@ namespace tests\unit\models;
 use app\components\ProjectContext;
 use app\models\Field;
 use app\models\FieldOption;
+use app\models\Project;
 use Codeception\Test\Unit;
 use common\constants\FieldConstants;
 use tests\fixtures\FieldFixture;
@@ -12,6 +13,7 @@ use tests\fixtures\FieldOptionFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 use Yii;
+use yii\helpers\FileHelper;
 
 class FieldTest extends Unit
 {
@@ -248,6 +250,45 @@ class FieldTest extends Unit
         verify($field->label)->null();
     }
 
+    public function testFileFieldRespectsBlacklistedDirectories(): void
+    {
+        $baseDir = sys_get_temp_dir() . '/pm_blacklist_' . uniqid('', true);
+        $blockedDir = $baseDir . '/vendor';
+        $allowedDir = $baseDir . '/src';
+
+        try {
+            FileHelper::createDirectory($blockedDir);
+            FileHelper::createDirectory($allowedDir);
+            file_put_contents($blockedDir . '/blocked.txt', 'nope');
+            file_put_contents($allowedDir . '/allowed.txt', 'ok');
+
+            $project = new Project([
+                'name' => 'Blacklist Project',
+                'user_id' => 1,
+                'root_directory' => $baseDir,
+                'blacklisted_directories' => 'vendor',
+                'allowed_file_extensions' => 'txt',
+            ]);
+            verify($project->save())->true();
+
+            $field = new Field([
+                'name' => 'fileField',
+                'type' => 'file',
+                'user_id' => 1,
+                'project_id' => $project->id,
+                'content' => 'vendor/blocked.txt',
+            ]);
+            $field->populateRelation('project', $project);
+
+            verify($field->validate())->false();
+            verify($field->getErrors('content'))->notEmpty();
+
+            $field->content = 'src/allowed.txt';
+            verify($field->validate())->true();
+        } finally {
+            FileHelper::removeDirectory($baseDir);
+        }
+    }
+
 
 }
-

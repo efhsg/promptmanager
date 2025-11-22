@@ -49,6 +49,14 @@ echo $this->render('_breadcrumbs', [
                         },
                     ],
                     [
+                        'attribute' => 'blacklisted_directories',
+                        'label' => 'Blacklisted Directories',
+                        'value' => static function ($model) {
+                            $directories = $model->getBlacklistedDirectories();
+                            return $directories === [] ? 'None' : implode(', ', $directories);
+                        },
+                    ],
+                    [
                         'attribute' => 'description',
                         'format' => 'raw',
                         'value' => function ($model) {

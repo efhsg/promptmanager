@@ -20,6 +20,10 @@ QuillAsset::register($this);
 
     <?= $form->field($model, 'root_directory')->textInput(['maxlength' => true]) ?>
 
+    <?= $form->field($model, 'blacklisted_directories')
+        ->textInput(['placeholder' => 'vendor,runtime,web,npm,docker'])
+        ->hint('Comma-separated directories under the root to exclude (e.g. vendor,runtime,web,npm,docker).') ?>
+
     <?= $form->field($model, 'allowed_file_extensions')
         ->textInput(['maxlength' => true, 'placeholder' => 'php,scss,html'])
         ->hint('Comma-separated extensions; leave blank to allow all.') ?>

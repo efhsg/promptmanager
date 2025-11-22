@@ -187,4 +187,26 @@ class ProjectTest extends Unit
             'trailing invalid char' => ['C:\\invalid|', false],
         ];
     }
+
+    public function testBlacklistedDirectoriesAreNormalized(): void
+    {
+        $project = new Project();
+        $project->name = 'Blacklist Normalization';
+        $project->user_id = 1;
+        $project->blacklisted_directories = ' vendor , /runtime/logs/,web , web ';
+
+        verify($project->validate())->true();
+        verify($project->getBlacklistedDirectories())->equals(['vendor', 'runtime/logs', 'web']);
+    }
+
+    public function testBlacklistedDirectoriesValidationBlocksTraversal(): void
+    {
+        $project = new Project();
+        $project->name = 'Invalid Blacklist';
+        $project->user_id = 1;
+        $project->blacklisted_directories = '../secrets';
+
+        verify($project->validate())->false();
+        verify($project->getErrors('blacklisted_directories'))->notEmpty();
+    }
 }
