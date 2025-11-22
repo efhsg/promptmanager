@@ -57,15 +57,24 @@ QuillAsset::register($this);
         <?= $form->field($modelField, 'content')->hiddenInput(['id' => 'field-content'])->label(false) ?>
         <div class="resizable-editor-container mb-3">
             <div id="editor" class="resizable-editor"></div>
-            </div>
         </div>
+    </div>
     <div id="field-path-wrapper" class="mb-3" style="display: none;">
-        <label for="field-path-select" class="form-label">Path</label>
-        <div class="input-group">
-            <select id="field-path-select" class="form-select" disabled>
-                <option value="">Select a path</option>
-            </select>
-            <button type="button" class="btn btn-outline-secondary" id="field-path-refresh">Refresh</button>
+        <label for="field-path-input" class="form-label">Path</label>
+        <input
+            type="text"
+            class="form-control"
+            id="field-path-input"
+            placeholder="Start typing to search paths"
+            disabled
+            autocomplete="off"
+        >
+        <div class="position-relative mt-1">
+            <div
+                id="field-path-suggestions"
+                class="list-group shadow-sm d-none position-absolute w-100"
+                style="max-height: 240px; overflow-y: auto; z-index: 1050; top: 0; left: 0;"
+            ></div>
         </div>
         <div class="form-text">
             <span>Root:</span>
@@ -97,10 +106,10 @@ QuillAsset::register($this);
     const nonOptionFieldElements = optionsWrapper.querySelectorAll(<?= json_encode(FieldConstants::NO_OPTION_FIELD_TYPES) ?>);
     const contentWrapper = document.getElementById('field-content-wrapper');
     const pathWrapper = document.getElementById('field-path-wrapper');
-    const pathSelect = document.getElementById('field-path-select');
+    const pathInput = document.getElementById('field-path-input');
+    const pathSuggestions = document.getElementById('field-path-suggestions');
     const pathStatus = document.getElementById('field-path-status');
     const pathRootLabel = document.getElementById('field-path-root');
-    const pathRefreshButton = document.getElementById('field-path-refresh');
     const projectSelector = document.getElementById('field-project_id');
     const hiddenContentInput = document.querySelector('#field-content');
     const pathListUrl = <?= json_encode(Url::to(['field/path-list'])) ?>;
@@ -108,56 +117,126 @@ QuillAsset::register($this);
     let initialPathValue = <?= in_array($modelField->type, FieldConstants::PATH_FIELD_TYPES, true)
         ? json_encode($modelField->content)
         : 'null' ?>;
+    let availablePaths = [];
     window.fieldFormContentTypes = contentTypes;
     window.fieldFormCurrentType = currentFieldType;
 
     function syncHiddenContentFromPath() {
-        if (hiddenContentInput && pathSelect) {
-            hiddenContentInput.value = pathSelect.value || '';
+        if (hiddenContentInput && pathInput) {
+            hiddenContentInput.value = pathInput.value || '';
         }
     }
 
-    function handlePathError(message) {
-        pathStatus.textContent = message;
-        setPathPlaceholder('Unable to load paths');
-        pathSelect.disabled = true;
+    function resetPathWidget(placeholder = 'Select a path') {
+        availablePaths = [];
+        if (pathInput) {
+            pathInput.value = '';
+            pathInput.placeholder = placeholder;
+            pathInput.disabled = true;
+        }
+        if (pathSuggestions) {
+            pathSuggestions.innerHTML = '';
+            pathSuggestions.classList.add('d-none');
+        }
         if (hiddenContentInput) {
             hiddenContentInput.value = '';
         }
     }
 
-    function setPathPlaceholder(message) {
-        if (!pathSelect) {
+    function handlePathError(message) {
+        if (pathStatus) {
+            pathStatus.textContent = message;
+        }
+        resetPathWidget('Unable to load paths');
+    }
+
+    function renderPathOptions(forceValue = null) {
+        if (!pathInput || !pathSuggestions) {
             return;
         }
 
-        pathSelect.innerHTML = '';
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = message;
-        pathSelect.appendChild(placeholder);
-        pathSelect.value = '';
+        if (forceValue !== null) {
+            pathInput.value = forceValue;
+        }
+
+        const filterTerm = pathInput.value.trim().toLowerCase();
+        const filteredPaths = filterTerm === ''
+            ? availablePaths
+            : availablePaths.filter((path) => path.toLowerCase().includes(filterTerm));
+
+        const currentValue = pathInput.value;
+        pathSuggestions.innerHTML = '';
+        if (filteredPaths.length === 1 && currentValue === filteredPaths[0]) {
+            pathSuggestions.classList.add('d-none');
+            pathSuggestions.innerHTML = '';
+        } else {
+            filteredPaths.forEach((path) => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'list-group-item list-group-item-action';
+                option.textContent = path;
+                option.dataset.value = path;
+                if (currentValue === path) {
+                    option.classList.add('active');
+                }
+                option.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                    pathInput.value = path;
+                    renderPathOptions();
+                });
+                pathSuggestions.appendChild(option);
+            });
+
+            if (filteredPaths.length === 0) {
+                pathSuggestions.classList.add('d-none');
+            } else {
+                pathSuggestions.classList.remove('d-none');
+            }
+        }
+
+        if (pathStatus) {
+            if (availablePaths.length === 0) {
+                pathStatus.textContent = 'No paths available.';
+            } else if (filteredPaths.length === 0 && filterTerm !== '') {
+                pathStatus.textContent = 'No paths match current input.';
+            } else if (currentValue && !availablePaths.includes(currentValue)) {
+                pathStatus.textContent = 'Path not found in project.';
+            } else {
+                pathStatus.textContent = '';
+            }
+        }
+
+        syncHiddenContentFromPath();
     }
 
     async function loadPathOptions(fieldType) {
-        if (!pathSelect) {
+        if (!pathInput) {
             return;
         }
 
         const projectId = projectSelector ? projectSelector.value : '';
         if (!projectId) {
-            pathStatus.textContent = 'Select a project to browse paths.';
-            pathRootLabel.textContent = '';
-            setPathPlaceholder('Select a path');
-            pathSelect.disabled = true;
-            if (hiddenContentInput) {
-                hiddenContentInput.value = '';
+            if (pathStatus) {
+                pathStatus.textContent = 'Select a project to browse paths.';
             }
+            if (pathRootLabel) {
+                pathRootLabel.textContent = '';
+            }
+            resetPathWidget('Select a path');
             return;
         }
 
-        pathStatus.textContent = 'Loading...';
-        pathSelect.disabled = true;
+        if (pathStatus) {
+            pathStatus.textContent = 'Loading...';
+        }
+        if (pathInput) {
+            pathInput.disabled = true;
+            pathInput.placeholder = 'Loading paths...';
+        }
+        if (pathSuggestions) {
+            pathSuggestions.innerHTML = '';
+            pathSuggestions.classList.add('d-none');
+        }
 
         try {
             const response = await fetch(`${pathListUrl}?projectId=${projectId}&type=${fieldType}`, {
@@ -175,57 +254,36 @@ QuillAsset::register($this);
                 return;
             }
 
-            const paths = Array.isArray(data.paths) ? data.paths : [];
-            pathRootLabel.textContent = data.root || '';
-
-            pathSelect.innerHTML = '';
-            const placeholder = document.createElement('option');
-            placeholder.value = '';
-            placeholder.textContent = 'Select a path';
-            pathSelect.appendChild(placeholder);
-
-            paths.forEach((path) => {
-                const option = document.createElement('option');
-                option.value = path;
-                option.textContent = path;
-                pathSelect.appendChild(option);
-            });
-
-            let targetValue = hiddenContentInput ? hiddenContentInput.value : '';
-            if (!targetValue) {
-                targetValue = initialPathValue || '';
+            availablePaths = Array.isArray(data.paths) ? data.paths : [];
+            if (pathRootLabel) {
+                pathRootLabel.textContent = data.root || '';
             }
 
-            if (targetValue) {
-                const exists = Array.from(pathSelect.options).some((option) => option.value === targetValue);
-                if (!exists) {
-                    const customOption = document.createElement('option');
-                    customOption.value = targetValue;
-                    customOption.textContent = `${targetValue} (missing)`;
-                    pathSelect.appendChild(customOption);
-                }
-                pathSelect.value = targetValue;
-            } else {
-                pathSelect.value = '';
+            if (pathInput) {
+                pathInput.disabled = false;
+                pathInput.placeholder = 'Start typing to search paths';
             }
 
-            syncHiddenContentFromPath();
+            const targetValue = (hiddenContentInput ? hiddenContentInput.value : '') || initialPathValue || '';
+            renderPathOptions(targetValue);
             initialPathValue = null;
-            pathSelect.disabled = false;
-            pathStatus.textContent = '';
         } catch (error) {
             handlePathError(error.message);
         }
     }
 
-    if (pathSelect) {
-        pathSelect.addEventListener('change', syncHiddenContentFromPath);
-    }
-
-    if (pathRefreshButton) {
-        pathRefreshButton.addEventListener('click', () => {
-            if (pathTypes.includes(currentFieldType)) {
-                loadPathOptions(currentFieldType);
+    if (pathInput) {
+        pathInput.addEventListener('input', () => {
+            renderPathOptions();
+        });
+        pathInput.addEventListener('focus', () => {
+            if (pathSuggestions && pathSuggestions.children.length > 0) {
+                pathSuggestions.classList.remove('d-none');
+            }
+        });
+        pathInput.addEventListener('blur', () => {
+            if (pathSuggestions) {
+                setTimeout(() => pathSuggestions.classList.add('d-none'), 100);
             }
         });
     }
@@ -259,6 +317,16 @@ QuillAsset::register($this);
             if (!isContentType && !isPathType) {
                 hiddenContentInput.value = '';
             }
+        }
+
+        if (!isPathType) {
+            if (pathRootLabel) {
+                pathRootLabel.textContent = '';
+            }
+            if (pathStatus) {
+                pathStatus.textContent = '';
+            }
+            resetPathWidget();
         }
 
         if (isPathType) {
