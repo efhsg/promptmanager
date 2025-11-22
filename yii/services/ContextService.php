@@ -5,6 +5,7 @@ namespace app\services;
 use app\models\Context;
 use Throwable;
 use yii\base\Component;
+use yii\db\ActiveQuery;
 use yii\db\Exception;
 use yii\helpers\ArrayHelper;
 
@@ -44,10 +45,8 @@ class ContextService extends Component
      */
     public function fetchContexts(int $userId): array
     {
-        $contexts = Context::find()
-            ->joinWith('project')
-            ->where(['project.user_id' => $userId])
-            ->orderBy(['name' => SORT_ASC])
+        $contexts = $this->createUserContextQuery($userId)
+            ->orderBy(['c.name' => SORT_ASC])
             ->all();
 
         return ArrayHelper::map($contexts, 'id', 'name');
@@ -61,10 +60,7 @@ class ContextService extends Component
      */
     public function fetchContextsContent(int $userId): array
     {
-        $contexts = Context::find()
-            ->joinWith('project')
-            ->where(['project.user_id' => $userId])
-            ->all();
+        $contexts = $this->createUserContextQuery($userId)->all();
 
         return ArrayHelper::map($contexts, 'id', 'content');
     }
@@ -78,13 +74,11 @@ class ContextService extends Component
      */
     public function fetchProjectContexts(int $userId, ?int $projectId): array
     {
-        $query = Context::find()
-            ->joinWith('project')
-            ->where(['project.user_id' => $userId]);
+        $query = $this->createUserContextQuery($userId);
         if ($projectId !== null) {
-            $query->andWhere(['project.id' => $projectId]);
+            $query->andWhere(['p.id' => $projectId]);
         }
-        $contexts = $query->orderBy(['name' => SORT_ASC])->all();
+        $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
         return ArrayHelper::map($contexts, 'id', 'name');
     }
 
@@ -94,10 +88,8 @@ class ContextService extends Component
             return [];
         }
 
-        $contexts = Context::find()
-            ->joinWith('project')
-            ->where(['project.user_id' => $userId])
-            ->andWhere(['context.id' => $contextIds])
+        $contexts = $this->createUserContextQuery($userId)
+            ->andWhere(['c.id' => $contextIds])
             ->all();
 
         return ArrayHelper::map($contexts, 'id', 'content');
@@ -105,13 +97,20 @@ class ContextService extends Component
 
     public function fetchDefaultContextIds(int $userId, ?int $projectId): array
     {
-        $query = Context::find()
-            ->select('context.id')
-            ->joinWith('project')
-            ->where(['project.user_id' => $userId, 'context.is_default' => 1]);
+        $query = $this->createUserContextQuery($userId)
+            ->select('c.id')
+            ->andWhere(['c.is_default' => 1]);
         if ($projectId !== null) {
-            $query->andWhere(['project.id' => $projectId]);
+            $query->andWhere(['p.id' => $projectId]);
         }
         return $query->column();
+    }
+
+    private function createUserContextQuery(int $userId): ActiveQuery
+    {
+        return Context::find()
+            ->alias('c')
+            ->joinWith(['project p'])
+            ->where(['p.user_id' => $userId]);
     }
 }
