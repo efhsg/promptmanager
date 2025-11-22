@@ -9,11 +9,8 @@ use app\models\Project;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ProjectService;
+use app\services\PathService;
 use common\constants\FieldConstants;
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 use UnexpectedValueException;
 use Yii;
 use yii\db\ActiveRecord;
@@ -29,8 +26,6 @@ use Yii2\Extensions\DynamicForm\Models\Model;
  */
 class FieldController extends Controller
 {
-    private const PATH_LIST_MAX_DEPTH = 10;
-
     private array $actionPermissionMap;
 
     public function __construct(
@@ -38,6 +33,7 @@ class FieldController extends Controller
         $module,
         private readonly ProjectService $projectService,
         private readonly FieldService $fieldService,
+        private readonly PathService $pathService,
         private readonly EntityPermissionService $permissionService,
         $config = []
     ) {
@@ -134,7 +130,7 @@ class FieldController extends Controller
         $allowedExtensions = $project->getAllowedFileExtensions();
 
         try {
-            $paths = $this->collectPaths($project->root_directory, $type === 'directory', $allowedExtensions);
+            $paths = $this->pathService->collectPaths($project->root_directory, $type === 'directory', $allowedExtensions);
         } catch (UnexpectedValueException $e) {
             Yii::error($e->getMessage(), __METHOD__);
             return ['success' => false, 'message' => 'Unable to read the project root directory.'];
@@ -165,7 +161,7 @@ class FieldController extends Controller
             return ['success' => false, 'message' => 'Invalid file path.'];
         }
 
-        $absolutePath = $this->resolveRequestedPath($field->project->root_directory, $path);
+        $absolutePath = $this->pathService->resolveRequestedPath($field->project->root_directory, $path);
         if ($absolutePath === null || !is_file($absolutePath) || !is_readable($absolutePath)) {
             return ['success' => false, 'message' => 'File not accessible.'];
         }
@@ -237,81 +233,5 @@ class FieldController extends Controller
             'id' => $id,
             'user_id' => Yii::$app->user->id,
         ])->one() ?? throw new NotFoundHttpException('The requested field does not exist or is not yours.');
-    }
-
-    private function collectPaths(string $rootDirectory, bool $directoriesOnly, array $allowedFileExtensions = []): array
-    {
-        $resolvedRoot = $this->resolveRootDirectory($rootDirectory);
-        $normalizedBase = str_replace('\\', '/', $resolvedRoot);
-        $paths = $directoriesOnly ? ['/'] : [];
-
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($resolvedRoot, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
-        $iterator->setMaxDepth(self::PATH_LIST_MAX_DEPTH);
-
-        /** @var SplFileInfo $item */
-        foreach ($iterator as $item) {
-            if ($directoriesOnly && !$item->isDir()) {
-                continue;
-            }
-            if (!$directoriesOnly && !$item->isFile()) {
-                continue;
-            }
-
-            if (!$directoriesOnly && $allowedFileExtensions !== []) {
-                $extension = strtolower($item->getExtension());
-                if ($extension === '' || !in_array($extension, $allowedFileExtensions, true)) {
-                    continue;
-                }
-            }
-
-            $relative = $this->makeRelativePath($normalizedBase, $item->getPathname());
-            if ($relative === '/') {
-                continue;
-            }
-
-            $paths[] = $relative;
-        }
-
-        $paths = array_values(array_unique($paths));
-        sort($paths, SORT_NATURAL | SORT_FLAG_CASE);
-
-        return $paths;
-    }
-
-    private function resolveRootDirectory(string $rootDirectory): string
-    {
-        $resolved = realpath($rootDirectory);
-        if ($resolved === false) {
-            $resolved = $rootDirectory;
-        }
-
-        return rtrim($resolved, DIRECTORY_SEPARATOR) ?: DIRECTORY_SEPARATOR;
-    }
-
-    private function makeRelativePath(string $normalizedBase, string $path): string
-    {
-        $normalizedPath = str_replace('\\', '/', $path);
-        $relative = ltrim(substr($normalizedPath, strlen($normalizedBase)), '/');
-
-        return $relative === '' ? '/' : $relative;
-    }
-
-    private function resolveRequestedPath(string $rootDirectory, string $relativePath): ?string
-    {
-        $base = $this->resolveRootDirectory($rootDirectory);
-        $normalizedBase = str_replace('\\', '/', $base);
-        $normalizedRelative = ltrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $relativePath), DIRECTORY_SEPARATOR);
-        $candidate = $base . DIRECTORY_SEPARATOR . $normalizedRelative;
-        $realPath = realpath($candidate) ?: $candidate;
-        $normalizedCandidate = str_replace('\\', '/', $realPath);
-
-        if (!str_starts_with($normalizedCandidate, $normalizedBase . '/') && $normalizedCandidate !== $normalizedBase) {
-            return null;
-        }
-
-        return $normalizedCandidate;
     }
 }
