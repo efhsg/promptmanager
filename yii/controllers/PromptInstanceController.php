@@ -13,7 +13,9 @@ use app\services\PromptGenerationService;
 use app\services\PromptInstanceService;
 use app\services\PromptTemplateService;
 use app\services\PromptTransformationService;
+use app\services\CopyFormatConverter;
 use common\constants\FieldConstants;
+use common\enums\CopyType;
 use Yii;
 use yii\db\Exception;
 use yii\filters\AccessControl;
@@ -323,8 +325,19 @@ class PromptInstanceController extends Controller
             $userId
         );
 
+        $copyFormat = CopyType::MD;
+        $copyContent = '';
+        $template = $this->promptTemplateService->getTemplateById($templateId, $userId);
+        if ($template && $template->project) {
+            $copyFormat = $template->project->getPromptInstanceCopyFormatEnum();
+            $copyConverter = new CopyFormatConverter();
+            $copyContent = $copyConverter->convertFromQuillDelta($deltaJson, $copyFormat);
+        }
+
         return [
             'displayDelta' => $deltaJson,
+            'copyContent' => $copyContent,
+            'copyFormat' => $copyFormat->value,
         ];
     }
 

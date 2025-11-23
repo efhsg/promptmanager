@@ -3,6 +3,8 @@
 namespace app\widgets;
 
 use app\assets\QuillAsset;
+use app\services\CopyFormatConverter;
+use common\enums\CopyType;
 use Throwable;
 use Yii;
 use yii\base\InvalidArgumentException;
@@ -48,6 +50,9 @@ class QuillViewerWidget extends Widget
         $viewerId = "$id-viewer";
         $hiddenId = "$id-hidden";
         $copyFormat = strtolower($this->copyFormat);
+        $copyType = CopyType::tryFrom($copyFormat) ?? CopyType::TEXT;
+        $converter = new CopyFormatConverter();
+        $copyContent = $converter->convertFromQuillDelta($this->content, $copyType);
 
         if (trim($this->content) === '') {
             return Html::tag('div', '<p>No content available.</p>', $this->options);
@@ -78,19 +83,16 @@ class QuillViewerWidget extends Widget
         );
 
         /* hidden raw JSON for copy-as-text */
-        $hiddenTextarea = $this->enableCopy && !in_array($copyFormat, ['md', 'llm-xml'], true)
-            ? Html::tag('textarea', $this->content, ['id' => $hiddenId, 'style' => 'display:none;'])
+        $hiddenTextarea = $this->enableCopy
+            ? Html::tag('textarea', Html::encode($copyContent), ['id' => $hiddenId, 'style' => 'display:none;'])
             : '';
 
         /* copy button */
         $copyBtnHtml = $this->enableCopy
             ? CopyToClipboardWidget::widget([
-                'targetSelector' => in_array(
-                    $copyFormat,
-                    ['md', 'llm-xml'],
-                    true
-                ) ? "#$viewerId .ql-editor" : "#$hiddenId",
+                'targetSelector' => "#$hiddenId",
                 'copyFormat' => $copyFormat,
+                'copyContent' => $copyContent,
                 'buttonOptions' => $this->copyButtonOptions,
                 'label' => $this->copyButtonLabel,
             ])

@@ -2,6 +2,8 @@
 
 namespace app\widgets;
 
+use app\services\CopyFormatConverter;
+use common\enums\CopyType;
 use yii\base\Widget;
 use yii\helpers\Html;
 
@@ -83,6 +85,9 @@ class ContentViewerWidget extends Widget
         $id = $this->getId();
         $viewerId = "$id-viewer";
         $hiddenId = "$id-hidden";
+        $copyType = CopyType::tryFrom(strtolower($this->copyFormat)) ?? CopyType::TEXT;
+        $converter = new CopyFormatConverter();
+        $copyContent = $converter->convertFromHtml($this->processedContent ?? '', $copyType);
 
         $viewerOptions = array_merge($this->viewerOptions, [
             'id' => $viewerId,
@@ -90,7 +95,7 @@ class ContentViewerWidget extends Widget
 
         $viewerHtml = Html::tag('div', $this->processedContent, $viewerOptions);
 
-        $hidden = Html::tag('textarea', $this->content, [
+        $hidden = Html::tag('textarea', Html::encode($copyContent), [
             'id' => $hiddenId,
             'style' => 'display:none;',
         ]);
@@ -98,8 +103,9 @@ class ContentViewerWidget extends Widget
         $copyBtnHtml = '';
         if ($this->enableCopy) {
             $btn = CopyToClipboardWidget::widget([
-                'targetSelector' => "#$viewerId",
+                'targetSelector' => "#$hiddenId",
                 'copyFormat' => $this->copyFormat,
+                'copyContent' => $copyContent,
                 'buttonOptions' => $this->copyButtonOptions,
                 'label' => $this->copyButtonLabel,
             ]);

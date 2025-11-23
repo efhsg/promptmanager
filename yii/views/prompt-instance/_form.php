@@ -340,9 +340,14 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     viewer.attr('data-delta-content', deltaString);
     container.attr('data-delta-content', deltaString);
     
-    // Extract plain text for the textarea
     var plainText = tempQuill.getText();
-    container.find('textarea').text(plainText);
+    var copyContent = response.copyContent || plainText;
+    container.find('textarea').text(copyContent);
+
+    var copyButton = container.find('.copy-button-container button');
+    if (copyButton.length) {
+        copyButton.attr('data-copy-content', copyContent);
+    }
     
     // Store the delta object for the edit functionality
     container.data('deltaObj', deltaObj);
@@ -414,6 +419,10 @@ $editButton.on('click', function() {
         $finalPromptContainer.attr('data-delta-content', deltaString);
         const plainText  = quillEditor.getText();
         $viewContainer.find('textarea').text(plainText);
+        const copyBtn = $viewContainer.find('.copy-button-container button');
+        if (copyBtn.length) {
+            copyBtn.attr('data-copy-content', plainText);
+        }
         $editContainer.addClass('d-none');
         $('.ql-toolbar').hide();
         $viewContainer.removeClass('d-none');
