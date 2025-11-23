@@ -114,6 +114,7 @@ QuillAsset::register($this);
     const hiddenContentInput = document.querySelector('#field-content');
     const pathListUrl = <?= json_encode(Url::to(['field/path-list'])) ?>;
     let currentFieldType = '<?= $modelField->type ?>';
+    let previousFieldType = currentFieldType;
     let initialPathValue = <?= in_array($modelField->type, FieldConstants::PATH_FIELD_TYPES, true)
         ? json_encode($modelField->content)
         : 'null' ?>;
@@ -127,7 +128,7 @@ QuillAsset::register($this);
         }
     }
 
-    function resetPathWidget(placeholder = 'Select a path') {
+    function resetPathWidget(placeholder = 'Select a path', clearHiddenContent = true) {
         availablePaths = [];
         if (pathInput) {
             pathInput.value = '';
@@ -138,7 +139,7 @@ QuillAsset::register($this);
             pathSuggestions.innerHTML = '';
             pathSuggestions.classList.add('d-none');
         }
-        if (hiddenContentInput) {
+        if (hiddenContentInput && clearHiddenContent) {
             hiddenContentInput.value = '';
         }
     }
@@ -297,6 +298,7 @@ QuillAsset::register($this);
     }
 
     function toggleFieldOptions(value) {
+        const wasPathType = pathTypes.includes(previousFieldType);
         currentFieldType = value;
         window.fieldFormCurrentType = value;
 
@@ -326,7 +328,8 @@ QuillAsset::register($this);
             if (pathStatus) {
                 pathStatus.textContent = '';
             }
-            resetPathWidget();
+            const shouldClearHiddenContent = wasPathType || !isContentType;
+            resetPathWidget('Select a path', shouldClearHiddenContent);
         }
 
         if (isPathType) {
@@ -340,6 +343,8 @@ QuillAsset::register($this);
             optionsWrapper.style.display = 'none';
             nonOptionFieldElements.forEach((el) => el.disabled = true);
         }
+
+        previousFieldType = value;
     }
 
     toggleFieldOptions('<?= $modelField->type ?>');
