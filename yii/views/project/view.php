@@ -1,6 +1,7 @@
 <?php
 /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\models\Project;
 use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
@@ -55,6 +56,11 @@ echo $this->render('_breadcrumbs', [
                             $directories = $model->getBlacklistedDirectories();
                             return $directories === [] ? 'None' : implode(', ', $directories);
                         },
+                    ],
+                    [
+                        'attribute' => 'prompt_instance_copy_format',
+                        'label' => 'Prompt Instance Copy Format',
+                        'value' => static fn(Project $model) => $model->getPromptInstanceCopyFormatEnum()->label(),
                     ],
                     [
                         'attribute' => 'description',

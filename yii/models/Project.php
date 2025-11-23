@@ -4,6 +4,7 @@ namespace app\models;
 
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
+use common\enums\CopyType;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -20,6 +21,7 @@ use yii\db\ActiveRecord;
  * @property string|null $root_directory
  * @property string|null $allowed_file_extensions
  * @property string|null $blacklisted_directories
+ * @property string $prompt_instance_copy_format
  * @property int $created_at
  * @property int $updated_at
  * @property int|null $deleted_at
@@ -38,6 +40,15 @@ class Project extends ActiveRecord
         return 'project';
     }
 
+    public function init(): void
+    {
+        parent::init();
+
+        if ($this->isNewRecord && $this->prompt_instance_copy_format === null) {
+            $this->prompt_instance_copy_format = CopyType::MD->value;
+        }
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -48,6 +59,10 @@ class Project extends ActiveRecord
             [['user_id', 'created_at', 'updated_at', 'deleted_at'], 'integer'],
             [['description'], 'string'],
             [['root_directory'], 'string', 'max' => 1024],
+            [['prompt_instance_copy_format'], 'default', 'value' => CopyType::MD->value],
+            [['prompt_instance_copy_format'], 'required'],
+            [['prompt_instance_copy_format'], 'string', 'max' => 32],
+            [['prompt_instance_copy_format'], 'in', 'range' => CopyType::values()],
             [
                 ['root_directory'],
                 'match',
@@ -76,6 +91,7 @@ class Project extends ActiveRecord
             'root_directory' => 'Root Directory',
             'allowed_file_extensions' => 'Allowed File Extensions',
             'blacklisted_directories' => 'Blacklisted Directories',
+            'prompt_instance_copy_format' => 'Prompt Instance Copy Format',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
             'deleted_at' => 'Deleted At',
@@ -168,6 +184,21 @@ class Project extends ActiveRecord
         );
 
         return array_values(array_unique($filtered));
+    }
+
+    public function getPromptInstanceCopyFormat(): string
+    {
+        return $this->getPromptInstanceCopyFormatEnum()->value;
+    }
+
+    public static function getPromptInstanceCopyFormatOptions(): array
+    {
+        return CopyType::labels();
+    }
+
+    public function getPromptInstanceCopyFormatEnum(): CopyType
+    {
+        return CopyType::tryFrom((string)$this->prompt_instance_copy_format) ?? CopyType::MD;
     }
 
     private function normalizeAllowedFileExtensionsField(): void

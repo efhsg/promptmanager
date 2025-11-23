@@ -44,6 +44,15 @@ class CopyToClipboardWidget extends Widget
         return (text || '').replace(/([\\\\`*_\\[\\]])/g, '\\\\$1');
     }
 
+    function escapeXml(text) {
+        return (text || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/\"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    }
+
     function applyInlineFormats(text, attrs, skipEscape) {
         var value = skipEscape ? (text || '') : escapeMarkdown(text || '');
         if (!attrs) {
@@ -418,12 +427,91 @@ class CopyToClipboardWidget extends Widget
         return element.innerText || '';
     }
 
+    function normalizeInstructionLine(line) {
+        var raw = (line || '').trim();
+        if (!raw) {
+            return {text: '', isListItem: false};
+        }
+
+        var isListItem = /^[-*+]\s+/.test(raw) || /^\d+\.\\s+/.test(raw) || /^\\[(?:\\s|x|X)\\]\\s+/.test(raw);
+
+        raw = raw
+            .replace(/^[-*+]\\s+/, '')
+            .replace(/^\\d+\\.\\s+/, '')
+            .replace(/^\\[(?:\\s|x|X)\\]\\s+/, '')
+            .replace(/^>+\\s*/, '')
+            .replace(/^#{1,6}\\s+/, '');
+
+        return {
+            text: raw.trim(),
+            isListItem: isListItem
+        };
+    }
+
+    function buildInstructionList(text) {
+        var instructions = [];
+        var buffer = [];
+
+        function pushBuffer() {
+            if (!buffer.length) {
+                return;
+            }
+            var combined = buffer.join(' ').replace(/\\s+/g, ' ').trim();
+            if (combined) {
+                instructions.push(combined);
+            }
+            buffer = [];
+        }
+
+        var lines = (text || '').split(/\\r?\\n/);
+        for (var i = 0; i < lines.length; i++) {
+            var normalized = normalizeInstructionLine(lines[i]);
+            if (!normalized.text) {
+                pushBuffer();
+                continue;
+            }
+
+            if (normalized.isListItem) {
+                pushBuffer();
+                instructions.push(normalized.text);
+                continue;
+            }
+
+            buffer.push(normalized.text);
+        }
+
+        pushBuffer();
+
+        return instructions;
+    }
+
+    function extractLlmXml(element) {
+        var markdown = extractMarkdown(element);
+        var content = markdown && markdown.trim() !== '' ? markdown : (element.innerText || '');
+        var steps = buildInstructionList(content);
+
+        if (!steps.length) {
+            return '<instructions></instructions>';
+        }
+
+        var parts = ['<instructions>'];
+        for (var i = 0; i < steps.length; i++) {
+            parts.push('  <instruction>' + escapeXml(steps[i]) + '</instruction>');
+        }
+        parts.push('</instructions>');
+
+        return parts.join('\\n');
+    }
+
     function getCopyText(element) {
         switch (copyFormat) {
             case 'html':
                 return element.innerHTML;
             case 'quilldelta':
                 return extractQuillDelta(element);
+            case 'llm-xml':
+            case 'llmxml':
+                return extractLlmXml(element);
             case 'md':
                 return extractMarkdown(element);
             case 'text':

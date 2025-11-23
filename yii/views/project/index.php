@@ -1,5 +1,6 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\models\Project;
 use app\models\ProjectSearch;
 use yii\grid\GridView;
 use yii\helpers\Html;
@@ -95,6 +96,11 @@ echo $this->render('_breadcrumbs', [
 
                             return StringHelper::truncate($plain, 50);
                         },
+                    ],
+                    [
+                        'attribute' => 'prompt_instance_copy_format',
+                        'label' => 'Copy Format',
+                        'value' => static fn(Project $model) => $model->getPromptInstanceCopyFormatEnum()->label(),
                     ],
                     [
                         'class' => yii\grid\ActionColumn::class,

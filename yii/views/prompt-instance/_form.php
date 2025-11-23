@@ -6,6 +6,7 @@ use app\assets\QuillAsset;
 use app\helpers\TooltipHelper;
 use app\models\PromptInstanceForm;
 use conquer\select2\Select2Widget;
+use common\enums\CopyType;
 use yii\helpers\Html;
 use yii\web\JsExpression;
 use yii\web\View;
@@ -28,6 +29,9 @@ $templateTooltipTexts = TooltipHelper::prepareTexts($templatesDescription, $maxC
 
 $this->registerJsVar('contextTooltipTexts', $contextTooltipTexts);
 $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
+
+$projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
+    ?? CopyType::MD->value;
 ?>
 
 <div class="prompt-instance-form focus-on-first-field">
@@ -143,7 +147,7 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
                                     'style' => 'bottom: 10px; right: 20px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy content to clipboard',
-                                    'copyFormat' => 'md',
+                                    'copyFormat' => $projectCopyFormat,
                                 ],
                             ]) ?>
                         </div>

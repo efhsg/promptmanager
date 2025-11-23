@@ -5,12 +5,14 @@
 
 /** @noinspection PhpUnhandledExceptionInspection */
 
+use common\enums\CopyType;
 use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
 /** @var app\models\PromptInstance $model */
+
 $this->title = 'View - ' . Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i:s');
 echo $this->render('_breadcrumbs', [
     'model' => null,
@@ -50,6 +52,9 @@ echo $this->render('_breadcrumbs', [
                         'format' => 'raw',
                         'label' => 'Prompt',
                         'value' => function ($model) {
+                            $projectCopyFormat = $model->template?->project?->getPromptInstanceCopyFormatEnum()->value
+                                ?? CopyType::MD->value;
+
                             return QuillViewerWidget::widget([
                                 'content' => $model->final_prompt,
                                 'options' => [
@@ -60,7 +65,7 @@ echo $this->render('_breadcrumbs', [
                                     'style' => 'bottom: 10px; right: 20px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy template content to clipboard',
-                                    'copyFormat'  => 'md',
+                                    'copyFormat' => $projectCopyFormat,
                                 ],
                             ]);
                         },

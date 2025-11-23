@@ -28,6 +28,10 @@ QuillAsset::register($this);
         ->textInput(['maxlength' => true, 'placeholder' => 'php,scss,html'])
         ->hint('Comma-separated extensions; leave blank to allow all.') ?>
 
+    <?= $form->field($model, 'prompt_instance_copy_format')
+        ->dropDownList($model::getPromptInstanceCopyFormatOptions())
+        ->hint('Format used by prompt instance copy buttons (e.g. Markdown).') ?>
+
     <?= $form->field($model, 'description')
         ->hiddenInput(['id' => 'project-description'])
         ->label('Description') ?>
