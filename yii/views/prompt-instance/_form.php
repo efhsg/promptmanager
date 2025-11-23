@@ -143,6 +143,7 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
                                     'style' => 'bottom: 10px; right: 20px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy content to clipboard',
+                                    'copyFormat' => 'md',
                                 ],
                             ]) ?>
                         </div>
@@ -224,7 +225,7 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     if (action === 'save') {
         const deltaObj   = (typeof quillEditor !== 'undefined' && quillEditor)
         ? quillEditor.getContents()                         
-        : $('#final-prompt-container').data('deltaObj') || {}; 
+        : $finalPromptContainer.data('deltaObj') || {}; 
         const finalPrompt = JSON.stringify(deltaObj); 
         $.ajax({
             url: '/prompt-instance/save-final-prompt',
@@ -300,12 +301,13 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             type: 'POST',
             data: data,
             success: function(response) {
-    var container = $('#final-prompt-container');
+    var container = $finalPromptContainer;
+    var deltaString = response.displayDelta || '';
     
     // Parse the delta object from the string
     var deltaObj;
     try {
-        deltaObj = JSON.parse(response.displayDelta);
+        deltaObj = JSON.parse(deltaString);
     } catch (error) {
         console.error("Error parsing delta", error);
         deltaObj = { ops: [{ insert: "Error rendering content" }] };
@@ -329,7 +331,10 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     
     // Get the entire container to preserve Quill styling
     var renderedHtml = tempContainer.outerHTML;
-    container.find('.content-viewer').html(renderedHtml);
+    var viewer = container.find('.content-viewer');
+    viewer.html(renderedHtml);
+    viewer.attr('data-delta-content', deltaString);
+    container.attr('data-delta-content', deltaString);
     
     // Extract plain text for the textarea
     var plainText = tempQuill.getText();
@@ -380,7 +385,7 @@ $editButton.on('click', function() {
         initQuillEditor();
         
         // Use the stored delta object
-        const delta = $('#final-prompt-container').data('deltaObj');
+        const delta = $finalPromptContainer.data('deltaObj');
         if (delta && delta.ops) {
             quillEditor.setContents(delta);
         } else {
@@ -394,11 +399,15 @@ $editButton.on('click', function() {
         $(this).text('View');
     } else {
         const delta      = quillEditor.getContents();
+        const deltaString = JSON.stringify(delta);
         const innerHtml  = quillEditor.root.innerHTML;
         const $rendered  = $('<div>', { class: 'ql-container ql-snow' })
             .append($('<div>', { class: 'ql-editor', html: innerHtml }));
-        $viewContainer.find('.content-viewer').html($rendered);
-        $('#final-prompt-container').data('deltaObj', delta);
+        const $viewer     = $viewContainer.find('.content-viewer');
+        $viewer.html($rendered);
+        $viewer.attr('data-delta-content', deltaString);
+        $finalPromptContainer.data('deltaObj', delta);
+        $finalPromptContainer.attr('data-delta-content', deltaString);
         const plainText  = quillEditor.getText();
         $viewContainer.find('textarea').text(plainText);
         $editContainer.addClass('d-none');
