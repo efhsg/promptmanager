@@ -4,6 +4,7 @@ namespace identity\tests\unit\services;
 
 use app\modules\identity\exceptions\UserCreationException;
 use app\modules\identity\models\User;
+use app\modules\identity\services\UserDataSeederInterface;
 use app\modules\identity\services\UserService;
 use Codeception\Test\Unit;
 use PHPUnit\Framework\MockObject\Exception as MockException;
@@ -18,9 +19,6 @@ use yii\rbac\Role;
 
 class UserServiceTest extends Unit
 {
-    /**
-     * @var UserService
-     */
     private UserService $userService;
 
     /**
@@ -36,10 +34,9 @@ class UserServiceTest extends Unit
     }
 
     /**
-     * Sets up the test environment before each test.
-     *
      * @throws NotInstantiableException
-     * @throws InvalidConfigException|MockException
+     * @throws InvalidConfigException
+     * @throws MockException
      */
     protected function _before(): void
     {
@@ -52,22 +49,20 @@ class UserServiceTest extends Unit
     }
 
     /**
-     * Cleans up after each test.
      * @throws InvalidConfigException
      */
     protected function _after(): void
     {
         Yii::$app->set('authManager', null);
+
         parent::_after();
     }
 
     /**
-     * Tests the creation of a user and verifies RBAC role assignment.
-     *
      * @throws UserCreationException
      * @throws MockException
      */
-    public function testCreateUser()
+    public function testCreateUser(): void
     {
         $username = 'newuser';
         $email = 'newuser@example.com';
@@ -76,12 +71,14 @@ class UserServiceTest extends Unit
         $roleMock = $this->createMock(Role::class);
         $roleMock->name = 'user';
 
-        $this->authManagerMock->expects($this->once())
+        $this->authManagerMock
+            ->expects($this->once())
             ->method('getRole')
             ->with('user')
             ->willReturn($roleMock);
 
-        $this->authManagerMock->expects($this->once())
+        $this->authManagerMock
+            ->expects($this->once())
             ->method('assign')
             ->with(
                 $this->equalTo($roleMock),
@@ -99,12 +96,11 @@ class UserServiceTest extends Unit
     }
 
     /**
-     * Tests user creation when RBAC is not available.
-     *
      * @throws UserCreationException
-     * @throws MockException|InvalidConfigException
+     * @throws MockException
+     * @throws InvalidConfigException
      */
-    public function testCreateUserWithoutRbac()
+    public function testCreateUserWithoutRbac(): void
     {
         Yii::$app->set('authManager', null);
 
@@ -112,7 +108,8 @@ class UserServiceTest extends Unit
         $email = 'newuser@example.com';
         $password = 'securepassword123';
 
-        $this->authManagerMock->expects($this->never())
+        $this->authManagerMock
+            ->expects($this->never())
             ->method('assign');
 
         $user = $this->userService->create($username, $email, $password);
@@ -125,11 +122,9 @@ class UserServiceTest extends Unit
     }
 
     /**
-     * Tests that an exception is thrown when user creation fails.
-     *
      * @throws UserCreationException
      */
-    public function testCreateUserWithException()
+    public function testCreateUserWithInvalidData(): void
     {
         $this->expectException(UserCreationException::class);
 
@@ -137,11 +132,9 @@ class UserServiceTest extends Unit
     }
 
     /**
-     * Tests generating a password reset token.
-     *
      * @throws Exception
      */
-    public function testGeneratePasswordResetToken()
+    public function testGeneratePasswordResetToken(): void
     {
         $user = User::findOne(100);
         $this->assertNotNull($user);
@@ -154,15 +147,34 @@ class UserServiceTest extends Unit
     }
 
     /**
-     * Tests removing a password reset token.
-     *
      * @throws Exception
      */
-    public function testRemovePasswordResetToken()
+    public function testGeneratePasswordResetTokenFailure(): void
+    {
+        /** @var User|MockObject $user */
+        $user = $this->createMock(User::class);
+        $user->id = 999;
+
+        $user
+            ->expects($this->once())
+            ->method('save')
+            ->with(false, ['password_reset_token'])
+            ->willThrowException(new Exception('Save failed'));
+
+        $result = $this->userService->generatePasswordResetToken($user);
+
+        $this->assertFalse($result);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testRemovePasswordResetToken(): void
     {
         $user = User::findOne(100);
-        $this->userService->generatePasswordResetToken($user);
+        $this->assertNotNull($user);
 
+        $this->userService->generatePasswordResetToken($user);
         verify($user->password_reset_token)->notEmpty();
 
         $result = $this->userService->removePasswordResetToken($user);
@@ -171,13 +183,11 @@ class UserServiceTest extends Unit
         verify($user->password_reset_token)->null();
     }
 
-    /**
-     * Tests soft deleting a user.
-     */
-    public function testSoftDelete()
+    public function testSoftDelete(): void
     {
         $user = User::findOne(100);
         $this->assertNotNull($user);
+
         verify($user->deleted_at)->null();
 
         $result = $this->userService->softDelete($user);
@@ -186,12 +196,11 @@ class UserServiceTest extends Unit
         verify($user->deleted_at)->notNull();
     }
 
-    /**
-     * Tests soft deleting an already deleted user.
-     */
-    public function testSoftDeleteAlreadyDeleted()
+    public function testSoftDeleteAlreadyDeleted(): void
     {
         $user = User::findOne(100);
+        $this->assertNotNull($user);
+
         $this->userService->softDelete($user);
 
         $result = $this->userService->softDelete($user);
@@ -199,14 +208,12 @@ class UserServiceTest extends Unit
         verify($result)->false();
     }
 
-    /**
-     * Tests restoring a soft-deleted user.
-     */
-    public function testRestoreSoftDelete()
+    public function testRestoreSoftDelete(): void
     {
         $user = User::findOne(100);
-        $this->userService->softDelete($user);
+        $this->assertNotNull($user);
 
+        $this->userService->softDelete($user);
         verify($user->deleted_at)->notNull();
 
         $result = $this->userService->restoreSoftDelete($user);
@@ -215,12 +222,11 @@ class UserServiceTest extends Unit
         verify($user->deleted_at)->null();
     }
 
-    /**
-     * Tests restoring a user that is not deleted.
-     */
-    public function testRestoreSoftDeleteNotDeleted()
+    public function testRestoreSoftDeleteNotDeleted(): void
     {
         $user = User::findOne(100);
+        $this->assertNotNull($user);
+
         verify($user->deleted_at)->null();
 
         $result = $this->userService->restoreSoftDelete($user);
@@ -228,15 +234,13 @@ class UserServiceTest extends Unit
         verify($result)->false();
     }
 
-    /**
-     * Tests hard deleting a user and verifies RBAC role revocation.
-     */
-    public function testHardDelete()
+    public function testHardDelete(): void
     {
         $user = User::findOne(100);
         $this->assertNotNull($user);
 
-        $this->authManagerMock->expects($this->once())
+        $this->authManagerMock
+            ->expects($this->once())
             ->method('revokeAll')
             ->with($this->equalTo($user->id))
             ->willReturn(true);
@@ -244,43 +248,48 @@ class UserServiceTest extends Unit
         $result = $this->userService->hardDelete($user);
 
         $this->assertTrue($result);
+
         $deletedUser = User::findOne(100);
         $this->assertNull($deletedUser);
     }
 
     /**
-     * Tests hard deleting a user when RBAC is not available.
      * @throws InvalidConfigException
      */
-    public function testHardDeleteWithoutRbac()
+    public function testHardDeleteWithoutRbac(): void
     {
         $user = User::findOne(100);
         $this->assertNotNull($user);
 
         Yii::$app->set('authManager', null);
 
-        $this->authManagerMock->expects($this->never())
+        $this->authManagerMock
+            ->expects($this->never())
             ->method('revokeAll');
 
         $result = $this->userService->hardDelete($user);
 
         $this->assertTrue($result);
+
         $deletedUser = User::findOne(100);
         $this->assertNull($deletedUser);
     }
 
     /**
-     * Tests that hard deletion fails gracefully when an exception occurs.
-     *
      * @throws MockException
      */
-    public function testHardDeleteFails()
+    public function testHardDeleteFails(): void
     {
+        /** @var User|MockObject $user */
         $user = $this->createMock(User::class);
         $user->id = 100;
-        $user->method('delete')->willThrowException(new \Exception('Delete operation failed'));
 
-        $this->authManagerMock->expects($this->once())
+        $user
+            ->method('delete')
+            ->willThrowException(new \Exception('Delete operation failed'));
+
+        $this->authManagerMock
+            ->expects($this->once())
             ->method('revokeAll')
             ->with($this->equalTo($user->id))
             ->willReturn(true);
@@ -291,14 +300,77 @@ class UserServiceTest extends Unit
     }
 
     /**
-     * Tests that an exception is thrown when a user with invalid data is created.
-     *
+     * @throws MockException
+     */
+    public function testHardDeleteFailsWhenDeleteReturnsFalse(): void
+    {
+        /** @var User|MockObject $user */
+        $user = $this->createMock(User::class);
+        $user->id = 100;
+
+        $user
+            ->expects($this->once())
+            ->method('delete')
+            ->willReturn(0);
+
+        $this->authManagerMock
+            ->expects($this->once())
+            ->method('revokeAll')
+            ->with($this->equalTo($user->id))
+            ->willReturn(true);
+
+        $result = $this->userService->hardDelete($user);
+
+        $this->assertFalse($result);
+    }
+
+    /**
      * @throws UserCreationException
      */
-    public function testCreateUserWithInvalidData()
+    public function testCreateUserCallsSeederOnSuccess(): void
     {
-        $this->expectException(UserCreationException::class);
+        /** @var UserDataSeederInterface|MockObject $seederMock */
+        $seederMock = $this->createMock(UserDataSeederInterface::class);
 
-        $this->userService->create('invaliduser', 'invalid-email', 'password123');
+        $seederMock
+            ->expects($this->once())
+            ->method('seed')
+            ->with($this->isInt());
+
+        $this->userService = new UserService($seederMock);
+
+        $username = 'seededuser';
+        $email = 'seededuser@example.com';
+        $password = 'securepassword123';
+
+        $user = $this->userService->create($username, $email, $password);
+
+        verify($user)->notEmpty();
+        verify($user->email)->equals($email);
+    }
+
+    public function testCreateUserRollsBackTransactionWhenSeederThrows(): void
+    {
+        /** @var UserDataSeederInterface|MockObject $seederMock */
+        $seederMock = $this->createMock(UserDataSeederInterface::class);
+
+        $seederMock
+            ->expects($this->once())
+            ->method('seed')
+            ->willThrowException(new Exception('Seeder failed'));
+
+        $this->userService = new UserService($seederMock);
+
+        $username = 'seedfailuser';
+        $email = 'seedfailuser@example.com';
+        $password = 'securepassword123';
+
+        try {
+            $this->userService->create($username, $email, $password);
+            $this->fail('Expected UserCreationException was not thrown.');
+        } catch (UserCreationException $exception) {
+            $user = User::findOne(['email' => $email]);
+            $this->assertNull($user);
+        }
     }
 }
