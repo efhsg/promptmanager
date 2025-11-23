@@ -45,14 +45,17 @@ RUN pecl install imagick && docker-php-ext-enable imagick
 # Install Xdebug
 RUN pecl install xdebug && docker-php-ext-enable xdebug
 
-# Create Xdebug configuration file
-ARG XDEBUG_CLIENT_HOST
-ARG XDEBUG_PORT
-RUN echo "zend_extension=xdebug.so" > /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
-    echo "xdebug.mode=debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
-    echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
-    echo "xdebug.client_host=${XDEBUG_CLIENT_HOST}" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && \
-    echo "xdebug.client_port=${XDEBUG_PORT}" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+# Create Xdebug configuration file (host/port resolved from env at runtime)
+RUN cat <<'EOF' > /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+zend_extension=xdebug.so
+xdebug.mode=debug,develop
+xdebug.start_with_request=trigger
+xdebug.discover_client_host=1
+xdebug.client_host=${XDEBUG_CLIENT_HOST}
+xdebug.client_port=${XDEBUG_CLIENT_PORT}
+xdebug.idekey=PHPSTORM
+xdebug.connect_timeout_ms=200
+EOF
 
 # Set max_execution_time
 RUN echo "max_execution_time=300" > /usr/local/etc/php/conf.d/custom.ini

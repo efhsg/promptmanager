@@ -244,6 +244,7 @@ Open `http://localhost:8080/` when running the built-in server.
 - **Permission denied on assets/runtime**: ensure Docker volume mounts allow writes or run `chmod -R 777 yii/runtime yii/web/assets` in development.
 - **RBAC not initialized**: rerun `docker exec pma_yii yii rbac/init`.
 - **Captcha blocking login locally**: set `IDENTITY_DISABLE_CAPTCHA=TRUE` in `.env`.
+- **Xdebug not connecting**: run `scripts/test_xdebug_ip.sh` to compare the current host IP with `.env` and test connectivity from `pma_yii` to your IDE port.
 
 ---
 
