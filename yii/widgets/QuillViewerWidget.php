@@ -65,7 +65,11 @@ class QuillViewerWidget extends Widget
             Html::tag('div', '', ['class' => 'ql-editor', 'style' => 'display:none;']),
             array_merge(
                 $this->options,
-                ['id' => $viewerId, 'style' => $style]
+                [
+                    'id' => $viewerId,
+                    'style' => $style,
+                    'data-delta-content' => $this->content,
+                ]
             )
         );
 
