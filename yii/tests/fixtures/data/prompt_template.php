@@ -1,6 +1,6 @@
 <?php
 return [
-    [
+    'template1' => [
         'id' => 1,
         'project_id' => 1,
         'name' => 'Default Template',
@@ -8,7 +8,7 @@ return [
         'created_at' => time(),
         'updated_at' => time(),
     ],
-    [
+    'template2' => [
         'id' => 2,
         'project_id' => 2,
         'name' => 'Another Template',

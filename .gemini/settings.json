@@ -1,0 +1,17 @@
+{
+  "general": {
+    "checkpointing": {
+      "enabled": true
+    }
+  },
+  "ui": {
+    "theme": "GitHub"
+  },
+  "tools": {
+    "core": [
+      "run_shell_command",
+      "read_file",
+      "write_file"
+    ]
+  }
+}

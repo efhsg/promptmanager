@@ -1,7 +1,7 @@
 <?php
 
 return [
-    [
+    'project1' => [
         'id' => 1,
         'user_id' => 100,
         'name' => 'Test Project',
@@ -9,7 +9,7 @@ return [
         'created_at' => time(),
         'updated_at' => time(),
     ],
-    [
+    'project2' => [
         'id' => 2,
         'user_id' => 1,
         'name' => 'Test Project 2',
