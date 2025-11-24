@@ -3,6 +3,7 @@
 namespace app\services;
 
 use JsonException;
+use yii\helpers\ArrayHelper;
 use yii\web\NotFoundHttpException;
 
 /**
@@ -15,23 +16,23 @@ class PromptGenerationService
      */
     private const PLACEHOLDER_PATTERN = '/\b(?:GEN|PRJ):\{\{(\d+)}}/';
 
+    private array $templateFieldTypes = [];
+
     public function __construct(
         private readonly PromptTemplateService $templateService,
-    )
-    {
+    ) {
     }
 
     /**
      *
      * @throws NotFoundHttpException If the template is not found.
      */
-      public function generateFinalPrompt(
-        int   $templateId,
+    public function generateFinalPrompt(
+        int $templateId,
         array $selectedContexts,
         array $fieldValues,
-        int   $userId
-    ): string
-    {
+        int $userId
+    ): string {
         $templateDelta = $this->getTemplateDelta($templateId, $userId);
         $fieldValuesCopy = $fieldValues;
 
@@ -87,6 +88,8 @@ class PromptGenerationService
     {
         $templateModel = $this->templateService->getTemplateById($templateId, $userId)
             ?? throw new NotFoundHttpException('Template not found or access denied.');
+
+        $this->templateFieldTypes = ArrayHelper::map($templateModel->fields ?? [], 'id', 'type');
 
         try {
             $templateDelta = json_decode($templateModel->template_body, true, 512, JSON_THROW_ON_ERROR);
@@ -181,15 +184,32 @@ class PromptGenerationService
      * Build field operations from a field value
      *
      * @param mixed $fieldValue The field value (JSON string or array)
+     * @param int $fieldId Field ID being processed
      * @return array Ops in Quill delta format
      */
-    private function buildFieldOperations(mixed $fieldValue): array
+    private function buildFieldOperations(mixed $fieldValue, int $fieldId): array
     {
+        $fieldType = $this->templateFieldTypes[$fieldId] ?? null;
+
         // Handle array field values (non-JSON strings)
         if (is_array($fieldValue)) {
             $ops = [];
-            // If it's a sequential array, present each value as a dot-ended list item
+            // If it's a sequential array, present each value as individual items
             if (array_keys($fieldValue) === range(0, count($fieldValue) - 1)) {
+                if ($fieldType === 'multi-select') {
+                    foreach ($fieldValue as $value) {
+                        $trimmed = trim((string)$value);
+                        if ($trimmed === '') {
+                            continue;
+                        }
+                        $ops[] = [
+                            'insert' => $trimmed . "\n",
+                            'attributes' => ['list' => 'bullet'],
+                        ];
+                    }
+                    return $ops;
+                }
+
                 foreach ($fieldValue as $value) {
                     $trimmed = rtrim($value);
                     $suffix = str_ends_with($trimmed, '.') ? "\n" : ".\n";
@@ -229,7 +249,7 @@ class PromptGenerationService
             $value = $fieldValues[$fieldId];
             // Consume the value by unsetting it
             unset($fieldValues[$fieldId]);
-            return $this->buildFieldOperations($value);
+            return $this->buildFieldOperations($value, $fieldId);
         }
 
         // Field not found - find the next available value if any
@@ -239,7 +259,7 @@ class PromptGenerationService
             $value = $fieldValues[$nextFieldId];
             // Consume the value
             unset($fieldValues[$nextFieldId]);
-            return $this->buildFieldOperations($value);
+            return $this->buildFieldOperations($value, $nextFieldId);
         }
 
         // No values available

@@ -9,6 +9,7 @@ use Codeception\Stub;
 use Codeception\Stub\Expected;
 use Codeception\Test\Unit;
 use Exception;
+use stdClass;
 use yii\web\NotFoundHttpException;
 
 class PromptGenerationServiceTest extends Unit
@@ -24,15 +25,26 @@ class PromptGenerationServiceTest extends Unit
         string $templateContent,
         array $contexts,
         array $fieldValues,
-        string $expectedOutput
-    ): void
-    {
+        string $expectedOutput,
+        array $fieldTypes
+    ): void {
+        $fields = [];
+        foreach ($fieldTypes as $id => $type) {
+            $field = new stdClass();
+            $field->id = $id;
+            $field->type = $type;
+            $fields[] = $field;
+        }
+
         $template = Stub::make(
             PromptTemplate::class,
             [
-                '__get' => function ($property) use ($templateContent) {
+                '__get' => function ($property) use ($templateContent, $fields) {
                     if ($property === 'template_body') {
                         return $templateContent;
+                    }
+                    if ($property === 'fields') {
+                        return $fields;
                     }
                     return null;
                 },
@@ -136,7 +148,6 @@ class PromptGenerationServiceTest extends Unit
         $ctxD = '{"ops":[{"insert":"Context with "},{"attributes":{"bold":true},"insert":"formatting"},{"insert":" and "},{"attributes":{"italic":true},"insert":"styles"},{"insert":".\n"}]}';
 
         return [
-
             'Change functionality' => [
                 '{"ops":[{"insert":"This is the code we want to change:GEN:{{1}}\nAnd this is the change I want: GEN:{{4}}\nGEN:{{3}}\n"}]}',
                 [],
@@ -145,12 +156,17 @@ class PromptGenerationServiceTest extends Unit
                     6 => '{"ops":[{"insert":"b\n"}]}',
                     3 => [0 => 'do not write any comment', 1 => 'use SOLID, DRY, YAGNI principles'],
                 ],
-                // updated to reflect two separate inserts
                 '{"ops":[
                     {"insert":"This is the code we want to change:a\nAnd this is the change I want: b\n"},
-                    {"insert":"do not write any comment.\n"},
-                    {"insert":"use SOLID, DRY, YAGNI principles.\n"}
-                ]}'
+                    {"insert":"do not write any comment\n","attributes":{"list":"bullet"}},
+                    {"insert":"use SOLID, DRY, YAGNI principles\n","attributes":{"list":"bullet"}}
+                ]}',
+                [
+                    1 => 'text',
+                    3 => 'multi-select',
+                    4 => 'text',
+                    6 => 'text',
+                ],
             ],
             'Change functionality2' => [
                 '{"ops":[{"insert":"This is the code we want to change:GEN:{{1}}\nAnd this is the change I want: GEN:{{4}}\nGEN:{{3}}\n"}]}',
@@ -165,7 +181,13 @@ JSON,
                 ],
                 <<<'JSON'
 {"ops":[{"insert":"<?php"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"namespace app\\assets;"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"use yii\\web\\AssetBundle;"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"class QuillAsset extends AssetBundle"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"{"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    public $basePath = '@webroot/quill/1.3.7';"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    public $baseUrl = '@web/quill/1.3.7';"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $css = ["},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'quill.snow.css',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'highlight/default.min.css',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    ];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $js = ["},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'highlight/highlight.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'quill.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'editor-init.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    ];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $jsOptions = ['defer' => true];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $depends = ['yii\\web\\YiiAsset'];"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"}"},{"attributes":{"code-block":"plain"},"insert":"\n"}]}
-JSON
+JSON,
+                [
+                    1 => 'text',
+                    3 => 'multi-select',
+                    4 => 'text',
+                    6 => 'text',
+                ],
             ],
         ];
     }
