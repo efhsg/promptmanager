@@ -152,24 +152,3 @@ $templateRendered = preg_replace_callback(
 <div class="generated-prompt-form">
     <?= $templateRendered ?>
 </div>
-
-<?php
-$this->registerJs(
-        <<<JS
-document.querySelectorAll('[data-editor="quill"]').forEach(function(el) {
-    var target = document.getElementById(el.dataset.target);
-    var config = JSON.parse(el.dataset.config);
-    var quill = new Quill(el, config);
-    quill.on('text-change', function() {
-        target.value = JSON.stringify(quill.getContents());
-    });
-    var v = (target.value || '').trim();
-    if (v) {
-    try {
-            quill.setContents(JSON.parse(v));
-    } catch (e) {}
-    }
-});
-JS
-);
-?>
