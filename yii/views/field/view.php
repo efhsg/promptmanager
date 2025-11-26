@@ -1,6 +1,6 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
-use app\assets\HighlightAsset;
+use app\widgets\PathPreviewWidget;
 use app\widgets\QuillViewerWidget;
 use common\constants\FieldConstants;
 use yii\helpers\Html;
@@ -16,29 +16,21 @@ echo $this->render('_breadcrumbs', [
         'actionLabel' => $this->title,
 ]);
 
-HighlightAsset::register($this);
-
-$resolveLanguage = static function (string $path): array {
-    $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION) ?: '');
-    return match ($extension) {
-        'php' => ['php', 'PHP'],
-        'js' => ['javascript', 'JavaScript'],
-        'ts' => ['typescript', 'TypeScript'],
-        'json' => ['json', 'JSON'],
-        'css' => ['css', 'CSS'],
-        'html', 'htm' => ['xml', 'HTML'],
-        'xml' => ['xml', 'XML'],
-        'md' => ['markdown', 'Markdown'],
-        'yaml', 'yml' => ['yaml', 'YAML'],
-        'sh', 'bash', 'zsh' => ['bash', 'Shell'],
-        'py' => ['python', 'Python'],
-        default => ['plaintext', 'Plain Text'],
-    };
-};
-
 $showPath = in_array($model->type, FieldConstants::PATH_FIELD_TYPES, true) && !empty($model->content);
 $canPreviewPath = $showPath && in_array($model->type, FieldConstants::PATH_PREVIEWABLE_FIELD_TYPES, true);
-$pathLanguage = $canPreviewPath ? $resolveLanguage($model->content) : null;
+$pathPreview = $showPath
+        ? PathPreviewWidget::widget([
+                'path' => $model->content,
+                'previewUrl' => $canPreviewPath
+                        ? Url::to([
+                                'field/path-preview',
+                                'id' => $model->id,
+                                'path' => $model->content,
+                        ])
+                        : '',
+                'enablePreview' => $canPreviewPath,
+        ])
+        : null;
 ?>
 
 <div class="container py-4">
@@ -90,30 +82,7 @@ $pathLanguage = $canPreviewPath ? $resolveLanguage($model->content) : null;
                                     ? [
                                     'label' => 'Path',
                                     'format' => 'raw',
-                                    'value' => $canPreviewPath
-                                            ? Html::button(
-                                                    Html::encode($model->content),
-                                                    [
-                                                            'type' => 'button',
-                                                            'class' => 'btn btn-link p-0 text-decoration-underline path-preview font-monospace',
-                                                            'data-url' => Url::to([
-                                                                    'field/path-preview',
-                                                                    'id' => $model->id,
-                                                                    'path' => $model->content,
-                                                            ]),
-                                                            'data-language' => $pathLanguage[0] ?? 'plaintext',
-                                                            'data-language-label' => $pathLanguage[1] ?? 'Plain Text',
-                                                            'data-path-label' => $model->content,
-                                                    ]
-                                            )
-                                            : Html::tag(
-                                                    'span',
-                                                    Html::encode($model->content),
-                                                    [
-                                                            'class' => 'font-monospace text-break',
-                                                            'title' => $model->content,
-                                                    ]
-                                            ),
+                                    'value' => $pathPreview,
                             ]
                                     : null,
                             (in_array($model->type, FieldConstants::CONTENT_FIELD_TYPES, true) && !empty($model->content))
@@ -170,170 +139,3 @@ $pathLanguage = $canPreviewPath ? $resolveLanguage($model->content) : null;
         </div>
     <?php endif; ?>
 </div>
-
-<?php
-echo <<<HTML
-<div class="modal fade" id="path-preview-modal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title mb-0 flex-grow-1 text-truncate">
-                    <span id="path-preview-title">File Preview</span>
-                    <span id="path-preview-language" class="badge text-bg-secondary ms-2 d-none"></span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <pre class="mb-0 border-0"><code id="path-preview-content" class="font-monospace"></code></pre>
-            </div>
-        </div>
-    </div>
-</div>
-HTML;
-
-$js = <<<JS
-function pathPreview() {
-    var modalElement = document.getElementById('path-preview-modal');
-    if (!modalElement || !window.bootstrap) {
-        return;
-    }
-
-    var modalBody = document.getElementById('path-preview-content');
-    var modalTitle = document.getElementById('path-preview-title');
-    var modal = new bootstrap.Modal(modalElement);
-    var languageBadge = document.getElementById('path-preview-language');
-    var defaultErrorMessage = 'Preview error: Unable to load preview.';
-
-    function resetLanguageBadge() {
-        if (!languageBadge) {
-            return;
-        }
-        languageBadge.textContent = '';
-        languageBadge.classList.add('d-none');
-    }
-
-    function updateLanguageBadge(label) {
-        if (!languageBadge) {
-            return;
-        }
-        languageBadge.textContent = label;
-        languageBadge.classList.remove('d-none');
-    }
-
-    function applyLanguageClass(language) {
-        var classes = ['font-monospace', 'hljs', 'text-light', 'language-' + language];
-        modalBody.className = classes.join(' ');
-    }
-
-    /**
-     * Binnen comments als:
-     *   /** @noinspection PhpUnused *\/
-     * zet dit script "PhpUnused" in een eigen span zodat de CSS
-     * het anders kan kleuren dan de rest van de comment.
-     */
-    function tweakPhpSuppressions(root) {
-        if (!root) {
-            return;
-        }
-
-        root.querySelectorAll('.hljs-comment').forEach(function (commentEl) {
-            // alleen comments met een @noinspection-doctag
-            if (!commentEl.querySelector('.hljs-doctag')) {
-                return;
-            }
-
-            var walker = document.createTreeWalker(
-                commentEl,
-                NodeFilter.SHOW_TEXT,
-                null
-            );
-
-            var textNodes = [];
-            while (walker.nextNode()) {
-                textNodes.push(walker.currentNode);
-            }
-
-            textNodes.forEach(function (node) {
-                var text = node.nodeValue;
-                var target = 'PhpUnused';
-                var index = text.indexOf(target);
-
-                if (index === -1) {
-                    return;
-                }
-
-                var before = text.slice(0, index);
-                var after = text.slice(index + target.length);
-
-                var span = document.createElement('span');
-                span.className = 'hljs-inspection-name';
-                span.textContent = target;
-
-                var parent = node.parentNode;
-                if (!parent) {
-                    return;
-                }
-
-                if (before) {
-                    parent.insertBefore(document.createTextNode(before), node);
-                }
-                parent.insertBefore(span, node);
-                if (after) {
-                    parent.insertBefore(document.createTextNode(after), node);
-                }
-
-                parent.removeChild(node);
-            });
-        });
-    }
-
-    function setPreviewContent(text) {
-        modalBody.textContent = text;
-
-        if (window.hljs) {
-            window.hljs.highlightElement(modalBody);
-            tweakPhpSuppressions(modalBody);
-        }
-    }
-
-    function showError(message) {
-        resetLanguageBadge();
-        setPreviewContent(message ? 'Preview error: ' + message : defaultErrorMessage);
-    }
-
-    document.querySelectorAll('.path-preview').forEach(function (button) {
-        button.addEventListener('click', function () {
-            var language = button.getAttribute('data-language') || 'plaintext';
-            var languageLabel = button.getAttribute('data-language-label') || language.toUpperCase();
-
-            if (modalTitle) {
-                modalTitle.textContent = button.getAttribute('data-path-label') || 'File Preview';
-            }
-
-            resetLanguageBadge();
-            applyLanguageClass(language);
-            setPreviewContent('Loading...');
-            modal.show();
-
-            fetch(button.getAttribute('data-url'), {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(function (response) { return response.json(); })
-                .then(function (data) {
-                    if (!data.success) {
-                        showError(data.message || '');
-                        return;
-                    }
-                    updateLanguageBadge(languageLabel);
-                    setPreviewContent(data.preview);
-                })
-                .catch(function (error) {
-                    console.error('Path preview failed:', error);
-                    showError('');
-                });
-        });
-    });
-}
-pathPreview();
-JS;
-
-$this->registerJs($js);
-?>
