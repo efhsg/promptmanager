@@ -4,8 +4,10 @@
 /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\assets\QuillAsset;
+use app\widgets\PathPreviewWidget;
 use conquer\select2\Select2Widget;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\web\JsExpression;
 
 /* @var string $templateBody */
@@ -116,6 +118,19 @@ $templateRendered = preg_replace_callback(
                                 'multiple' => $fieldType === 'multi-select',
                         ],
                         'settings' => $select2Settings,
+                ]),
+                'file' => Html::hiddenInput(
+                        $name,
+                        (string)($field['default'] ?? ''),
+                        ['id' => "field-$placeholder"]
+                ) . PathPreviewWidget::widget([
+                        'path' => (string)($field['default'] ?? ''),
+                        'previewUrl' => !empty($field['default'] ?? '') ? Url::to([
+                                'field/path-preview',
+                                'id' => $field['id'] ?? $placeholder,
+                                'path' => $field['default'] ?? '',
+                        ]) : '',
+                        'enablePreview' => !empty($field['default'] ?? ''),
                 ]),
                 default => Html::textarea(
                         $name,

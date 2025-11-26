@@ -267,7 +267,7 @@ class PromptInstanceController extends Controller
         foreach ($template->fields as $field) {
             $fields[(string)$field->id] = $this->getFieldData($field);
         }
-        return $this->renderPartial('_template_form', [
+        return $this->renderAjax('_template_form', [
             'templateBody' => $templateBody,
             'fields' => $fields,
         ]);
@@ -276,6 +276,7 @@ class PromptInstanceController extends Controller
     private function getFieldData($field): array
     {
         $fieldData = [
+            'id' => $field->id,
             'type' => $field->type,
             'label' => $field->label,
         ];
