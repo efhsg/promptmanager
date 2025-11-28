@@ -87,24 +87,32 @@ $templateRendered = preg_replace_callback(
 
                 return
                         Html::hiddenInput($name, $defaultValue, ['id' => $hiddenId]) .
-                        Html::tag('div', '', [
-                                'id' => $editorId,
-                                'style' => 'height:150px;border:1px solid #ccc',
-                                'data-editor' => 'quill',
-                                'data-target' => $hiddenId,
-                                'data-config' => json_encode([
-                                        'theme' => 'snow',
-                                        'placeholder' => $placeholderText,
-                                        'modules' => [
-                                                'toolbar' => [
-                                                        ['bold', 'italic', 'underline'],
-                                                        ['blockquote', 'code-block'],
-                                                        [['list' => 'ordered'], ['list' => 'bullet']],
-                                                        ['clean'],
+                        Html::tag(
+                                'div',
+                                Html::tag('div', '', [
+                                        'id' => $editorId,
+                                        'class' => 'resizable-editor',
+                                        'style' => 'min-height: 150px;',
+                                        'data-editor' => 'quill',
+                                        'data-target' => $hiddenId,
+                                        'data-config' => json_encode([
+                                                'theme' => 'snow',
+                                                'placeholder' => $placeholderText,
+                                                'modules' => [
+                                                        'toolbar' => [
+                                                                ['bold', 'italic', 'underline', 'strike'],
+                                                                ['blockquote', 'code-block'],
+                                                                [['list' => 'ordered'], ['list' => 'bullet']],
+                                                                [['indent' => '-1'], ['indent' => '+1']],
+                                                                [['header' => [1, 2, 3, 4, 5, 6, false]]],
+                                                                [['align' => []]],
+                                                                ['clean'],
+                                                        ],
                                                 ],
-                                        ],
-                                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                        ]);
+                                        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+                                ]),
+                                ['class' => 'resizable-editor-container mb-3']
+                        );
             }
 
             return match ($fieldType) {
