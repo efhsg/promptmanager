@@ -73,7 +73,6 @@ QuillAsset::register($this);
             <div
                 id="field-path-suggestions"
                 class="list-group shadow-sm d-none position-absolute w-100"
-                style="max-height: 240px; overflow-y: auto; z-index: 1050; top: 0; left: 0;"
             ></div>
         </div>
         <div class="form-text">

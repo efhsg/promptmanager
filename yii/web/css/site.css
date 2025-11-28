@@ -274,3 +274,12 @@ a.desc:after {
 #path-preview-modal .hljs-title.class_ {
     color: #f0f0f0 !important;
 }
+
+/* Field path suggestions dropdown */
+#field-path-suggestions {
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 1050;
+    top: 0;
+    left: 0;
+}
