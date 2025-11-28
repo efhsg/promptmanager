@@ -1,39 +1,83 @@
-# PromptManager - Claude Code Guidance
-
-## Project Context
+# CLAUDE.md
 
 Yii2-based LLM prompt management system. Manages reusable prompt components (projects, contexts, fields, templates) and generates final prompts via placeholder substitution using Quill Delta format.
 
-**Current Focus:** Placeholder replacement (`PromptGenerationService`), multi-tenant access control, field validation.
+**Stack:** PHP 8.2+, Yii2 2.0.x, MySQL 8.x, Quill.js (Delta format), Codeception, Docker Compose
 
-## Tech Stack
+## Code Standards (STRICT)
 
-- PHP 8.2+ (Yii2 2.0.x), MySQL 8.x, Quill.js
-- Testing: Codeception
-- Infrastructure: Docker Compose (services: pma_yii, pma_nginx, pma_mysql, pma_npm)
-- IDE: PHPStorm on Windows → Unix deployment
-
-## Critical Rules (VIOLATIONS = REJECTED CODE)
-
-### Code Standards
-- ✅ PSR-12 compliant, full type hints on ALL parameters/returns
-- ✅ Imports at top, NEVER fully-qualified names in method bodies
-- ❌ **NEVER use `declare(strict_types=1);`** - Not used in this project
-- ❌ **NEVER add @param/@return in PHPDoc** - Only `@throws` and special behaviors
-- ❌ **NEVER edit `yii/web/` directly** - Compiled outputs from `npm/`
+### PHP Style
+- PSR-12 compliant with full type hints on ALL parameters, return types, and properties
+- Use `use` statements at top; NEVER fully-qualified names in method bodies
+- **❌ NEVER** add `declare(strict_types=1);`
+- **❌ NEVER** add `@param`/`@return` PHPDoc (only `@throws` allowed)
+- **❌ NEVER** edit files in `yii/web/` (compiled from `npm/`)
 
 ### Architecture
-- **Service Layer Pattern**: ALL business logic in `yii/services/`, controllers stay thin
-- **SOLID/DRY/YAGNI**: Apply pragmatically - stop when duplication/coupling eliminated
-- See `docs/ARCHITECTURE.md` for detailed patterns and examples
+- **Service Layer (REQUIRED):** ALL business logic in `yii/services/`, controllers stay thin (HTTP only)
+- Services injected via constructor DI; models handle data structure only
+- Apply SOLID/DRY/YAGNI pragmatically
 
 ### Testing (Codeception)
-- ❌ **NEVER duplicate fixture loading** - Use `_fixtures()` method ONLY, NOT `haveFixtures()` in `_before()`
-- ❌ **NEVER use magic numbers** - Use `grabFixture('users', 'user1')` instead of hardcoded IDs
-- ✅ Test both success and failure paths
-- ✅ Use `createMock()` for unit tests, fixtures for integration tests
-- See `docs/TESTING.md` for detailed examples and patterns
+- **❌ NEVER** duplicate fixture loading - use `_fixtures()` method ONLY, not `haveFixtures()` in `_before()`
+- **❌ NEVER** use magic numbers - use `$this->tester->grabFixture('users', 'user1')`
+- Test both success and failure paths
 
-### Comment Style (STRICT)
-```php
- 
+## Commands
+
+```bash
+# Docker
+docker compose up -d                    # Start
+docker exec -it pma_yii bash            # Shell access
+
+# Tests
+docker exec pma_yii vendor/bin/codecept run unit
+docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest:testMethod
+
+# Migrations
+docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+
+# Frontend (after Quill changes)
+docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
+```
+
+## Structure
+
+```
+yii/
+├── controllers/    # Thin HTTP layer
+├── services/       # Business logic (most code here)
+├── models/         # ActiveRecord + validation
+├── views/          # Templates
+├── config/         # main.php, web.php, console.php, test.php, db.php
+├── migrations/     # Database migrations
+├── modules/identity/  # Auth module (separate migrations)
+├── tests/          # Codeception suites
+└── web/            # GENERATED - never edit
+npm/                # Frontend source for Quill.js
+```
+
+**Key Models:** Project, Context, Field, FieldOption, PromptTemplate, TemplateField, PromptInstance, UserPreference
+
+**Key Services:** ProjectService, ContextService, FieldService, PromptTemplateService, PromptGenerationService, PromptInstanceService, UserPreferenceService
+
+## Domain
+
+### Prompt Generation Flow
+Project → Context → Field/FieldOption → PromptTemplate → PromptInstance → Final Prompt
+
+### Placeholders
+- `GEN:{{fieldId}}` - Generic field
+- `PRJ:{{fieldId}}` - Project-specific field
+- Replaced by `PromptGenerationService` using Quill Delta format
+
+## Environment
+
+Docker Compose with `.env`: `DB_HOST=pma_mysql`, `DB_DATABASE=promptmanager`, `DB_DATABASE_TEST=promptmanager_test`, `NGINX_PORT=8503`
+
+## Notes
+
+- Windows dev → Unix containers via Docker
+- Prompts use Quill Delta format (JSON ops array), not plain text/HTML
+- Multi-tenant with owner-based RBAC permissions
