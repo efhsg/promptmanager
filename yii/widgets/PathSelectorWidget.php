@@ -9,18 +9,24 @@ use yii\helpers\Html;
 use yii\helpers\Json;
 
 /**
- * Renders a path selector widget with autocomplete functionality.
- * Fetches available paths from a project via AJAX and syncs selection with a hidden input.
+ * Path selector widget with autocomplete functionality.
+ * Fetches paths from a project via AJAX and syncs with a hidden input.
  */
 class PathSelectorWidget extends Widget
 {
-    public ?int $projectId = null;
-    public string $fieldType = 'file';
     public ?string $initialValue = null;
     public string $pathListUrl = '';
     public ?string $projectRootDirectory = null;
     public string $hiddenContentInputId = 'field-content';
     public array $wrapperOptions = [];
+    public string $labelText = 'Path';
+    public string $placeholderText = 'Start typing to search paths';
+    public string $loadingText = 'Loading paths...';
+    public string $noProjectText = 'Select a project to browse paths.';
+    public string $noPathsText = 'No paths available.';
+    public string $noMatchText = 'No paths match current input.';
+    public string $notFoundText = 'Path not found in project.';
+    public string $errorText = 'Unable to load paths.';
 
     /**
      * @throws InvalidConfigException
@@ -35,11 +41,12 @@ class PathSelectorWidget extends Widget
 
     public function run(): string
     {
-        $wrapperId = 'field-path-wrapper';
-        $inputId = 'field-path-input';
-        $suggestionsId = 'field-path-suggestions';
-        $statusId = 'field-path-status';
-        $rootLabelId = 'field-path-root';
+        $baseId = $this->getId();
+        $wrapperId = $baseId . '-wrapper';
+        $inputId = $baseId . '-input';
+        $suggestionsId = $baseId . '-suggestions';
+        $statusId = $baseId . '-status';
+        $rootLabelId = $baseId . '-root';
 
         $wrapperOptions = array_merge([
             'id' => $wrapperId,
@@ -48,11 +55,11 @@ class PathSelectorWidget extends Widget
         ], $this->wrapperOptions);
 
         $html = Html::beginTag('div', $wrapperOptions);
-        $html .= Html::label('Path', $inputId, ['class' => 'form-label']);
+        $html .= Html::label($this->labelText, $inputId, ['class' => 'form-label']);
         $html .= Html::input('text', null, '', [
             'class' => 'form-control',
             'id' => $inputId,
-            'placeholder' => 'Start typing to search paths',
+            'placeholder' => $this->placeholderText,
             'disabled' => true,
             'autocomplete' => 'off',
         ]);
@@ -70,26 +77,35 @@ class PathSelectorWidget extends Widget
         $html .= Html::endTag('div');
         $html .= Html::endTag('div');
 
-        $this->registerScript($wrapperId, $inputId, $suggestionsId, $statusId, $rootLabelId);
+        $this->registerScript($baseId, $inputId, $suggestionsId, $statusId, $rootLabelId, $wrapperId);
 
         return $html;
     }
 
     private function registerScript(
-        string $wrapperId,
+        string $baseId,
         string $inputId,
         string $suggestionsId,
         string $statusId,
-        string $rootLabelId
+        string $rootLabelId,
+        string $wrapperId
     ): void {
-        $wrapperIdJson = Json::encode($wrapperId);
+        $baseIdJson = Json::encode($baseId);
         $inputIdJson = Json::encode($inputId);
         $suggestionsIdJson = Json::encode($suggestionsId);
         $statusIdJson = Json::encode($statusId);
         $rootLabelIdJson = Json::encode($rootLabelId);
+        $wrapperIdJson = Json::encode($wrapperId);
         $pathListUrl = Json::encode($this->pathListUrl);
         $hiddenContentInputId = Json::encode($this->hiddenContentInputId);
         $initialValue = Json::encode($this->initialValue);
+        $placeholderText = Json::encode($this->placeholderText);
+        $loadingText = Json::encode($this->loadingText);
+        $noProjectText = Json::encode($this->noProjectText);
+        $noPathsText = Json::encode($this->noPathsText);
+        $noMatchText = Json::encode($this->noMatchText);
+        $notFoundText = Json::encode($this->notFoundText);
+        $errorText = Json::encode($this->errorText);
 
         $script = <<<JS
 /* eslint-disable */
@@ -105,13 +121,23 @@ class PathSelectorWidget extends Widget
     let availablePaths = [];
     let initialPathValue = {$initialValue};
 
+    const messages = {
+        placeholder: {$placeholderText},
+        loading: {$loadingText},
+        noProject: {$noProjectText},
+        noPaths: {$noPathsText},
+        noMatch: {$noMatchText},
+        notFound: {$notFoundText},
+        error: {$errorText}
+    };
+
     function syncHiddenContentFromPath() {
         if (hiddenContentInput && pathInput) {
             hiddenContentInput.value = pathInput.value || '';
         }
     }
 
-    function resetPathWidget(placeholder = 'Select a path', clearHiddenContent = true) {
+    function resetPathWidget(placeholder = messages.placeholder, clearHiddenContent = true) {
         availablePaths = [];
         if (pathInput) {
             pathInput.value = '';
@@ -131,7 +157,7 @@ class PathSelectorWidget extends Widget
         if (pathStatus) {
             pathStatus.textContent = message;
         }
-        resetPathWidget('Unable to load paths');
+        resetPathWidget(messages.error, false);
     }
 
     function renderPathOptions(forceValue = null) {
@@ -180,11 +206,11 @@ class PathSelectorWidget extends Widget
 
         if (pathStatus) {
             if (availablePaths.length === 0) {
-                pathStatus.textContent = 'No paths available.';
+                pathStatus.textContent = messages.noPaths;
             } else if (filteredPaths.length === 0 && filterTerm !== '') {
-                pathStatus.textContent = 'No paths match current input.';
+                pathStatus.textContent = messages.noMatch;
             } else if (currentValue && !availablePaths.includes(currentValue)) {
-                pathStatus.textContent = 'Path not found in project.';
+                pathStatus.textContent = messages.notFound;
             } else {
                 pathStatus.textContent = '';
             }
@@ -200,12 +226,12 @@ class PathSelectorWidget extends Widget
 
         if (!projectId) {
             if (pathStatus) {
-                pathStatus.textContent = 'Select a project to browse paths.';
+                pathStatus.textContent = messages.noProject;
             }
             if (pathRootLabel) {
                 pathRootLabel.textContent = '';
             }
-            resetPathWidget('Select a path');
+            resetPathWidget(messages.placeholder);
             return;
         }
 
@@ -214,7 +240,7 @@ class PathSelectorWidget extends Widget
         }
         if (pathInput) {
             pathInput.disabled = true;
-            pathInput.placeholder = 'Loading paths...';
+            pathInput.placeholder = messages.loading;
         }
         if (pathSuggestions) {
             pathSuggestions.innerHTML = '';
@@ -227,13 +253,13 @@ class PathSelectorWidget extends Widget
             });
 
             if (!response.ok) {
-                handlePathError('Unable to load paths.');
+                handlePathError(messages.error);
                 return;
             }
 
             const data = await response.json();
             if (!data.success) {
-                handlePathError(data.message || 'Unable to load paths.');
+                handlePathError(data.message || messages.error);
                 return;
             }
 
@@ -244,7 +270,7 @@ class PathSelectorWidget extends Widget
 
             if (pathInput) {
                 pathInput.disabled = false;
-                pathInput.placeholder = 'Start typing to search paths';
+                pathInput.placeholder = messages.placeholder;
             }
 
             const targetValue = (hiddenContentInput ? hiddenContentInput.value : '') || initialPathValue || '';
@@ -272,14 +298,16 @@ class PathSelectorWidget extends Widget
     }
 
     window.pathSelectorWidgets = window.pathSelectorWidgets || {};
-    window.pathSelectorWidgets[{$wrapperIdJson}] = {
+    window.pathSelectorWidgets[{$baseIdJson}] = {
         load: loadPathOptions,
         reset: resetPathWidget,
         render: renderPathOptions,
         sync: syncHiddenContentFromPath
     };
 
-    window.pathSelectorWidget = window.pathSelectorWidgets[{$wrapperIdJson}];
+    if (!window.pathSelectorWidget) {
+        window.pathSelectorWidget = window.pathSelectorWidgets[{$baseIdJson}];
+    }
 })();
 /* eslint-enable */
 JS;

@@ -70,12 +70,6 @@ endif; ?>
     </div>
 
     <?= PathSelectorWidget::widget([
-            'projectId' => $modelField->project_id,
-            'fieldType' => in_array(
-                    $modelField->type,
-                    FieldConstants::PATH_FIELD_TYPES,
-                    true
-            ) ? $modelField->type : 'file',
             'initialValue' => in_array(
                     $modelField->type,
                     FieldConstants::PATH_FIELD_TYPES,
@@ -84,6 +78,7 @@ endif; ?>
             'pathListUrl' => Url::to(['field/path-list']),
             'projectRootDirectory' => $modelField->project?->root_directory,
             'hiddenContentInputId' => 'field-content',
+            'wrapperOptions' => ['id' => 'field-path-wrapper'],
     ]) ?>
 
     <div id="field-options-wrapper" style="display: none;">
