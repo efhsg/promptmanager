@@ -1,11 +1,17 @@
 <?php
+/** @noinspection JSPrimitiveTypeWrapperUsage */
 
 namespace app\widgets;
 
+use yii\base\InvalidConfigException;
 use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
 
+/**
+ * Renders a path selector widget with autocomplete functionality.
+ * Fetches available paths from a project via AJAX and syncs selection with a hidden input.
+ */
 class PathSelectorWidget extends Widget
 {
     public ?int $projectId = null;
@@ -15,6 +21,17 @@ class PathSelectorWidget extends Widget
     public ?string $projectRootDirectory = null;
     public string $hiddenContentInputId = 'field-content';
     public array $wrapperOptions = [];
+
+    /**
+     * @throws InvalidConfigException
+     */
+    public function init(): void
+    {
+        parent::init();
+        if (empty($this->pathListUrl)) {
+            throw new InvalidConfigException('The "pathListUrl" property must be set.');
+        }
+    }
 
     public function run(): string
     {
@@ -65,17 +82,25 @@ class PathSelectorWidget extends Widget
         string $statusId,
         string $rootLabelId
     ): void {
+        $wrapperIdJson = Json::encode($wrapperId);
+        $inputIdJson = Json::encode($inputId);
+        $suggestionsIdJson = Json::encode($suggestionsId);
+        $statusIdJson = Json::encode($statusId);
+        $rootLabelIdJson = Json::encode($rootLabelId);
         $pathListUrl = Json::encode($this->pathListUrl);
         $hiddenContentInputId = Json::encode($this->hiddenContentInputId);
         $initialValue = Json::encode($this->initialValue);
 
         $script = <<<JS
+/* eslint-disable */
+// noinspection JSAnnotator
+
 (function() {
-    const pathInput = document.getElementById('{$inputId}');
-    const pathSuggestions = document.getElementById('{$suggestionsId}');
-    const pathStatus = document.getElementById('{$statusId}');
-    const pathRootLabel = document.getElementById('{$rootLabelId}');
-    const hiddenContentInput = document.getElementById({$hiddenContentInputId})
+    const pathInput = document.getElementById({$inputIdJson});
+    const pathSuggestions = document.getElementById({$suggestionsIdJson});
+    const pathStatus = document.getElementById({$statusIdJson});
+    const pathRootLabel = document.getElementById({$rootLabelIdJson});
+    const hiddenContentInput = document.getElementById({$hiddenContentInputId});
     const pathListUrl = {$pathListUrl};
     let availablePaths = [];
     let initialPathValue = {$initialValue};
@@ -246,13 +271,17 @@ class PathSelectorWidget extends Widget
         });
     }
 
-    window.pathSelectorWidget = {
+    window.pathSelectorWidgets = window.pathSelectorWidgets || {};
+    window.pathSelectorWidgets[{$wrapperIdJson}] = {
         load: loadPathOptions,
         reset: resetPathWidget,
         render: renderPathOptions,
         sync: syncHiddenContentFromPath
     };
+
+    window.pathSelectorWidget = window.pathSelectorWidgets[{$wrapperIdJson}];
 })();
+/* eslint-enable */
 JS;
 
         $this->view->registerJs($script);
