@@ -196,7 +196,12 @@ class ProjectTest extends Unit
         $project->blacklisted_directories = ' vendor , /runtime/logs/,web , web ';
 
         verify($project->validate())->true();
-        verify($project->getBlacklistedDirectories())->equals(['vendor', 'runtime/logs', 'web']);
+        $rules = $project->getBlacklistedDirectories();
+        verify($rules)->equals([
+            ['path' => 'vendor', 'exceptions' => []],
+            ['path' => 'runtime/logs', 'exceptions' => []],
+            ['path' => 'web', 'exceptions' => []],
+        ]);
     }
 
     public function testBlacklistedDirectoriesValidationBlocksTraversal(): void
@@ -208,5 +213,78 @@ class ProjectTest extends Unit
 
         verify($project->validate())->false();
         verify($project->getErrors('blacklisted_directories'))->notEmpty();
+    }
+
+    public function testBlacklistedDirectoriesWithWhitelistExceptions(): void
+    {
+        $project = new Project();
+        $project->name = 'Blacklist With Exceptions';
+        $project->user_id = 1;
+        $project->blacklisted_directories = 'vendor, web/[css,js], tests/_output';
+
+        verify($project->validate())->true();
+        $rules = $project->getBlacklistedDirectories();
+        verify($rules)->equals([
+            ['path' => 'vendor', 'exceptions' => []],
+            ['path' => 'web', 'exceptions' => ['css', 'js']],
+            ['path' => 'tests/_output', 'exceptions' => []],
+        ]);
+    }
+
+    public function testBlacklistedDirectoriesNormalizeWhitelistExceptions(): void
+    {
+        $project = new Project();
+        $project->name = 'Normalize Exceptions';
+        $project->user_id = 1;
+        $project->blacklisted_directories = 'web/[css , js, css]';
+
+        verify($project->validate())->true();
+        $rules = $project->getBlacklistedDirectories();
+        verify($rules)->equals([
+            ['path' => 'web', 'exceptions' => ['css', 'js']],
+        ]);
+    }
+
+    public function testBlacklistedDirectoriesValidationRejectsEmptyException(): void
+    {
+        $project = new Project();
+        $project->name = 'Invalid Exception';
+        $project->user_id = 1;
+        $project->blacklisted_directories = 'web/[css,,js]';
+
+        verify($project->validate())->false();
+        verify($project->getErrors('blacklisted_directories'))->notEmpty();
+    }
+
+    public function testBlacklistedDirectoriesValidationRejectsNestedExceptions(): void
+    {
+        $project = new Project();
+        $project->name = 'Invalid Nested Exception';
+        $project->user_id = 1;
+        $project->blacklisted_directories = 'web/[css/nested]';
+
+        verify($project->validate())->false();
+        verify($project->getErrors('blacklisted_directories'))->notEmpty();
+    }
+
+    public function testBlacklistedDirectoriesRoundTrip(): void
+    {
+        $project = new Project();
+        $project->name = 'Round Trip Test';
+        $project->user_id = 1;
+        $project->blacklisted_directories = 'vendor, web/[css,js], tests/_output';
+
+        verify($project->validate())->true();
+        verify($project->save())->true();
+
+        $reloaded = Project::findOne($project->id);
+        verify($reloaded->blacklisted_directories)->equals('vendor,web/[css,js],tests/_output');
+
+        $rules = $reloaded->getBlacklistedDirectories();
+        verify($rules)->equals([
+            ['path' => 'vendor', 'exceptions' => []],
+            ['path' => 'web', 'exceptions' => ['css', 'js']],
+            ['path' => 'tests/_output', 'exceptions' => []],
+        ]);
     }
 }

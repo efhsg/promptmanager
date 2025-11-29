@@ -55,17 +55,19 @@ class PathService
                 $childPath = $currentPath . DIRECTORY_SEPARATOR . $child;
                 $relative = $this->makeRelativePath($normalizedBase, $childPath);
 
-                if ($relative !== '/' && $this->isBlacklistedPath($relative, $normalizedBlacklist)) {
-                    continue;
-                }
-
                 $isDir = is_dir($childPath);
+                $isBlacklisted = $relative !== '/' && $this->isBlacklistedPath($relative, $normalizedBlacklist);
+                $shouldTraverse = !$isBlacklisted || $this->hasWhitelistExceptions($relative, $normalizedBlacklist);
 
-                if ($isDir && $depth < self::PATH_LIST_MAX_DEPTH) {
+                if ($isDir && $shouldTraverse && $depth < self::PATH_LIST_MAX_DEPTH) {
                     $queue[] = [
                         'path' => $childPath,
                         'depth' => $depth + 1,
                     ];
+                }
+
+                if ($isBlacklisted) {
+                    continue;
                 }
 
                 if ($relative === '/') {
@@ -145,30 +147,92 @@ class PathService
 
     private function normalizeBlacklistedDirectories(array $blacklistedDirectories): array
     {
-        $normalized = array_map(
-            static function (string $directory): string {
-                $cleaned = trim(str_replace('\\', '/', $directory), " \t\n\r\0\x0B/");
-                return strtolower($cleaned);
-            },
-            $blacklistedDirectories
-        );
+        $normalized = [];
 
-        $filtered = array_filter($normalized, static fn(string $value): bool => $value !== '');
+        foreach ($blacklistedDirectories as $entry) {
+            if (is_array($entry) && isset($entry['path'])) {
+                $cleanedPath = trim(str_replace('\\', '/', $entry['path']), " \t\n\r\0\x0B/");
+                if ($cleanedPath === '') {
+                    continue;
+                }
 
-        return array_values(array_unique($filtered));
+                $exceptions = [];
+                if (isset($entry['exceptions']) && is_array($entry['exceptions'])) {
+                    foreach ($entry['exceptions'] as $exception) {
+                        $cleanedException = trim(str_replace('\\', '/', (string)$exception), " \t\n\r\0\x0B/");
+                        if ($cleanedException !== '') {
+                            $exceptions[] = strtolower($cleanedException);
+                        }
+                    }
+                }
+
+                $normalized[] = [
+                    'path' => strtolower($cleanedPath),
+                    'exceptions' => array_values(array_unique($exceptions)),
+                ];
+            } elseif (is_string($entry)) {
+                $cleaned = trim(str_replace('\\', '/', $entry), " \t\n\r\0\x0B/");
+                if ($cleaned !== '') {
+                    $normalized[] = [
+                        'path' => strtolower($cleaned),
+                        'exceptions' => [],
+                    ];
+                }
+            }
+        }
+
+        return $normalized;
     }
 
-    private function isBlacklistedPath(string $relativePath, array $blacklistedDirectories): bool
+    private function hasWhitelistExceptions(string $relativePath, array $blacklistedRules): bool
     {
-        if ($blacklistedDirectories === []) {
+        if ($blacklistedRules === []) {
             return false;
         }
 
         $normalizedPath = strtolower(ltrim($relativePath, '/'));
 
-        foreach ($blacklistedDirectories as $directory) {
-            if ($normalizedPath === $directory || str_starts_with($normalizedPath, $directory . '/')) {
+        foreach ($blacklistedRules as $rule) {
+            $blacklistedDir = $rule['path'];
+            $exceptions = $rule['exceptions'];
+
+            if (($normalizedPath === $blacklistedDir || str_starts_with($normalizedPath, $blacklistedDir . '/')) && $exceptions !== []) {
                 return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isBlacklistedPath(string $relativePath, array $blacklistedRules): bool
+    {
+        if ($blacklistedRules === []) {
+            return false;
+        }
+
+        $normalizedPath = strtolower(ltrim($relativePath, '/'));
+
+        foreach ($blacklistedRules as $rule) {
+            $blacklistedDir = $rule['path'];
+            $exceptions = $rule['exceptions'];
+
+            if ($normalizedPath === $blacklistedDir || str_starts_with($normalizedPath, $blacklistedDir . '/')) {
+                if ($exceptions === []) {
+                    return true;
+                }
+
+                $isException = false;
+                foreach ($exceptions as $exception) {
+                    $exceptionPath = $blacklistedDir . '/' . $exception;
+                    if ($normalizedPath === $exceptionPath || str_starts_with($normalizedPath, $exceptionPath . '/')) {
+                        $isException = true;
+                        break;
+                    }
+                }
+
+                if (!$isException) {
+                    return true;
+                }
             }
         }
 

@@ -88,8 +88,114 @@ class PathServiceTest extends Unit
         $logs->addChild(new vfsStreamFile('app.log'));
         $this->root->addChild($logs);
 
-        $resolved = $this->service->resolveRequestedPath($this->root->url(), 'logs/app.log', ['logs']);
+        $resolved = $this->service->resolveRequestedPath(
+            $this->root->url(),
+            'logs/app.log',
+            [['path' => 'logs', 'exceptions' => []]]
+        );
 
         $this->assertNull($resolved);
+    }
+
+    public function testCollectPathsRespectsWhitelistExceptions(): void
+    {
+        $web = new vfsStreamDirectory('web');
+        $css = new vfsStreamDirectory('css');
+        $js = new vfsStreamDirectory('js');
+        $assets = new vfsStreamDirectory('assets');
+
+        $css->addChild(new vfsStreamFile('style.css'));
+        $js->addChild(new vfsStreamFile('app.js'));
+        $assets->addChild(new vfsStreamFile('bundle.js'));
+
+        $web->addChild($css);
+        $web->addChild($js);
+        $web->addChild($assets);
+        $this->root->addChild($web);
+
+        $blacklist = [
+            ['path' => 'web', 'exceptions' => ['css', 'js']],
+        ];
+
+        $paths = $this->service->collectPaths($this->root->url(), false, [], $blacklist);
+
+        $this->assertContains('web/css/style.css', $paths);
+        $this->assertContains('web/js/app.js', $paths);
+        $this->assertNotContains('web/assets/bundle.js', $paths);
+    }
+
+    public function testCollectPathsWithBackwardCompatibleStringFormat(): void
+    {
+        $vendor = new vfsStreamDirectory('vendor');
+        $vendor->addChild(new vfsStreamDirectory('package'));
+        $src = new vfsStreamDirectory('src');
+        $src->addChild(new vfsStreamFile('keep.md'));
+        $this->root->addChild($vendor);
+        $this->root->addChild($src);
+
+        $paths = $this->service->collectPaths($this->root->url(), false, [], ['vendor']);
+
+        $this->assertSame(['src/keep.md'], $paths);
+    }
+
+    public function testResolveRequestedPathAllowsWhitelistedSubdirectory(): void
+    {
+        $web = new vfsStreamDirectory('web');
+        $css = new vfsStreamDirectory('css');
+        $assets = new vfsStreamDirectory('assets');
+
+        $cssFile = new vfsStreamFile('style.css');
+        $assetFile = new vfsStreamFile('bundle.js');
+
+        $css->addChild($cssFile);
+        $assets->addChild($assetFile);
+        $web->addChild($css);
+        $web->addChild($assets);
+        $this->root->addChild($web);
+
+        $blacklist = [
+            ['path' => 'web', 'exceptions' => ['css']],
+        ];
+
+        $resolvedCss = $this->service->resolveRequestedPath($this->root->url(), 'web/css/style.css', $blacklist);
+        $this->assertNotNull($resolvedCss);
+        $this->assertSame($this->root->url() . '/web/css/style.css', $resolvedCss);
+
+        $resolvedAsset = $this->service->resolveRequestedPath($this->root->url(), 'web/assets/bundle.js', $blacklist);
+        $this->assertNull($resolvedAsset);
+    }
+
+    public function testCollectPathsWithMultipleBlacklistRulesAndExceptions(): void
+    {
+        $vendor = new vfsStreamDirectory('vendor');
+        $vendorBin = new vfsStreamDirectory('bin');
+        $vendorLib = new vfsStreamDirectory('lib');
+        $vendorBin->addChild(new vfsStreamFile('tool'));
+        $vendorLib->addChild(new vfsStreamFile('library.php'));
+        $vendor->addChild($vendorBin);
+        $vendor->addChild($vendorLib);
+
+        $tests = new vfsStreamDirectory('tests');
+        $testsUnit = new vfsStreamDirectory('unit');
+        $testsOutput = new vfsStreamDirectory('_output');
+        $testsUnit->addChild(new vfsStreamFile('Test.php'));
+        $testsOutput->addChild(new vfsStreamFile('coverage.xml'));
+        $tests->addChild($testsUnit);
+        $tests->addChild($testsOutput);
+
+        $this->root->addChild($vendor);
+        $this->root->addChild($tests);
+
+        $blacklist = [
+            ['path' => 'vendor', 'exceptions' => ['bin']],
+            ['path' => 'tests', 'exceptions' => ['unit']],
+        ];
+
+        $paths = $this->service->collectPaths($this->root->url(), false, [], $blacklist);
+
+        $this->assertContains('vendor/bin/tool', $paths);
+        $this->assertNotContains('vendor/lib/library.php', $paths);
+        $this->assertContains('tests/unit/Test.php', $paths);
+        $this->assertNotContains('tests/_output/coverage.xml', $paths);
     }
 }

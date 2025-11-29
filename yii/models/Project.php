@@ -105,7 +105,6 @@ class Project extends ActiveRecord
         }
 
         $this->normalizeAllowedFileExtensionsField();
-        $this->normalizeBlacklistedDirectoriesField();
 
         return true;
     }
@@ -166,24 +165,86 @@ class Project extends ActiveRecord
         return in_array($normalized, $whitelist, true);
     }
 
+    private function parseBlacklistDirectories(string $input): array
+    {
+        $parts = [];
+        $current = '';
+        $inBrackets = false;
+
+        for ($i = 0; $i < strlen($input); $i++) {
+            $char = $input[$i];
+
+            if ($char === '[') {
+                $inBrackets = true;
+                $current .= $char;
+            } elseif ($char === ']') {
+                $inBrackets = false;
+                $current .= $char;
+            } elseif ($char === ',' && !$inBrackets) {
+                $parts[] = $current;
+                $current = '';
+            } else {
+                $current .= $char;
+            }
+        }
+
+        if ($current !== '') {
+            $parts[] = $current;
+        }
+
+        return $parts;
+    }
+
     public function getBlacklistedDirectories(): array
     {
         if (empty($this->blacklisted_directories)) {
             return [];
         }
 
-        $parts = explode(',', $this->blacklisted_directories);
-        $normalized = array_map(
-            static fn(string $directory): string => trim(str_replace('\\', '/', $directory), " \t\n\r\0\x0B/"),
-            $parts
-        );
+        $parts = $this->parseBlacklistDirectories($this->blacklisted_directories);
+        $result = [];
 
-        $filtered = array_filter(
-            $normalized,
-            static fn(string $value): bool => $value !== ''
-        );
+        foreach ($parts as $part) {
+            $trimmed = trim($part);
+            if ($trimmed === '') {
+                continue;
+            }
 
-        return array_values(array_unique($filtered));
+            if (preg_match('~^(.+?)/?(\[([^\]]+)\])$~', $trimmed, $matches)) {
+                $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
+                $exceptionsStr = $matches[3];
+                $exceptionParts = array_map('trim', explode(',', $exceptionsStr));
+                $filtered = array_filter($exceptionParts, static fn(string $v): bool => $v !== '');
+                $exceptions = array_values(array_unique($filtered));
+
+                if ($basePath !== '') {
+                    $result[] = [
+                        'path' => $basePath,
+                        'exceptions' => $exceptions,
+                    ];
+                }
+            } else {
+                $normalized = trim(str_replace('\\', '/', $trimmed), " \t\n\r\0\x0B/");
+                if ($normalized !== '') {
+                    $result[] = [
+                        'path' => $normalized,
+                        'exceptions' => [],
+                    ];
+                }
+            }
+        }
+
+        $uniqueKeys = [];
+        $uniqueResult = [];
+        foreach ($result as $rule) {
+            $key = $rule['path'];
+            if (!isset($uniqueKeys[$key])) {
+                $uniqueKeys[$key] = true;
+                $uniqueResult[] = $rule;
+            }
+        }
+
+        return $uniqueResult;
     }
 
     public function getPromptInstanceCopyFormat(): string
@@ -209,8 +270,22 @@ class Project extends ActiveRecord
 
     private function normalizeBlacklistedDirectoriesField(): void
     {
-        $directories = $this->getBlacklistedDirectories();
-        $this->blacklisted_directories = $directories === [] ? null : implode(',', $directories);
+        $rules = $this->getBlacklistedDirectories();
+        if ($rules === []) {
+            $this->blacklisted_directories = null;
+            return;
+        }
+
+        $normalized = [];
+        foreach ($rules as $rule) {
+            if ($rule['exceptions'] === []) {
+                $normalized[] = $rule['path'];
+            } else {
+                $normalized[] = $rule['path'] . '/[' . implode(',', $rule['exceptions']) . ']';
+            }
+        }
+
+        $this->blacklisted_directories = implode(',', $normalized);
     }
 
     public function validateBlacklistedDirectories(string $attribute): void
@@ -219,25 +294,81 @@ class Project extends ActiveRecord
             return;
         }
 
-        foreach (explode(',', (string)$this->$attribute) as $directory) {
-            $normalized = trim(str_replace('\\', '/', $directory), " \t\n\r\0\x0B/");
+        $parts = $this->parseBlacklistDirectories((string)$this->$attribute);
 
-            if ($normalized === '') {
+        foreach ($parts as $directory) {
+            $trimmed = trim($directory);
+            if ($trimmed === '') {
                 $this->addError($attribute, 'Provide at least one directory or leave this field blank.');
                 return;
             }
 
-            if (str_contains($normalized, '..')) {
-                $this->addError($attribute, 'Blacklisted directories must be relative to the project root.');
-                return;
-            }
+            if (preg_match('~^(.+?)/?(\[([^\]]+)\])$~', $trimmed, $matches)) {
+                $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
+                $exceptionsStr = $matches[3];
 
-            if (!preg_match('~^[\\w.\\- ]+(?:/[\\w.\\- ]+)*$~', $normalized)) {
-                $this->addError(
-                    $attribute,
-                    'Directory names may include letters, numbers, dots, underscores, hyphens, spaces, and slashes only.'
-                );
-                return;
+                if ($basePath === '') {
+                    $this->addError($attribute, 'Blacklisted directory path cannot be empty.');
+                    return;
+                }
+
+                if (str_contains($basePath, '..')) {
+                    $this->addError($attribute, 'Blacklisted directories must be relative to the project root.');
+                    return;
+                }
+
+                if (!preg_match('~^[\w. -]+(?:/[\w. -]+)*$~', $basePath)) {
+                    $this->addError(
+                        $attribute,
+                        'Directory names may include letters, numbers, dots, underscores, hyphens, spaces, and slashes only.'
+                    );
+                    return;
+                }
+
+                $rawExceptionParts = explode(',', $exceptionsStr);
+                $exceptionParts = array_map('trim', $rawExceptionParts);
+
+                foreach ($rawExceptionParts as $i => $rawException) {
+                    $exception = $exceptionParts[$i];
+
+                    if ($exception === '') {
+                        $this->addError($attribute, 'Whitelist exceptions cannot be empty.');
+                        return;
+                    }
+
+                    if (str_contains($exception, '/') || str_contains($exception, '\\')) {
+                        $this->addError($attribute, 'Whitelist exceptions must be direct subdirectories (no slashes).');
+                        return;
+                    }
+
+                    if (!preg_match('~^[\w. -]+$~', $exception)) {
+                        $this->addError(
+                            $attribute,
+                            'Exception names may include letters, numbers, dots, underscores, hyphens, and spaces only.'
+                        );
+                        return;
+                    }
+                }
+            } else {
+                $normalized = trim(str_replace('\\', '/', $trimmed), " \t\n\r\0\x0B/");
+
+                if ($normalized === '') {
+                    $this->addError($attribute, 'Provide at least one directory or leave this field blank.');
+                    return;
+                }
+
+                if (str_contains($normalized, '..')) {
+                    $this->addError($attribute, 'Blacklisted directories must be relative to the project root.');
+                    return;
+                }
+
+                if (!preg_match('~^[\w. -]+(?:/[\w. -]+)*$~', $normalized)) {
+                    $this->addError(
+                        $attribute,
+                        'Directory names may include letters, numbers, dots, underscores, hyphens, spaces, and slashes only.'
+                    );
+                    return;
+                }
             }
         }
     }
