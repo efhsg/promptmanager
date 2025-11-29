@@ -89,23 +89,28 @@ class ProjectTest extends Unit
 
     public function testTimestampsAreUpdatedOnSave(): void
     {
-        // Create a new project and save it
-        $project = new Project();
-        $project->name = 'Timestamp Test Project';
-        $project->user_id = 1;
-        verify($project->save())->true();
+        try {
+            Project::setTimestampOverride(1_700_000_000);
 
-        $originalCreatedAt = $project->created_at;
-        $originalUpdatedAt = $project->updated_at;
-        sleep(1); // ensure time difference
+            $project = new Project();
+            $project->name = 'Timestamp Test Project';
+            $project->user_id = 1;
+            verify($project->save())->true();
 
-        // Update a property and save again
-        $project->name = 'Updated Timestamp Test Project';
-        verify($project->save())->true();
+            $originalCreatedAt = $project->created_at;
+            $originalUpdatedAt = $project->updated_at;
 
-        // Verify that created_at remains the same and updated_at is newer
-        verify($project->created_at)->equals($originalCreatedAt);
-        verify($project->updated_at)->greaterThan($originalUpdatedAt);
+            // Update a property and save again using a later synthetic timestamp
+            Project::setTimestampOverride($originalUpdatedAt + 10);
+            $project->name = 'Updated Timestamp Test Project';
+            verify($project->save())->true();
+
+            // Verify that created_at remains the same and updated_at is newer
+            verify($project->created_at)->equals($originalCreatedAt);
+            verify($project->updated_at)->greaterThan($originalUpdatedAt);
+        } finally {
+            Project::setTimestampOverride(null);
+        }
     }
 
     public function testSoftDeleteProject(): void

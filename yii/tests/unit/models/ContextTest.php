@@ -89,19 +89,25 @@ class ContextTest extends Unit
      */
     public function testTimestampsAreSetOnSave()
     {
-        $context = new Context();
-        $context->project_id = 1;
-        $context->name = 'New Context';
+        try {
+            Context::setTimestampOverride(1_700_000_100);
 
-        $context->save();
-        verify($context->created_at)->notEmpty();
-        verify($context->updated_at)->notEmpty();
-        verify($context->created_at)->equals($context->updated_at);
+            $context = new Context();
+            $context->project_id = 1;
+            $context->name = 'New Context';
 
-        sleep(1); // Ensure a different timestamp
-        $context->name = 'Updated Context';
-        $context->save();
-        verify($context->updated_at)->greaterThan($context->created_at);
+            $context->save();
+            verify($context->created_at)->notEmpty();
+            verify($context->updated_at)->notEmpty();
+            verify($context->created_at)->equals($context->updated_at);
+
+            Context::setTimestampOverride($context->created_at + 5);
+            $context->name = 'Updated Context';
+            $context->save();
+            verify($context->updated_at)->greaterThan($context->created_at);
+        } finally {
+            Context::setTimestampOverride(null);
+        }
     }
 
     public function testInvalidProjectId()

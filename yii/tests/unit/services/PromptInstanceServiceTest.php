@@ -24,6 +24,8 @@ class PromptInstanceServiceTest extends Unit
 
     private PromptInstanceService $service;
 
+    private static bool $schemaRefreshed = false;
+
     public function _fixtures(): array
     {
         return [
@@ -38,8 +40,10 @@ class PromptInstanceServiceTest extends Unit
     {
         parent::_before();
         $this->service = new PromptInstanceService();
-        Yii::$app->db->enableSchemaCache = false;
-        Yii::$app->db->schema->refresh();
+        if (!self::$schemaRefreshed && Yii::$app !== null && Yii::$app->has('db', true)) {
+            Yii::$app->db->schema->refresh();
+            self::$schemaRefreshed = true;
+        }
     }
 
     /**

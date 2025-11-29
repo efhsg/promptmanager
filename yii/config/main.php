@@ -50,6 +50,7 @@ $config = [
             'targets' => [
                 [
                     'class' => 'yii\log\DbTarget',
+                    'enabled' => YII_ENV !== 'test',
                     'levels' => ['error'],
                     'categories' => ['application', 'database'],
                     'logTable' => '{{%log}}',

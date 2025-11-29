@@ -16,7 +16,7 @@ modules:
             configFile: 'config/test.php'
 
 coverage:
-  enabled: true
+  enabled: false
   remote: false        # <<< important: use local Xdebug coverage
   include:
     - models/*
