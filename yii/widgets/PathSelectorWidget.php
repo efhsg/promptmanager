@@ -112,14 +112,14 @@ class PathSelectorWidget extends Widget
 // noinspection JSAnnotator
 
 (function() {
-    const pathInput = document.getElementById({$inputIdJson});
-    const pathSuggestions = document.getElementById({$suggestionsIdJson});
-    const pathStatus = document.getElementById({$statusIdJson});
-    const pathRootLabel = document.getElementById({$rootLabelIdJson});
-    const hiddenContentInput = document.getElementById({$hiddenContentInputId});
-    const pathListUrl = {$pathListUrl};
-    let availablePaths = [];
-    let initialPathValue = {$initialValue};
+    const pathInput = document.getElementById({$inputIdJson})
+    const pathSuggestions = document.getElementById({$suggestionsIdJson})
+    const pathStatus = document.getElementById({$statusIdJson})
+    const pathRootLabel = document.getElementById({$rootLabelIdJson})
+    const hiddenContentInput = document.getElementById({$hiddenContentInputId})
+    const pathListUrl = {$pathListUrl}
+    let availablePaths = []
+    let initialPathValue = {$initialValue}
 
     const messages = {
         placeholder: {$placeholderText},
@@ -129,186 +129,186 @@ class PathSelectorWidget extends Widget
         noMatch: {$noMatchText},
         notFound: {$notFoundText},
         error: {$errorText}
-    };
+    }
 
     function syncHiddenContentFromPath() {
         if (hiddenContentInput && pathInput) {
-            hiddenContentInput.value = pathInput.value || '';
+            hiddenContentInput.value = pathInput.value || ''
         }
     }
 
     function resetPathWidget(placeholder = messages.placeholder, clearHiddenContent = true) {
-        availablePaths = [];
+        availablePaths = []
         if (pathInput) {
-            pathInput.value = '';
-            pathInput.placeholder = placeholder;
-            pathInput.disabled = true;
+            pathInput.value = ''
+            pathInput.placeholder = placeholder
+            pathInput.disabled = true
         }
         if (pathSuggestions) {
-            pathSuggestions.innerHTML = '';
-            pathSuggestions.classList.add('d-none');
+            pathSuggestions.innerHTML = ''
+            pathSuggestions.classList.add('d-none')
         }
         if (hiddenContentInput && clearHiddenContent) {
-            hiddenContentInput.value = '';
+            hiddenContentInput.value = ''
         }
     }
 
     function handlePathError(message) {
         if (pathStatus) {
-            pathStatus.textContent = message;
+            pathStatus.textContent = message
         }
-        resetPathWidget(messages.error, false);
+        resetPathWidget(messages.error, false)
     }
 
     function renderPathOptions(forceValue = null) {
         if (!pathInput || !pathSuggestions) {
-            return;
+            return
         }
 
         if (forceValue !== null) {
-            pathInput.value = forceValue;
+            pathInput.value = forceValue
         }
 
-        const filterTerm = pathInput.value.trim().toLowerCase();
+        const filterTerm = pathInput.value.trim().toLowerCase()
         const filteredPaths = filterTerm === ''
             ? availablePaths
-            : availablePaths.filter((path) => path.toLowerCase().includes(filterTerm));
+            : availablePaths.filter((path) => path.toLowerCase().includes(filterTerm))
 
-        const currentValue = pathInput.value;
-        pathSuggestions.innerHTML = '';
+        const currentValue = pathInput.value
+        pathSuggestions.innerHTML = ''
         if (filteredPaths.length === 1 && currentValue === filteredPaths[0]) {
-            pathSuggestions.classList.add('d-none');
-            pathSuggestions.innerHTML = '';
+            pathSuggestions.classList.add('d-none')
+            pathSuggestions.innerHTML = ''
         } else {
             filteredPaths.forEach((path) => {
-                const option = document.createElement('button');
-                option.type = 'button';
-                option.className = 'list-group-item list-group-item-action';
-                option.textContent = path;
-                option.dataset.value = path;
+                const option = document.createElement('button')
+                option.type = 'button'
+                option.className = 'list-group-item list-group-item-action'
+                option.textContent = path
+                option.dataset.value = path
                 if (currentValue === path) {
-                    option.classList.add('active');
+                    option.classList.add('active')
                 }
                 option.addEventListener('mousedown', (event) => {
-                    event.preventDefault();
-                    pathInput.value = path;
-                    renderPathOptions();
-                });
-                pathSuggestions.appendChild(option);
-            });
+                    event.preventDefault()
+                    pathInput.value = path
+                    renderPathOptions()
+                })
+                pathSuggestions.appendChild(option)
+            })
 
             if (filteredPaths.length === 0) {
-                pathSuggestions.classList.add('d-none');
+                pathSuggestions.classList.add('d-none')
             } else {
-                pathSuggestions.classList.remove('d-none');
+                pathSuggestions.classList.remove('d-none')
             }
         }
 
         if (pathStatus) {
             if (availablePaths.length === 0) {
-                pathStatus.textContent = messages.noPaths;
+                pathStatus.textContent = messages.noPaths
             } else if (filteredPaths.length === 0 && filterTerm !== '') {
-                pathStatus.textContent = messages.noMatch;
+                pathStatus.textContent = messages.noMatch
             } else if (currentValue && !availablePaths.includes(currentValue)) {
-                pathStatus.textContent = messages.notFound;
+                pathStatus.textContent = messages.notFound
             } else {
-                pathStatus.textContent = '';
+                pathStatus.textContent = ''
             }
         }
 
-        syncHiddenContentFromPath();
+        syncHiddenContentFromPath()
     }
 
     async function loadPathOptions(fieldType, projectId) {
         if (!pathInput) {
-            return;
+            return
         }
 
         if (!projectId) {
             if (pathStatus) {
-                pathStatus.textContent = messages.noProject;
+                pathStatus.textContent = messages.noProject
             }
             if (pathRootLabel) {
-                pathRootLabel.textContent = '';
+                pathRootLabel.textContent = ''
             }
-            resetPathWidget(messages.placeholder);
-            return;
+            resetPathWidget(messages.placeholder)
+            return
         }
 
         if (pathStatus) {
-            pathStatus.textContent = 'Loading...';
+            pathStatus.textContent = 'Loading...'
         }
         if (pathInput) {
-            pathInput.disabled = true;
-            pathInput.placeholder = messages.loading;
+            pathInput.disabled = true
+            pathInput.placeholder = messages.loading
         }
         if (pathSuggestions) {
-            pathSuggestions.innerHTML = '';
-            pathSuggestions.classList.add('d-none');
+            pathSuggestions.innerHTML = ''
+            pathSuggestions.classList.add('d-none')
         }
 
         try {
             const response = await fetch(`\${pathListUrl}?projectId=\${projectId}&type=\${fieldType}`, {
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
-            });
+            })
 
             if (!response.ok) {
-                handlePathError(messages.error);
-                return;
+                handlePathError(messages.error)
+                return
             }
 
-            const data = await response.json();
+            const data = await response.json()
             if (!data.success) {
-                handlePathError(data.message || messages.error);
-                return;
+                handlePathError(data.message || messages.error)
+                return
             }
 
-            availablePaths = Array.isArray(data.paths) ? data.paths : [];
+            availablePaths = Array.isArray(data.paths) ? data.paths : []
             if (pathRootLabel) {
-                pathRootLabel.textContent = data.root || '';
+                pathRootLabel.textContent = data.root || ''
             }
 
             if (pathInput) {
-                pathInput.disabled = false;
-                pathInput.placeholder = messages.placeholder;
+                pathInput.disabled = false
+                pathInput.placeholder = messages.placeholder
             }
 
-            const targetValue = (hiddenContentInput ? hiddenContentInput.value : '') || initialPathValue || '';
-            renderPathOptions(targetValue);
-            initialPathValue = null;
+            const targetValue = (hiddenContentInput ? hiddenContentInput.value : '') || initialPathValue || ''
+            renderPathOptions(targetValue)
+            initialPathValue = null
         } catch (error) {
-            handlePathError(error.message);
+            handlePathError(error.message)
         }
     }
 
     if (pathInput) {
         pathInput.addEventListener('input', () => {
-            renderPathOptions();
-        });
+            renderPathOptions()
+        })
         pathInput.addEventListener('focus', () => {
             if (pathSuggestions && pathSuggestions.children.length > 0) {
-                pathSuggestions.classList.remove('d-none');
+                pathSuggestions.classList.remove('d-none')
             }
-        });
+        })
         pathInput.addEventListener('blur', () => {
             if (pathSuggestions) {
-                setTimeout(() => pathSuggestions.classList.add('d-none'), 100);
+                setTimeout(() => pathSuggestions.classList.add('d-none'), 100)
             }
-        });
+        })
     }
 
-    window.pathSelectorWidgets = window.pathSelectorWidgets || {};
+    window.pathSelectorWidgets = window.pathSelectorWidgets || {}
     window.pathSelectorWidgets[{$baseIdJson}] = {
         load: loadPathOptions,
         reset: resetPathWidget,
         render: renderPathOptions,
         sync: syncHiddenContentFromPath
-    };
+    }
 
     if (!window.pathSelectorWidget) {
-        window.pathSelectorWidget = window.pathSelectorWidgets[{$baseIdJson}];
+        window.pathSelectorWidget = window.pathSelectorWidgets[{$baseIdJson}]
     }
-})();
+})()
 /* eslint-enable */
 JS;
 
