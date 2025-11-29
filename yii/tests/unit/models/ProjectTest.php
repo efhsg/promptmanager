@@ -18,16 +18,31 @@ class ProjectTest extends Unit
         ];
     }
 
-    public function testFindProjectById()
+    /**
+     * @dataProvider projectByIdProvider
+     */
+    public function testFindProjectById(int $projectId, ?string $expectedName): void
     {
-        $project = Project::findOne(1);
-        verify($project)->notEmpty();
-        verify($project->name)->equals('Test Project');
+        $project = Project::findOne($projectId);
 
-        verify(Project::findOne(999))->empty();
+        if ($expectedName === null) {
+            verify($project)->empty();
+            return;
+        }
+
+        verify($project)->notEmpty();
+        verify($project->name)->equals($expectedName);
     }
 
-    public function testProjectBelongsToUser()
+    public static function projectByIdProvider(): array
+    {
+        return [
+            'existing project' => [1, 'Test Project'],
+            'missing project' => [999, null],
+        ];
+    }
+
+    public function testProjectBelongsToUser(): void
     {
         $project = Project::findOne(1);
         verify($project)->notEmpty();
@@ -37,32 +52,42 @@ class ProjectTest extends Unit
         verify($user->id)->equals($project->user_id);
     }
 
-    public function testValidateProject()
+    /**
+     * @dataProvider projectValidationProvider
+     */
+    public function testValidateProject(?string $name, ?int $userId, bool $isValid, array $expectedErrorFields): void
     {
-        // Test valid project
         $project = new Project();
-        $project->name = 'New Project';
-        $project->user_id = 1;
-        verify($project->validate())->true();
+        $project->name = $name;
+        $project->user_id = $userId;
 
-        // Test missing name (required)
-        $project = new Project();
-        $project->user_id = 1;
-        verify($project->validate())->false();
-        verify(array_key_exists('name', $project->errors))->true();
+        $result = $project->validate();
+        verify($result)->equals($isValid);
 
-        // Test maximum name length (255 characters)
-        $project = new Project();
-        $project->name = str_repeat('a', 255);
-        $project->user_id = 1;
-        verify($project->validate())->true();
+        if ($isValid) {
+            verify($project->errors)->empty();
+            return;
+        }
 
-        // Test exceeding name length
-        $project->name = str_repeat('a', 256);
-        verify($project->validate())->false();
+        verify($project->errors)->notEmpty();
+
+        foreach ($expectedErrorFields as $field) {
+            verify(array_key_exists($field, $project->errors))->true();
+        }
     }
 
-    public function testTimestampsAreUpdatedOnSave()
+    public static function projectValidationProvider(): array
+    {
+        return [
+            'valid project' => ['New Project', 1, true, []],
+            'missing name' => [null, 1, false, ['name']],
+            'maximum length' => [str_repeat('a', 255), 1, true, []],
+            'exceeding length' => [str_repeat('a', 256), 1, false, ['name']],
+            'invalid user' => ['Invalid User Project', 99999, false, ['user_id']],
+        ];
+    }
+
+    public function testTimestampsAreUpdatedOnSave(): void
     {
         // Create a new project and save it
         $project = new Project();
@@ -83,7 +108,7 @@ class ProjectTest extends Unit
         verify($project->updated_at)->greaterThan($originalUpdatedAt);
     }
 
-    public function testSoftDeleteProject()
+    public function testSoftDeleteProject(): void
     {
         $project = Project::findOne(1);
         verify($project)->notEmpty();
@@ -96,7 +121,7 @@ class ProjectTest extends Unit
         verify($softDeletedProject->deleted_at)->notEmpty();
     }
 
-    public function testRestoreSoftDeletedProject()
+    public function testRestoreSoftDeletedProject(): void
     {
         $project = Project::findOne(1);
         verify($project)->notEmpty();
@@ -109,7 +134,7 @@ class ProjectTest extends Unit
         verify($restoredProject->deleted_at)->empty();
     }
 
-    public function testFindOnlyActiveProjects()
+    public function testFindOnlyActiveProjects(): void
     {
         $activeProject = new Project();
         $activeProject->name = 'Active Project';
@@ -131,17 +156,7 @@ class ProjectTest extends Unit
         }
     }
 
-    public function testProjectFailsValidationWithInvalidUserId()
-    {
-        $project = new Project();
-        $project->name = 'Invalid User Project';
-        $project->user_id = 99999;
-
-        verify($project->validate())->false();
-        verify(array_key_exists('user_id', $project->errors))->true();
-    }
-
-    public function testProjectRelationWithUserIsValid()
+    public function testProjectRelationWithUserIsValid(): void
     {
         $project = Project::findOne(1);
         verify($project)->notEmpty();
@@ -155,7 +170,7 @@ class ProjectTest extends Unit
     /**
      * @dataProvider rootDirectoryProvider
      */
-    public function testRootDirectoryValidation(?string $rootDirectory, bool $isValid)
+    public function testRootDirectoryValidation(?string $rootDirectory, bool $isValid): void
     {
         $project = new Project();
         $project->name = 'Root Directory Validation';
@@ -188,83 +203,72 @@ class ProjectTest extends Unit
         ];
     }
 
-    public function testBlacklistedDirectoriesAreNormalized(): void
+    /**
+     * @dataProvider blacklistedDirectoriesProvider
+     */
+    public function testBlacklistedDirectoriesValidation(string $blacklistedDirectories, bool $isValid, ?array $expectedRules): void
     {
         $project = new Project();
-        $project->name = 'Blacklist Normalization';
+        $project->name = 'Blacklist Validation';
         $project->user_id = 1;
-        $project->blacklisted_directories = ' vendor , /runtime/logs/,web , web ';
+        $project->blacklisted_directories = $blacklistedDirectories;
 
-        verify($project->validate())->true();
-        $rules = $project->getBlacklistedDirectories();
-        verify($rules)->equals([
-            ['path' => 'vendor', 'exceptions' => []],
-            ['path' => 'runtime/logs', 'exceptions' => []],
-            ['path' => 'web', 'exceptions' => []],
-        ]);
-    }
+        $result = $project->validate();
+        verify($result)->equals($isValid);
 
-    public function testBlacklistedDirectoriesValidationBlocksTraversal(): void
-    {
-        $project = new Project();
-        $project->name = 'Invalid Blacklist';
-        $project->user_id = 1;
-        $project->blacklisted_directories = '../secrets';
+        if ($isValid) {
+            $rules = $project->getBlacklistedDirectories();
+            verify($rules)->equals($expectedRules);
+            return;
+        }
 
-        verify($project->validate())->false();
         verify($project->getErrors('blacklisted_directories'))->notEmpty();
     }
 
-    public function testBlacklistedDirectoriesWithWhitelistExceptions(): void
+    public static function blacklistedDirectoriesProvider(): array
     {
-        $project = new Project();
-        $project->name = 'Blacklist With Exceptions';
-        $project->user_id = 1;
-        $project->blacklisted_directories = 'vendor, web/[css,js], tests/_output';
-
-        verify($project->validate())->true();
-        $rules = $project->getBlacklistedDirectories();
-        verify($rules)->equals([
-            ['path' => 'vendor', 'exceptions' => []],
-            ['path' => 'web', 'exceptions' => ['css', 'js']],
-            ['path' => 'tests/_output', 'exceptions' => []],
-        ]);
-    }
-
-    public function testBlacklistedDirectoriesNormalizeWhitelistExceptions(): void
-    {
-        $project = new Project();
-        $project->name = 'Normalize Exceptions';
-        $project->user_id = 1;
-        $project->blacklisted_directories = 'web/[css , js, css]';
-
-        verify($project->validate())->true();
-        $rules = $project->getBlacklistedDirectories();
-        verify($rules)->equals([
-            ['path' => 'web', 'exceptions' => ['css', 'js']],
-        ]);
-    }
-
-    public function testBlacklistedDirectoriesValidationRejectsEmptyException(): void
-    {
-        $project = new Project();
-        $project->name = 'Invalid Exception';
-        $project->user_id = 1;
-        $project->blacklisted_directories = 'web/[css,,js]';
-
-        verify($project->validate())->false();
-        verify($project->getErrors('blacklisted_directories'))->notEmpty();
-    }
-
-    public function testBlacklistedDirectoriesValidationRejectsNestedExceptions(): void
-    {
-        $project = new Project();
-        $project->name = 'Invalid Nested Exception';
-        $project->user_id = 1;
-        $project->blacklisted_directories = 'web/[css/nested]';
-
-        verify($project->validate())->false();
-        verify($project->getErrors('blacklisted_directories'))->notEmpty();
+        return [
+            'normalized paths' => [
+                'blacklistedDirectories' => ' vendor , /runtime/logs/,web , web ',
+                'isValid' => true,
+                'expectedRules' => [
+                    ['path' => 'vendor', 'exceptions' => []],
+                    ['path' => 'runtime/logs', 'exceptions' => []],
+                    ['path' => 'web', 'exceptions' => []],
+                ],
+            ],
+            'blocks traversal' => [
+                'blacklistedDirectories' => '../secrets',
+                'isValid' => false,
+                'expectedRules' => null,
+            ],
+            'with whitelist exceptions' => [
+                'blacklistedDirectories' => 'vendor, web/[css,js], tests/_output',
+                'isValid' => true,
+                'expectedRules' => [
+                    ['path' => 'vendor', 'exceptions' => []],
+                    ['path' => 'web', 'exceptions' => ['css', 'js']],
+                    ['path' => 'tests/_output', 'exceptions' => []],
+                ],
+            ],
+            'normalizes whitelist exceptions' => [
+                'blacklistedDirectories' => 'web/[css , js, css]',
+                'isValid' => true,
+                'expectedRules' => [
+                    ['path' => 'web', 'exceptions' => ['css', 'js']],
+                ],
+            ],
+            'rejects empty exception' => [
+                'blacklistedDirectories' => 'web/[css,,js]',
+                'isValid' => false,
+                'expectedRules' => null,
+            ],
+            'rejects nested exceptions' => [
+                'blacklistedDirectories' => 'web/[css/nested]',
+                'isValid' => false,
+                'expectedRules' => null,
+            ],
+        ];
     }
 
     public function testBlacklistedDirectoriesRoundTrip(): void
