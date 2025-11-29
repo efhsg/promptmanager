@@ -4,7 +4,9 @@
 /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\assets\QuillAsset;
+use app\services\CopyFormatConverter;
 use app\widgets\PathPreviewWidget;
+use common\enums\CopyType;
 use conquer\select2\Select2Widget;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -14,18 +16,15 @@ use yii\web\JsExpression;
 /* @var array $fields */
 
 QuillAsset::register($this);
+$this->registerCss('.generated-prompt-form h2{font-size:1.25rem;line-height:1.3;margin-bottom:0.5rem;}');
 
 $delta = json_decode($templateBody, true);
-if (!$delta || !isset($delta['ops'])) {
+if (!is_array($delta) || !isset($delta['ops'])) {
     throw new InvalidArgumentException('Template is not in valid Delta format.');
 }
 
-$templateText = '';
-foreach ($delta['ops'] as $op) {
-    if (isset($op['insert']) && is_string($op['insert'])) {
-        $templateText .= $op['insert'];
-    }
-}
+$copyFormatConverter = new CopyFormatConverter();
+$templateHtml = $copyFormatConverter->convertFromQuillDelta($templateBody, CopyType::HTML);
 
 /** Normalize a value to a JSON-encoded Quill Delta or '' */
 $toDeltaJson = static function (mixed $value): string {
@@ -128,18 +127,18 @@ $templateRendered = preg_replace_callback(
                         'settings' => $select2Settings,
                 ]),
                 'file' => Html::hiddenInput(
-                        $name,
-                        (string)($field['default'] ?? ''),
-                        ['id' => "field-$placeholder"]
-                ) . PathPreviewWidget::widget([
-                        'path' => (string)($field['default'] ?? ''),
-                        'previewUrl' => !empty($field['default'] ?? '') ? Url::to([
-                                'field/path-preview',
-                                'id' => $field['id'] ?? $placeholder,
-                                'path' => $field['default'] ?? '',
-                        ]) : '',
-                        'enablePreview' => !empty($field['default'] ?? ''),
-                ]),
+                                $name,
+                                (string)($field['default'] ?? ''),
+                                ['id' => "field-$placeholder"]
+                        ) . PathPreviewWidget::widget([
+                                'path' => (string)($field['default'] ?? ''),
+                                'previewUrl' => !empty($field['default'] ?? '') ? Url::to([
+                                        'field/path-preview',
+                                        'id' => $field['id'] ?? $placeholder,
+                                        'path' => $field['default'] ?? '',
+                                ]) : '',
+                                'enablePreview' => !empty($field['default'] ?? ''),
+                        ]),
                 default => Html::textarea(
                         $name,
                         (string)($field['default'] ?? ''),
@@ -153,7 +152,7 @@ $templateRendered = preg_replace_callback(
                 ),
             };
         },
-        $templateText
+        $templateHtml
 );
 ?>
 
