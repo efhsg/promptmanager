@@ -7,6 +7,10 @@ use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
 
+/**
+ * Renders a filesystem path and, when enabled, provides a modal preview for the
+ * file contents with syntax highlighting and client-side fetching.
+ */
 class PathPreviewWidget extends Widget
 {
     public string $path = '';
@@ -80,18 +84,18 @@ class PathPreviewWidget extends Widget
     private function renderModal(string $modalId, string $titleId, string $languageId, string $contentId): string
     {
         return <<<HTML
-<div class="modal fade" id="{$modalId}" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="$modalId" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title mb-0 flex-grow-1 text-truncate">
-                    <span id="{$titleId}">File Preview</span>
-                    <span id="{$languageId}" class="badge text-bg-secondary ms-2 d-none"></span>
+                    <span id="$titleId">File Preview</span>
+                    <span id="$languageId" class="badge text-bg-secondary ms-2 d-none"></span>
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <pre class="mb-0 border-0"><code id="{$contentId}" class="font-monospace"></code></pre>
+                <pre class="mb-0 border-0"><code id="$contentId" class="font-monospace"></code></pre>
             </div>
         </div>
     </div>
