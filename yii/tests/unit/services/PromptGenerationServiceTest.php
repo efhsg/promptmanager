@@ -210,4 +210,69 @@ JSON,
 
         $service->generateFinalPrompt(999, [], [], self::USER_ID);
     }
+
+    /**
+     * @throws Exception
+     */
+    public function testSelectInvertFieldType(): void
+    {
+        // Create field options
+        $option1 = new stdClass();
+        $option1->value = 'Shell';
+
+        $option2 = new stdClass();
+        $option2->value = 'Exxon';
+
+        $option3 = new stdClass();
+        $option3->value = 'BP';
+
+        // Create field with select-invert type
+        $field = new stdClass();
+        $field->id = 1;
+        $field->type = 'select-invert';
+        $field->content = ' compared to ';
+        $field->fieldOptions = [$option1, $option2, $option3];
+
+        $templateBody = '{"ops":[{"insert":"GEN:{{1}}"}]}';
+
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) use ($templateBody, $field) {
+                    if ($property === 'template_body') {
+                        return $templateBody;
+                    }
+                    if ($property === 'fields') {
+                        return [$field];
+                    }
+                    return null;
+                },
+                'getAttribute' => function ($name) use ($templateBody) {
+                    if ($name === 'template_body') {
+                        return $templateBody;
+                    }
+                    return null;
+                }
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        // Test: Select "Shell", should output "Shell compared to Exxon,BP"
+        $result = $service->generateFinalPrompt(
+            1,
+            [],
+            [1 => 'Shell'],
+            self::USER_ID
+        );
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+        $this->assertEquals('Shell compared to Exxon,BP', $plainText);
+    }
 }

@@ -17,6 +17,7 @@ class PromptGenerationService
     private const PLACEHOLDER_PATTERN = '/\b(?:GEN|PRJ):\{\{(\d+)}}/';
 
     private array $templateFieldTypes = [];
+    private array $templateFields = [];
 
     public function __construct(
         private readonly PromptTemplateService $templateService,
@@ -90,6 +91,11 @@ class PromptGenerationService
             ?? throw new NotFoundHttpException('Template not found or access denied.');
 
         $this->templateFieldTypes = ArrayHelper::map($templateModel->fields ?? [], 'id', 'type');
+
+        // Store full field objects for fields that need additional data (like select-invert)
+        foreach (($templateModel->fields ?? []) as $field) {
+            $this->templateFields[$field->id] = $field;
+        }
 
         try {
             $templateDelta = json_decode($templateModel->template_body, true, 512, JSON_THROW_ON_ERROR);
@@ -191,6 +197,11 @@ class PromptGenerationService
     {
         $fieldType = $this->templateFieldTypes[$fieldId] ?? null;
 
+        // Handle select-invert field type
+        if ($fieldType === 'select-invert') {
+            return $this->buildSelectInvertOperations($fieldValue, $fieldId);
+        }
+
         // Handle array field values (non-JSON strings)
         if (is_array($fieldValue)) {
             $ops = [];
@@ -233,6 +244,47 @@ class PromptGenerationService
             // If JSON decoding fails, treat as plain text
             return [['insert' => (string)$fieldValue]];
         }
+    }
+
+    /**
+     * Build operations for select-invert field type
+     * Format: selected value + field content + unselected values (comma-separated)
+     */
+    private function buildSelectInvertOperations(mixed $selectedValue, int $fieldId): array
+    {
+        $field = $this->templateFields[$fieldId] ?? null;
+        if ($field === null) {
+            return [['insert' => (string)$selectedValue]];
+        }
+
+        // Get field content (the middle part)
+        $fieldContent = trim((string)($field->content ?? ''));
+
+        // Get all field options
+        $allOptions = [];
+        foreach (($field->fieldOptions ?? []) as $option) {
+            $allOptions[] = $option->value;
+        }
+
+        // Determine selected and unselected values
+        $selected = trim((string)$selectedValue);
+        $unselected = array_filter($allOptions, fn($opt) => $opt !== $selected);
+
+        // Build the output string: selected + content + unselected (comma-separated)
+        $parts = [];
+        if ($selected !== '') {
+            $parts[] = $selected;
+        }
+        if ($fieldContent !== '') {
+            $parts[] = $fieldContent;
+        }
+        if (!empty($unselected)) {
+            $parts[] = implode(',', $unselected);
+        }
+
+        $output = implode('', $parts);
+
+        return [['insert' => $output]];
     }
 
     /**
