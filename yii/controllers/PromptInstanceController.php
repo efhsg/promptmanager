@@ -325,6 +325,39 @@ class PromptInstanceController extends Controller
         $templateId = (int)Yii::$app->request->post('template_id');
         $contextIds = Yii::$app->request->post('context_ids') ?? [];
         $fieldValues = Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [];
+
+        // FIX: Handle duplicate field submissions (use FIRST value, not last)
+        // Parse raw POST data to get all values when field appears multiple times
+        $rawPost = file_get_contents('php://input');
+        if ($rawPost !== false && $rawPost !== '') {
+            parse_str($rawPost, $rawData);
+            if (isset($rawData['PromptInstanceForm']['fields']) && is_array($rawData['PromptInstanceForm']['fields'])) {
+                // PHP's parse_str still uses last value for duplicates, so we need to manually parse
+                $params = [];
+                foreach (explode('&', $rawPost) as $param) {
+                    if (strpos($param, 'PromptInstanceForm%5Bfields%5D') === 0) {
+                        $parts = explode('=', $param, 2);
+                        if (count($parts) === 2) {
+                            $key = urldecode($parts[0]);
+                            $value = urldecode($parts[1]);
+                            // Extract field ID from: PromptInstanceForm[fields][41]
+                            if (preg_match('/PromptInstanceForm\[fields\]\[(\d+)\]/', $key, $matches)) {
+                                $fieldId = $matches[1];
+                                // Use FIRST occurrence only (user's selection, not default)
+                                if (!isset($params[$fieldId])) {
+                                    $params[$fieldId] = $value;
+                                }
+                            }
+                        }
+                    }
+                }
+                // Override with first values
+                foreach ($params as $fid => $val) {
+                    $fieldValues[$fid] = $val;
+                }
+            }
+        }
+
         $template = $this->promptTemplateService->getTemplateById($templateId, $userId);
 
         if ($template && $template->project && !empty($template->project->root_directory)) {
