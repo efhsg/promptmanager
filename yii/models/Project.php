@@ -27,6 +27,7 @@ use yii\db\ActiveRecord;
  * @property int|null $deleted_at
  *
  * @property User $user
+ * @property Project[] $linkedProjects
  */
 class Project extends ActiveRecord
 {
@@ -376,6 +377,25 @@ class Project extends ActiveRecord
     public function getUser(): ActiveQuery
     {
         return $this->hasOne(User::class, ['id' => 'user_id']);
+    }
+
+    public function getLinkedProjects(): ActiveQuery
+    {
+        return $this->hasMany(Project::class, ['id' => 'linked_project_id'])
+            ->viaTable('project_linked_project', ['project_id' => 'id']);
+    }
+
+    public static function findAvailableForLinking(?int $excludeProjectId, int $userId): ActiveQuery
+    {
+        $query = static::find()
+            ->where(['user_id' => $userId])
+            ->andWhere(['deleted_at' => null]);
+
+        if ($excludeProjectId !== null) {
+            $query->andWhere(['!=', 'id', $excludeProjectId]);
+        }
+
+        return $query;
     }
 
     public function beforeSave($insert): bool
