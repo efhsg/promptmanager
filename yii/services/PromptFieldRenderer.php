@@ -126,6 +126,13 @@ class PromptFieldRenderer
         $isMultiSelect = $fieldType === 'multi-select';
         $placeholderText = $isMultiSelect ? 'Select options...' : 'Select an option...';
 
+        $template = new JsExpression(
+            "function(state) {
+                if (!state.id) return state.text;
+                return $('<span></span>').text(state.text);
+            }"
+        );
+
         return Select2Widget::widget([
             'name' => $isMultiSelect ? $name . '[]' : $name,
             'id' => "field-$placeholder",
@@ -135,7 +142,13 @@ class PromptFieldRenderer
                 'placeholder' => $placeholderText,
                 'multiple' => $isMultiSelect,
             ],
-            'settings' => $this->createSelect2Settings(),
+            'settings' => array_merge(
+                self::SELECT2_SETTINGS,
+                [
+                    'templateResult' => $template,
+                    'templateSelection' => $template,
+                ]
+            ),
         ]);
     }
 
@@ -297,28 +310,5 @@ if (typeof window.PathSelectorField === 'undefined') {
 JS;
 
         $this->view->registerJs($script, View::POS_END);
-    }
-
-    private function createSelect2Settings(): array
-    {
-        $template = $this->createSelect2Template();
-
-        return array_merge(
-            self::SELECT2_SETTINGS,
-            [
-                'templateResult' => $template,
-                'templateSelection' => $template,
-            ]
-        );
-    }
-
-    private function createSelect2Template(): JsExpression
-    {
-        return new JsExpression(
-            "function(state) {
-                if (!state.id) return state.text;
-                return $('<span></span>').text(state.text);
-            }"
-        );
     }
 }
