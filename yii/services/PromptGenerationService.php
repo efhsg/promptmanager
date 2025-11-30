@@ -258,10 +258,6 @@ class PromptGenerationService
         }
 
         $selectedValueStr = (string)$selectedValue;
-
-        // DEBUG: Log what we received
-        error_log("select-invert field {$fieldId}: received value = '{$selectedValueStr}'");
-
         $selectedLabel = null;
         $unselectedLabels = [];
 
@@ -269,11 +265,8 @@ class PromptGenerationService
         foreach (($field->fieldOptions ?? []) as $option) {
             $label = !empty($option->label) ? $option->label : $option->value;
 
-            error_log("  option: value='{$option->value}', label='{$label}'");
-
             if ($option->value === $selectedValueStr) {
                 $selectedLabel = $label;
-                error_log("  ^ MATCHED");
             } else {
                 $unselectedLabels[] = $label;
             }
@@ -282,10 +275,7 @@ class PromptGenerationService
         // If no match found, use the selected value as-is
         if ($selectedLabel === null) {
             $selectedLabel = $selectedValueStr;
-            error_log("NO MATCH FOUND - using selected value as-is: '{$selectedValueStr}'");
         }
-
-        error_log("Final: selectedLabel='{$selectedLabel}', unselected=" . implode(',', $unselectedLabels));
 
         // Build the output as Quill Delta operations
         $ops = [];
