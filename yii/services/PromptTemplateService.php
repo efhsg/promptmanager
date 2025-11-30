@@ -119,6 +119,7 @@ class PromptTemplateService
     {
         $template = PromptTemplate::find()
             ->joinWith('project')
+            ->with(['fields.fieldOptions'])
             ->where([
                 'prompt_template.id' => $templateId,
                 'project.user_id' => $userId,

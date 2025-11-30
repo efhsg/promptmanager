@@ -98,7 +98,8 @@ class Field extends ActiveRecord
      */
     public function getFieldOptions(): ActiveQuery
     {
-        return $this->hasMany(FieldOption::class, ['field_id' => 'id']);
+        return $this->hasMany(FieldOption::class, ['field_id' => 'id'])
+            ->orderBy(['order' => SORT_ASC, 'id' => SORT_ASC]);
     }
 
     /**
