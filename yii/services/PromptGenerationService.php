@@ -248,7 +248,7 @@ class PromptGenerationService
 
     /**
      * Build operations for select-invert field type
-     * Format: selected value + field content + unselected values (comma-separated)
+     * Format: selected label + field content + unselected labels (comma-separated)
      */
     private function buildSelectInvertOperations(mixed $selectedValue, int $fieldId): array
     {
@@ -257,22 +257,32 @@ class PromptGenerationService
             return [['insert' => (string)$selectedValue]];
         }
 
-        // Get all field options
-        $allOptions = [];
+        $selectedValueStr = (string)$selectedValue;
+        $selectedLabel = null;
+        $unselectedLabels = [];
+
+        // Build mapping of values to labels and find selected/unselected
         foreach (($field->fieldOptions ?? []) as $option) {
-            $allOptions[] = $option->value;
+            $label = !empty($option->label) ? $option->label : $option->value;
+
+            if ($option->value === $selectedValueStr) {
+                $selectedLabel = $label;
+            } else {
+                $unselectedLabels[] = $label;
+            }
         }
 
-        // Determine selected and unselected values
-        $selected = (string)$selectedValue;
-        $unselected = array_filter($allOptions, fn($opt) => $opt !== $selected);
+        // If no match found, use the selected value as-is
+        if ($selectedLabel === null) {
+            $selectedLabel = $selectedValueStr;
+        }
 
         // Build the output as Quill Delta operations
         $ops = [];
 
-        // Add selected value
-        if ($selected !== '') {
-            $ops[] = ['insert' => $selected];
+        // Add selected label
+        if ($selectedLabel !== '') {
+            $ops[] = ['insert' => $selectedLabel];
         }
 
         // Add field content operations (decode from Quill Delta JSON)
@@ -281,9 +291,9 @@ class PromptGenerationService
             $ops[] = $op;
         }
 
-        // Add unselected values (comma-separated)
-        if (!empty($unselected)) {
-            $ops[] = ['insert' => implode(',', $unselected)];
+        // Add unselected labels (comma-separated)
+        if (!empty($unselectedLabels)) {
+            $ops[] = ['insert' => implode(',', $unselectedLabels)];
         }
 
         return $ops;
