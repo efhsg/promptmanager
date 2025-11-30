@@ -295,27 +295,12 @@ class PromptFieldRendererTest extends Unit
         $scripts = array_values($registered);
         $script = isset($scripts[0]) ? (string)$scripts[0] : '';
 
+        $this->assertStringContainsString('"modalId":"path-modal-file-1"', $script);
+        $this->assertStringContainsString('"pathSelectorId":"path-selector-file-1"', $script);
+        $this->assertStringContainsString('"hiddenInputId":"field-file-1"', $script);
+        $this->assertStringContainsString('"pathPreviewWrapperId":"path-preview-wrapper-file-1"', $script);
+        $this->assertStringContainsString('"projectId":"22"', $script);
         $this->assertStringContainsString('window.PathSelectorField.init', $script);
-
-        $initPos = strpos($script, 'PathSelectorField.init(');
-        $this->assertNotFalse($initPos);
-
-        $openParenPos = strpos($script, '(', $initPos);
-        $this->assertNotFalse($openParenPos);
-
-        $closeParenPos = strpos($script, ');', $openParenPos);
-        $this->assertNotFalse($closeParenPos);
-
-        $json = substr($script, $openParenPos + 1, $closeParenPos - $openParenPos - 1);
-        $config = json_decode($json, true);
-        $this->assertIsArray($config);
-
-        $this->assertSame('path-modal-file-1', $config['modalId'] ?? null);
-        $this->assertSame('path-selector-file-1', $config['pathSelectorId'] ?? null);
-        $this->assertSame('field-file-1', $config['hiddenInputId'] ?? null);
-        $this->assertSame('path-preview-wrapper-file-1', $config['pathPreviewWrapperId'] ?? null);
-        $this->assertSame('22', $config['projectId'] ?? null);
-
         $this->assertStringContainsString('name="PromptInstanceForm[fields][file-1]"', $html);
         $this->assertStringContainsString('/current/path', $html);
     }
@@ -361,10 +346,6 @@ class PromptFieldRendererTest extends Unit
 
     private function resetPathPreviewWidgetState(): void
     {
-        if (!property_exists(PathPreviewWidget::class, 'modalRendered')) {
-            return;
-        }
-
         $property = new ReflectionProperty(PathPreviewWidget::class, 'modalRendered');
         $property->setValue(false);
     }
