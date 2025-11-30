@@ -257,9 +257,6 @@ class PromptGenerationService
             return [['insert' => (string)$selectedValue]];
         }
 
-        // Get field content (the middle part) - decode from Quill Delta JSON
-        $fieldContent = $this->extractPlainTextFromDelta($field->content ?? '');
-
         // Get all field options
         $allOptions = [];
         foreach (($field->fieldOptions ?? []) as $option) {
@@ -270,21 +267,49 @@ class PromptGenerationService
         $selected = (string)$selectedValue;
         $unselected = array_filter($allOptions, fn($opt) => $opt !== $selected);
 
-        // Build the output string: selected + content + unselected (comma-separated)
-        $parts = [];
+        // Build the output as Quill Delta operations
+        $ops = [];
+
+        // Add selected value
         if ($selected !== '') {
-            $parts[] = $selected;
+            $ops[] = ['insert' => $selected];
         }
-        if ($fieldContent !== '') {
-            $parts[] = $fieldContent;
+
+        // Add field content operations (decode from Quill Delta JSON)
+        $contentOps = $this->extractOpsFromDelta($field->content ?? '');
+        foreach ($contentOps as $op) {
+            $ops[] = $op;
         }
+
+        // Add unselected values (comma-separated)
         if (!empty($unselected)) {
-            $parts[] = implode(',', $unselected);
+            $ops[] = ['insert' => implode(',', $unselected)];
         }
 
-        $output = implode('', $parts);
+        return $ops;
+    }
 
-        return [['insert' => $output]];
+    /**
+     * Extract Quill Delta operations from JSON format
+     */
+    private function extractOpsFromDelta(string $deltaJson): array
+    {
+        if ($deltaJson === '') {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($deltaJson, true, 512, JSON_THROW_ON_ERROR);
+            if (!isset($decoded['ops']) || !is_array($decoded['ops'])) {
+                // If not valid Quill Delta, treat as plain text
+                return [['insert' => $deltaJson]];
+            }
+
+            return $decoded['ops'];
+        } catch (JsonException) {
+            // If it's not valid JSON, treat as plain text
+            return [['insert' => $deltaJson]];
+        }
     }
 
     /**
