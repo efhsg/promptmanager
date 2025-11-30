@@ -283,3 +283,10 @@ a.desc:after {
     top: 0;
     left: 0;
 }
+
+/* Select2 multi-select dropdown styling */
+/* Gray out non-selected options in multi-select dropdowns */
+.select2-container--default[aria-multiselectable="true"] .select2-results__option:not(.select2-results__option--selected) {
+    opacity: 0.5;
+    color: #6c757d;
+}

@@ -2,7 +2,6 @@
 use app\assets\QuillAsset;
 use conquer\select2\Select2Widget;
 use yii\helpers\Html;
-use yii\web\JsExpression;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
@@ -36,40 +35,16 @@ QuillAsset::register($this);
         ->hint('Format used by prompt instance copy buttons (e.g. Markdown).') ?>
 
     <?php
-    $linkedProjectsSelect2Settings = [
-        'minimumResultsForSearch' => 0,
-        'templateResult' => new JsExpression("
-            function(state) {
-                if (!state.id) return state.text;
-                var \$selectElement = $('#project-linkedprojectids');
-                var selectedValues = \$selectElement.val() || [];
-                var isSelected = selectedValues.indexOf(state.id.toString()) !== -1;
-                var \$el = $('<span></span>').text(state.text);
-                if (!isSelected) {
-                    \$el.css({
-                        'opacity': '0.5',
-                        'color': '#6c757d'
-                    });
-                }
-                return \$el;
-            }
-        "),
-        'templateSelection' => new JsExpression("
-            function(state) {
-                if (!state.id) return state.text;
-                return $('<span></span>').text(state.text);
-            }
-        "),
-    ];
     echo $form->field($model, 'linkedProjectIds')
         ->widget(Select2Widget::class, [
             'items' => $availableProjects,
             'options' => [
                 'placeholder' => 'Select projects to link...',
                 'multiple' => true,
-                'id' => 'project-linkedprojectids',
             ],
-            'settings' => $linkedProjectsSelect2Settings,
+            'settings' => [
+                'minimumResultsForSearch' => 0,
+            ],
         ])
         ->hint('Select other projects whose fields can be used as external (EXT) fields in prompt instances.');
     ?>
