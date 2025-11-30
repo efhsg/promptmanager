@@ -221,7 +221,6 @@ JSON,
         string $selectedValue,
         string $expectedOutput
     ): void {
-        // Create field options
         $fieldOptions = [];
         foreach ($optionValues as $value) {
             $option = new stdClass();
@@ -229,7 +228,6 @@ JSON,
             $fieldOptions[] = $option;
         }
 
-        // Create field with select-invert type
         $field = new stdClass();
         $field->id = 1;
         $field->type = 'select-invert';
