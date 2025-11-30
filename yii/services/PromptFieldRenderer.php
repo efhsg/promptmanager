@@ -20,12 +20,13 @@ use yii\web\View;
 class PromptFieldRenderer
 {
     /**
-     * Matches template placeholders in format GEN:{{123}} or PRJ:{{456}}
+     * Matches template placeholders in format GEN:{{123}}, PRJ:{{456}}, or EXT:{{789}}
      * - GEN: indicates a general/global field
      * - PRJ: indicates a project-specific field
+     * - EXT: indicates a field from a linked project
      * - The numeric ID maps to the $fields array key
      */
-    public const PLACEHOLDER_PATTERN = '/(?:GEN:|PRJ:)\{\{(\d+)}}/';
+    public const PLACEHOLDER_PATTERN = '/(?:GEN:|PRJ:|EXT:)\{\{(\d+)}}/';
 
     private const SELECT2_SETTINGS = [
         'minimumResultsForSearch' => 0,

@@ -22,6 +22,7 @@ use yii\db\ActiveRecord;
  * @property string|null $allowed_file_extensions
  * @property string|null $blacklisted_directories
  * @property string $prompt_instance_copy_format
+ * @property string|null $label
  * @property int $created_at
  * @property int $updated_at
  * @property int|null $deleted_at
@@ -83,6 +84,14 @@ class Project extends ActiveRecord
             [['prompt_instance_copy_format'], 'required'],
             [['prompt_instance_copy_format'], 'string', 'max' => 32],
             [['prompt_instance_copy_format'], 'in', 'range' => CopyType::values()],
+            [['label'], 'string', 'max' => 64],
+            [
+                ['label'],
+                'unique',
+                'targetAttribute' => ['user_id', 'label'],
+                'filter' => ['not', ['label' => null]],
+                'message' => 'Label must be unique per user.',
+            ],
             [
                 ['root_directory'],
                 'match',
@@ -114,6 +123,7 @@ class Project extends ActiveRecord
             'allowed_file_extensions' => 'Allowed File Extensions',
             'blacklisted_directories' => 'Blacklisted Directories',
             'prompt_instance_copy_format' => 'Prompt Instance Copy Format',
+            'label' => 'Label',
             'linkedProjectIds' => 'Linked Projects',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
@@ -233,7 +243,7 @@ class Project extends ActiveRecord
                 continue;
             }
 
-            if (preg_match('~^(.+?)/?(\[([^\]]+)\])$~', $trimmed, $matches)) {
+            if (preg_match('~^(.+?)/?(\[([^]]+)])$~', $trimmed, $matches)) {
                 $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
                 $exceptionsStr = $matches[3];
                 $exceptionParts = array_map('trim', explode(',', $exceptionsStr));
@@ -326,7 +336,7 @@ class Project extends ActiveRecord
                 return;
             }
 
-            if (preg_match('~^(.+?)/?(\[([^\]]+)\])$~', $trimmed, $matches)) {
+            if (preg_match('~^(.+?)/?(\[([^]]+)])$~', $trimmed, $matches)) {
                 $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
                 $exceptionsStr = $matches[3];
 
@@ -424,6 +434,10 @@ class Project extends ActiveRecord
     {
         if (!parent::beforeSave($insert)) {
             return false;
+        }
+
+        if ($this->label !== null) {
+            $this->label = trim($this->label) === '' ? null : trim($this->label);
         }
 
         $this->normalizeAllowedFileExtensionsField();

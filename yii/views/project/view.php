@@ -39,6 +39,10 @@ echo $this->render('_breadcrumbs', [
                 'model' => $model,
                 'options' => ['class' => 'table table-borderless'],
                 'attributes' => [
+                    [
+                        'attribute' => 'label',
+                        'value' => static fn(Project $model) => $model->label ?: '—',
+                    ],
                     'name',
                     'root_directory',
                     [

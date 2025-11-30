@@ -138,7 +138,8 @@ a.desc:after {
 
 /* Make sure your custom pickers look like the default Quill pickers. */
 .ql-toolbar .ql-picker.ql-insertGeneralField,
-.ql-toolbar .ql-picker.ql-insertProjectField {
+.ql-toolbar .ql-picker.ql-insertProjectField,
+.ql-toolbar .ql-picker.ql-insertExternalField {
     width: auto;
     padding: 2px 2px;
     margin: 8px 0 4px 8px;

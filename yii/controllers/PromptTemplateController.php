@@ -110,7 +110,7 @@ class PromptTemplateController extends Controller
         /** @var PromptTemplate $model */
         $model = $this->findModel($id);
         $userId = Yii::$app->user->id;
-        [$generalFieldsMap, $projectFieldsMap, $fieldsMapping] = $this->getFieldsMaps(
+        [$generalFieldsMap, $projectFieldsMap, $externalFieldsMap, $fieldsMapping] = $this->getFieldsMaps(
             $userId,
             $model->project_id ?: null
         );
@@ -154,9 +154,17 @@ class PromptTemplateController extends Controller
     private function handleForm(PromptTemplate $model): Response|string
     {
         $userId = Yii::$app->user->id;
-        [$generalFieldsMap, $projectFieldsMap, $fieldsMapping] = $this->getFieldsMaps(
+        $projectId = $model->project_id ?: null;
+        if (Yii::$app->request->isPost) {
+            $postedProjectId = Yii::$app->request->post('PromptTemplate')['project_id'] ?? null;
+            if ($postedProjectId !== null && $postedProjectId !== '') {
+                $projectId = (int)$postedProjectId;
+            }
+        }
+
+        [$generalFieldsMap, $projectFieldsMap, $externalFieldsMap, $fieldsMapping] = $this->getFieldsMaps(
             $userId,
-            $model->project_id ?: null
+            $projectId
         );
         $view = $model->isNewRecord ? 'create' : 'update';
         if (!Yii::$app->request->isPost) {
@@ -173,6 +181,7 @@ class PromptTemplateController extends Controller
                 'projects' => $this->projectService->fetchProjectsList($userId),
                 'generalFieldsMap' => $generalFieldsMap,
                 'projectFieldsMap' => $projectFieldsMap,
+                'externalFieldsMap' => $externalFieldsMap,
             ]);
         }
         $postData = Yii::$app->request->post();
@@ -184,6 +193,7 @@ class PromptTemplateController extends Controller
             'projects' => $this->projectService->fetchProjectsList($userId),
             'generalFieldsMap' => $generalFieldsMap,
             'projectFieldsMap' => $projectFieldsMap,
+            'externalFieldsMap' => $externalFieldsMap,
         ]);
     }
 
@@ -234,6 +244,12 @@ class PromptTemplateController extends Controller
     {
         $generalFieldsMap = $this->fieldService->fetchFieldsMap($userId, null);
         $projectFieldsMap = $this->fieldService->fetchFieldsMap($userId, $projectId);
-        return [$generalFieldsMap, $projectFieldsMap, array_merge($generalFieldsMap, $projectFieldsMap)];
+        $externalFieldsMap = $this->fieldService->fetchExternalFieldsMap($userId, $projectId);
+        return [
+            $generalFieldsMap,
+            $projectFieldsMap,
+            $externalFieldsMap,
+            array_merge($generalFieldsMap, $projectFieldsMap, $externalFieldsMap)
+        ];
     }
 }

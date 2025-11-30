@@ -69,6 +69,10 @@ echo $this->render('_breadcrumbs', [
                 },
                 'columns' => [
                     'name',
+                    [
+                        'attribute' => 'label',
+                        'value' => static fn(Project $model) => $model->label ?: '—',
+                    ],
                     'root_directory',
                     [
                         'attribute' => 'allowed_file_extensions',

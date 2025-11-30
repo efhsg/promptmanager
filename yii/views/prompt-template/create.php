@@ -5,6 +5,7 @@
 /** @var array $projects */
 /** @var array $generalFieldsMap */
 /** @var array $projectFieldsMap */
+/** @var array $externalFieldsMap */
 
 $this->title = 'Create Template';
 echo $this->render('_breadcrumbs', [
@@ -21,6 +22,7 @@ echo $this->render('_breadcrumbs', [
                     'projects' => $projects,
                     'generalFieldsMap' => $generalFieldsMap,
                     'projectFieldsMap' => $projectFieldsMap,
+                    'externalFieldsMap' => $externalFieldsMap,
                 ]) ?>
             </div>
         </div>

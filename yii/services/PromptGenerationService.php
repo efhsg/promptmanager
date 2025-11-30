@@ -14,7 +14,7 @@ class PromptGenerationService
     /**
      * @var string
      */
-    private const PLACEHOLDER_PATTERN = '/\b(?:GEN|PRJ):\{\{(\d+)}}/';
+    private const PLACEHOLDER_PATTERN = '/\b(?:GEN|PRJ|EXT):\{\{(\d+)}}/';
 
     private array $templateFieldTypes = [];
     private array $templateFields = [];

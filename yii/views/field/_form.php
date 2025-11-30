@@ -60,6 +60,10 @@ endif; ?>
             [0 => 'No', 1 => 'Yes']
     )->label('Default on') ?>
 
+    <?= $form->field($modelField, 'share')->dropDownList(
+            [0 => 'No', 1 => 'Yes']
+    )->label('Share with linked projects') ?>
+
     <?= $form->field($modelField, 'label')->textInput(['maxlength' => true])->label('Label (Optional)') ?>
 
     <div id="field-content-wrapper" style="display: none;">

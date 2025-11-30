@@ -20,6 +20,10 @@ QuillAsset::register($this);
 
     <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
 
+    <?= $form->field($model, 'label')
+        ->textInput(['maxlength' => true, 'placeholder' => 'Short identifier'])
+        ->hint('Optional short code or label for quick identification.') ?>
+
     <?= $form->field($model, 'root_directory')->textInput(['maxlength' => true]) ?>
 
     <?= $form->field($model, 'blacklisted_directories')
