@@ -286,7 +286,12 @@ a.desc:after {
 
 /* Select2 multi-select dropdown styling */
 /* Gray out non-selected options in multi-select dropdowns */
-.select2-container--default[aria-multiselectable="true"] .select2-results__option:not(.select2-results__option--selected) {
-    opacity: 0.5;
-    color: #6c757d;
+.select2-results__option:not(.select2-results__option--selected):not(.select2-results__option--highlighted) {
+    opacity: 0.5 !important;
+    color: #6c757d !important;
+}
+
+/* Keep highlighted (hovered) non-selected options more visible */
+.select2-results__option--highlighted:not(.select2-results__option--selected) {
+    opacity: 0.7 !important;
 }
