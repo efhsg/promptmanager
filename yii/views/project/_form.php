@@ -6,6 +6,7 @@ use yii\widgets\ActiveForm;
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 /** @var yii\widgets\ActiveForm $form */
+/** @var array $availableProjects */
 
 QuillAsset::register($this);
 ?>
@@ -31,6 +32,10 @@ QuillAsset::register($this);
     <?= $form->field($model, 'prompt_instance_copy_format')
         ->dropDownList($model::getPromptInstanceCopyFormatOptions())
         ->hint('Format used by prompt instance copy buttons (e.g. Markdown).') ?>
+
+    <?= $form->field($model, 'linkedProjectIds')
+        ->dropDownList($availableProjects, ['multiple' => true, 'size' => 5])
+        ->hint('Select other projects whose fields can be used as external (EXT) fields in prompt instances.') ?>
 
     <?= $form->field($model, 'description')
         ->hiddenInput(['id' => 'project-description'])

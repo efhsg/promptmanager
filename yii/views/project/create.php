@@ -4,6 +4,7 @@ use yii\helpers\Html;
 
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
+/** @var array $availableProjects */
 
 $this->title = 'Create project';
 echo $this->render('_breadcrumbs', [
@@ -19,6 +20,7 @@ echo $this->render('_breadcrumbs', [
                 <h3 class="mb-4"><?= Html::encode($this->title) ?></h3>
                 <?= $this->render('_form', [
                     'model' => $model,
+                    'availableProjects' => $availableProjects,
                 ]) ?>
             </div>
         </div>

@@ -28,10 +28,13 @@ use yii\db\ActiveRecord;
  *
  * @property User $user
  * @property Project[] $linkedProjects
+ * @property array $linkedProjectIds
  */
 class Project extends ActiveRecord
 {
     use TimestampTrait;
+
+    public array $linkedProjectIds = [];
 
     /**
      * {@inheritdoc}
@@ -76,6 +79,8 @@ class Project extends ActiveRecord
             [['blacklisted_directories'], 'validateBlacklistedDirectories'],
             [['name'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
+            [['linkedProjectIds'], 'safe'],
+            [['linkedProjectIds'], 'each', 'rule' => ['integer']],
         ];
     }
 
@@ -93,10 +98,20 @@ class Project extends ActiveRecord
             'allowed_file_extensions' => 'Allowed File Extensions',
             'blacklisted_directories' => 'Blacklisted Directories',
             'prompt_instance_copy_format' => 'Prompt Instance Copy Format',
+            'linkedProjectIds' => 'Linked Projects',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
             'deleted_at' => 'Deleted At',
         ];
+    }
+
+    public function afterFind(): void
+    {
+        parent::afterFind();
+        $this->linkedProjectIds = array_map(
+            static fn($project): int => $project->id,
+            $this->linkedProjects
+        );
     }
 
     public function beforeValidate(): bool
