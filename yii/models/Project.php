@@ -34,7 +34,23 @@ class Project extends ActiveRecord
 {
     use TimestampTrait;
 
-    public array $linkedProjectIds = [];
+    private array $_linkedProjectIds = [];
+
+    public function getLinkedProjectIds(): array
+    {
+        return $this->_linkedProjectIds;
+    }
+
+    public function setLinkedProjectIds(mixed $value): void
+    {
+        if (is_array($value)) {
+            $this->_linkedProjectIds = $value;
+        } elseif ($value === '' || $value === null) {
+            $this->_linkedProjectIds = [];
+        } else {
+            $this->_linkedProjectIds = (array)$value;
+        }
+    }
 
     /**
      * {@inheritdoc}
