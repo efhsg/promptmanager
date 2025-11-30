@@ -12,6 +12,7 @@ use conquer\select2\Select2Widget;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\web\JsExpression;
+use yii\web\View;
 
 /* @var string $templateBody */
 /* @var array $fields */
@@ -27,8 +28,7 @@ if (!is_array($delta) || !isset($delta['ops'])) {
 $copyFormatConverter = new CopyFormatConverter();
 $templateHtml = $copyFormatConverter->convertFromQuillDelta($templateBody, CopyType::HTML);
 
-/** Normalize a value to a JSON-encoded Quill Delta or '' */
-$toDeltaJson = static function (mixed $value): string {
+$normalizeToDeltaJson = static function (mixed $value): string {
     if (is_array($value)) {
         return isset($value['ops']) ? json_encode($value, JSON_UNESCAPED_UNICODE) : '';
     }
@@ -39,173 +39,156 @@ $toDeltaJson = static function (mixed $value): string {
     return '';
 };
 
-$view = $this;
-$templateRendered = preg_replace_callback(
-        '/(?:GEN:|PRJ:)\{\{(\d+)}}/',
-        static function (array $matches) use ($fields, $toDeltaJson, $view) {
-            $select2Settings = [
-                    'minimumResultsForSearch' => 0,
-                    'templateResult' => new JsExpression(
-                            "
-            function(state) {
-                if (!state.id) return state.text;
-                return $('<span></span>').text(state.text);
-            }
-        "
-                    ),
-                    'templateSelection' => new JsExpression(
-                            "
-            function(state) {
-                if (!state.id) return state.text;
-                return $('<span></span>').text(state.text);
-            }
-        "
-                    ),
-            ];
-            $placeholder = $matches[1];
-            if (!isset($fields[$placeholder])) {
-                return $matches[0];
-            }
+$renderTextCodeField = static function (array $field, string $placeholder, string $name, callable $normalizeToDeltaJson): string {
+    $hiddenId = "hidden-$placeholder";
+    $editorId = "editor-$placeholder";
+    $fieldType = (string)($field['type'] ?? 'text');
+    $defaultValue = $normalizeToDeltaJson($field['default'] ?? '');
+    $label = trim((string)($field['label'] ?? ''));
+    $custom = trim((string)($field['placeholder'] ?? ''));
 
-            $field = $fields[$placeholder];
-            $fieldType = (string)($field['type'] ?? 'text');
-            $name = "PromptInstanceForm[fields][$placeholder]";
+    $placeholderText = $custom !== ''
+        ? $custom
+        : ($fieldType === 'code'
+            ? ($label !== '' ? "Paste or write code for {$label}…" : 'Paste or write code…')
+            : ($label !== '' ? "Write {$label}…" : 'Type your content…'));
 
-            if (in_array($fieldType, ['text', 'code'], true)) {
-                $hiddenId = "hidden-$placeholder";
-                $editorId = "editor-$placeholder";
-
-                $defaultValue = $toDeltaJson($field['default'] ?? '');
-
-                $label = trim((string)($field['label'] ?? ''));
-                $custom = trim((string)($field['placeholder'] ?? ''));
-
-                $placeholderText = $custom !== ''
-                        ? $custom
-                        : ($fieldType === 'code'
-                                ? ($label !== '' ? "Paste or write code for {$label}…" : 'Paste or write code…')
-                                : ($label !== '' ? "Write {$label}…" : 'Type your content…'));
-
-                return
-                        Html::hiddenInput($name, $defaultValue, ['id' => $hiddenId]) .
-                        Html::tag(
-                                'div',
-                                Html::tag('div', '', [
-                                        'id' => $editorId,
-                                        'class' => 'resizable-editor',
-                                        'style' => 'min-height: 150px;',
-                                        'data-editor' => 'quill',
-                                        'data-target' => $hiddenId,
-                                        'data-config' => json_encode([
-                                                'theme' => 'snow',
-                                                'placeholder' => $placeholderText,
-                                                'modules' => [
-                                                        'toolbar' => [
-                                                                ['bold', 'italic', 'underline', 'strike'],
-                                                                ['blockquote', 'code-block'],
-                                                                [['list' => 'ordered'], ['list' => 'bullet']],
-                                                                [['indent' => '-1'], ['indent' => '+1']],
-                                                                [['header' => [1, 2, 3, 4, 5, 6, false]]],
-                                                                [['align' => []]],
-                                                                ['clean'],
-                                                        ],
-                                                ],
-                                        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-                                ]),
-                                ['class' => 'resizable-editor-container mb-3']
-                        );
-            }
-
-            return match ($fieldType) {
-                'select', 'multi-select', 'select-invert' => Select2Widget::widget([
-                        'name' => $fieldType === 'multi-select' ? $name . '[]' : $name,
-                        'id' => "field-$placeholder",
-                        'value' => $field['default'],
-                        'items' => $field['options'],
-                        'options' => [
-                                'placeholder' => 'Select ' . ($fieldType === 'multi-select' ? 'options' : 'an option') . '...',
-                                'multiple' => $fieldType === 'multi-select',
+    return Html::hiddenInput($name, $defaultValue, ['id' => $hiddenId]) .
+        Html::tag(
+            'div',
+            Html::tag('div', '', [
+                'id' => $editorId,
+                'class' => 'resizable-editor',
+                'style' => 'min-height: 150px;',
+                'data-editor' => 'quill',
+                'data-target' => $hiddenId,
+                'data-config' => json_encode([
+                    'theme' => 'snow',
+                    'placeholder' => $placeholderText,
+                    'modules' => [
+                        'toolbar' => [
+                            ['bold', 'italic', 'underline', 'strike'],
+                            ['blockquote', 'code-block'],
+                            [['list' => 'ordered'], ['list' => 'bullet']],
+                            [['indent' => '-1'], ['indent' => '+1']],
+                            [['header' => [1, 2, 3, 4, 5, 6, false]]],
+                            [['align' => []]],
+                            ['clean'],
                         ],
-                        'settings' => $select2Settings,
-                ]),
-                'file' => (function () use ($field, $placeholder, $name, $view) {
-                        $hiddenInputId = "field-$placeholder";
-                        $pathPreviewWrapperId = "path-preview-wrapper-$placeholder";
-                        $changeButtonId = "change-path-btn-$placeholder";
-                        $modalId = "path-modal-$placeholder";
-                        $pathSelectorId = "path-selector-$placeholder";
-                        $saveButtonId = "save-path-btn-$placeholder";
-                        $projectId = $field['project_id'] ?? null;
-                        $currentPath = (string)($field['default'] ?? '');
+                    ],
+                ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+            ]),
+            ['class' => 'resizable-editor-container mb-3']
+        );
+};
 
-                        $html = Html::hiddenInput($name, $currentPath, ['id' => $hiddenInputId]);
-                        $html .= Html::beginTag('div', ['class' => 'd-flex align-items-center gap-2']);
-                        $html .= Html::tag('div', PathPreviewWidget::widget([
-                                'path' => $currentPath,
-                                'previewUrl' => !empty($currentPath) ? Url::to([
-                                        'field/path-preview',
-                                        'id' => $field['id'] ?? $placeholder,
-                                        'path' => $currentPath,
-                                ]) : '',
-                                'enablePreview' => !empty($currentPath),
-                        ]), ['id' => $pathPreviewWrapperId, 'class' => 'flex-grow-1']);
-                        $html .= Html::button('Change', [
-                                'id' => $changeButtonId,
-                                'class' => 'btn btn-sm btn-outline-secondary',
-                                'type' => 'button',
-                                'data-bs-toggle' => 'modal',
-                                'data-bs-target' => "#$modalId",
-                        ]);
-                        $html .= Html::endTag('div');
+$renderSelectField = static function (array $field, string $placeholder, string $name, array $select2Settings): string {
+    $fieldType = (string)($field['type'] ?? 'select');
+    return Select2Widget::widget([
+        'name' => $fieldType === 'multi-select' ? $name . '[]' : $name,
+        'id' => "field-$placeholder",
+        'value' => $field['default'],
+        'items' => $field['options'],
+        'options' => [
+            'placeholder' => 'Select ' . ($fieldType === 'multi-select' ? 'options' : 'an option') . '...',
+            'multiple' => $fieldType === 'multi-select',
+        ],
+        'settings' => $select2Settings,
+    ]);
+};
 
-                        $modalHtml = Html::beginTag('div', [
-                                'class' => 'modal fade',
-                                'id' => $modalId,
-                                'tabindex' => '-1',
-                                'aria-hidden' => 'true',
-                        ]);
-                        $modalHtml .= Html::beginTag('div', ['class' => 'modal-dialog modal-lg']);
-                        $modalHtml .= Html::beginTag('div', ['class' => 'modal-content']);
-                        $modalHtml .= Html::beginTag('div', ['class' => 'modal-header']);
-                        $modalHtml .= Html::tag('h5', 'Change Path', ['class' => 'modal-title']);
-                        $modalHtml .= Html::button('', [
-                                'type' => 'button',
-                                'class' => 'btn-close',
-                                'data-bs-dismiss' => 'modal',
-                                'aria-label' => 'Close',
-                        ]);
-                        $modalHtml .= Html::endTag('div');
-                        $modalHtml .= Html::beginTag('div', ['class' => 'modal-body']);
-                        $modalHtml .= PathSelectorWidget::widget([
-                                'id' => $pathSelectorId,
-                                'initialValue' => $currentPath,
-                                'pathListUrl' => Url::to(['field/path-list']),
-                                'hiddenContentInputId' => $hiddenInputId,
-                                'wrapperOptions' => [
-                                        'style' => 'display: block;',
-                                ],
-                        ]);
-                        $modalHtml .= Html::endTag('div');
-                        $modalHtml .= Html::beginTag('div', ['class' => 'modal-footer']);
-                        $modalHtml .= Html::button('Cancel', [
-                                'type' => 'button',
-                                'class' => 'btn btn-secondary',
-                                'data-bs-dismiss' => 'modal',
-                        ]);
-                        $modalHtml .= Html::button('Ok', [
-                                'id' => $saveButtonId,
-                                'type' => 'button',
-                                'class' => 'btn btn-primary',
-                        ]);
-                        $modalHtml .= Html::endTag('div');
-                        $modalHtml .= Html::endTag('div');
-                        $modalHtml .= Html::endTag('div');
-                        $modalHtml .= Html::endTag('div');
+$renderTextareaField = static function (array $field, string $placeholder, string $name): string {
+    return Html::textarea(
+        $name,
+        (string)($field['default'] ?? ''),
+        [
+            'id' => "field-$placeholder",
+            'class' => 'form-control custom-textarea',
+            'rows' => 5,
+            'cols' => 50,
+            'style' => 'resize: vertical; height: 150px; overflow-y: auto;',
+        ]
+    );
+};
 
-                        $html .= $modalHtml;
+$renderFileFieldWithPathSelector = static function (array $field, string $placeholder, string $name, View $view): string {
+    $hiddenInputId = "field-$placeholder";
+    $pathPreviewWrapperId = "path-preview-wrapper-$placeholder";
+    $changeButtonId = "change-path-btn-$placeholder";
+    $modalId = "path-modal-$placeholder";
+    $pathSelectorId = "path-selector-$placeholder";
+    $saveButtonId = "save-path-btn-$placeholder";
+    $projectId = $field['project_id'] ?? null;
+    $currentPath = (string)($field['default'] ?? '');
 
-                        $basePreviewUrl = Url::to(['field/path-preview', 'id' => $field['id']]);
-                        $script = <<<JS
+    $html = Html::hiddenInput($name, $currentPath, ['id' => $hiddenInputId]);
+    $html .= Html::beginTag('div', ['class' => 'd-flex align-items-center gap-2']);
+    $html .= Html::tag('div', PathPreviewWidget::widget([
+        'path' => $currentPath,
+        'previewUrl' => !empty($currentPath) ? Url::to([
+            'field/path-preview',
+            'id' => $field['id'] ?? $placeholder,
+            'path' => $currentPath,
+        ]) : '',
+        'enablePreview' => !empty($currentPath),
+    ]), ['id' => $pathPreviewWrapperId, 'class' => 'flex-grow-1']);
+    $html .= Html::button('Change', [
+        'id' => $changeButtonId,
+        'class' => 'btn btn-sm btn-outline-secondary',
+        'type' => 'button',
+        'data-bs-toggle' => 'modal',
+        'data-bs-target' => "#$modalId",
+    ]);
+    $html .= Html::endTag('div');
+
+    $modalHtml = Html::beginTag('div', [
+        'class' => 'modal fade',
+        'id' => $modalId,
+        'tabindex' => '-1',
+        'aria-hidden' => 'true',
+    ]);
+    $modalHtml .= Html::beginTag('div', ['class' => 'modal-dialog modal-lg']);
+    $modalHtml .= Html::beginTag('div', ['class' => 'modal-content']);
+    $modalHtml .= Html::beginTag('div', ['class' => 'modal-header']);
+    $modalHtml .= Html::tag('h5', 'Change Path', ['class' => 'modal-title']);
+    $modalHtml .= Html::button('', [
+        'type' => 'button',
+        'class' => 'btn-close',
+        'data-bs-dismiss' => 'modal',
+        'aria-label' => 'Close',
+    ]);
+    $modalHtml .= Html::endTag('div');
+    $modalHtml .= Html::beginTag('div', ['class' => 'modal-body']);
+    $modalHtml .= PathSelectorWidget::widget([
+        'id' => $pathSelectorId,
+        'initialValue' => $currentPath,
+        'pathListUrl' => Url::to(['field/path-list']),
+        'hiddenContentInputId' => $hiddenInputId,
+        'wrapperOptions' => [
+            'style' => 'display: block;',
+        ],
+    ]);
+    $modalHtml .= Html::endTag('div');
+    $modalHtml .= Html::beginTag('div', ['class' => 'modal-footer']);
+    $modalHtml .= Html::button('Cancel', [
+        'type' => 'button',
+        'class' => 'btn btn-secondary',
+        'data-bs-dismiss' => 'modal',
+    ]);
+    $modalHtml .= Html::button('Ok', [
+        'id' => $saveButtonId,
+        'type' => 'button',
+        'class' => 'btn btn-primary',
+    ]);
+    $modalHtml .= Html::endTag('div');
+    $modalHtml .= Html::endTag('div');
+    $modalHtml .= Html::endTag('div');
+    $modalHtml .= Html::endTag('div');
+
+    $html .= $modalHtml;
+
+    $basePreviewUrl = Url::to(['field/path-preview', 'id' => $field['id']]);
+    $script = <<<JS
 ;(function() {
     const modalElement = document.getElementById('$modalId');
     const modal = modalElement ? new bootstrap.Modal(modalElement) : null;
@@ -453,24 +436,57 @@ $templateRendered = preg_replace_callback(
     }
 })();
 JS;
-                        $view->registerJs($script);
+    $view->registerJs($script);
 
-                        return $html;
-                })(),
-                default => Html::textarea(
-                        $name,
-                        (string)($field['default'] ?? ''),
-                        [
-                                'id' => "field-$placeholder",
-                                'class' => 'form-control custom-textarea',
-                                'rows' => 5,
-                                'cols' => 50,
-                                'style' => 'resize: vertical; height: 150px; overflow-y: auto;',
-                        ]
-                ),
-            };
-        },
-        $templateHtml
+    return $html;
+};
+
+$select2Settings = [
+    'minimumResultsForSearch' => 0,
+    'templateResult' => new JsExpression("
+        function(state) {
+            if (!state.id) return state.text;
+            return $('<span></span>').text(state.text);
+        }
+    "),
+    'templateSelection' => new JsExpression("
+        function(state) {
+            if (!state.id) return state.text;
+            return $('<span></span>').text(state.text);
+        }
+    "),
+];
+
+$view = $this;
+$templateRendered = preg_replace_callback(
+    '/(?:GEN:|PRJ:)\{\{(\d+)}}/',
+    static function (array $matches) use (
+        $fields,
+        $normalizeToDeltaJson,
+        $renderTextCodeField,
+        $renderSelectField,
+        $renderFileFieldWithPathSelector,
+        $renderTextareaField,
+        $select2Settings,
+        $view
+    ) {
+        $placeholder = $matches[1];
+        if (!isset($fields[$placeholder])) {
+            return $matches[0];
+        }
+
+        $field = $fields[$placeholder];
+        $fieldType = (string)($field['type'] ?? 'text');
+        $name = "PromptInstanceForm[fields][$placeholder]";
+
+        return match ($fieldType) {
+            'text', 'code' => $renderTextCodeField($field, $placeholder, $name, $normalizeToDeltaJson),
+            'select', 'multi-select', 'select-invert' => $renderSelectField($field, $placeholder, $name, $select2Settings),
+            'file' => $renderFileFieldWithPathSelector($field, $placeholder, $name, $view),
+            default => $renderTextareaField($field, $placeholder, $name),
+        };
+    },
+    $templateHtml
 );
 ?>
 
