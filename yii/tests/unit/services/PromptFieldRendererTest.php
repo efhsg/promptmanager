@@ -375,7 +375,7 @@ class PromptFieldRendererTest extends Unit
     /**
      * @dataProvider selectInvertFieldProvider
      */
-    public function testSelectInvertFieldRendersAsSingleSelect(array $field, string $placeholder, string $expectedDefault): void
+    public function testSelectInvertFieldRendersAsSingleSelect(array $field, string $placeholder, ?string $expectedDefault): void
     {
         $capturedConfig = [];
 
