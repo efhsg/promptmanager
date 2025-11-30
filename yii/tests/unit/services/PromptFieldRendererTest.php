@@ -372,6 +372,98 @@ class PromptFieldRendererTest extends Unit
         $this->assertStringContainsString('Text', $html);
     }
 
+    /**
+     * @dataProvider selectInvertFieldProvider
+     */
+    public function testSelectInvertFieldRendersAsSingleSelect(array $field, string $placeholder, ?string $expectedDefault): void
+    {
+        $capturedConfig = [];
+
+        Yii::$container->set(
+            Select2Widget::class,
+            function (Container $container, array $params, array $config) use (&$capturedConfig): Select2Widget {
+                /** @var Select2Widget&MockObject $widget */
+                $widget = $this->getMockBuilder(Select2Widget::class)
+                    ->disableOriginalConstructor()
+                    ->onlyMethods(['run'])
+                    ->getMock();
+
+                Yii::configure($widget, $config);
+                $widget->setView($this->view);
+                $widget->init();
+
+                $widget->method('run')->willReturnCallback(
+                    static function () use (&$capturedConfig, $widget): string {
+                        $capturedConfig = [
+                            'name' => $widget->name,
+                            'options' => $widget->options,
+                            'settings' => $widget->settings,
+                            'items' => $widget->items,
+                            'value' => $widget->value,
+                        ];
+
+                        return '<select id="' . ($widget->options['id'] ?? '') . '" name="' . $widget->name . '"></select>';
+                    }
+                );
+
+                return $widget;
+            }
+        );
+
+        $html = $this->renderer->renderField($field, $placeholder);
+
+        $this->assertSame("PromptInstanceForm[fields][$placeholder]", $capturedConfig['name']);
+        $this->assertEmpty($capturedConfig['options']['multiple'] ?? null, 'select-invert should NOT be multi-select');
+        $this->assertSame($field['options'], $capturedConfig['items']);
+        $this->assertSame($expectedDefault, $capturedConfig['value']);
+        $this->assertStringContainsString("id=\"field-$placeholder\"", $html);
+    }
+
+    public static function selectInvertFieldProvider(): array
+    {
+        return [
+            'Basic select-invert with default' => [
+                'field' => [
+                    'type' => 'select-invert',
+                    'options' => [
+                        'shell' => 'Shell',
+                        'exxon' => 'Exxon Mobil',
+                        'bp' => 'BP',
+                    ],
+                    'default' => 'shell',
+                ],
+                'placeholder' => 'companies',
+                'expectedDefault' => 'shell',
+            ],
+            'Select-invert with multi-word options' => [
+                'field' => [
+                    'type' => 'select-invert',
+                    'options' => [
+                        'exxon_mobil' => 'Exxon Mobil',
+                        'shell' => 'Shell',
+                        'total' => 'TotalEnergies',
+                        'chevron' => 'Chevron',
+                    ],
+                    'default' => 'exxon_mobil',
+                ],
+                'placeholder' => 'energy-companies',
+                'expectedDefault' => 'exxon_mobil',
+            ],
+            'Select-invert without default' => [
+                'field' => [
+                    'type' => 'select-invert',
+                    'options' => [
+                        'a' => 'Option A',
+                        'b' => 'Option B',
+                        'c' => 'Option C',
+                    ],
+                ],
+                'placeholder' => 'no-default',
+                'expectedDefault' => null,
+            ],
+        ];
+    }
+
     private function createDom(string $html): DOMDocument
     {
         $document = new DOMDocument();
