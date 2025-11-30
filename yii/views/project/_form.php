@@ -41,7 +41,17 @@ QuillAsset::register($this);
         'templateResult' => new JsExpression("
             function(state) {
                 if (!state.id) return state.text;
-                return $('<span></span>').text(state.text);
+                var \$selectElement = $('#project-linkedprojectids');
+                var selectedValues = \$selectElement.val() || [];
+                var isSelected = selectedValues.indexOf(state.id.toString()) !== -1;
+                var \$el = $('<span></span>').text(state.text);
+                if (!isSelected) {
+                    \$el.css({
+                        'opacity': '0.5',
+                        'color': '#6c757d'
+                    });
+                }
+                return \$el;
             }
         "),
         'templateSelection' => new JsExpression("
@@ -57,6 +67,7 @@ QuillAsset::register($this);
             'options' => [
                 'placeholder' => 'Select projects to link...',
                 'multiple' => true,
+                'id' => 'project-linkedprojectids',
             ],
             'settings' => $linkedProjectsSelect2Settings,
         ])
