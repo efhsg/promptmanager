@@ -66,6 +66,19 @@ class PromptFieldRenderer
         };
     }
 
+    private function buildEditorPlaceholder(string $fieldType, string $label, string $customPlaceholder): string
+    {
+        if ($customPlaceholder !== '') {
+            return $customPlaceholder;
+        }
+
+        if ($fieldType === 'code') {
+            return $label !== '' ? "Paste or write code for {$label}…" : 'Paste or write code…';
+        }
+
+        return $label !== '' ? "Write {$label}…" : 'Type your content…';
+    }
+
     private function renderTextCodeField(array $field, string $placeholder, string $name): string
     {
         $hiddenId = "hidden-$placeholder";
@@ -75,13 +88,8 @@ class PromptFieldRenderer
         $defaultValue = $this->toDeltaJson($field['default'] ?? '');
 
         $label = trim((string)($field['label'] ?? ''));
-        $custom = trim((string)($field['placeholder'] ?? ''));
-
-        $placeholderText = $custom !== ''
-            ? $custom
-            : ($fieldType === 'code'
-                ? ($label !== '' ? "Paste or write code for {$label}…" : 'Paste or write code…')
-                : ($label !== '' ? "Write {$label}…" : 'Type your content…'));
+        $customPlaceholder = trim((string)($field['placeholder'] ?? ''));
+        $placeholderText = $this->buildEditorPlaceholder($fieldType, $label, $customPlaceholder);
 
         return
             Html::hiddenInput($name, $defaultValue, ['id' => $hiddenId]) .
@@ -115,31 +123,19 @@ class PromptFieldRenderer
 
     private function renderSelectField(array $field, string $placeholder, string $name, string $fieldType): string
     {
-        $select2Settings = array_merge(self::SELECT2_SETTINGS, [
-            'templateResult' => new JsExpression(
-                "function(state) {
-                    if (!state.id) return state.text;
-                    return $('<span></span>').text(state.text);
-                }"
-            ),
-            'templateSelection' => new JsExpression(
-                "function(state) {
-                    if (!state.id) return state.text;
-                    return $('<span></span>').text(state.text);
-                }"
-            ),
-        ]);
+        $isMultiSelect = $fieldType === 'multi-select';
+        $placeholderText = $isMultiSelect ? 'Select options...' : 'Select an option...';
 
         return Select2Widget::widget([
-            'name' => $fieldType === 'multi-select' ? $name . '[]' : $name,
+            'name' => $isMultiSelect ? $name . '[]' : $name,
             'id' => "field-$placeholder",
             'value' => $field['default'] ?? null,
             'items' => $field['options'] ?? [],
             'options' => [
-                'placeholder' => 'Select ' . ($fieldType === 'multi-select' ? 'options' : 'an option') . '...',
-                'multiple' => $fieldType === 'multi-select',
+                'placeholder' => $placeholderText,
+                'multiple' => $isMultiSelect,
             ],
-            'settings' => $select2Settings,
+            'settings' => $this->createSelect2Settings(),
         ]);
     }
 
@@ -301,5 +297,28 @@ if (typeof window.PathSelectorField === 'undefined') {
 JS;
 
         $this->view->registerJs($script, View::POS_END);
+    }
+
+    private function createSelect2Settings(): array
+    {
+        $template = $this->createSelect2Template();
+
+        return array_merge(
+            self::SELECT2_SETTINGS,
+            [
+                'templateResult' => $template,
+                'templateSelection' => $template,
+            ]
+        );
+    }
+
+    private function createSelect2Template(): JsExpression
+    {
+        return new JsExpression(
+            "function(state) {
+                if (!state.id) return state.text;
+                return $('<span></span>').text(state.text);
+            }"
+        );
     }
 }
