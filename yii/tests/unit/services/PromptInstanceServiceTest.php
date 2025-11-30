@@ -207,4 +207,43 @@ class PromptInstanceServiceTest extends Unit
         $this->expectExceptionMessage('The requested prompt instance does not exist or is not yours.');
         $this->service->findModelWithOwner(-1, -1);
     }
+
+    public function testParseRawFieldValuesReturnsOriginalWhenNoRawInput(): void
+    {
+        $fieldValues = ['1' => 'value1', '2' => 'value2'];
+
+        $result = $this->service->parseRawFieldValues($fieldValues);
+
+        $this->assertSame($fieldValues, $result);
+    }
+
+    public function testParseRawFieldValuesReturnsOriginalForEmptyInput(): void
+    {
+        $fieldValues = [];
+
+        $result = $this->service->parseRawFieldValues($fieldValues);
+
+        $this->assertSame($fieldValues, $result);
+    }
+
+    public function testParseRawFieldValuesPreservesExistingArrayFields(): void
+    {
+        $fieldValues = [
+            '1' => 'value1',
+            '2' => ['array', 'field'],
+        ];
+
+        $result = $this->service->parseRawFieldValues($fieldValues);
+
+        $this->assertSame($fieldValues, $result);
+        $this->assertIsArray($result['2']);
+    }
+
+    public function testParseRawFieldValuesWithNullInput(): void
+    {
+        $result = $this->service->parseRawFieldValues([]);
+
+        $this->assertIsArray($result);
+        $this->assertEmpty($result);
+    }
 }

@@ -9,8 +9,8 @@ use app\models\PromptInstanceSearch;
 use app\services\ContextService;
 use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
+use app\services\FileFieldProcessor;
 use app\services\ModelService;
-use app\services\PathService;
 use app\services\PromptGenerationService;
 use app\services\PromptInstanceService;
 use app\services\PromptTemplateService;
@@ -36,7 +36,6 @@ class PromptInstanceController extends Controller
      */
     private array $actionPermissionMap;
 
-    private readonly PathService $pathService;
     private PromptGenerationService $promptGenerationService;
 
     public function __construct(
@@ -48,14 +47,13 @@ class PromptInstanceController extends Controller
         private readonly EntityPermissionService $permissionService,
         private readonly ContextService $contextService,
         private readonly PromptTransformationService $promptTransformationService,
-        PathService $pathService,
+        private readonly FileFieldProcessor $fileFieldProcessor,
         PromptGenerationService $promptGenerationService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('promptInstance');
         $this->promptGenerationService = $promptGenerationService;
-        $this->pathService = $pathService;
     }
 
     public function behaviors(): array
@@ -323,109 +321,11 @@ class PromptInstanceController extends Controller
         $contextIds = Yii::$app->request->post('context_ids') ?? [];
         $fieldValues = Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [];
 
-        $rawPost = file_get_contents('php://input');
-        if ($rawPost !== false && $rawPost !== '') {
-            parse_str($rawPost, $rawData);
-            if (isset($rawData['PromptInstanceForm']['fields']) && is_array($rawData['PromptInstanceForm']['fields'])) {
-                $params = [];
-                foreach (explode('&', $rawPost) as $param) {
-                    if (!str_starts_with($param, 'PromptInstanceForm%5Bfields%5D')) {
-                        continue;
-                    }
-                    $parts = explode('=', $param, 2);
-                    if (count($parts) !== 2) {
-                        continue;
-                    }
-                    $key = urldecode($parts[0]);
-                    $value = urldecode($parts[1]);
-                    if (preg_match('/PromptInstanceForm\[fields]\[(\d+)](\[])?/', $key, $matches)) {
-                        $fieldId = $matches[1];
-                        $isArrayField = isset($matches[2]) && $matches[2] === '[]';
-                        if ($isArrayField) {
-                            $params[$fieldId][] = $value;
-                        } elseif (!isset($params[$fieldId])) {
-                            $params[$fieldId] = $value;
-                        }
-                    }
-                }
-                foreach ($params as $fid => $val) {
-                    if (isset($fieldValues[$fid]) && is_array($fieldValues[$fid])) {
-                        continue;
-                    }
-                    $fieldValues[$fid] = $val;
-                }
-            }
-        }
+        $fieldValues = $this->promptInstanceService->parseRawFieldValues($fieldValues);
 
         $template = $this->promptTemplateService->getTemplateById($templateId, $userId);
 
-        if ($template && $template->project && !empty($template->project->root_directory)) {
-            $blacklistedDirectories = $template->project->getBlacklistedDirectories();
-            foreach ($template->fields as $field) {
-                if ($field->type !== 'file') {
-                    continue;
-                }
-
-                $pathToUse = $fieldValues[$field->id] ?? $field->content;
-                if (empty($pathToUse)) {
-                    continue;
-                }
-
-                $absolutePath = $this->pathService->resolveRequestedPath(
-                    $template->project->root_directory,
-                    $pathToUse,
-                    $blacklistedDirectories
-                );
-                if ($absolutePath === null || !is_file($absolutePath) || !is_readable($absolutePath)) {
-                    continue;
-                }
-
-                if (!$template->project->isFileExtensionAllowed(pathinfo($absolutePath, PATHINFO_EXTENSION))) {
-                    continue;
-                }
-
-                $fileContent = @file_get_contents($absolutePath);
-                if ($fileContent === false) {
-                    continue;
-                }
-
-                $isCode = $this->promptTransformationService->detectCode($fileContent)
-                    || in_array(
-                        strtolower((string)pathinfo($absolutePath, PATHINFO_EXTENSION)),
-                        [
-                            'php',
-                            'js',
-                            'ts',
-                            'json',
-                            'css',
-                            'html',
-                            'htm',
-                            'xml',
-                            'md',
-                            'yaml',
-                            'yml',
-                            'sh',
-                            'bash',
-                            'zsh',
-                            'py'
-                        ],
-                        true
-                    );
-
-                if ($isCode) {
-                    $fieldValues[$field->id] = json_encode([
-                        'ops' => [
-                            [
-                                'insert' => rtrim($fileContent) . "\n",
-                                'attributes' => ['code-block' => true],
-                            ],
-                        ],
-                    ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-                } else {
-                    $fieldValues[$field->id] = $fileContent;
-                }
-            }
-        }
+        $fieldValues = $this->fileFieldProcessor->processFileFields($template, $fieldValues);
 
         $deltaJson = $this->promptGenerationService->generateFinalPrompt(
             $templateId,
