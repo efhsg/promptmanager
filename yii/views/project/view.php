@@ -76,6 +76,18 @@ echo $this->render('_breadcrumbs', [
                         'value' => static fn(Project $model) => $model->getPromptInstanceCopyFormatEnum()->label(),
                     ],
                     [
+                        'attribute' => 'linkedProjectIds',
+                        'label' => 'Linked Projects',
+                        'value' => static function ($model) {
+                            $linkedProjects = $model->linkedProjects;
+                            if (empty($linkedProjects)) {
+                                return 'None';
+                            }
+                            $names = array_map(static fn($project) => $project->name, $linkedProjects);
+                            return implode(', ', $names);
+                        },
+                    ],
+                    [
                         'attribute' => 'description',
                         'format' => 'raw',
                         'value' => function ($model) {
