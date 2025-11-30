@@ -1,6 +1,8 @@
 <?php /** @noinspection JSUnresolvedReference */
 use app\assets\QuillAsset;
+use conquer\select2\Select2Widget;
 use yii\helpers\Html;
+use yii\web\JsExpression;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
@@ -33,9 +35,33 @@ QuillAsset::register($this);
         ->dropDownList($model::getPromptInstanceCopyFormatOptions())
         ->hint('Format used by prompt instance copy buttons (e.g. Markdown).') ?>
 
-    <?= $form->field($model, 'linkedProjectIds')
-        ->dropDownList($availableProjects, ['multiple' => true, 'size' => 5])
-        ->hint('Select other projects whose fields can be used as external (EXT) fields in prompt instances.') ?>
+    <?php
+    $linkedProjectsSelect2Settings = [
+        'minimumResultsForSearch' => 0,
+        'templateResult' => new JsExpression("
+            function(state) {
+                if (!state.id) return state.text;
+                return $('<span></span>').text(state.text);
+            }
+        "),
+        'templateSelection' => new JsExpression("
+            function(state) {
+                if (!state.id) return state.text;
+                return $('<span></span>').text(state.text);
+            }
+        "),
+    ];
+    echo $form->field($model, 'linkedProjectIds')
+        ->widget(Select2Widget::class, [
+            'items' => $availableProjects,
+            'options' => [
+                'placeholder' => 'Select projects to link...',
+                'multiple' => true,
+            ],
+            'settings' => $linkedProjectsSelect2Settings,
+        ])
+        ->hint('Select other projects whose fields can be used as external (EXT) fields in prompt instances.');
+    ?>
 
     <?= $form->field($model, 'description')
         ->hiddenInput(['id' => 'project-description'])
