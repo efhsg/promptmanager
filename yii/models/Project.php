@@ -105,15 +105,6 @@ class Project extends ActiveRecord
         ];
     }
 
-    public function afterFind(): void
-    {
-        parent::afterFind();
-        $this->linkedProjectIds = array_map(
-            static fn($project): int => $project->id,
-            $this->linkedProjects
-        );
-    }
-
     public function beforeValidate(): bool
     {
         if (!parent::beforeValidate()) {

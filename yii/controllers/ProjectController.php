@@ -150,6 +150,11 @@ class ProjectController extends Controller
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
+        $model->linkedProjectIds = array_map(
+            static fn($project): int => $project->id,
+            $model->linkedProjects
+        );
+
         $availableProjects = $this->projectService->fetchAvailableProjectsForLinking($model->id, Yii::$app->user->id);
 
         return $this->render('update', [
