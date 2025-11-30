@@ -284,22 +284,43 @@ a.desc:after {
     left: 0;
 }
 
-/* Select2 multi-select dropdown styling */
-/* Make selected options clearly visible with blue background */
-.select2-results__option.select2-results__option--selected {
-    background-color: #6897bb !important;
-    color: #ffffff !important;
-    font-weight: 500 !important;
+/* Select2 list contrast */
+.select2-container--bootstrap .select2-results__options .select2-results__option {
+    padding: 8px 12px;
+    border-left: 4px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-/* Gray out non-selected options in multi-select dropdowns */
-.select2-results__option:not(.select2-results__option--selected):not(.select2-results__option--highlighted) {
-    opacity: 0.5 !important;
-    color: #6c757d !important;
+.select2-container--bootstrap .select2-results__options .select2-results__option[aria-selected=true],
+.select2-container--bootstrap .select2-results__options .select2-results__option--selected {
+    background-color: #e6f0ff;
+    border-left-color: #3b6dbc;
+    color: #123870;
+    font-weight: 400;
 }
 
-/* Keep highlighted (hovered) non-selected options more visible */
-.select2-results__option--highlighted:not(.select2-results__option--selected) {
-    opacity: 0.7 !important;
-    background-color: #f0f0f0 !important;
+.select2-container--bootstrap .select2-results__options .select2-results__option--highlighted.select2-results__option--selectable {
+    background-color: #d4e4ff;
+    color: #0f2f62;
 }
+
+.select2-container--bootstrap .select2-results__options .select2-results__option--selected.select2-results__option--highlighted {
+    background-color: #c6d8ff;
+    color: #0b2f5e;
+}
+
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__rendered .select2-selection__choice {
+    background-color: #ffffff;
+    border-color: #c0d4ff;
+    color: #000000;
+    font-weight: 400;
+}
+
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__choice__remove {
+    color: #123870;
+}
+
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #0a254d;
+}
+
