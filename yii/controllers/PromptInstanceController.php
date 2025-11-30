@@ -349,7 +349,6 @@ class PromptInstanceController extends Controller
                     }
                 }
                 foreach ($params as $fid => $val) {
-                    // Preserve multi-value submissions (e.g. multi-select) already parsed by Yii.
                     if (isset($fieldValues[$fid]) && is_array($fieldValues[$fid])) {
                         continue;
                     }
