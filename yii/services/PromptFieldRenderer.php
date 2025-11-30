@@ -179,6 +179,7 @@ class PromptFieldRenderer
             $modalId,
             $pathSelectorId,
             $saveButtonId,
+            $hiddenInputId,
             $currentPath
         );
 
@@ -216,6 +217,7 @@ class PromptFieldRenderer
         string $modalId,
         string $pathSelectorId,
         string $saveButtonId,
+        string $hiddenInputId,
         string $currentPath
     ): string {
         $modalHtml = Html::beginTag('div', [
@@ -240,7 +242,7 @@ class PromptFieldRenderer
             'id' => $pathSelectorId,
             'initialValue' => $currentPath,
             'pathListUrl' => Url::to(['field/path-list']),
-            'hiddenContentInputId' => null,
+            'hiddenContentInputId' => $hiddenInputId,
             'wrapperOptions' => [
                 'style' => 'display: block;',
             ],
