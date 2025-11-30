@@ -287,6 +287,17 @@ class PromptGenerationService
 
         // Add field content operations (decode from Quill Delta JSON)
         $contentOps = $this->extractOpsFromDelta($field->content ?? '');
+        if ($selectedLabel !== '' && $contentOps !== []) {
+            $firstInsert = &$contentOps[0];
+            if (
+                isset($firstInsert['insert']) &&
+                is_string($firstInsert['insert']) &&
+                $firstInsert['insert'] !== '' &&
+                !preg_match('/^\s/', $firstInsert['insert'])
+            ) {
+                $firstInsert['insert'] = ' ' . $firstInsert['insert'];
+            }
+        }
         foreach ($contentOps as $op) {
             $ops[] = $op;
         }
