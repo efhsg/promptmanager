@@ -280,6 +280,64 @@ class PromptFieldRendererTest extends Unit
         $this->assertStringContainsString('id="field-46"', $html);
     }
 
+    public function testRenderFieldConfiguresSelectInvertAsSingleSelection(): void
+    {
+        $capturedConfig = [];
+
+        Yii::$container->set(
+            Select2Widget::class,
+            function (Container $container, array $params, array $config) use (&$capturedConfig): Select2Widget {
+                /** @var Select2Widget&MockObject $widget */
+                $widget = $this->getMockBuilder(Select2Widget::class)
+                    ->disableOriginalConstructor()
+                    ->onlyMethods(['run'])
+                    ->getMock();
+
+                Yii::configure($widget, $config);
+                $widget->setView($this->view);
+                $widget->init();
+
+                $widget->method('run')->willReturnCallback(
+                    static function () use (&$capturedConfig, $widget): string {
+                        $capturedConfig = [
+                            'name' => $widget->name,
+                            'options' => $widget->options,
+                            'settings' => $widget->settings,
+                            'items' => $widget->items,
+                            'value' => $widget->value,
+                        ];
+
+                        $multiple = !empty($widget->options['multiple']) ? ' multiple' : '';
+
+                        return '<select id="' . ($widget->options['id'] ?? '') . '" name="' . $widget->name . '"' . $multiple . '></select>';
+                    }
+                );
+
+                return $widget;
+            }
+        );
+
+        $field = [
+            'type' => 'select-invert',
+            'options' => [
+                'on' => 'On',
+                'off' => 'Off',
+            ],
+            'default' => 'off',
+        ];
+
+        $html = $this->renderer->renderField($field, '47');
+
+        $this->assertSame('PromptInstanceForm[fields][47]', $capturedConfig['name']);
+        $this->assertEmpty($capturedConfig['options']['multiple'] ?? null);
+        $this->assertSame($field['options'], $capturedConfig['items']);
+        $this->assertSame($field['default'], $capturedConfig['value']);
+        $this->assertSame(0, $capturedConfig['settings']['minimumResultsForSearch']);
+        $this->assertInstanceOf(JsExpression::class, $capturedConfig['settings']['templateResult']);
+        $this->assertInstanceOf(JsExpression::class, $capturedConfig['settings']['templateSelection']);
+        $this->assertStringContainsString('id="field-47"', $html);
+    }
+
     public function testRenderFieldRegistersFileFieldScriptWithCurrentPath(): void
     {
         $field = [
@@ -293,7 +351,7 @@ class PromptFieldRendererTest extends Unit
 
         $registered = $this->view->js[View::POS_END] ?? [];
         $scripts = array_values($registered);
-        $script = isset($scripts[0]) ? (string)$scripts[0] : '';
+        $script = implode("\n", array_map('strval', $scripts));
 
         $this->assertStringContainsString('"modalId":"path-modal-file-1"', $script);
         $this->assertStringContainsString('"pathSelectorId":"path-selector-file-1"', $script);
