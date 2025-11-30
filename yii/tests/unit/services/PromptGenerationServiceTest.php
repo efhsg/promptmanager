@@ -325,4 +325,88 @@ JSON,
             ],
         ];
     }
+
+    /**
+     * Test with separate value and label (like real database records)
+     * @throws Exception
+     */
+    public function testSelectInvertWithValueAndLabel(): void
+    {
+        // Create field options with VALUE and LABEL (like real field_option records)
+        $option1 = new stdClass();
+        $option1->value = 'shell';
+        $option1->label = 'Shell';
+        $option1->selected_by_default = 1;  // Shell is default
+
+        $option2 = new stdClass();
+        $option2->value = 'exxon';
+        $option2->label = 'Exxon Mobil';
+        $option2->selected_by_default = 0;
+
+        $option3 = new stdClass();
+        $option3->value = 'bp';
+        $option3->label = 'BP';
+        $option3->selected_by_default = 0;
+
+        $option4 = new stdClass();
+        $option4->value = 'total';
+        $option4->label = 'TotalEnergies';
+        $option4->selected_by_default = 0;
+
+        $option5 = new stdClass();
+        $option5->value = 'chevron';
+        $option5->label = 'Chevron';
+        $option5->selected_by_default = 0;
+
+        $field = new stdClass();
+        $field->id = 1;
+        $field->type = 'select-invert';
+        $field->content = '{"ops":[{"insert":" compared to "}]}';
+        $field->fieldOptions = [$option1, $option2, $option3, $option4, $option5];
+
+        $templateBody = '{"ops":[{"insert":"GEN:{{1}}"}]}';
+
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) use ($templateBody, $field) {
+                    if ($property === 'template_body') {
+                        return $templateBody;
+                    }
+                    if ($property === 'fields') {
+                        return [$field];
+                    }
+                    return null;
+                },
+                'getAttribute' => function ($name) use ($templateBody) {
+                    if ($name === 'template_body') {
+                        return $templateBody;
+                    }
+                    return null;
+                }
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        // User selects 'exxon' (the VALUE, not the label)
+        $result = $service->generateFinalPrompt(
+            1,
+            [],
+            [1 => 'exxon'],  // Form submits the VALUE
+            self::USER_ID
+        );
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+
+        // Should output: "Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron"
+        // NOT: "Shell compared to ..." or "exxon compared to ..."
+        $this->assertEquals('Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron', $plainText);
+    }
 }
