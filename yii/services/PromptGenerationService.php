@@ -257,8 +257,8 @@ class PromptGenerationService
             return [['insert' => (string)$selectedValue]];
         }
 
-        // Get field content (the middle part)
-        $fieldContent = trim((string)($field->content ?? ''));
+        // Get field content (the middle part) - decode from Quill Delta JSON
+        $fieldContent = $this->extractPlainTextFromDelta($field->content ?? '');
 
         // Get all field options
         $allOptions = [];
@@ -267,7 +267,7 @@ class PromptGenerationService
         }
 
         // Determine selected and unselected values
-        $selected = trim((string)$selectedValue);
+        $selected = (string)$selectedValue;
         $unselected = array_filter($allOptions, fn($opt) => $opt !== $selected);
 
         // Build the output string: selected + content + unselected (comma-separated)
@@ -285,6 +285,35 @@ class PromptGenerationService
         $output = implode('', $parts);
 
         return [['insert' => $output]];
+    }
+
+    /**
+     * Extract plain text from Quill Delta JSON format
+     */
+    private function extractPlainTextFromDelta(string $deltaJson): string
+    {
+        if ($deltaJson === '') {
+            return '';
+        }
+
+        try {
+            $decoded = json_decode($deltaJson, true, 512, JSON_THROW_ON_ERROR);
+            if (!isset($decoded['ops']) || !is_array($decoded['ops'])) {
+                return $deltaJson;
+            }
+
+            $text = '';
+            foreach ($decoded['ops'] as $op) {
+                if (isset($op['insert']) && is_string($op['insert'])) {
+                    $text .= $op['insert'];
+                }
+            }
+
+            return $text;
+        } catch (JsonException) {
+            // If it's not valid JSON, return as-is
+            return $deltaJson;
+        }
     }
 
     /**
