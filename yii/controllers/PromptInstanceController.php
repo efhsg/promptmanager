@@ -284,6 +284,9 @@ class PromptInstanceController extends Controller
             'type' => $field->type,
             'label' => $field->label,
         ];
+        if (in_array($field->type, FieldConstants::PATH_FIELD_TYPES, true)) {
+            $fieldData['project_id'] = $field->project_id;
+        }
         if (in_array($field->type, FieldConstants::OPTION_FIELD_TYPES)) {
             $options = [];
             $default = [];
@@ -327,13 +330,18 @@ class PromptInstanceController extends Controller
         if ($template && $template->project && !empty($template->project->root_directory)) {
             $blacklistedDirectories = $template->project->getBlacklistedDirectories();
             foreach ($template->fields as $field) {
-                if ($field->type !== 'file' || empty($field->content)) {
+                if ($field->type !== 'file') {
+                    continue;
+                }
+
+                $pathToUse = $fieldValues[$field->id] ?? $field->content;
+                if (empty($pathToUse)) {
                     continue;
                 }
 
                 $absolutePath = $this->pathService->resolveRequestedPath(
                     $template->project->root_directory,
-                    $field->content,
+                    $pathToUse,
                     $blacklistedDirectories
                 );
                 if ($absolutePath === null || !is_file($absolutePath) || !is_readable($absolutePath)) {
