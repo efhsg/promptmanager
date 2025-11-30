@@ -15,7 +15,7 @@ use yii\web\View;
 /**
  * Renders dynamic form fields for prompt templates based on field type
  * and configuration. Supports text/code editors, selects, file pickers,
- * and textareas with Quill Delta format for rich text.
+ * and text areas with Quill Delta format for rich text.
  */
 class PromptFieldRenderer
 {
