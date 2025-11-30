@@ -148,9 +148,9 @@ return [
         'data' => null,
     ],
     [
-        'name' => 'generatePromptForm',
+        'name' => 'generatePrompt',
         'type' => 2,
-        'description' => 'Generate a Prompt Instance form',
+        'description' => 'Generate a Prompt Instance',
         'rule_name' => 'isPromptTemplateOwner',
         'data' => null,
     ],

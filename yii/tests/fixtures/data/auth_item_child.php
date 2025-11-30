@@ -21,6 +21,6 @@ return [
     ['parent' => 'user', 'child' => 'viewPromptInstance'],
     ['parent' => 'user', 'child' => 'updatePromptInstance'],
     ['parent' => 'user', 'child' => 'deletePromptInstance'],
-    ['parent' => 'user', 'child' => 'generatePromptForm'],
+    ['parent' => 'user', 'child' => 'generatePrompt'],
     ['parent' => 'admin', 'child' => 'user'],
 ];
