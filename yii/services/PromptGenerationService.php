@@ -17,6 +17,7 @@ class PromptGenerationService
     private const PLACEHOLDER_PATTERN = '/\b(?:GEN|PRJ):\{\{(\d+)}}/';
 
     private array $templateFieldTypes = [];
+    private array $templateFields = [];
 
     public function __construct(
         private readonly PromptTemplateService $templateService,
@@ -90,6 +91,11 @@ class PromptGenerationService
             ?? throw new NotFoundHttpException('Template not found or access denied.');
 
         $this->templateFieldTypes = ArrayHelper::map($templateModel->fields ?? [], 'id', 'type');
+
+        // Store full field objects for fields that need additional data (like select-invert)
+        foreach (($templateModel->fields ?? []) as $field) {
+            $this->templateFields[$field->id] = $field;
+        }
 
         try {
             $templateDelta = json_decode($templateModel->template_body, true, 512, JSON_THROW_ON_ERROR);
@@ -191,6 +197,11 @@ class PromptGenerationService
     {
         $fieldType = $this->templateFieldTypes[$fieldId] ?? null;
 
+        // Handle select-invert field type
+        if ($fieldType === 'select-invert') {
+            return $this->buildSelectInvertOperations($fieldValue, $fieldId);
+        }
+
         // Handle array field values (non-JSON strings)
         if (is_array($fieldValue)) {
             $ops = [];
@@ -232,6 +243,122 @@ class PromptGenerationService
         } catch (JsonException) {
             // If JSON decoding fails, treat as plain text
             return [['insert' => (string)$fieldValue]];
+        }
+    }
+
+    /**
+     * Build operations for select-invert field type
+     * Format: selected label + field content + unselected labels (comma-separated)
+     */
+    private function buildSelectInvertOperations(mixed $selectedValue, int $fieldId): array
+    {
+        $field = $this->templateFields[$fieldId] ?? null;
+        if ($field === null) {
+            return [['insert' => (string)$selectedValue]];
+        }
+
+        $selectedValueStr = (string)$selectedValue;
+        $selectedLabel = null;
+        $unselectedLabels = [];
+
+        // Build mapping of values to labels and find selected/unselected
+        foreach (($field->fieldOptions ?? []) as $option) {
+            $label = !empty($option->label) ? $option->label : $option->value;
+
+            if ($option->value === $selectedValueStr) {
+                $selectedLabel = $label;
+            } else {
+                $unselectedLabels[] = $label;
+            }
+        }
+
+        // If no match found, use the selected value as-is
+        if ($selectedLabel === null) {
+            $selectedLabel = $selectedValueStr;
+        }
+
+        // Build the output as Quill Delta operations
+        $ops = [];
+
+        // Add selected label
+        if ($selectedLabel !== '') {
+            $ops[] = ['insert' => $selectedLabel];
+        }
+
+        // Add field content operations (decode from Quill Delta JSON)
+        $contentOps = $this->extractOpsFromDelta($field->content ?? '');
+        if ($selectedLabel !== '' && $contentOps !== []) {
+            $firstInsert = &$contentOps[0];
+            if (
+                isset($firstInsert['insert']) &&
+                is_string($firstInsert['insert']) &&
+                $firstInsert['insert'] !== '' &&
+                !preg_match('/^\s/', $firstInsert['insert'])
+            ) {
+                $firstInsert['insert'] = ' ' . $firstInsert['insert'];
+            }
+        }
+        foreach ($contentOps as $op) {
+            $ops[] = $op;
+        }
+
+        // Add unselected labels (comma-separated)
+        if (!empty($unselectedLabels)) {
+            $ops[] = ['insert' => implode(',', $unselectedLabels)];
+        }
+
+        return $ops;
+    }
+
+    /**
+     * Extract Quill Delta operations from JSON format
+     */
+    private function extractOpsFromDelta(string $deltaJson): array
+    {
+        if ($deltaJson === '') {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($deltaJson, true, 512, JSON_THROW_ON_ERROR);
+            if (!isset($decoded['ops']) || !is_array($decoded['ops'])) {
+                // If not valid Quill Delta, treat as plain text
+                return [['insert' => $deltaJson]];
+            }
+
+            return $decoded['ops'];
+        } catch (JsonException) {
+            // If it's not valid JSON, treat as plain text
+            return [['insert' => $deltaJson]];
+        }
+    }
+
+    /**
+     * Extract plain text from Quill Delta JSON format
+     */
+    private function extractPlainTextFromDelta(string $deltaJson): string
+    {
+        if ($deltaJson === '') {
+            return '';
+        }
+
+        try {
+            $decoded = json_decode($deltaJson, true, 512, JSON_THROW_ON_ERROR);
+            if (!isset($decoded['ops']) || !is_array($decoded['ops'])) {
+                return $deltaJson;
+            }
+
+            $text = '';
+            foreach ($decoded['ops'] as $op) {
+                if (isset($op['insert']) && is_string($op['insert'])) {
+                    $text .= $op['insert'];
+                }
+            }
+
+            return $text;
+        } catch (JsonException) {
+            // If it's not valid JSON, return as-is
+            return $deltaJson;
         }
     }
 

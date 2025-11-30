@@ -7,6 +7,7 @@ use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
 use app\services\ContextService;
+use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
 use app\services\ModelService;
 use app\services\PathService;
@@ -14,10 +15,10 @@ use app\services\PromptGenerationService;
 use app\services\PromptInstanceService;
 use app\services\PromptTemplateService;
 use app\services\PromptTransformationService;
-use app\services\CopyFormatConverter;
 use common\constants\FieldConstants;
 use common\enums\CopyType;
 use Yii;
+use yii\base\InvalidArgumentException;
 use yii\db\Exception;
 use yii\filters\AccessControl;
 use yii\helpers\Json;
@@ -29,10 +30,6 @@ use yii\web\Response;
 
 class PromptInstanceController extends Controller
 {
-
-    private const FORMAT_HTML = 'displayHtml';
-    private const FORMAT_MARKDOWN = 'displayText';
-    private const FORMAT_DELTA = 'displayDelta';
 
     /**
      * @var array
@@ -325,6 +322,42 @@ class PromptInstanceController extends Controller
         $templateId = (int)Yii::$app->request->post('template_id');
         $contextIds = Yii::$app->request->post('context_ids') ?? [];
         $fieldValues = Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [];
+
+        $rawPost = file_get_contents('php://input');
+        if ($rawPost !== false && $rawPost !== '') {
+            parse_str($rawPost, $rawData);
+            if (isset($rawData['PromptInstanceForm']['fields']) && is_array($rawData['PromptInstanceForm']['fields'])) {
+                $params = [];
+                foreach (explode('&', $rawPost) as $param) {
+                    if (!str_starts_with($param, 'PromptInstanceForm%5Bfields%5D')) {
+                        continue;
+                    }
+                    $parts = explode('=', $param, 2);
+                    if (count($parts) !== 2) {
+                        continue;
+                    }
+                    $key = urldecode($parts[0]);
+                    $value = urldecode($parts[1]);
+                    if (preg_match('/PromptInstanceForm\[fields]\[(\d+)](\[])?/', $key, $matches)) {
+                        $fieldId = $matches[1];
+                        $isArrayField = isset($matches[2]) && $matches[2] === '[]';
+                        if ($isArrayField) {
+                            $params[$fieldId][] = $value;
+                        } elseif (!isset($params[$fieldId])) {
+                            $params[$fieldId] = $value;
+                        }
+                    }
+                }
+                foreach ($params as $fid => $val) {
+                    // Preserve multi-value submissions (e.g. multi-select) already parsed by Yii.
+                    if (isset($fieldValues[$fid]) && is_array($fieldValues[$fid])) {
+                        continue;
+                    }
+                    $fieldValues[$fid] = $val;
+                }
+            }
+        }
+
         $template = $this->promptTemplateService->getTemplateById($templateId, $userId);
 
         if ($template && $template->project && !empty($template->project->root_directory)) {
@@ -360,7 +393,23 @@ class PromptInstanceController extends Controller
                 $isCode = $this->promptTransformationService->detectCode($fileContent)
                     || in_array(
                         strtolower((string)pathinfo($absolutePath, PATHINFO_EXTENSION)),
-                        ['php', 'js', 'ts', 'json', 'css', 'html', 'htm', 'xml', 'md', 'yaml', 'yml', 'sh', 'bash', 'zsh', 'py'],
+                        [
+                            'php',
+                            'js',
+                            'ts',
+                            'json',
+                            'css',
+                            'html',
+                            'htm',
+                            'xml',
+                            'md',
+                            'yaml',
+                            'yml',
+                            'sh',
+                            'bash',
+                            'zsh',
+                            'py'
+                        ],
                         true
                     );
 
@@ -417,7 +466,7 @@ class PromptInstanceController extends Controller
 
         try {
             $delta = Json::decode($finalPrompt, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException|\yii\base\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException) {
             return ['success' => false];
         }
 

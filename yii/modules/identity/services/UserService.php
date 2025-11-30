@@ -74,7 +74,10 @@ class UserService
      */
     public function generatePasswordResetToken(User $user): bool
     {
-        return $this->updateUserAttribute($user, 'password_reset_token', Yii::$app->security->generateRandomString() . '_' . time());
+        $randomString = bin2hex(Yii::$app->security->generateRandomKey());
+        $token = $randomString . '_' . time();
+
+        return $this->updateUserAttribute($user, 'password_reset_token', $token);
     }
 
     private function updateUserAttribute(User $user, string $attribute, $value): bool
