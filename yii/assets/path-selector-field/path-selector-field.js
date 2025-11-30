@@ -187,7 +187,10 @@
             if (!previewUrl) return;
 
             fetch(previewUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(function(response) { return response.json(); })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    return response.json();
+                })
                 .then(function(data) {
                     if (!data.success) {
                         if (modalBody) modalBody.textContent = 'Preview error: ' + (data.message || 'Unable to load preview.');
@@ -228,7 +231,7 @@
         const pathLabel = escapeHtml(path);
         const [language, languageLabel] = resolveLanguage(path);
 
-        const buttonId = 'path-preview-button-' + fieldId + '-' + Date.now();
+        const buttonId = 'path-preview-button-' + escapeHtml(fieldId) + '-' + Date.now();
         const buttonHtml = '<button id="' + buttonId + '" type="button" class="btn btn-link p-0 text-decoration-underline path-preview font-monospace" ' +
             'data-url="' + escapeHtml(previewUrl) + '" ' +
             'data-language="' + escapeHtml(language) + '" ' +
@@ -275,15 +278,15 @@
                     const currentPath = hiddenInput ? hiddenInput.value : '';
                     const prunedPath = pruneToFirstDirectory(currentPath);
 
-                    pathSelector.load(config.fieldType, config.projectId);
-
-                    // Wait for path selector to finish loading before rendering
-                    // TODO: Replace timeout with proper callback/event from pathSelector.load()
-                    setTimeout(function() {
-                        if (prunedPath) {
-                            pathSelector.render(prunedPath);
-                        }
-                    }, 100);
+                    // Use Promise returned by load() to ensure render is called after loading completes
+                    const loadPromise = pathSelector.load(config.fieldType, config.projectId);
+                    if (loadPromise && typeof loadPromise.then === 'function') {
+                        loadPromise.then(function() {
+                            if (prunedPath) {
+                                pathSelector.render(prunedPath);
+                            }
+                        });
+                    }
                 }
             });
         }
