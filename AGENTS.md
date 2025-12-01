@@ -19,6 +19,11 @@
 - JavaScript in `npm/src` follows ES2019 conventions with 2-space indentation.
 - Docker and Compose files use clean 2-space YAML indentation; new environment variables must be documented in `.env.example`.
 
+## Migrations & Database Management
+- Database schema changes are managed through Yii migrations located in `yii/migrations` or module-specific `migrations` directories.
+- Each migration file is named with a timestamp prefix (e.g., `m230101_123456_add_new_table.php`) and includes `up()` and `down()` methods.
+- Migrations should be atomic, reversible, and include comments explaining their purpose at the class level.
+
 ## Commit & Pull Request Guidelines
 - Commit messages follow the existing convention:  
   `Add: ...` for new features  
