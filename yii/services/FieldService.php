@@ -4,7 +4,6 @@ namespace app\services;
 
 use app\models\Field;
 use app\models\FieldOption;
-use app\models\Project;
 use app\models\ProjectLinkedProject;
 use Exception;
 use Throwable;
@@ -81,7 +80,7 @@ class FieldService
     private function createExternalPlaceholder(Field $field): string
     {
         $projectLabel = $field->project->label ?: $field->project->name;
-        $projectName = $this->sanitizePlaceholderSegment((string)($projectLabel ?? 'Project ' . $field->project_id));
+        $projectName = $this->sanitizePlaceholderSegment($projectLabel ?? 'Project ' . $field->project_id);
         $fieldName = $this->sanitizePlaceholderSegment($field->name);
 
         return sprintf('EXT:{{%s: %s}}', $projectName, $fieldName);

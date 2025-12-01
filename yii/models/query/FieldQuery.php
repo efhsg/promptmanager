@@ -14,9 +14,8 @@ class FieldQuery extends ActiveQuery
     public function sharedFromProjects(int $userId, array $projectIds): self
     {
         return $this
-            ->alias('f')
             ->with('project')
-            ->where(['f.user_id' => $userId])
-            ->andWhere(['f.project_id' => $projectIds, 'f.share' => 1]);
+            ->where(['user_id' => $userId])
+            ->andWhere(['project_id' => $projectIds, 'share' => 1]);
     }
 }
