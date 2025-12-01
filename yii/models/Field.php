@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\query\FieldQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use app\services\PathService;
@@ -20,6 +21,7 @@ use yii\db\ActiveRecord;
  * @property string $type
  * @property string|null $content
  * @property int $selected_by_default
+ * @property int $share
  * @property string|null $label
  * @property int $created_at
  * @property int $updated_at
@@ -41,6 +43,11 @@ class Field extends ActiveRecord
         return 'field';
     }
 
+    public static function find(): FieldQuery
+    {
+        return new FieldQuery(static::class);
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -48,13 +55,21 @@ class Field extends ActiveRecord
     {
         return [
             [['name', 'type'], 'required'],
-            [['user_id', 'project_id', 'selected_by_default', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'project_id', 'selected_by_default', 'share', 'created_at', 'updated_at'], 'integer'],
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],
             [['name', 'label'], 'string', 'max' => 255],
             ['name', 'validateUniqueNameWithinProject', 'skipOnError' => true],
+            [
+                ['label'],
+                'unique',
+                'targetAttribute' => ['project_id', 'label', 'user_id'],
+                'filter' => ['not', ['label' => null]],
+                'message' => 'Label must be unique within the project.',
+            ],
             [['content'], 'string'],
             [['content'], 'validatePathContent'],
+            [['share'], 'default', 'value' => 0],
             [['project_id'],
                 'exist',
                 'skipOnError' => true,
@@ -85,6 +100,7 @@ class Field extends ActiveRecord
             'content' => 'Content',
             'type' => 'Type',
             'selected_by_default' => 'Default on',
+            'share' => 'Share with linked projects',
             'label' => 'Label',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',

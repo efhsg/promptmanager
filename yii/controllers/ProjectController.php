@@ -6,6 +6,7 @@ use app\components\ProjectContext;
 use app\models\Project;
 use app\models\ProjectSearch;
 use app\services\EntityPermissionService;
+use app\services\ProjectService;
 use Throwable;
 use Yii;
 use yii\db\ActiveRecord;
@@ -26,15 +27,18 @@ class ProjectController extends Controller
     private ProjectContext $projectContext;
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
+    private readonly ProjectService $projectService;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
+        ProjectService $projectService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
+        $this->projectService = $projectService;
         // Load the permission mapping for "project" actions
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('project');
     }
@@ -117,11 +121,15 @@ class ProjectController extends Controller
         $model = new Project(['user_id' => Yii::$app->user->id]);
 
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
+            $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
+        $availableProjects = $this->projectService->fetchAvailableProjectsForLinking(null, Yii::$app->user->id);
+
         return $this->render('create', [
             'model' => $model,
+            'availableProjects' => $availableProjects,
         ]);
     }
 
@@ -138,11 +146,20 @@ class ProjectController extends Controller
         $model = $this->findModel($id);
 
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
+            $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
+        $model->linkedProjectIds = array_map(
+            static fn($project): int => $project->id,
+            $model->linkedProjects
+        );
+
+        $availableProjects = $this->projectService->fetchAvailableProjectsForLinking($model->id, Yii::$app->user->id);
+
         return $this->render('update', [
             'model' => $model,
+            'availableProjects' => $availableProjects,
         ]);
     }
 

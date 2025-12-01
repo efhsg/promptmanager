@@ -44,7 +44,7 @@ class PromptTemplateService
             }
         }
 
-        if (!preg_match_all('/(GEN|PRJ):\{\{(\d+)}}/', $content, $matches)) {
+        if (!preg_match_all('/(GEN|PRJ|EXT):\{\{(\d+)}}/', $content, $matches)) {
             return;
         }
 
@@ -142,7 +142,7 @@ class PromptTemplateService
 
         foreach ($delta['ops'] as &$op) {
             if (isset($op['insert']) && is_string($op['insert'])) {
-                $op['insert'] = preg_replace_callback('/(GEN|PRJ):\{\{(.+?)}}/', function ($matches) use ($mapping) {
+                $op['insert'] = preg_replace_callback('/(GEN|PRJ|EXT):\{\{(.+?)}}/', function ($matches) use ($mapping) {
                     $prefix = $matches[1];
                     $placeholderName = $matches[2];
                     if (isset($mapping[$prefix][$placeholderName])) {
@@ -160,7 +160,7 @@ class PromptTemplateService
     {
         $normalized = [];
         foreach ($fieldsMapping as $placeholder => $data) {
-            if (preg_match('/^(GEN|PRJ):\{\{(.+)}}$/', $placeholder, $parts)) {
+            if (preg_match('/^(GEN|PRJ|EXT):\{\{(.+)}}$/', $placeholder, $parts)) {
                 $normalized[$parts[1]][$parts[2]] = $data;
             }
         }
@@ -177,7 +177,7 @@ class PromptTemplateService
 
         $normalizedMapping = [];
         foreach ($fieldsMapping as $placeholder => $data) {
-            if (preg_match('/^(GEN|PRJ):\{\{(.+)}}$/', $placeholder, $matches)) {
+            if (preg_match('/^(GEN|PRJ|EXT):\{\{(.+)}}$/', $placeholder, $matches)) {
                 $prefix = $matches[1];
                 $fieldName = $matches[2];
                 $fieldId = $data['id'];
@@ -187,7 +187,7 @@ class PromptTemplateService
 
         foreach ($delta['ops'] as &$op) {
             if (isset($op['insert']) && is_string($op['insert'])) {
-                $op['insert'] = preg_replace_callback('/(GEN|PRJ):\{\{(\d+)}}/', function ($matches) use ($normalizedMapping) {
+                $op['insert'] = preg_replace_callback('/(GEN|PRJ|EXT):\{\{(\d+)}}/', function ($matches) use ($normalizedMapping) {
                     $prefix = $matches[1];
                     $fieldId = (int)$matches[2];
                     if (isset($normalizedMapping[$prefix][$fieldId])) {

@@ -16,7 +16,7 @@ class ProjectSearch extends Project
     public function rules(): array
     {
         return [
-            [['name', 'description'], 'safe'],
+            [['name', 'description', 'label'], 'safe'],
         ];
     }
 
@@ -57,6 +57,7 @@ class ProjectSearch extends Project
         }
 
         $query->andFilterWhere(['like', 'name', $this->name]);
+        $query->andFilterWhere(['like', 'label', $this->label]);
         $query->andFilterWhere(['like', 'description', $this->description]);
 
         return $dataProvider;

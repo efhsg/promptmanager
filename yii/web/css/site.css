@@ -138,7 +138,8 @@ a.desc:after {
 
 /* Make sure your custom pickers look like the default Quill pickers. */
 .ql-toolbar .ql-picker.ql-insertGeneralField,
-.ql-toolbar .ql-picker.ql-insertProjectField {
+.ql-toolbar .ql-picker.ql-insertProjectField,
+.ql-toolbar .ql-picker.ql-insertExternalField {
     width: auto;
     padding: 2px 2px;
     margin: 8px 0 4px 8px;
@@ -283,3 +284,44 @@ a.desc:after {
     top: 0;
     left: 0;
 }
+
+/* Select2 list contrast */
+.select2-container--bootstrap .select2-results__options .select2-results__option {
+    padding: 8px 12px;
+    border-left: 4px solid transparent;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.select2-container--bootstrap .select2-results__options .select2-results__option[aria-selected=true],
+.select2-container--bootstrap .select2-results__options .select2-results__option--selected {
+    background-color: #e6f0ff;
+    border-left-color: #3b6dbc;
+    color: #123870;
+    font-weight: 400;
+}
+
+.select2-container--bootstrap .select2-results__options .select2-results__option--highlighted.select2-results__option--selectable {
+    background-color: #d4e4ff;
+    color: #0f2f62;
+}
+
+.select2-container--bootstrap .select2-results__options .select2-results__option--selected.select2-results__option--highlighted {
+    background-color: #c6d8ff;
+    color: #0b2f5e;
+}
+
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__rendered .select2-selection__choice {
+    background-color: #ffffff;
+    border-color: #c0d4ff;
+    color: #000000;
+    font-weight: 400;
+}
+
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__choice__remove {
+    color: #123870;
+}
+
+.select2-container--bootstrap .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #0a254d;
+}
+

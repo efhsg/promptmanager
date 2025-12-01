@@ -143,6 +143,37 @@ class PromptTemplateServiceTest extends Unit
         $this->assertEquals($template, $result);
     }
 
+    public function testConvertPlaceholdersToIdsSupportsExternalFields(): void
+    {
+        $template = '{"ops":[{"insert":"Use EXT:{{Project Alpha: externalField}} and GEN:{{codeType}}.\n"}]}';
+
+        $fieldsMapping = [
+            'EXT:{{Project Alpha: externalField}}' => ['id' => 9],
+            'GEN:{{codeType}}' => ['id' => 3],
+        ];
+
+        $result = $this->service->convertPlaceholdersToIds($template, $fieldsMapping);
+
+        $expected = '{"ops":[{"insert":"Use EXT:{{9}} and GEN:{{3}}.\n"}]}';
+
+        $this->assertEquals($expected, $result);
+    }
+
+    public function testConvertPlaceholdersToLabelsSupportsExternalFields(): void
+    {
+        $template = '{"ops":[{"insert":"Reference EXT:{{9}} here.\n"}]}';
+
+        $fieldsMapping = [
+            'EXT:{{Project Alpha: externalField}}' => ['id' => 9],
+        ];
+
+        $result = $this->service->convertPlaceholdersToLabels($template, $fieldsMapping);
+
+        $expected = '{"ops":[{"insert":"Reference EXT:{{Project Alpha: externalField}} here.\n"}]}';
+
+        $this->assertEquals($expected, $result);
+    }
+
     public function testFallbackToLegacyFormat(): void
     {
         $template = "Hello, GEN:{{codeType}} and PRJ:{{projectType}}!";

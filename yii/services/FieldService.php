@@ -4,6 +4,7 @@ namespace app\services;
 
 use app\models\Field;
 use app\models\FieldOption;
+use app\models\ProjectLinkedProject;
 use Exception;
 use Throwable;
 use Yii;
@@ -16,6 +17,34 @@ class FieldService
     {
         $fields = $this->getFields($userId, $projectId);
         return $this->mapFields($fields);
+    }
+
+    public function fetchExternalFieldsMap(int $userId, ?int $projectId): array
+    {
+        if ($projectId === null) {
+            return [];
+        }
+
+        $linkedProjectIds = ProjectLinkedProject::find()
+            ->linkedProjectIdsFor($projectId, $userId)
+            ->column();
+
+        if (empty($linkedProjectIds)) {
+            return [];
+        }
+
+        $fields = Field::find()
+            ->sharedFromProjects($userId, $linkedProjectIds)
+            ->all();
+
+        $mappedFields = [];
+
+        foreach ($fields as $field) {
+            $placeholder = $this->createExternalPlaceholder($field);
+            $mappedFields[$placeholder] = $this->createExternalFieldData($field);
+        }
+
+        return $mappedFields;
     }
 
     private function getFields(int $userId, ?int $projectId): array
@@ -48,12 +77,38 @@ class FieldService
         return sprintf('%s{{%s}}', $prefixType, $field->name);
     }
 
+    private function createExternalPlaceholder(Field $field): string
+    {
+        $projectLabel = $field->project->label ?: $field->project->name;
+        $projectName = $this->sanitizePlaceholderSegment($projectLabel ?? 'Project ' . $field->project_id);
+        $fieldName = $this->sanitizePlaceholderSegment($field->name);
+
+        return sprintf('EXT:{{%s: %s}}', $projectName, $fieldName);
+    }
+
+    private function sanitizePlaceholderSegment(string $value): string
+    {
+        return trim(str_replace(['{{', '}}'], '', $value));
+    }
+
     private function createFieldData(Field $field): array
     {
         return [
             'id' => $field->id,
             'label' => $field->label ?: $field->name,
             'isProjectSpecific' => $field->project_id !== null,
+        ];
+    }
+
+    private function createExternalFieldData(Field $field): array
+    {
+        $projectName = $field->project->label ?: $field->project->name ?: ('Project ' . $field->project_id);
+        $fieldLabel = $field->label ?: $field->name;
+
+        return [
+            'id' => $field->id,
+            'label' => sprintf('%s: %s', $projectName, $fieldLabel),
+            'isProjectSpecific' => true,
         ];
     }
 

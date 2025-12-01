@@ -9,6 +9,7 @@ use yii\widgets\ActiveForm;
 /** @var array $projects */
 /** @var array $generalFieldsMap */
 /** @var array $projectFieldsMap */
+/** @var array $externalFieldsMap */
 QuillAsset::register($this);
 ?>
     <div class="prompt-template-form focus-on-first-field">
@@ -36,6 +37,7 @@ QuillAsset::register($this);
 <?php
 $generalFieldsJson = json_encode($generalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $projectFieldsJson = json_encode($projectFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$externalFieldsJson = json_encode($externalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 $script = <<<JS
 var quill = new Quill('#editor', {
@@ -48,12 +50,11 @@ var quill = new Quill('#editor', {
                 [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                 [{ 'indent': '-1' }, { 'indent': '+1' }],
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'font': [] }],
                 [{ 'align': [] }],
                 ['clean'],
                 [{ 'insertGeneralField': [] }],
-                [{ 'insertProjectField': [] }]
+                [{ 'insertProjectField': [] }],
+                [{ 'insertExternalField': [] }]
             ]
         }
     }
@@ -69,6 +70,10 @@ generalFieldDropdown.innerHTML = '<option value="" selected disabled>General Fie
 var projectFieldDropdown = document.createElement('select');
 projectFieldDropdown.classList.add('ql-insertProjectField', 'ql-picker', 'ql-font');
 projectFieldDropdown.innerHTML = '<option value="" selected disabled>Project Field</option>';
+
+var externalFieldDropdown = document.createElement('select');
+externalFieldDropdown.classList.add('ql-insertExternalField', 'ql-picker', 'ql-font');
+externalFieldDropdown.innerHTML = '<option value="" selected disabled>External Field</option>';
 
 var generalFields = $generalFieldsJson;
 Object.keys(generalFields).forEach(function(key) {
@@ -86,8 +91,17 @@ Object.keys(projectFields).forEach(function(key) {
     projectFieldDropdown.appendChild(option);
 });
 
+var externalFields = $externalFieldsJson;
+Object.keys(externalFields).forEach(function(key) {
+    var option = document.createElement('option');
+    option.value = key;
+    option.textContent = externalFields[key].label;
+    externalFieldDropdown.appendChild(option);
+});
+
 toolbarContainer.querySelector('.ql-insertGeneralField').replaceWith(generalFieldDropdown);
 toolbarContainer.querySelector('.ql-insertProjectField').replaceWith(projectFieldDropdown);
+toolbarContainer.querySelector('.ql-insertExternalField').replaceWith(externalFieldDropdown);
 
 function insertFieldText(dropdown) {
     var value = dropdown.value;
@@ -104,6 +118,10 @@ generalFieldDropdown.addEventListener('change', function() {
 });
 
 projectFieldDropdown.addEventListener('change', function() {
+    insertFieldText(this);
+});
+
+externalFieldDropdown.addEventListener('change', function() {
     insertFieldText(this);
 });
 JS;

@@ -22,15 +22,36 @@ use yii\db\ActiveRecord;
  * @property string|null $allowed_file_extensions
  * @property string|null $blacklisted_directories
  * @property string $prompt_instance_copy_format
+ * @property string|null $label
  * @property int $created_at
  * @property int $updated_at
  * @property int|null $deleted_at
  *
  * @property User $user
+ * @property Project[] $linkedProjects
+ * @property array $linkedProjectIds
  */
 class Project extends ActiveRecord
 {
     use TimestampTrait;
+
+    private array $_linkedProjectIds = [];
+
+    public function getLinkedProjectIds(): array
+    {
+        return $this->_linkedProjectIds;
+    }
+
+    public function setLinkedProjectIds(mixed $value): void
+    {
+        if (is_array($value)) {
+            $this->_linkedProjectIds = $value;
+        } elseif ($value === '' || $value === null) {
+            $this->_linkedProjectIds = [];
+        } else {
+            $this->_linkedProjectIds = (array)$value;
+        }
+    }
 
     /**
      * {@inheritdoc}
@@ -63,6 +84,14 @@ class Project extends ActiveRecord
             [['prompt_instance_copy_format'], 'required'],
             [['prompt_instance_copy_format'], 'string', 'max' => 32],
             [['prompt_instance_copy_format'], 'in', 'range' => CopyType::values()],
+            [['label'], 'string', 'max' => 64],
+            [
+                ['label'],
+                'unique',
+                'targetAttribute' => ['user_id', 'label'],
+                'filter' => ['not', ['label' => null]],
+                'message' => 'Label must be unique per user.',
+            ],
             [
                 ['root_directory'],
                 'match',
@@ -75,6 +104,8 @@ class Project extends ActiveRecord
             [['blacklisted_directories'], 'validateBlacklistedDirectories'],
             [['name'], 'string', 'max' => 255],
             [['user_id'], 'exist', 'targetClass' => User::class, 'targetAttribute' => 'id'],
+            [['linkedProjectIds'], 'safe'],
+            [['linkedProjectIds'], 'each', 'rule' => ['integer']],
         ];
     }
 
@@ -92,6 +123,8 @@ class Project extends ActiveRecord
             'allowed_file_extensions' => 'Allowed File Extensions',
             'blacklisted_directories' => 'Blacklisted Directories',
             'prompt_instance_copy_format' => 'Prompt Instance Copy Format',
+            'label' => 'Label',
+            'linkedProjectIds' => 'Linked Projects',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
             'deleted_at' => 'Deleted At',
@@ -210,7 +243,7 @@ class Project extends ActiveRecord
                 continue;
             }
 
-            if (preg_match('~^(.+?)/?(\[([^\]]+)\])$~', $trimmed, $matches)) {
+            if (preg_match('~^(.+?)/?(\[([^]]+)])$~', $trimmed, $matches)) {
                 $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
                 $exceptionsStr = $matches[3];
                 $exceptionParts = array_map('trim', explode(',', $exceptionsStr));
@@ -303,7 +336,7 @@ class Project extends ActiveRecord
                 return;
             }
 
-            if (preg_match('~^(.+?)/?(\[([^\]]+)\])$~', $trimmed, $matches)) {
+            if (preg_match('~^(.+?)/?(\[([^]]+)])$~', $trimmed, $matches)) {
                 $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
                 $exceptionsStr = $matches[3];
 
@@ -378,10 +411,33 @@ class Project extends ActiveRecord
         return $this->hasOne(User::class, ['id' => 'user_id']);
     }
 
+    public function getLinkedProjects(): ActiveQuery
+    {
+        return $this->hasMany(Project::class, ['id' => 'linked_project_id'])
+            ->viaTable('project_linked_project', ['project_id' => 'id']);
+    }
+
+    public static function findAvailableForLinking(?int $excludeProjectId, int $userId): ActiveQuery
+    {
+        $query = static::find()
+            ->where(['user_id' => $userId])
+            ->andWhere(['deleted_at' => null]);
+
+        if ($excludeProjectId !== null) {
+            $query->andWhere(['!=', 'id', $excludeProjectId]);
+        }
+
+        return $query;
+    }
+
     public function beforeSave($insert): bool
     {
         if (!parent::beforeSave($insert)) {
             return false;
+        }
+
+        if ($this->label !== null) {
+            $this->label = trim($this->label) === '' ? null : trim($this->label);
         }
 
         $this->normalizeAllowedFileExtensionsField();

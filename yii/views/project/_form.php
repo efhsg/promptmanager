@@ -1,11 +1,13 @@
 <?php /** @noinspection JSUnresolvedReference */
 use app\assets\QuillAsset;
+use conquer\select2\Select2Widget;
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 /** @var yii\widgets\ActiveForm $form */
+/** @var array $availableProjects */
 
 QuillAsset::register($this);
 ?>
@@ -17,6 +19,10 @@ QuillAsset::register($this);
     ]); ?>
 
     <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
+
+    <?= $form->field($model, 'label')
+        ->textInput(['maxlength' => true, 'placeholder' => 'Short identifier'])
+        ->hint('Optional short code or label for quick identification.') ?>
 
     <?= $form->field($model, 'root_directory')->textInput(['maxlength' => true]) ?>
 
@@ -31,6 +37,21 @@ QuillAsset::register($this);
     <?= $form->field($model, 'prompt_instance_copy_format')
         ->dropDownList($model::getPromptInstanceCopyFormatOptions())
         ->hint('Format used by prompt instance copy buttons (e.g. Markdown).') ?>
+
+    <?php
+    echo $form->field($model, 'linkedProjectIds')
+        ->widget(Select2Widget::class, [
+            'items' => $availableProjects,
+            'options' => [
+                'placeholder' => 'Select projects to link...',
+                'multiple' => true,
+            ],
+            'settings' => [
+                'minimumResultsForSearch' => 0,
+            ],
+        ])
+        ->hint('Select other projects whose fields can be used as external (EXT) fields in prompt instances.');
+    ?>
 
     <?= $form->field($model, 'description')
         ->hiddenInput(['id' => 'project-description'])
