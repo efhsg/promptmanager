@@ -13,6 +13,11 @@ Yii2-based LLM prompt management system. Manages reusable prompt components (pro
 - **❌ NEVER** add `@param`/`@return` PHPDoc (only `@throws` allowed)
 - **❌ NEVER** edit files in `yii/web/` (compiled from `npm/`)
 
+### Migrations & Database Management
+Database schema changes are managed through Yii migrations located in yii/migrations or module-specific migrations directories.
+Each migration file is named with a timestamp prefix (e.g., m251123_123456_add_new_table.php) and includes up() and down() methods.
+Migrations should be atomic, reversible, and include comments explaining their purpose at the class level.
+
 ### Architecture
 - **Service Layer (REQUIRED):** ALL business logic in `yii/services/`, controllers stay thin (HTTP only)
 - Services injected via constructor DI; models handle data structure only
