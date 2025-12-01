@@ -27,14 +27,7 @@ class FieldService
         }
 
         $linkedProjectIds = ProjectLinkedProject::find()
-            ->alias('plp')
-            ->select('plp.linked_project_id')
-            ->innerJoin(Project::tableName() . ' p', 'p.id = plp.linked_project_id')
-            ->where([
-                'plp.project_id' => $projectId,
-                'p.user_id' => $userId,
-                'p.deleted_at' => null,
-            ])
+            ->linkedProjectIdsFor($projectId, $userId)
             ->column();
 
         if (empty($linkedProjectIds)) {
@@ -42,10 +35,7 @@ class FieldService
         }
 
         $fields = Field::find()
-            ->alias('f')
-            ->with('project')
-            ->where(['f.user_id' => $userId])
-            ->andWhere(['f.project_id' => $linkedProjectIds, 'f.share' => 1])
+            ->sharedFromProjects($userId, $linkedProjectIds)
             ->all();
 
         $mappedFields = [];

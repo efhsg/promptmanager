@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\query\FieldQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use app\services\PathService;
@@ -40,6 +41,11 @@ class Field extends ActiveRecord
     public static function tableName(): string
     {
         return 'field';
+    }
+
+    public static function find(): FieldQuery
+    {
+        return new FieldQuery(static::class);
     }
 
     /**

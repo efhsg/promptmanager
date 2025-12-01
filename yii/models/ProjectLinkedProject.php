@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\query\ProjectLinkedProjectQuery;
 use app\models\traits\TimestampTrait;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -90,4 +91,10 @@ class ProjectLinkedProject extends ActiveRecord
 
         return true;
     }
+
+    public static function find(): ProjectLinkedProjectQuery
+    {
+        return new ProjectLinkedProjectQuery(get_called_class());
+    }
+
 }
