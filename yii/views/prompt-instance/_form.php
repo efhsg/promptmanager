@@ -5,8 +5,10 @@
 use app\assets\QuillAsset;
 use app\helpers\TooltipHelper;
 use app\models\PromptInstanceForm;
-use conquer\select2\Select2Widget;
+use app\widgets\ContentViewerWidget;
 use common\enums\CopyType;
+use conquer\select2\Select2Widget;
+use Yii;
 use yii\helpers\Html;
 use yii\web\JsExpression;
 use yii\web\View;
@@ -30,7 +32,7 @@ $templateTooltipTexts = TooltipHelper::prepareTexts($templatesDescription, $maxC
 $this->registerJsVar('contextTooltipTexts', $contextTooltipTexts);
 $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
 
-$projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
+$projectCopyFormat = (Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
     ?? CopyType::MD->value;
 ?>
 
@@ -52,6 +54,11 @@ $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getProm
                  data-bs-parent="#promptInstanceAccordion">
                 <div class="accordion-body">
                     <?php
+                    echo $form->field($model, 'label')
+                        ->textInput([
+                            'maxlength' => true,
+                            'placeholder' => 'Enter a label for this prompt instance...'
+                        ]);
                     $contextSelect2Settings = [
                         'minimumResultsForSearch' => new JsExpression("Infinity"),
                         'templateResult' => new JsExpression("
@@ -138,9 +145,9 @@ $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getProm
             <div id="collapseFinalPrompt" class="accordion-collapse collapse" aria-labelledby="headingFinalPrompt"
                  data-bs-parent="#promptInstanceAccordion">
                 <div class="accordion-body">
-                    <div id="final-prompt-container">
-                        <div id="final-prompt-container-view">
-                            <?= app\widgets\ContentViewerWidget::widget([
+                        <div id="final-prompt-container">
+                            <div id="final-prompt-container-view">
+                            <?= ContentViewerWidget::widget([
                                 'content' => '',
                                 'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',
@@ -227,16 +234,22 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     var action = button.attr('data-action');
     var templateId = form.find('#promptinstanceform-template_id').val();
     if (action === 'save') {
+        var label = form.find('#promptinstanceform-label').val();
+        if (!label) {
+            alert('Please provide a label for this prompt instance.');
+            return false;
+        }
         const deltaObj   = (typeof quillEditor !== 'undefined' && quillEditor)
-        ? quillEditor.getContents()                         
-        : $finalPromptContainer.data('deltaObj') || {}; 
-        const finalPrompt = JSON.stringify(deltaObj); 
+        ? quillEditor.getContents()
+        : $finalPromptContainer.data('deltaObj') || {};
+        const finalPrompt = JSON.stringify(deltaObj);
         $.ajax({
             url: '/prompt-instance/save-final-prompt',
             type: 'POST',
-            data: { 
+            data: {
                 prompt: finalPrompt,
                 template_id: templateId,
+                label: label,
                 _csrf: yii.getCsrfToken()
             },
             success: function(response) {

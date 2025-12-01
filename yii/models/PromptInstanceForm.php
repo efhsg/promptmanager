@@ -11,13 +11,15 @@ use yii\db\Exception;
 class PromptInstanceForm extends Model
 {
     public ?int $template_id = null;
+    public ?string $label = null;
     public ?string $final_prompt = null;
     public array $context_ids = [];
 
     public function rules(): array
     {
         return [
-            [['template_id', 'final_prompt'], 'required'],
+            [['template_id', 'label', 'final_prompt'], 'required'],
+            ['label', 'string', 'max' => 255],
             [['context_ids'], 'safe'], // Allows assignment without persisting
         ];
     }
@@ -32,6 +34,7 @@ class PromptInstanceForm extends Model
     {
         $promptInstance = new PromptInstance();
         $promptInstance->template_id = $this->template_id;
+        $promptInstance->label = $this->label;
         $promptInstance->final_prompt = $this->final_prompt;
 
         // Save the PromptInstance model.

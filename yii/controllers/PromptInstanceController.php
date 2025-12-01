@@ -157,6 +157,7 @@ class PromptInstanceController extends Controller
                 $newInstance = PromptInstance::find()
                     ->where([
                         'template_id' => $formModel->template_id,
+                        'label' => $formModel->label,
                         'final_prompt' => $formModel->final_prompt,
                     ])
                     ->orderBy(['id' => SORT_DESC])
@@ -375,6 +376,7 @@ class PromptInstanceController extends Controller
 
         $model = new PromptInstance([
             'template_id' => (int)Yii::$app->request->post('template_id'),
+            'label' => (string)Yii::$app->request->post('label'),
             'final_prompt' => $finalPrompt,
         ]);
 

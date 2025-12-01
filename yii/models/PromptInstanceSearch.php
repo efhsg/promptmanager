@@ -26,7 +26,7 @@ class PromptInstanceSearch extends PromptInstance
     {
         return [
             [['id', 'template_id', 'created_at', 'updated_at'], 'integer'],
-            [['final_prompt'], 'safe'],
+            [['label', 'final_prompt'], 'safe'],
             ['projectName', 'safe'],
         ];
     }
@@ -80,7 +80,8 @@ class PromptInstanceSearch extends PromptInstance
             return $dataProvider;
         }
 
-        $query->andFilterWhere(['like', 'final_prompt', $this->final_prompt])
+        $query->andFilterWhere(['like', 'label', $this->label])
+              ->andFilterWhere(['like', 'final_prompt', $this->final_prompt])
               ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;
