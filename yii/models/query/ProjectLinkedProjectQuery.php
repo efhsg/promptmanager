@@ -2,6 +2,7 @@
 
 namespace app\models\query;
 
+use app\models\Project;
 use app\models\ProjectLinkedProject;
 use yii\db\ActiveQuery;
 
@@ -12,13 +13,16 @@ class ProjectLinkedProjectQuery extends ActiveQuery
 {
     public function linkedProjectIdsFor(int $projectId, int $userId): self
     {
+        $primaryTableName = $this->getPrimaryTableName();
+        $projectTable = Project::tableName();
+
         return $this
-            ->select('linked_project_id')
+            ->select("$primaryTableName.linked_project_id")
             ->innerJoinWith('linkedProject', false)
             ->andWhere([
-                'project_id' => $projectId,
-                'linkedProject.user_id' => $userId,
-                'linkedProject.deleted_at' => null,
+                "$primaryTableName.project_id" => $projectId,
+                "$projectTable.user_id" => $userId,
+                "$projectTable.deleted_at" => null,
             ]);
     }
 }
