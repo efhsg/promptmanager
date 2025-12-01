@@ -15,6 +15,7 @@ use yii\db\ActiveRecord;
  * @property string $name
  * @property string|null $content
  * @property bool $is_default
+ * @property int $share
  * @property int $created_at
  * @property int $updated_at
  *
@@ -40,9 +41,10 @@ class Context extends ActiveRecord
     {
         return [
             [['name', 'project_id'], 'required'],
-            [['project_id', 'created_at', 'updated_at'], 'integer'],
+            [['project_id', 'share', 'created_at', 'updated_at'], 'integer'],
             [['content'], 'string'],
             [['is_default'], 'boolean'],
+            [['share'], 'default', 'value' => 0],
             [['name'], 'string', 'max' => 255],
             [
                 ['project_id', 'name'],
@@ -69,6 +71,7 @@ class Context extends ActiveRecord
             'name' => 'Name',
             'content' => 'Content',
             'is_default' => 'Default',
+            'share' => 'Share',
             'created_at' => 'Created',
             'updated_at' => 'Updated',
         ];
