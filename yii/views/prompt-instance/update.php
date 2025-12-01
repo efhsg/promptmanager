@@ -5,6 +5,7 @@
 
 use app\assets\QuillAsset;
 use app\models\PromptInstance;
+use Yii;
 use yii\helpers\Html;
 use yii\web\View;
 use yii\widgets\ActiveForm;
@@ -27,6 +28,8 @@ echo $this->render('_breadcrumbs', [
                         'id' => 'prompt-instance-update-form',
                         'enableClientValidation' => true,
                     ]); ?>
+
+                    <?= $form->field($model, 'label')->textInput(['maxlength' => true]) ?>
 
                     <?= $form->field($model, 'final_prompt')->hiddenInput(['id' => 'final-prompt'])->label(false) ?>
 

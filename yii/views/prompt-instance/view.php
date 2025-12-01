@@ -5,15 +5,17 @@
 
 /** @noinspection PhpUnhandledExceptionInspection */
 
-use common\enums\CopyType;
 use app\widgets\QuillViewerWidget;
+use common\enums\CopyType;
+use Yii;
 use yii\helpers\Html;
 use yii\widgets\DetailView;
 
 /** @var yii\web\View $this */
 /** @var app\models\PromptInstance $model */
 
-$this->title = 'View - ' . Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i:s');
+$fallbackTitle = Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i:s');
+$this->title = 'View - ' . ($model->label ?: $fallbackTitle);
 echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => $this->title,
@@ -40,6 +42,10 @@ echo $this->render('_breadcrumbs', [
                 'model' => $model,
                 'options' => ['class' => 'table table-borderless'],
                 'attributes' => [
+                    [
+                        'attribute' => 'label',
+                        'label' => 'Label',
+                    ],
                     [
                         'attribute' => 'template_name',
                         'label' => 'Template',

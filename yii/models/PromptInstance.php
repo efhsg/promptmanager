@@ -2,6 +2,8 @@
 
 namespace app\models;
 
+use app\models\Project;
+use app\models\PromptTemplate;
 use app\models\traits\TimestampTrait;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -11,10 +13,13 @@ use yii\db\ActiveRecord;
  *
  * @property int $id
  * @property int $template_id
+ * @property int $project_id
+ * @property string $label
  * @property string $final_prompt
  * @property int $created_at
  * @property int $updated_at
  *
+ * @property Project $project
  * @property PromptTemplate $template
  */
 class PromptInstance extends ActiveRecord
@@ -35,9 +40,16 @@ class PromptInstance extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['template_id', 'final_prompt'], 'required'],
-            [['template_id'], 'integer'],
+            [['template_id', 'project_id', 'label', 'final_prompt'], 'required'],
+            [['template_id', 'project_id'], 'integer'],
+            [['label'], 'string', 'max' => 255],
             [['final_prompt'], 'string'],
+            [
+                ['label', 'project_id'],
+                'unique',
+                'targetAttribute' => ['label', 'project_id'],
+                'message' => 'Label must be unique within the project.'
+            ],
             [['template_id'],
                 'exist',
                 'skipOnError' => true,
@@ -54,6 +66,8 @@ class PromptInstance extends ActiveRecord
         return [
             'id' => 'ID',
             'template_id' => 'Template',
+            'project_id' => 'Project',
+            'label' => 'Label',
             'final_prompt' => 'Prompt',
             'created_at' => 'Created',
             'updated_at' => 'Updated',
@@ -71,6 +85,16 @@ class PromptInstance extends ActiveRecord
     }
 
     /**
+     * Gets query for [[Project]].
+     *
+     * @return ActiveQuery
+     */
+    public function getProject(): ActiveQuery
+    {
+        return $this->hasOne(Project::class, ['id' => 'project_id']);
+    }
+
+    /**
      * Handles timestamps before saving the record.
      *
      * @param bool $insert whether this is a new record insertion.
@@ -85,5 +109,17 @@ class PromptInstance extends ActiveRecord
         $this->handleTimestamps($insert);
 
         return true;
+    }
+
+    public function beforeValidate(): bool
+    {
+        if ($this->project_id === null && $this->template_id) {
+            $this->project_id = PromptTemplate::find()
+                ->select('project_id')
+                ->where(['id' => $this->template_id])
+                ->scalar();
+        }
+
+        return parent::beforeValidate();
     }
 }

@@ -157,6 +157,7 @@ class PromptInstanceController extends Controller
                 $newInstance = PromptInstance::find()
                     ->where([
                         'template_id' => $formModel->template_id,
+                        'label' => $formModel->label,
                         'final_prompt' => $formModel->final_prompt,
                     ])
                     ->orderBy(['id' => SORT_DESC])
@@ -373,13 +374,21 @@ class PromptInstanceController extends Controller
             return ['success' => false];
         }
 
+        $templateId = (int)Yii::$app->request->post('template_id');
+        $template = $this->promptTemplateService->getTemplateById($templateId, Yii::$app->user->id);
+        if ($template === null) {
+            return ['success' => false];
+        }
+
         $model = new PromptInstance([
-            'template_id' => (int)Yii::$app->request->post('template_id'),
+            'template_id' => $templateId,
+            'project_id' => $template->project_id,
+            'label' => Yii::$app->request->post('label'),
             'final_prompt' => $finalPrompt,
         ]);
 
         if (!$model->save()) {
-            return ['success' => false];
+            return ['success' => false, 'errors' => $model->getErrors()];
         }
 
         return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];

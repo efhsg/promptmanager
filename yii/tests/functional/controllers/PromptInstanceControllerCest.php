@@ -55,12 +55,14 @@ class PromptInstanceControllerCest
         $I->amOnRoute('/prompt-instance/create');
         $I->submitForm('#prompt-instance-form', [
             'PromptInstanceForm[template_id]' => 1,
+            'PromptInstanceForm[label]' => 'Test Instance',
             'PromptInstanceForm[final_prompt]' => '{"ops":[{"insert":"Test prompt instance\n"}]}',
         ]);
         $I->seeResponseCodeIsSuccessful();
         $I->see('Test prompt instance');
         $I->seeInDatabase('prompt_instance', [
             'template_id' => 1,
+            'project_id' => 1,
             'final_prompt' => '{"ops":[{"insert":"Test prompt instance\n"}]}',
         ]);
     }

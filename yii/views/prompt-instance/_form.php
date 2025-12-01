@@ -5,8 +5,10 @@
 use app\assets\QuillAsset;
 use app\helpers\TooltipHelper;
 use app\models\PromptInstanceForm;
-use conquer\select2\Select2Widget;
+use app\widgets\ContentViewerWidget;
 use common\enums\CopyType;
+use conquer\select2\Select2Widget;
+use Yii;
 use yii\helpers\Html;
 use yii\web\JsExpression;
 use yii\web\View;
@@ -30,7 +32,7 @@ $templateTooltipTexts = TooltipHelper::prepareTexts($templatesDescription, $maxC
 $this->registerJsVar('contextTooltipTexts', $contextTooltipTexts);
 $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
 
-$projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
+$projectCopyFormat = (Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
     ?? CopyType::MD->value;
 ?>
 
@@ -52,6 +54,11 @@ $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getProm
                  data-bs-parent="#promptInstanceAccordion">
                 <div class="accordion-body">
                     <?php
+                    echo $form->field($model, 'label')
+                        ->textInput([
+                            'maxlength' => true,
+                            'placeholder' => 'Enter a label for this prompt instance...'
+                        ]);
                     $contextSelect2Settings = [
                         'minimumResultsForSearch' => new JsExpression("Infinity"),
                         'templateResult' => new JsExpression("
@@ -138,9 +145,9 @@ $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getProm
             <div id="collapseFinalPrompt" class="accordion-collapse collapse" aria-labelledby="headingFinalPrompt"
                  data-bs-parent="#promptInstanceAccordion">
                 <div class="accordion-body">
-                    <div id="final-prompt-container">
-                        <div id="final-prompt-container-view">
-                            <?= app\widgets\ContentViewerWidget::widget([
+                        <div id="final-prompt-container">
+                            <div id="final-prompt-container-view">
+                            <?= ContentViewerWidget::widget([
                                 'content' => '',
                                 'copyButtonOptions' => [
                                     'class' => 'btn btn-sm position-absolute',
@@ -176,6 +183,29 @@ $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getProm
     <?php ActiveForm::end(); ?>
 </div>
 
+<div class="modal fade" id="labelModal" tabindex="-1" aria-labelledby="labelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="labelModalLabel">Add Label</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="label-modal-input" class="form-label">Label</label>
+                    <input type="text" class="form-control" id="label-modal-input" maxlength="255"
+                           placeholder="Enter a label for this prompt instance">
+                    <div class="invalid-feedback">Label is required.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="label-modal-save-button">Save Label</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php
 $script = <<<'JS'
 var step2Loaded = false;
@@ -184,6 +214,10 @@ var $nextButton = $('#form-submit-button');
 var $prevButton = $('#previous-button');
 var $editButton = $('#edit-button');
 var $finalPromptContainer = $('#final-prompt-container');
+var $labelField = $('#promptinstanceform-label');
+var $labelModalInput = $('#label-modal-input');
+var labelModalElement = document.getElementById('labelModal');
+var labelModal = labelModalElement ? new bootstrap.Modal(labelModalElement) : null;
 
 function updateButtonState(step) {
     currentStep = step;
@@ -227,29 +261,15 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     var action = button.attr('data-action');
     var templateId = form.find('#promptinstanceform-template_id').val();
     if (action === 'save') {
-        const deltaObj   = (typeof quillEditor !== 'undefined' && quillEditor)
-        ? quillEditor.getContents()                         
-        : $finalPromptContainer.data('deltaObj') || {}; 
-        const finalPrompt = JSON.stringify(deltaObj); 
-        $.ajax({
-            url: '/prompt-instance/save-final-prompt',
-            type: 'POST',
-            data: { 
-                prompt: finalPrompt,
-                template_id: templateId,
-                _csrf: yii.getCsrfToken()
-            },
-            success: function(response) {
-                if (response.success) {
-                    window.location.href = response.redirectUrl;
-                } else {
-                    alert('Error saving the prompt. Please try again.');
-                }
-            },
-            error: function() {
-                alert('Error saving the prompt. Please try again.');
+        var label = $labelField.val().trim();
+        if (!label) {
+            if (labelModal) {
+                $labelModalInput.val('');
+                labelModal.show();
+                return false;
             }
-        });
+        }
+        performSave(label);
         return false;
     }
     if (!step2Loaded) {
@@ -370,6 +390,38 @@ $('#promptinstanceform-template_id').on('change', function() {
 });
 let quillEditor = null;
 
+function performSave(label) {
+    const deltaObj   = (typeof quillEditor !== 'undefined' && quillEditor)
+        ? quillEditor.getContents()
+        : $finalPromptContainer.data('deltaObj') || {};
+    const finalPrompt = JSON.stringify(deltaObj);
+    $.ajax({
+        url: '/prompt-instance/save-final-prompt',
+        type: 'POST',
+        data: {
+            prompt: finalPrompt,
+            template_id: $('#promptinstanceform-template_id').val(),
+            label: label,
+            _csrf: yii.getCsrfToken()
+        },
+        success: function(response) {
+            if (response.success) {
+                window.location.href = response.redirectUrl;
+            } else {
+                var errors = response.errors || {};
+                if (errors.label && errors.label.length) {
+                    alert(errors.label.join('\n'));
+                    return;
+                }
+                alert('Error saving the prompt. Please try again.');
+            }
+        },
+        error: function() {
+            alert('Error saving the prompt. Please try again.');
+        }
+    });
+}
+
 function initQuillEditor() {
     if (!quillEditor) {
         quillEditor = new Quill('#quill-editor', {
@@ -428,6 +480,28 @@ $editButton.on('click', function() {
         $viewContainer.removeClass('d-none');
             $(this).text('Edit');
     }
+});
+
+$('#labelModal').on('shown.bs.modal', function() {
+    $labelModalInput.trigger('focus');
+});
+
+$('#labelModal').on('hidden.bs.modal', function() {
+    $labelModalInput.removeClass('is-invalid');
+});
+
+$('#label-modal-save-button').on('click', function() {
+    var modalLabel = $labelModalInput.val().trim();
+    if (!modalLabel) {
+        $labelModalInput.addClass('is-invalid');
+        return;
+    }
+    $labelModalInput.removeClass('is-invalid');
+    $labelField.val(modalLabel);
+    if (labelModal) {
+        labelModal.hide();
+    }
+    performSave(modalLabel);
 });
 JS;
 $this->registerJs($script);
