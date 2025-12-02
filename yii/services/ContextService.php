@@ -110,15 +110,7 @@ class ContextService extends Component
             ->select('c.id')
             ->andWhere(['c.is_default' => 1]);
         if ($projectId !== null) {
-            $query->andWhere([
-                'or',
-                ['p.id' => $projectId],
-                [
-                    'and',
-                    ['c.share' => 1],
-                    ['p.id' => $this->getLinkedProjectIds($projectId)],
-                ],
-            ]);
+            $query->andWhere(['p.id' => $projectId]);
         }
         return $query->column();
     }

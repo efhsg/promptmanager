@@ -289,17 +289,11 @@ class ContextServiceTest extends Unit
         $context->delete();
     }
 
-    public function testFetchDefaultContextIdsIncludesSharedDefaultsFromLinkedProjects(): void
+    public function testFetchDefaultContextIdsExcludesContextsFromLinkedProjects(): void
     {
         $result = $this->service->fetchDefaultContextIds(1, 2);
 
-        $this->assertContains('5', $result);
-    }
-
-    public function testFetchDefaultContextIdsExcludesNonDefaultSharedContextsFromLinkedProjects(): void
-    {
-        $result = $this->service->fetchDefaultContextIds(1, 2);
-
+        $this->assertNotContains('5', $result);
         $this->assertNotContains('4', $result);
     }
 }
