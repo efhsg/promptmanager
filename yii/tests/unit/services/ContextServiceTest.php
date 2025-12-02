@@ -130,10 +130,8 @@ class ContextServiceTest extends Unit
 
         $this->assertSame(
             [
-                'Test Project' => [
-                    1 => 'Test Context',
-                    3 => 'Test Context3',
-                ],
+                1 => 'Test Context',
+                3 => 'Test Context3',
             ],
             $result
         );

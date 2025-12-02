@@ -68,11 +68,11 @@ class ContextService extends Component
     /**
      * Fetches all contexts belonging to the given user and project.
      * Includes contexts from the current project and all contexts from linked projects.
-     * Returns contexts grouped by project name.
+     * Returns contexts grouped by project name only when linked projects have contexts.
      *
      * @param int $userId The ID of the user.
      * @param int|null $projectId The ID of the project.
-     * @return array An associative array of contexts grouped by project: [projectName => [id => contextName]].
+     * @return array If linked projects have contexts: [projectName => [id => contextName]]. Otherwise: [id => contextName].
      */
     public function fetchProjectContexts(int $userId, ?int $projectId): array
     {
@@ -111,6 +111,10 @@ class ContextService extends Component
                     }
                     $linkedProjectsContexts[$projectName][$context->id] = $context->name;
                 }
+            }
+
+            if (empty($linkedProjectsContexts)) {
+                return $currentProjectContexts;
             }
 
             if (!empty($currentProjectContexts)) {
