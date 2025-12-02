@@ -31,6 +31,10 @@ QuillAsset::register($this);
             [0 => 'No', 1 => 'Yes']
         )->label('Default on') ?>
 
+        <?= $form->field($model, 'share')->dropDownList(
+            [0 => 'No', 1 => 'Yes']
+        )->label('Share') ?>
+
         <?= $form->field($model, 'content')->hiddenInput(['id' => 'context-content'])->label(false) ?>
 
         <div class="resizable-editor-container mb-3">

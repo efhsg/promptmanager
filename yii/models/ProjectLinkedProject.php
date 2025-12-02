@@ -36,6 +36,12 @@ class ProjectLinkedProject extends ActiveRecord
             [['project_id', 'linked_project_id'], 'required'],
             [['project_id', 'linked_project_id', 'created_at', 'updated_at'], 'integer'],
             [
+                ['project_id', 'linked_project_id'],
+                'unique',
+                'targetAttribute' => ['project_id', 'linked_project_id'],
+                'message' => 'This project is already linked.',
+            ],
+            [
                 ['project_id'],
                 'exist',
                 'skipOnError' => true,

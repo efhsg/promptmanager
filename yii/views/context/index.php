@@ -89,6 +89,15 @@ echo $this->render('_breadcrumbs', [
                     ],
 
                     [
+                        'attribute' => 'share',
+                        'label' => 'Share',
+                        'enableSorting' => true,
+                        'value' => function ($model) {
+                            return $model->share ? 'Yes' : 'No';
+                        },
+                    ],
+
+                    [
                         'class' => yii\grid\ActionColumn::class,
                         'urlCreator' => function ($action, $model) {
                             $id = is_array($model) ? $model['id'] : $model->id;

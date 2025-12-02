@@ -16,17 +16,11 @@ use yii\db\ActiveRecord;
  */
 class TemplateField extends ActiveRecord
 {
-    /**
-     * {@inheritdoc}
-     */
     public static function tableName(): string
     {
         return 'template_field';
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function rules(): array
     {
         return [
@@ -37,9 +31,6 @@ class TemplateField extends ActiveRecord
         ];
     }
 
-    /**
-     * {@inheritdoc}
-     */
     public function attributeLabels(): array
     {
         return [
@@ -48,21 +39,11 @@ class TemplateField extends ActiveRecord
         ];
     }
 
-    /**
-     * Gets query for [[Field]].
-     *
-     * @return ActiveQuery
-     */
     public function getField(): ActiveQuery
     {
         return $this->hasOne(Field::class, ['id' => 'field_id']);
     }
 
-    /**
-     * Gets query for [[Template]].
-     *
-     * @return ActiveQuery
-     */
     public function getTemplate(): ActiveQuery
     {
         return $this->hasOne(PromptTemplate::class, ['id' => 'template_id']);

@@ -118,8 +118,7 @@ class FieldService
         $newIDs = ArrayHelper::map($options, 'id', 'id');
         $deletedIDs = array_diff($oldIDs, array_filter($newIDs));
 
-        $valid = $field->validate() && Model::validateMultiple($options);
-        if (!$valid) {
+        if (!$field->validate()) {
             return false;
         }
 
@@ -129,12 +128,20 @@ class FieldService
                 throw new Exception('Failed to save field.');
             }
 
+            foreach ($options as $option) {
+                $option->field_id = $field->id;
+            }
+
+            if (!Model::validateMultiple($options)) {
+                $transaction->rollBack();
+                return false;
+            }
+
             if (!empty($deletedIDs)) {
                 FieldOption::deleteAll(['id' => $deletedIDs]);
             }
 
             foreach ($options as $option) {
-                $option->field_id = $field->id;
                 if (!$option->save(false)) {
                     throw new Exception('Failed to save field option.');
                 }
