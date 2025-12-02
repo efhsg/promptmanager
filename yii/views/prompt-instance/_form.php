@@ -32,6 +32,27 @@ $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
 
 $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
     ?? CopyType::MD->value;
+
+$css = <<<CSS
+.select2-container--default .select2-results__group {
+    background-color: #e9ecef;
+    color: #495057;
+    font-weight: 600;
+    padding: 8px 12px;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.select2-container--default .select2-results__option--group {
+    padding-left: 0;
+}
+
+.select2-container--default .select2-results__option[aria-selected] {
+    padding-left: 20px;
+}
+CSS;
+
+$this->registerCss($css);
 ?>
 
 <div class="prompt-instance-form focus-on-first-field">
