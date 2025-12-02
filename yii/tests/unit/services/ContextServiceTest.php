@@ -251,25 +251,19 @@ class ContextServiceTest extends Unit
         $context->delete();
     }
 
-    public function testFetchProjectContextsIncludesSharedContextsFromLinkedProjects(): void
+    public function testFetchProjectContextsIncludesAllContextsFromLinkedProjects(): void
     {
         $result = $this->service->fetchProjectContexts(1, 2);
 
         $this->assertSame(
             [
                 2 => 'Test Context2',
+                6 => 'Non-Shared Context',
                 4 => 'Shared Context',
                 5 => 'Shared Default Context',
             ],
             $result
         );
-    }
-
-    public function testFetchProjectContextsExcludesNonSharedContextsFromLinkedProjects(): void
-    {
-        $result = $this->service->fetchProjectContexts(1, 2);
-
-        $this->assertArrayNotHasKey(6, $result);
     }
 
     public function testFetchProjectContextsIncludesAllContextsFromCurrentProject(): void

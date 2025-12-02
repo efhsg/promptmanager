@@ -67,7 +67,7 @@ class ContextService extends Component
 
     /**
      * Fetches all contexts belonging to the given user and project.
-     * Includes contexts from the current project and shared contexts from linked projects.
+     * Includes contexts from the current project and all contexts from linked projects.
      *
      * @param int $userId The ID of the user.
      * @param int|null $projectId The ID of the project.
@@ -80,11 +80,7 @@ class ContextService extends Component
             $query->andWhere([
                 'or',
                 ['p.id' => $projectId],
-                [
-                    'and',
-                    ['c.share' => 1],
-                    ['p.id' => $this->getLinkedProjectIds($projectId)],
-                ],
+                ['p.id' => $this->getLinkedProjectIds($projectId)],
             ]);
         }
         $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
