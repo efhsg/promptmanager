@@ -22,6 +22,7 @@ class ContextServiceTest extends Unit
             'users' => UserFixture::class,
             'projects' => ProjectFixture::class,
             'contexts' => ContextFixture::class,
+            'projectLinkedProjects' => \tests\fixtures\ProjectLinkedProjectFixture::class,
         ];
     }
 
@@ -248,5 +249,57 @@ class ContextServiceTest extends Unit
         $this->assertSame([], $result);
 
         $context->delete();
+    }
+
+    public function testFetchProjectContextsIncludesSharedContextsFromLinkedProjects(): void
+    {
+        $result = $this->service->fetchProjectContexts(1, 2);
+
+        $this->assertSame(
+            [
+                2 => 'Test Context2',
+                4 => 'Shared Context',
+                5 => 'Shared Default Context',
+            ],
+            $result
+        );
+    }
+
+    public function testFetchProjectContextsExcludesNonSharedContextsFromLinkedProjects(): void
+    {
+        $result = $this->service->fetchProjectContexts(1, 2);
+
+        $this->assertArrayNotHasKey(6, $result);
+    }
+
+    public function testFetchProjectContextsIncludesAllContextsFromCurrentProject(): void
+    {
+        $context = new Context();
+        $context->project_id = 2;
+        $context->name = 'Non-Shared in Current Project';
+        $context->content = 'This should be included';
+        $context->share = 0;
+        $this->assertTrue($context->save());
+
+        $result = $this->service->fetchProjectContexts(1, 2);
+
+        $this->assertArrayHasKey($context->id, $result);
+        $this->assertSame('Non-Shared in Current Project', $result[$context->id]);
+
+        $context->delete();
+    }
+
+    public function testFetchDefaultContextIdsIncludesSharedDefaultsFromLinkedProjects(): void
+    {
+        $result = $this->service->fetchDefaultContextIds(1, 2);
+
+        $this->assertContains('5', $result);
+    }
+
+    public function testFetchDefaultContextIdsExcludesNonDefaultSharedContextsFromLinkedProjects(): void
+    {
+        $result = $this->service->fetchDefaultContextIds(1, 2);
+
+        $this->assertNotContains('4', $result);
     }
 }

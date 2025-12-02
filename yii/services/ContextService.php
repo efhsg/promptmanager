@@ -67,6 +67,7 @@ class ContextService extends Component
 
     /**
      * Fetches all contexts belonging to the given user and project.
+     * Includes contexts from the current project and shared contexts from linked projects.
      *
      * @param int $userId The ID of the user.
      * @param int|null $projectId The ID of the project.
@@ -76,7 +77,15 @@ class ContextService extends Component
     {
         $query = $this->createUserContextQuery($userId);
         if ($projectId !== null) {
-            $query->andWhere(['p.id' => $projectId]);
+            $query->andWhere([
+                'or',
+                ['p.id' => $projectId],
+                [
+                    'and',
+                    ['c.share' => 1],
+                    ['p.id' => $this->getLinkedProjectIds($projectId)],
+                ],
+            ]);
         }
         $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
         return ArrayHelper::map($contexts, 'id', 'name');
@@ -101,7 +110,15 @@ class ContextService extends Component
             ->select('c.id')
             ->andWhere(['c.is_default' => 1]);
         if ($projectId !== null) {
-            $query->andWhere(['p.id' => $projectId]);
+            $query->andWhere([
+                'or',
+                ['p.id' => $projectId],
+                [
+                    'and',
+                    ['c.share' => 1],
+                    ['p.id' => $this->getLinkedProjectIds($projectId)],
+                ],
+            ]);
         }
         return $query->column();
     }
@@ -112,5 +129,14 @@ class ContextService extends Component
             ->alias('c')
             ->joinWith(['project p'])
             ->where(['p.user_id' => $userId]);
+    }
+
+    private function getLinkedProjectIds(int $projectId): array
+    {
+        return (new ActiveQuery('app\models\Project'))
+            ->select('linked_project_id')
+            ->from('project_linked_project')
+            ->where(['project_id' => $projectId])
+            ->column();
     }
 }
