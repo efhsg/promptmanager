@@ -3,6 +3,7 @@
 namespace app\services;
 
 use app\models\Context;
+use app\models\ProjectLinkedProject;
 use Throwable;
 use yii\base\Component;
 use yii\db\ActiveQuery;
@@ -76,7 +77,19 @@ class ContextService extends Component
     {
         $query = $this->createUserContextQuery($userId);
         if ($projectId !== null) {
-            $query->andWhere(['p.id' => $projectId]);
+            $linkedProjectIds = $this->getLinkedProjectIds($projectId, $userId);
+
+            $conditions = [['p.id' => $projectId]];
+
+            if (!empty($linkedProjectIds)) {
+                $conditions[] = [
+                    'and',
+                    ['p.id' => $linkedProjectIds],
+                    ['c.share' => 1],
+                ];
+            }
+
+            $query->andWhere(['or', ...$conditions]);
         }
         $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
         return ArrayHelper::map($contexts, 'id', 'name');
@@ -100,10 +113,31 @@ class ContextService extends Component
         $query = $this->createUserContextQuery($userId)
             ->select('c.id')
             ->andWhere(['c.is_default' => 1]);
+
         if ($projectId !== null) {
-            $query->andWhere(['p.id' => $projectId]);
+            $linkedProjectIds = $this->getLinkedProjectIds($projectId, $userId);
+
+            $conditions = [['p.id' => $projectId]];
+
+            if (!empty($linkedProjectIds)) {
+                $conditions[] = [
+                    'and',
+                    ['p.id' => $linkedProjectIds],
+                    ['c.share' => 1],
+                ];
+            }
+
+            $query->andWhere(['or', ...$conditions]);
         }
+
         return $query->column();
+    }
+
+    private function getLinkedProjectIds(int $projectId, int $userId): array
+    {
+        return ProjectLinkedProject::find()
+            ->linkedProjectIdsFor($projectId, $userId)
+            ->column();
     }
 
     private function createUserContextQuery(int $userId): ActiveQuery

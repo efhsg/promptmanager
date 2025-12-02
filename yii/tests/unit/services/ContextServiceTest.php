@@ -9,6 +9,7 @@ use app\services\ContextService;
 use Codeception\Test\Unit;
 use PHPUnit\Framework\MockObject\MockObject;
 use tests\fixtures\ContextFixture;
+use tests\fixtures\ProjectLinkedProjectFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 
@@ -22,6 +23,7 @@ class ContextServiceTest extends Unit
             'users' => UserFixture::class,
             'projects' => ProjectFixture::class,
             'contexts' => ContextFixture::class,
+            'projectLinkedProjects' => ProjectLinkedProjectFixture::class,
         ];
     }
 
@@ -248,5 +250,25 @@ class ContextServiceTest extends Unit
         $this->assertSame([], $result);
 
         $context->delete();
+    }
+
+    public function testFetchProjectContextsIncludesSharedLinkedContexts(): void
+    {
+        $result = $this->service->fetchProjectContexts(1, 2);
+
+        $this->assertSame(
+            [
+                4 => 'Shared Linked Context',
+                2 => 'Test Context2',
+            ],
+            $result
+        );
+    }
+
+    public function testFetchDefaultContextIdsIncludesSharedLinkedDefaults(): void
+    {
+        $result = $this->service->fetchDefaultContextIds(1, 2);
+
+        $this->assertSame(['4'], $result);
     }
 }
