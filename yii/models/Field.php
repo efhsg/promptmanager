@@ -20,8 +20,8 @@ use yii\db\ActiveRecord;
  * @property string $name
  * @property string $type
  * @property string|null $content
- * @property int $selected_by_default
- * @property int $share
+ * @property bool $selected_by_default
+ * @property bool $share
  * @property string|null $label
  * @property int $created_at
  * @property int $updated_at
@@ -55,7 +55,8 @@ class Field extends ActiveRecord
     {
         return [
             [['name', 'type'], 'required'],
-            [['user_id', 'project_id', 'selected_by_default', 'share', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'project_id', 'created_at', 'updated_at'], 'integer'],
+            [['selected_by_default', 'share'], 'boolean'],
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],
             [['name', 'label'], 'string', 'max' => 255],
@@ -69,7 +70,7 @@ class Field extends ActiveRecord
             ],
             [['content'], 'string'],
             [['content'], 'validatePathContent'],
-            [['share'], 'default', 'value' => 0],
+            [['share'], 'default', 'value' => false],
             [['project_id'],
                 'exist',
                 'skipOnError' => true,
