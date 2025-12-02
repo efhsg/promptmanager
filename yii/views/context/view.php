@@ -50,6 +50,13 @@ echo $this->render('_breadcrumbs', [
                         },
                     ],
                     [
+                        'attribute' => 'share',
+                        'label' => 'Share',
+                        'value' => function ($model) {
+                            return $model->share ? 'Yes' : 'No';
+                        },
+                    ],
+                    [
                         'attribute' => 'content',
                         'format' => 'raw',
                         'value' => function ($model) {
