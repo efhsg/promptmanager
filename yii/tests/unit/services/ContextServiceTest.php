@@ -130,8 +130,10 @@ class ContextServiceTest extends Unit
 
         $this->assertSame(
             [
-                1 => 'Test Context',
-                3 => 'Test Context3',
+                'Test Project' => [
+                    1 => 'Test Context',
+                    3 => 'Test Context3',
+                ],
             ],
             $result
         );
@@ -257,10 +259,14 @@ class ContextServiceTest extends Unit
 
         $this->assertSame(
             [
-                2 => 'Test Context2',
-                6 => 'Non-Shared Context',
-                4 => 'Shared Context',
-                5 => 'Shared Default Context',
+                'Test Project 2' => [
+                    2 => 'Test Context2',
+                ],
+                'Linked Project' => [
+                    6 => 'Non-Shared Context',
+                    4 => 'Shared Context',
+                    5 => 'Shared Default Context',
+                ],
             ],
             $result
         );
@@ -277,8 +283,9 @@ class ContextServiceTest extends Unit
 
         $result = $this->service->fetchProjectContexts(1, 2);
 
-        $this->assertArrayHasKey($context->id, $result);
-        $this->assertSame('Non-Shared in Current Project', $result[$context->id]);
+        $this->assertArrayHasKey('Test Project 2', $result);
+        $this->assertArrayHasKey($context->id, $result['Test Project 2']);
+        $this->assertSame('Non-Shared in Current Project', $result['Test Project 2'][$context->id]);
 
         $context->delete();
     }

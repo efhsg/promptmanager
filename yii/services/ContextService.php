@@ -68,21 +68,62 @@ class ContextService extends Component
     /**
      * Fetches all contexts belonging to the given user and project.
      * Includes contexts from the current project and all contexts from linked projects.
+     * Returns contexts grouped by project name.
      *
      * @param int $userId The ID of the user.
      * @param int|null $projectId The ID of the project.
-     * @return array An associative array of contexts mapped as [id => name].
+     * @return array An associative array of contexts grouped by project: [projectName => [id => contextName]].
      */
     public function fetchProjectContexts(int $userId, ?int $projectId): array
     {
         $query = $this->createUserContextQuery($userId);
         if ($projectId !== null) {
+            $linkedProjectIds = $this->getLinkedProjectIds($projectId);
             $query->andWhere([
                 'or',
                 ['p.id' => $projectId],
-                ['p.id' => $this->getLinkedProjectIds($projectId)],
+                ['p.id' => $linkedProjectIds],
             ]);
+
+            $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
+
+            if (empty($contexts)) {
+                return [];
+            }
+
+            $grouped = [];
+            $currentProjectContexts = [];
+            $currentProjectName = null;
+            $linkedProjectsContexts = [];
+
+            foreach ($contexts as $context) {
+                $contextProjectId = $context->project_id;
+                $projectName = $context->project->name;
+
+                if ($contextProjectId === $projectId) {
+                    $currentProjectContexts[$context->id] = $context->name;
+                    if ($currentProjectName === null) {
+                        $currentProjectName = $projectName;
+                    }
+                } else {
+                    if (!isset($linkedProjectsContexts[$projectName])) {
+                        $linkedProjectsContexts[$projectName] = [];
+                    }
+                    $linkedProjectsContexts[$projectName][$context->id] = $context->name;
+                }
+            }
+
+            if (!empty($currentProjectContexts)) {
+                $grouped[$currentProjectName ?? 'Current Project'] = $currentProjectContexts;
+            }
+
+            foreach ($linkedProjectsContexts as $projectName => $projectContexts) {
+                $grouped[$projectName] = $projectContexts;
+            }
+
+            return $grouped;
         }
+
         $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
         return ArrayHelper::map($contexts, 'id', 'name');
     }
