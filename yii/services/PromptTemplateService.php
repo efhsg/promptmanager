@@ -79,8 +79,8 @@ class PromptTemplateService
     }
 
     /**
-     * Returns an associative array of template descriptions for the given user,
-     * mapping template id to template description.
+     * Returns an associative array of template bodies for the given user,
+     * mapping template id to template body content.
      *
      * @param int $userId
      * @param int|null $projectId
@@ -95,7 +95,7 @@ class PromptTemplateService
             $query->andWhere(['project.id' => $projectId]);
         }
         $templates = $query->all();
-        return ArrayHelper::map($templates, 'id', 'description');
+        return ArrayHelper::map($templates, 'id', 'template_body');
     }
 
     public function getTemplatesContentByUser(int $userId): array

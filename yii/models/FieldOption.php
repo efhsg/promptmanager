@@ -39,9 +39,10 @@ class FieldOption extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['value'], 'required'],
+            [['field_id', 'value'], 'required'],
             [['field_id', 'order', 'created_at', 'updated_at'], 'integer'],
             [['selected_by_default'], 'boolean'],
+            [['selected_by_default'], 'default', 'value' => false],
             [['value'], 'string',],
             [['label'], 'string', 'max' => 255],
             [['field_id'], 'exist', 'skipOnError' => true, 'targetClass' => Field::class, 'targetAttribute' => ['field_id' => 'id']],

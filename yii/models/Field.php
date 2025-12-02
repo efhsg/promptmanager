@@ -54,9 +54,10 @@ class Field extends ActiveRecord
     public function rules(): array
     {
         return [
-            [['name', 'type'], 'required'],
+            [['user_id', 'name', 'type'], 'required'],
             [['user_id', 'project_id', 'created_at', 'updated_at'], 'integer'],
             [['selected_by_default', 'share'], 'boolean'],
+            [['selected_by_default'], 'default', 'value' => false],
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],
             [['name', 'label'], 'string', 'max' => 255],
