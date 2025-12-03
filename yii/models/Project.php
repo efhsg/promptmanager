@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\query\ProjectQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use common\enums\CopyType;
@@ -59,6 +60,11 @@ class Project extends ActiveRecord
     public static function tableName(): string
     {
         return 'project';
+    }
+
+    public static function find(): ProjectQuery
+    {
+        return new ProjectQuery(static::class);
     }
 
     public function init(): void
@@ -417,17 +423,9 @@ class Project extends ActiveRecord
             ->viaTable('project_linked_project', ['project_id' => 'id']);
     }
 
-    public static function findAvailableForLinking(?int $excludeProjectId, int $userId): ActiveQuery
+    public static function findAvailableForLinking(?int $excludeProjectId, int $userId): ProjectQuery
     {
-        $query = static::find()
-            ->where(['user_id' => $userId])
-            ->andWhere(['deleted_at' => null]);
-
-        if ($excludeProjectId !== null) {
-            $query->andWhere(['!=', 'id', $excludeProjectId]);
-        }
-
-        return $query;
+        return static::find()->availableForLinking($excludeProjectId, $userId);
     }
 
     public function beforeSave($insert): bool

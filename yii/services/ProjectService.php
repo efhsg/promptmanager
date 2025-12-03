@@ -12,8 +12,8 @@ class ProjectService
     {
         return ArrayHelper::map(
             Project::find()
-                ->where(['user_id' => $userId])
-                ->orderBy(['name' => SORT_ASC])
+                ->forUser($userId)
+                ->orderedByName()
                 ->all() ?: [],
             'id',
             'name'
@@ -23,7 +23,9 @@ class ProjectService
     public function fetchAvailableProjectsForLinking(?int $excludeProjectId, int $userId): array
     {
         return ArrayHelper::map(
-            Project::findAvailableForLinking($excludeProjectId, $userId)->all() ?: [],
+            Project::find()
+                ->availableForLinking($excludeProjectId, $userId)
+                ->all() ?: [],
             'id',
             'name'
         );
