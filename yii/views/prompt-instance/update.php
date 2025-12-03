@@ -28,6 +28,11 @@ echo $this->render('_breadcrumbs', [
                         'enableClientValidation' => true,
                     ]); ?>
 
+                    <?= $form->field($model, 'label')->textInput([
+                        'maxlength' => true,
+                        'placeholder' => 'Enter a label',
+                    ]) ?>
+
                     <?= $form->field($model, 'final_prompt')->hiddenInput(['id' => 'final-prompt'])->label(false) ?>
 
                     <div class="form-group"><?= Html::encode($model->template->name ?? 'N/A') ?></div>

@@ -70,7 +70,10 @@ class PromptInstanceController extends Controller
                     [
                         'allow' => true,
                         'roles' => ['@'],
-                        'actions' => array_keys($this->actionPermissionMap),
+                        'actions' => array_merge(
+                            array_keys($this->actionPermissionMap),
+                            ['generate-prompt-form', 'generate-final-prompt', 'save-final-prompt']
+                        ),
                         'matchCallback' => function ($rule, $action) {
                             if (in_array(
                                 $action->id,
@@ -373,8 +376,15 @@ class PromptInstanceController extends Controller
             return ['success' => false];
         }
 
+        $label = Yii::$app->request->post('label', '');
+        $label = is_string($label) ? trim($label) : '';
+        if ($label === '') {
+            return ['success' => false];
+        }
+
         $model = new PromptInstance([
             'template_id' => (int)Yii::$app->request->post('template_id'),
+            'label' => $label,
             'final_prompt' => $finalPrompt,
         ]);
 
