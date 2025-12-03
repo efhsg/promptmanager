@@ -69,6 +69,14 @@ echo $this->render('_breadcrumbs', [
                 },
                 'columns' => [
                     [
+                        'attribute' => 'label',
+                        'label' => 'Label',
+                        'value' => static function ($model): string {
+                            $label = $model->label;
+                            return $label === null || $label === '' ? 'N/A' : $label;
+                        },
+                    ],
+                    [
                         'attribute' => 'template_id',
                         'label' => 'Template Name',
                         'enableSorting' => true,

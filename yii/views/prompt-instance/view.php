@@ -41,6 +41,14 @@ echo $this->render('_breadcrumbs', [
                 'options' => ['class' => 'table table-borderless'],
                 'attributes' => [
                     [
+                        'attribute' => 'label',
+                        'label' => 'Label',
+                        'value' => static function ($model): string {
+                            $label = $model->label;
+                            return $label === null || $label === '' ? 'N/A' : $label;
+                        },
+                    ],
+                    [
                         'attribute' => 'template_name',
                         'label' => 'Template',
                         'value' => function ($model) {
