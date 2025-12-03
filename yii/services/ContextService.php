@@ -4,6 +4,7 @@ namespace app\services;
 
 use app\models\Context;
 use Throwable;
+use Yii;
 use yii\base\Component;
 use yii\db\ActiveQuery;
 use yii\db\Exception;
@@ -166,10 +167,10 @@ class ContextService extends Component
 
     private function getLinkedProjectIds(int $projectId): array
     {
-        return (new ActiveQuery('app\models\Project'))
+        return Yii::$app->db->createCommand()
             ->select('linked_project_id')
             ->from('project_linked_project')
             ->where(['project_id' => $projectId])
-            ->column();
+            ->queryColumn();
     }
 }

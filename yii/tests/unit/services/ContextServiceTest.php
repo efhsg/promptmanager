@@ -295,4 +295,23 @@ class ContextServiceTest extends Unit
         $this->assertNotContains('5', $result);
         $this->assertNotContains('4', $result);
     }
+
+    public function testFetchProjectContextsIncludesAllThreeContextsFromLinkedProject(): void
+    {
+        $result = $this->service->fetchProjectContexts(1, 2);
+
+        $this->assertArrayHasKey('Test Project 2', $result);
+        $this->assertArrayHasKey('Linked Project', $result);
+
+        $linkedProjectContexts = $result['Linked Project'];
+
+        $this->assertCount(3, $linkedProjectContexts, 'Should have exactly 3 contexts from linked project');
+        $this->assertArrayHasKey(4, $linkedProjectContexts, 'Should include context 4 (share=1)');
+        $this->assertArrayHasKey(5, $linkedProjectContexts, 'Should include context 5 (share=1)');
+        $this->assertArrayHasKey(6, $linkedProjectContexts, 'Should include context 6 (share=0)');
+
+        $this->assertSame('Shared Context', $linkedProjectContexts[4]);
+        $this->assertSame('Shared Default Context', $linkedProjectContexts[5]);
+        $this->assertSame('Non-Shared Context', $linkedProjectContexts[6]);
+    }
 }
