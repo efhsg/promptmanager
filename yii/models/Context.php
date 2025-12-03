@@ -3,6 +3,7 @@
 namespace app\models;
 
 use app\models\traits\TimestampTrait;
+use app\models\query\ContextQuery;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -32,6 +33,11 @@ class Context extends ActiveRecord
     public static function tableName(): string
     {
         return 'context';
+    }
+
+    public static function find(): ContextQuery
+    {
+        return new ContextQuery(static::class);
     }
 
     /**

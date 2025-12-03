@@ -33,3 +33,22 @@ Migrations should be atomic, reversible, and include comments explaining their p
 - Pull requests should provide context, reference an issue, and clearly describe the intended behavior.
 - Visual or UI-impacting changes should include screenshots or GIFs.
 - Any new environment variables, migration IDs, or Docker-related adjustments must be noted in the PR so operators can apply them consistently.
+
+## Commands
+
+```bash
+# Docker
+docker compose up -d                    # Start
+docker exec -it pma_yii bash            # Shell access
+
+# Tests
+docker exec pma_yii vendor/bin/codecept run unit
+docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest:testMethod
+
+# Migrations
+docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+
+# Frontend (after Quill changes)
+docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
+```
