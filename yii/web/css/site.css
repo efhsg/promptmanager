@@ -315,13 +315,14 @@ a.desc:after {
 }
 
 .select2-container--bootstrap .select2-results__group {
-    padding: 8px 12px;
+    padding: 10px 12px;
     background-color: #f8f9fa;
     color: #495057;
     font-weight: 600;
     border-top: 1px solid #e9ecef;
     text-transform: uppercase;
     letter-spacing: 0.02em;
+    line-height: 1.4;
 }
 
 .select2-container--bootstrap .select2-results__option[role="group"]:first-child .select2-results__group {
