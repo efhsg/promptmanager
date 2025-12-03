@@ -1,6 +1,5 @@
 <?php
 
-
 namespace app\models;
 
 use InvalidArgumentException;
@@ -26,7 +25,7 @@ class PromptInstanceSearch extends PromptInstance
     {
         return [
             [['id', 'template_id', 'created_at', 'updated_at'], 'integer'],
-            [['final_prompt'], 'safe'],
+            [['final_prompt', 'label'], 'safe'],
             ['projectName', 'safe'],
         ];
     }
@@ -69,6 +68,15 @@ class PromptInstanceSearch extends PromptInstance
             ],
         ]);
 
+        $dataProvider->sort->attributes['label'] = [
+            'asc' => ['prompt_instance.label' => SORT_ASC],
+            'desc' => ['prompt_instance.label' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->defaultOrder = [
+            'label' => SORT_ASC,
+        ];
+
         $dataProvider->sort->attributes['projectName'] = [
             'asc' => ['p.name' => SORT_ASC],
             'desc' => ['p.name' => SORT_DESC],
@@ -80,8 +88,10 @@ class PromptInstanceSearch extends PromptInstance
             return $dataProvider;
         }
 
-        $query->andFilterWhere(['like', 'final_prompt', $this->final_prompt])
-              ->andFilterWhere(['like', 'p.name', $this->projectName]);
+        $query
+            ->andFilterWhere(['like', 'prompt_instance.label', $this->label])
+            ->andFilterWhere(['like', 'final_prompt', $this->final_prompt])
+            ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;
     }

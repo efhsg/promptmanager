@@ -8,6 +8,7 @@ use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\StringHelper;
 use yii\helpers\Url;
+use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
 /** @var app\models\PromptInstanceSearch $searchModel */
@@ -28,7 +29,27 @@ echo $this->render('_breadcrumbs', [
 
     <div class="card">
         <div class="card-header">
-            <strong>Prompt Instance List</strong>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <strong class="mb-0">Prompt Instance List</strong>
+                <?php $form = ActiveForm::begin([
+                    'action' => ['index'],
+                    'method' => 'get',
+                    'options' => ['class' => 'd-flex flex-wrap align-items-center gap-2 mb-0'],
+                ]); ?>
+                    <?= $form->field($searchModel, 'label', [
+                        'options' => ['class' => 'mb-0'],
+                    ])->textInput([
+                        'class' => 'form-control',
+                        'placeholder' => 'Search by label',
+                    ])->label(false) ?>
+                    <div class="d-flex align-items-center gap-2">
+                        <?= Html::submitButton('Search', ['class' => 'btn btn-outline-primary']) ?>
+                        <?php if ($searchModel->label !== ''): ?>
+                            <?= Html::a('Reset', ['index'], ['class' => 'btn btn-link px-2']) ?>
+                        <?php endif; ?>
+                    </div>
+                <?php ActiveForm::end(); ?>
+            </div>
         </div>
         <div class="card-body p-0">
             <?= GridView::widget([
