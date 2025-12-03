@@ -3,20 +3,21 @@
 namespace app\services;
 
 use app\models\Context;
+use app\models\query\ContextQuery;
 use Throwable;
 use yii\base\Component;
-use yii\db\ActiveQuery;
 use yii\db\Exception;
-use yii\db\Query;
 use yii\helpers\ArrayHelper;
 
+/**
+ * Service for managing Context models: saving, deleting and fetching contexts
+ * for a user or project.
+ */
 class ContextService extends Component
 {
     /**
-     * Persists the given Context model.
+     * Persist the given Context model.
      *
-     * @param Context $model
-     * @return bool
      * @throws Exception
      */
     public function saveContext(Context $model): bool
@@ -25,10 +26,8 @@ class ContextService extends Component
     }
 
     /**
-     * Deletes the given Context model.
+     * Delete the given Context model.
      *
-     * @param Context $model
-     * @return bool
      * @throws Exception|Throwable
      */
     public function deleteContext(Context $model): bool
@@ -37,60 +36,44 @@ class ContextService extends Component
     }
 
     /**
-     * Fetches all contexts belonging to the given user.
-     *
-     * Assumes that each Context is linked to a Project that has a user_id.
-     *
-     * @param int $userId The ID of the user.
-     * @return array An associative array of contexts mapped as [id => name].
+     * Fetch all contexts belonging to the given user.
+     * Returns an associative array of contexts mapped as [id => name].
      */
     public function fetchContexts(int $userId): array
     {
         $contexts = $this->createUserContextQuery($userId)
-            ->orderBy(['c.name' => SORT_ASC])
+            ->orderedByName()
             ->all();
 
         return ArrayHelper::map($contexts, 'id', 'name');
     }
 
     /**
-     * Fetches the content of all contexts belonging to the given user.
-     *
-     * @param int $userId The ID of the user.
-     * @return array An associative array of contexts mapped as [id => content].
+     * Fetch the content of all contexts belonging to the given user.
+     * Returns an associative array of contexts mapped as [id => content].
      */
     public function fetchContextsContent(int $userId): array
     {
-        $contexts = $this->createUserContextQuery($userId)->all();
+        $contexts = $this->createUserContextQuery($userId)
+            ->all();
 
         return ArrayHelper::map($contexts, 'id', 'content');
     }
 
     /**
-     * Fetches all contexts belonging to the given user and project.
-     * Includes all contexts from the current project and only shared contexts from linked projects.
-     * Returns contexts grouped by project name only when linked projects have contexts.
-     *
-     * @param int $userId The ID of the user.
-     * @param int|null $projectId The ID of the project.
-     * @return array If linked projects have contexts: [projectName => [id => contextName]]. Otherwise: [id => contextName].
+     * Fetch all contexts belonging to the given user and project.
+     * Includes all contexts from the current project and only shared contexts
+     * from linked projects. Returns contexts grouped by project name only when
+     * linked projects have contexts.
      */
     public function fetchProjectContexts(int $userId, ?int $projectId): array
     {
-        $query = $this->createUserContextQuery($userId);
         if ($projectId !== null) {
-            $linkedProjectIds = $this->getLinkedProjectIds($projectId);
-            $query->andWhere([
-                'or',
-                ['p.id' => $projectId],
-                [
-                    'and',
-                    ['c.share' => 1],
-                    ['p.id' => $linkedProjectIds],
-                ],
-            ]);
-
-            $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
+            $linkedProjectIds = ContextQuery::linkedProjectIds($projectId);
+            $contexts = $this->createUserContextQuery($userId)
+                ->forProjectWithLinkedSharing($projectId, $linkedProjectIds)
+                ->orderedByName()
+                ->all();
 
             if (empty($contexts)) {
                 return [];
@@ -100,7 +83,7 @@ class ContextService extends Component
             $currentProjectContexts = [];
             $currentProjectName = null;
             $linkedProjectsContexts = [];
-
+            /** @var Context[] $contexts */
             foreach ($contexts as $context) {
                 $contextProjectId = $context->project_id;
                 $projectName = $context->project->name;
@@ -133,7 +116,10 @@ class ContextService extends Component
             return $grouped;
         }
 
-        $contexts = $query->orderBy(['c.name' => SORT_ASC])->all();
+        $contexts = $this->createUserContextQuery($userId)
+            ->orderedByName()
+            ->all();
+
         return ArrayHelper::map($contexts, 'id', 'name');
     }
 
@@ -144,7 +130,7 @@ class ContextService extends Component
         }
 
         $contexts = $this->createUserContextQuery($userId)
-            ->andWhere(['c.id' => $contextIds])
+            ->withIds($contextIds)
             ->all();
 
         return ArrayHelper::map($contexts, 'id', 'content');
@@ -153,28 +139,19 @@ class ContextService extends Component
     public function fetchDefaultContextIds(int $userId, ?int $projectId): array
     {
         $query = $this->createUserContextQuery($userId)
-            ->select('c.id')
-            ->andWhere(['c.is_default' => 1]);
+            ->select(Context::tableName() . '.id')
+            ->onlyDefault();
+
         if ($projectId !== null) {
-            $query->andWhere(['p.id' => $projectId]);
+            $query->forProject($projectId);
         }
+
         return $query->column();
     }
 
-    private function createUserContextQuery(int $userId): ActiveQuery
+    private function createUserContextQuery(int $userId): ContextQuery
     {
         return Context::find()
-            ->alias('c')
-            ->joinWith(['project p'])
-            ->where(['p.user_id' => $userId]);
-    }
-
-    private function getLinkedProjectIds(int $projectId): array
-    {
-        return (new Query())
-            ->select('linked_project_id')
-            ->from('project_linked_project')
-            ->where(['project_id' => $projectId])
-            ->column();
+            ->forUser($userId);
     }
 }
