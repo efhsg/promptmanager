@@ -11,7 +11,10 @@ class ProjectService
     public function fetchProjectsList(int $userId): array
     {
         return ArrayHelper::map(
-            Project::find()->where(['user_id' => $userId])->all() ?: [],
+            Project::find()
+                ->where(['user_id' => $userId])
+                ->orderBy(['name' => SORT_ASC])
+                ->all() ?: [],
             'id',
             'name'
         );

@@ -51,15 +51,41 @@ class ProjectServiceTest extends Unit
         try {
             $result = $this->service->fetchProjectsList(100);
 
-            $this->assertSame(
-                [
-                    1 => 'Test Project',
-                    (int)$project->id => 'Additional Project',
-                ],
-                $result
-            );
+            $this->assertCount(2, $result);
+            $this->assertSame('Test Project', $result[1]);
+            $this->assertSame('Additional Project', $result[(int)$project->id]);
         } finally {
             $project->delete();
+        }
+    }
+
+    public function testFetchProjectsListOrdersProjectsByName(): void
+    {
+        $alphaProject = new Project();
+        $alphaProject->user_id = 100;
+        $alphaProject->name = 'Alpha Project';
+
+        $zetaProject = new Project();
+        $zetaProject->user_id = 100;
+        $zetaProject->name = 'Zeta Project';
+
+        $this->assertSame(true, $alphaProject->save());
+        $this->assertSame(true, $zetaProject->save());
+
+        try {
+            $result = $this->service->fetchProjectsList(100);
+
+            $this->assertSame(
+                [
+                    'Alpha Project',
+                    'Test Project',
+                    'Zeta Project',
+                ],
+                array_values($result)
+            );
+        } finally {
+            $alphaProject->delete();
+            $zetaProject->delete();
         }
     }
 }
