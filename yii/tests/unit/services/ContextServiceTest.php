@@ -251,7 +251,7 @@ class ContextServiceTest extends Unit
         $context->delete();
     }
 
-    public function testFetchProjectContextsIncludesAllContextsFromLinkedProjects(): void
+    public function testFetchProjectContextsIncludesOnlySharedContextsFromLinkedProjects(): void
     {
         $result = $this->service->fetchProjectContexts(1, 2);
 
@@ -261,7 +261,6 @@ class ContextServiceTest extends Unit
                     2 => 'Test Context2',
                 ],
                 'Linked Project' => [
-                    6 => 'Non-Shared Context',
                     4 => 'Shared Context',
                     5 => 'Shared Default Context',
                 ],
@@ -296,7 +295,7 @@ class ContextServiceTest extends Unit
         $this->assertNotContains('4', $result);
     }
 
-    public function testFetchProjectContextsIncludesAllThreeContextsFromLinkedProject(): void
+    public function testFetchProjectContextsIncludesOnlySharedContextsNotNonShared(): void
     {
         $result = $this->service->fetchProjectContexts(1, 2);
 
@@ -305,13 +304,12 @@ class ContextServiceTest extends Unit
 
         $linkedProjectContexts = $result['Linked Project'];
 
-        $this->assertCount(3, $linkedProjectContexts, 'Should have exactly 3 contexts from linked project');
+        $this->assertCount(2, $linkedProjectContexts, 'Should have exactly 2 shared contexts from linked project');
         $this->assertArrayHasKey(4, $linkedProjectContexts, 'Should include context 4 (share=1)');
         $this->assertArrayHasKey(5, $linkedProjectContexts, 'Should include context 5 (share=1)');
-        $this->assertArrayHasKey(6, $linkedProjectContexts, 'Should include context 6 (share=0)');
+        $this->assertArrayNotHasKey(6, $linkedProjectContexts, 'Should NOT include context 6 (share=0)');
 
         $this->assertSame('Shared Context', $linkedProjectContexts[4]);
         $this->assertSame('Shared Default Context', $linkedProjectContexts[5]);
-        $this->assertSame('Non-Shared Context', $linkedProjectContexts[6]);
     }
 }
