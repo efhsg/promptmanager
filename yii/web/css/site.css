@@ -310,6 +310,24 @@ a.desc:after {
     color: #0b2f5e;
 }
 
+.select2-container--bootstrap .select2-results__option[role="group"] {
+    padding: 0;
+}
+
+.select2-container--bootstrap .select2-results__group {
+    padding: 8px 12px;
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    border-top: 1px solid #e9ecef;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.select2-container--bootstrap .select2-results__option[role="group"]:first-child .select2-results__group {
+    border-top: none;
+}
+
 .select2-container--bootstrap .select2-selection--multiple .select2-selection__rendered .select2-selection__choice {
     background-color: #ffffff;
     border-color: #c0d4ff;
