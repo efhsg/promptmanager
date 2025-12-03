@@ -269,22 +269,52 @@ class ContextServiceTest extends Unit
         );
     }
 
-    public function testFetchProjectContextsIncludesAllContextsFromCurrentProject(): void
+    public function testIntent1ShowAllContextsFromCurrentProjectRegardlessOfShareFlag(): void
     {
-        $context = new Context();
-        $context->project_id = 2;
-        $context->name = 'Non-Shared in Current Project';
-        $context->content = 'This should be included';
-        $context->share = 0;
-        $this->assertTrue($context->save());
+        $contextShared = new Context();
+        $contextShared->project_id = 2;
+        $contextShared->name = 'AAA Shared Context in Current';
+        $contextShared->content = 'Shared context';
+        $contextShared->share = 1;
+        $this->assertTrue($contextShared->save());
+
+        $contextNonShared = new Context();
+        $contextNonShared->project_id = 2;
+        $contextNonShared->name = 'ZZZ Non-Shared Context in Current';
+        $contextNonShared->content = 'Non-shared context';
+        $contextNonShared->share = 0;
+        $this->assertTrue($contextNonShared->save());
 
         $result = $this->service->fetchProjectContexts(1, 2);
 
         $this->assertArrayHasKey('Test Project 2', $result);
-        $this->assertArrayHasKey($context->id, $result['Test Project 2']);
-        $this->assertSame('Non-Shared in Current Project', $result['Test Project 2'][$context->id]);
+        $currentProjectContexts = $result['Test Project 2'];
 
-        $context->delete();
+        $this->assertArrayHasKey($contextShared->id, $currentProjectContexts, 'Should include share=1 context from current project');
+        $this->assertArrayHasKey($contextNonShared->id, $currentProjectContexts, 'Should include share=0 context from current project');
+        $this->assertArrayHasKey(2, $currentProjectContexts, 'Should include existing context from current project');
+
+        $this->assertCount(3, $currentProjectContexts, 'Current project should have all 3 contexts regardless of share flag');
+
+        $contextShared->delete();
+        $contextNonShared->delete();
+    }
+
+    public function testIntent2ShowOnlySharedContextsFromLinkedProjects(): void
+    {
+        $result = $this->service->fetchProjectContexts(1, 2);
+
+        $this->assertArrayHasKey('Linked Project', $result, 'Should have contexts from linked project');
+        $linkedProjectContexts = $result['Linked Project'];
+
+        $this->assertArrayHasKey(4, $linkedProjectContexts, 'Should include context 4 (share=1) from linked project');
+        $this->assertArrayHasKey(5, $linkedProjectContexts, 'Should include context 5 (share=1) from linked project');
+        $this->assertArrayNotHasKey(6, $linkedProjectContexts, 'Should NOT include context 6 (share=0) from linked project');
+
+        $this->assertCount(2, $linkedProjectContexts, 'Linked project should have only 2 shared contexts (not 3)');
+
+        $this->assertSame('Shared Context', $linkedProjectContexts[4]);
+        $this->assertSame('Shared Default Context', $linkedProjectContexts[5]);
     }
 
     public function testFetchDefaultContextIdsExcludesContextsFromLinkedProjects(): void
@@ -293,23 +323,5 @@ class ContextServiceTest extends Unit
 
         $this->assertNotContains('5', $result);
         $this->assertNotContains('4', $result);
-    }
-
-    public function testFetchProjectContextsIncludesOnlySharedContextsNotNonShared(): void
-    {
-        $result = $this->service->fetchProjectContexts(1, 2);
-
-        $this->assertArrayHasKey('Test Project 2', $result);
-        $this->assertArrayHasKey('Linked Project', $result);
-
-        $linkedProjectContexts = $result['Linked Project'];
-
-        $this->assertCount(2, $linkedProjectContexts, 'Should have exactly 2 shared contexts from linked project');
-        $this->assertArrayHasKey(4, $linkedProjectContexts, 'Should include context 4 (share=1)');
-        $this->assertArrayHasKey(5, $linkedProjectContexts, 'Should include context 5 (share=1)');
-        $this->assertArrayNotHasKey(6, $linkedProjectContexts, 'Should NOT include context 6 (share=0)');
-
-        $this->assertSame('Shared Context', $linkedProjectContexts[4]);
-        $this->assertSame('Shared Default Context', $linkedProjectContexts[5]);
     }
 }
