@@ -2,6 +2,7 @@
 /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\presenters\PromptInstancePresenter;
+use app\models\PromptInstance;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
@@ -71,7 +72,7 @@ echo $this->render('_breadcrumbs', [
                     [
                         'attribute' => 'label',
                         'label' => 'Label',
-                        'value' => static function ($model): string {
+                        'value' => static function (PromptInstance $model): string {
                             $label = $model->label;
                             return $label === null || $label === '' ? 'N/A' : $label;
                         },
@@ -80,7 +81,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'template_id',
                         'label' => 'Template Name',
                         'enableSorting' => true,
-                        'value' => function ($model) {
+                        'value' => static function (PromptInstance $model): string {
                             return $model->template ? $model->template->name : 'N/A';
                         },
                     ],
@@ -88,7 +89,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'final_prompt',
                         'label' => 'Final Prompt',
                         'format' => 'ntext',
-                        'value' => static function ($model): string {
+                        'value' => static function (PromptInstance $model): string {
                             $plain = PromptInstancePresenter::extractPlain($model->final_prompt);
                             return StringHelper::truncate($plain, 100, '...');
                         },

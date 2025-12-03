@@ -5,6 +5,7 @@
 
 /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\models\PromptInstance;
 use common\enums\CopyType;
 use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
@@ -43,7 +44,7 @@ echo $this->render('_breadcrumbs', [
                     [
                         'attribute' => 'label',
                         'label' => 'Label',
-                        'value' => static function ($model): string {
+                        'value' => static function (PromptInstance $model): string {
                             $label = $model->label;
                             return $label === null || $label === '' ? 'N/A' : $label;
                         },
@@ -51,7 +52,7 @@ echo $this->render('_breadcrumbs', [
                     [
                         'attribute' => 'template_name',
                         'label' => 'Template',
-                        'value' => function ($model) {
+                        'value' => static function (PromptInstance $model): string {
                             return $model->template ? $model->template->name : 'N/A';
                         },
                     ],
@@ -59,7 +60,7 @@ echo $this->render('_breadcrumbs', [
                         'attribute' => 'final_prompt',
                         'format' => 'raw',
                         'label' => 'Prompt',
-                        'value' => function ($model) {
+                        'value' => static function (PromptInstance $model) {
                             $projectCopyFormat = $model->template?->project?->getPromptInstanceCopyFormatEnum()->value
                                 ?? CopyType::MD->value;
 

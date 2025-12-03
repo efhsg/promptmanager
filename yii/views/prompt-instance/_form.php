@@ -160,13 +160,12 @@ $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getProm
         </div>
     </div>
     <div id="label-input-container" class="form-group mt-3 d-none">
-        <?= Html::label('Label', 'prompt-instance-label', ['class' => 'form-label']) ?>
-        <?= Html::textInput('label', '', [
+        <?= $form->field($model, 'label')->textInput([
             'id' => 'prompt-instance-label',
             'class' => 'form-control',
             'maxlength' => 255,
             'placeholder' => 'Enter a label',
-        ]) ?>
+        ])->label('Label', ['class' => 'form-label']) ?>
     </div>
     <div class="form-group mt-4 text-end">
         <?= Html::button('Previous', [
@@ -195,6 +194,7 @@ var $editButton = $('#edit-button');
 var $finalPromptContainer = $('#final-prompt-container');
 var $labelContainer = $('#label-input-container');
 var $labelInput = $('#prompt-instance-label');
+var labelErrorId = '#label-error';
 
 function updateButtonState(step) {
     currentStep = step;
@@ -240,11 +240,21 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     if (action === 'save') {
         if ($labelContainer.hasClass('d-none')) {
             $labelContainer.removeClass('d-none');
+            $(labelErrorId).remove();
             setTimeout(function() {
                 $labelInput.trigger('focus');
             }, 0);
             return false;
         }
+        var labelValue = $labelInput.val().trim();
+        if (!labelValue) {
+            if (!$(labelErrorId).length) {
+                $labelInput.after('<div id="label-error" class="text-danger mt-1">Please enter a label.</div>');
+            }
+            $labelInput.trigger('focus');
+            return false;
+        }
+        $(labelErrorId).remove();
         const deltaObj   = (typeof quillEditor !== 'undefined' && quillEditor)
         ? quillEditor.getContents()                         
         : $finalPromptContainer.data('deltaObj') || {}; 
@@ -254,7 +264,7 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             type: 'POST',
             data: { 
                 prompt: finalPrompt,
-                label: $labelInput.val(),
+                label: labelValue,
                 template_id: templateId,
                 _csrf: yii.getCsrfToken()
             },

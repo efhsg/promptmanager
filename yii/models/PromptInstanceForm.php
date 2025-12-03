@@ -13,11 +13,14 @@ class PromptInstanceForm extends Model
     public ?int $template_id = null;
     public ?string $final_prompt = null;
     public array $context_ids = [];
+    public string $label = '';
 
     public function rules(): array
     {
         return [
             [['template_id', 'final_prompt'], 'required'],
+            ['template_id', 'integer'],
+            ['label', 'string', 'max' => 255],
             [['context_ids'], 'safe'], // Allows assignment without persisting
         ];
     }
@@ -33,6 +36,7 @@ class PromptInstanceForm extends Model
         $promptInstance = new PromptInstance();
         $promptInstance->template_id = $this->template_id;
         $promptInstance->final_prompt = $this->final_prompt;
+        $promptInstance->label = $this->label;
 
         // Save the PromptInstance model.
         // You may need additional logic to process context_ids separately.
