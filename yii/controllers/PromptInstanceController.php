@@ -373,8 +373,14 @@ class PromptInstanceController extends Controller
             return ['success' => false];
         }
 
+        $label = Yii::$app->request->post('label', '');
+        if (!is_string($label)) {
+            $label = '';
+        }
+
         $model = new PromptInstance([
             'template_id' => (int)Yii::$app->request->post('template_id'),
+            'label' => $label,
             'final_prompt' => $finalPrompt,
         ]);
 

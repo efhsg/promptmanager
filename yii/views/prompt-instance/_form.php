@@ -159,6 +159,15 @@ $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getProm
             </div>
         </div>
     </div>
+    <div id="label-input-container" class="form-group mt-3 d-none">
+        <?= Html::label('Label', 'prompt-instance-label', ['class' => 'form-label']) ?>
+        <?= Html::textInput('label', '', [
+            'id' => 'prompt-instance-label',
+            'class' => 'form-control',
+            'maxlength' => 255,
+            'placeholder' => 'Enter a label',
+        ]) ?>
+    </div>
     <div class="form-group mt-4 text-end">
         <?= Html::button('Previous', [
             'class' => 'btn btn-secondary me-2 d-none',
@@ -184,6 +193,8 @@ var $nextButton = $('#form-submit-button');
 var $prevButton = $('#previous-button');
 var $editButton = $('#edit-button');
 var $finalPromptContainer = $('#final-prompt-container');
+var $labelContainer = $('#label-input-container');
+var $labelInput = $('#prompt-instance-label');
 
 function updateButtonState(step) {
     currentStep = step;
@@ -227,6 +238,13 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
     var action = button.attr('data-action');
     var templateId = form.find('#promptinstanceform-template_id').val();
     if (action === 'save') {
+        if ($labelContainer.hasClass('d-none')) {
+            $labelContainer.removeClass('d-none');
+            setTimeout(function() {
+                $labelInput.trigger('focus');
+            }, 0);
+            return false;
+        }
         const deltaObj   = (typeof quillEditor !== 'undefined' && quillEditor)
         ? quillEditor.getContents()                         
         : $finalPromptContainer.data('deltaObj') || {}; 
@@ -236,6 +254,7 @@ $('#prompt-instance-form').on('beforeSubmit', function(e) {
             type: 'POST',
             data: { 
                 prompt: finalPrompt,
+                label: $labelInput.val(),
                 template_id: templateId,
                 _csrf: yii.getCsrfToken()
             },
