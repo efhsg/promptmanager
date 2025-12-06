@@ -23,9 +23,13 @@ QuillAsset::register($this);
 
         <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
 
-    <?= $form->field($model, 'template_body')->hiddenInput(['id' => 'template-body'])->label(false) ?>
-        <div class="resizable-editor-container">
-            <div id="editor" class="resizable-editor"></div>
+        <div class="form-group">
+            <label class="form-label">Template Body</label>
+            <?= Html::activeHiddenInput($model, 'template_body', ['id' => 'template-body']) ?>
+            <div class="resizable-editor-container">
+                <div id="editor" class="resizable-editor"></div>
+            </div>
+            <?= Html::error($model, 'template_body', ['class' => 'invalid-feedback d-block']) ?>
         </div>
         <div class="form-group mt-4 text-end">
             <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
