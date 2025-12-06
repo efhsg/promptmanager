@@ -66,10 +66,6 @@ $pathPreview = $showPath
                             'name',
                             'type',
                             [
-                                    'attribute' => 'selected_by_default',
-                                    'value' => $model->selected_by_default ? 'Yes' : 'No',
-                            ],
-                            [
                                     'attribute' => 'share',
                                     'value' => $model->share ? 'Yes' : 'No',
                                     'label' => 'Share with linked projects',

@@ -20,7 +20,7 @@ class FieldSearch extends Field
     public function rules(): array
     {
         return [
-            [['id', 'user_id', 'project_id', 'selected_by_default', 'share', 'created_at', 'updated_at'], 'integer'],
+            [['id', 'user_id', 'project_id', 'share', 'created_at', 'updated_at'], 'integer'],
             [['name', 'content', 'type', 'label'], 'safe'],
             ['projectName', 'safe'],
         ];

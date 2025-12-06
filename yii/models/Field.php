@@ -20,7 +20,6 @@ use yii\db\ActiveRecord;
  * @property string $name
  * @property string $type
  * @property string|null $content
- * @property bool $selected_by_default
  * @property bool $share
  * @property string|null $label
  * @property int $created_at
@@ -56,8 +55,7 @@ class Field extends ActiveRecord
         return [
             [['user_id', 'name', 'type'], 'required'],
             [['user_id', 'project_id', 'created_at', 'updated_at'], 'integer'],
-            [['selected_by_default', 'share'], 'boolean'],
-            [['selected_by_default'], 'default', 'value' => false],
+            [['share'], 'boolean'],
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],
             [['name', 'label'], 'string', 'max' => 255],
@@ -101,7 +99,6 @@ class Field extends ActiveRecord
             'name' => 'Name',
             'content' => 'Content',
             'type' => 'Type',
-            'selected_by_default' => 'Default on',
             'share' => 'Share with linked projects',
             'label' => 'Label',
             'created_at' => 'Created At',

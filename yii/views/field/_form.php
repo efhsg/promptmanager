@@ -56,10 +56,6 @@ endif; ?>
             ]
     )->label('Field Type') ?>
 
-    <?= $form->field($modelField, 'selected_by_default')->dropDownList(
-            [0 => 'No', 1 => 'Yes']
-    )->label('Default on') ?>
-
     <?= $form->field($modelField, 'share')->dropDownList(
             [0 => 'No', 1 => 'Yes']
     )->label('Share with linked projects') ?>
