@@ -74,6 +74,26 @@ class ContextSearch extends Context
             'desc' => ['p.name' => SORT_DESC],
         ];
 
+        $dataProvider->sort->attributes['name'] = [
+            'asc' => ['{{%context}}.name' => SORT_ASC],
+            'desc' => ['{{%context}}.name' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->attributes['order'] = [
+            'asc' => ['{{%context}}.order' => SORT_ASC],
+            'desc' => ['{{%context}}.order' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->attributes['is_default'] = [
+            'asc' => ['{{%context}}.is_default' => SORT_ASC],
+            'desc' => ['{{%context}}.is_default' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->attributes['share'] = [
+            'asc' => ['{{%context}}.share' => SORT_ASC],
+            'desc' => ['{{%context}}.share' => SORT_DESC],
+        ];
+
         $this->load($params);
 
         if (!$this->validate()) {
@@ -81,7 +101,7 @@ class ContextSearch extends Context
         }
 
         $query
-            ->andFilterWhere(['like', 'name', $this->name])
+            ->andFilterWhere(['like', '{{%context}}.name', $this->name])
             ->andFilterWhere(['like', 'content', $this->content])
             ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
