@@ -25,6 +25,14 @@ class PromptTemplateService
             return false;
         }
 
+        $duplicatePlaceholders = $this->findDuplicatePlaceholders($originalTemplate);
+        if (!empty($duplicatePlaceholders)) {
+            $errorMessage = 'Duplicate field placeholders found: ' . implode(', ', $duplicatePlaceholders);
+            $model->addError('template_body', $errorMessage);
+            $model->load($postData);
+            return false;
+        }
+
         $convertedTemplate = $this->convertPlaceholdersToIds($originalTemplate, $fieldsMapping);
         $postData['PromptTemplate']['template_body'] = $convertedTemplate;
         if (!$model->load($postData) || !$model->save()) {
@@ -238,5 +246,42 @@ class PromptTemplateService
         }
 
         return array_unique($invalidPlaceholders);
+    }
+
+    public function findDuplicatePlaceholders(string $template): array
+    {
+        $delta = json_decode($template, true);
+        if (!$delta || !isset($delta['ops'])) {
+            return [];
+        }
+
+        $content = '';
+        foreach ($delta['ops'] as $op) {
+            if (isset($op['insert']) && is_string($op['insert'])) {
+                $content .= $op['insert'];
+            }
+        }
+
+        if (!preg_match_all('/(GEN|PRJ|EXT):\{\{(.+?)}}/', $content, $matches, PREG_SET_ORDER)) {
+            return [];
+        }
+
+        $placeholderCounts = [];
+        foreach ($matches as $match) {
+            $fullPlaceholder = $match[0];
+            if (!isset($placeholderCounts[$fullPlaceholder])) {
+                $placeholderCounts[$fullPlaceholder] = 0;
+            }
+            $placeholderCounts[$fullPlaceholder]++;
+        }
+
+        $duplicates = [];
+        foreach ($placeholderCounts as $placeholder => $count) {
+            if ($count > 1) {
+                $duplicates[] = $placeholder;
+            }
+        }
+
+        return $duplicates;
     }
 }
