@@ -187,4 +187,126 @@ class PromptTemplateServiceTest extends Unit
 
         $this->assertEquals($template, $result);
     }
+
+    public function testValidateTemplatePlaceholdersWithValidFields(): void
+    {
+        $template = '{"ops":[{"insert":"Hello, GEN:{{codeType}} and PRJ:{{projectType}}!\n"}]}';
+
+        $fieldsMapping = [
+            'GEN:{{codeType}}' => ['id' => 3],
+            'PRJ:{{projectType}}' => ['id' => 7]
+        ];
+
+        $result = $this->service->validateTemplatePlaceholders($template, $fieldsMapping);
+
+        $this->assertEmpty($result);
+    }
+
+    public function testValidateTemplatePlaceholdersWithInvalidFields(): void
+    {
+        $template = '{"ops":[{"insert":"Hello, GEN:{{invalidField}} and PRJ:{{anotherInvalid}}!\n"}]}';
+
+        $fieldsMapping = [
+            'GEN:{{codeType}}' => ['id' => 3]
+        ];
+
+        $result = $this->service->validateTemplatePlaceholders($template, $fieldsMapping);
+
+        $this->assertCount(2, $result);
+        $this->assertContains('GEN:{{invalidField}}', $result);
+        $this->assertContains('PRJ:{{anotherInvalid}}', $result);
+    }
+
+    public function testValidateTemplatePlaceholdersWithMixedValidAndInvalid(): void
+    {
+        $template = '{"ops":[{"insert":"Use GEN:{{codeType}} and GEN:{{invalidField}}.\n"}]}';
+
+        $fieldsMapping = [
+            'GEN:{{codeType}}' => ['id' => 3]
+        ];
+
+        $result = $this->service->validateTemplatePlaceholders($template, $fieldsMapping);
+
+        $this->assertCount(1, $result);
+        $this->assertContains('GEN:{{invalidField}}', $result);
+    }
+
+    public function testValidateTemplatePlaceholdersWithExternalFields(): void
+    {
+        $template = '{"ops":[{"insert":"Use EXT:{{Project Alpha: externalField}} and EXT:{{Invalid: field}}.\n"}]}';
+
+        $fieldsMapping = [
+            'EXT:{{Project Alpha: externalField}}' => ['id' => 9]
+        ];
+
+        $result = $this->service->validateTemplatePlaceholders($template, $fieldsMapping);
+
+        $this->assertCount(1, $result);
+        $this->assertContains('EXT:{{Invalid: field}}', $result);
+    }
+
+    public function testValidateTemplatePlaceholdersWithEmptyTemplate(): void
+    {
+        $template = '{"ops":[{"insert":"\n"}]}';
+        $fieldsMapping = [];
+
+        $result = $this->service->validateTemplatePlaceholders($template, $fieldsMapping);
+
+        $this->assertEmpty($result);
+    }
+
+    public function testValidateTemplatePlaceholdersWithNoPlaceholders(): void
+    {
+        $template = '{"ops":[{"insert":"Just plain text with no placeholders.\n"}]}';
+
+        $fieldsMapping = [
+            'GEN:{{codeType}}' => ['id' => 3]
+        ];
+
+        $result = $this->service->validateTemplatePlaceholders($template, $fieldsMapping);
+
+        $this->assertEmpty($result);
+    }
+
+    public function testValidateTemplatePlaceholdersWithInvalidJson(): void
+    {
+        $template = 'not valid json';
+        $fieldsMapping = [];
+
+        $result = $this->service->validateTemplatePlaceholders($template, $fieldsMapping);
+
+        $this->assertEmpty($result);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testSaveTemplateWithFieldsFailsWithInvalidPlaceholders(): void
+    {
+        $model = new PromptTemplate();
+        $model->id = 1;
+        $model->name = 'Test Template';
+        $model->project_id = 1;
+
+        $deltaInput = '{"ops":[{"insert":"Hello, GEN:{{invalidField}}!\n"}]}';
+        $postData = [
+            'PromptTemplate' => [
+                'name' => 'Test Template',
+                'project_id' => 1,
+                'template_body' => $deltaInput
+            ]
+        ];
+
+        $fieldsMapping = [
+            'GEN:{{validField}}' => ['id' => 3]
+        ];
+
+        $result = $this->service->saveTemplateWithFields($model, $postData, $fieldsMapping);
+
+        $this->assertFalse($result);
+        $this->assertTrue($model->hasErrors('template_body'));
+        $errors = $model->getErrors('template_body');
+        $this->assertStringContainsString('Invalid field placeholders found', $errors[0]);
+        $this->assertStringContainsString('GEN:{{invalidField}}', $errors[0]);
+    }
 }

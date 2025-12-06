@@ -16,6 +16,15 @@ class PromptTemplateService
     public function saveTemplateWithFields(PromptTemplate $model, array $postData, array $fieldsMapping): bool
     {
         $originalTemplate = $postData['PromptTemplate']['template_body'] ?? '{"ops":[{"insert":"\n"}]}';
+
+        $invalidPlaceholders = $this->validateTemplatePlaceholders($originalTemplate, $fieldsMapping);
+        if (!empty($invalidPlaceholders)) {
+            $errorMessage = 'Invalid field placeholders found: ' . implode(', ', $invalidPlaceholders);
+            $model->addError('template_body', $errorMessage);
+            $model->load($postData);
+            return false;
+        }
+
         $convertedTemplate = $this->convertPlaceholdersToIds($originalTemplate, $fieldsMapping);
         $postData['PromptTemplate']['template_body'] = $convertedTemplate;
         if (!$model->load($postData) || !$model->save()) {
@@ -200,5 +209,34 @@ class PromptTemplateService
         }
 
         return json_encode($delta);
+    }
+
+    public function validateTemplatePlaceholders(string $template, array $fieldsMapping): array
+    {
+        $delta = json_decode($template, true);
+        if (!$delta || !isset($delta['ops'])) {
+            return [];
+        }
+
+        $content = '';
+        foreach ($delta['ops'] as $op) {
+            if (isset($op['insert']) && is_string($op['insert'])) {
+                $content .= $op['insert'];
+            }
+        }
+
+        if (!preg_match_all('/(GEN|PRJ|EXT):\{\{(.+?)}}/', $content, $matches, PREG_SET_ORDER)) {
+            return [];
+        }
+
+        $invalidPlaceholders = [];
+        foreach ($matches as $match) {
+            $fullPlaceholder = $match[0];
+            if (!isset($fieldsMapping[$fullPlaceholder])) {
+                $invalidPlaceholders[] = $fullPlaceholder;
+            }
+        }
+
+        return array_unique($invalidPlaceholders);
     }
 }
