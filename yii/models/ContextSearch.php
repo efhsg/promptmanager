@@ -19,7 +19,7 @@ class ContextSearch extends Context
     public function rules(): array
     {
         return [
-            [['id', 'project_id', 'created_at', 'updated_at'], 'integer'],
+            [['id', 'project_id', 'created_at', 'updated_at', 'order'], 'integer'],
             [['name', 'content'], 'safe'],
             ['projectName', 'safe'],
         ];
@@ -60,11 +60,38 @@ class ContextSearch extends Context
             'pagination' => [
                 'pageSize' => 10,
             ],
+            'sort' => [
+                'defaultOrder' => [
+                    'order' => SORT_ASC,
+                    'is_default' => SORT_DESC,
+                    'name' => SORT_ASC,
+                ],
+            ],
         ]);
 
         $dataProvider->sort->attributes['projectName'] = [
             'asc' => ['p.name' => SORT_ASC],
             'desc' => ['p.name' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->attributes['name'] = [
+            'asc' => ['{{%context}}.name' => SORT_ASC],
+            'desc' => ['{{%context}}.name' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->attributes['order'] = [
+            'asc' => ['{{%context}}.order' => SORT_ASC],
+            'desc' => ['{{%context}}.order' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->attributes['is_default'] = [
+            'asc' => ['{{%context}}.is_default' => SORT_ASC],
+            'desc' => ['{{%context}}.is_default' => SORT_DESC],
+        ];
+
+        $dataProvider->sort->attributes['share'] = [
+            'asc' => ['{{%context}}.share' => SORT_ASC],
+            'desc' => ['{{%context}}.share' => SORT_DESC],
         ];
 
         $this->load($params);
@@ -74,7 +101,7 @@ class ContextSearch extends Context
         }
 
         $query
-            ->andFilterWhere(['like', 'name', $this->name])
+            ->andFilterWhere(['like', '{{%context}}.name', $this->name])
             ->andFilterWhere(['like', 'content', $this->content])
             ->andFilterWhere(['like', 'p.name', $this->projectName]);
 

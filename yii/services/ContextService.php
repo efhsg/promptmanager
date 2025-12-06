@@ -131,6 +131,7 @@ class ContextService extends Component
 
         $contexts = $this->createUserContextQuery($userId)
             ->withIds($contextIds)
+            ->defaultOrdering()
             ->all();
 
         return ArrayHelper::map($contexts, 'id', 'content');

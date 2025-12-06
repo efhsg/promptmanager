@@ -23,6 +23,15 @@ class ContextQuery extends ActiveQuery
         return $this->orderBy([Context::tableName() . '.name' => SORT_ASC]);
     }
 
+    public function defaultOrdering(): self
+    {
+        return $this->orderBy([
+            Context::tableName() . '.order' => SORT_ASC,
+            Context::tableName() . '.is_default' => SORT_DESC,
+            Context::tableName() . '.name' => SORT_ASC,
+        ]);
+    }
+
     public function withIds(array $contextIds): self
     {
         return $this->andWhere([Context::tableName() . '.id' => $contextIds]);

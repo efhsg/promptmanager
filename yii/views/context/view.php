@@ -56,6 +56,7 @@ echo $this->render('_breadcrumbs', [
                             return $model->share ? 'Yes' : 'No';
                         },
                     ],
+                    'order',
                     [
                         'attribute' => 'content',
                         'format' => 'raw',

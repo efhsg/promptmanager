@@ -98,6 +98,12 @@ echo $this->render('_breadcrumbs', [
                     ],
 
                     [
+                        'attribute' => 'order',
+                        'label' => 'Order',
+                        'enableSorting' => true,
+                    ],
+
+                    [
                         'class' => yii\grid\ActionColumn::class,
                         'urlCreator' => function ($action, $model) {
                             $id = is_array($model) ? $model['id'] : $model->id;
