@@ -35,6 +35,8 @@ QuillAsset::register($this);
             [0 => 'No', 1 => 'Yes']
         )->label('Share') ?>
 
+        <?= $form->field($model, 'order')->textInput(['type' => 'number'])->label('Order') ?>
+
         <?= $form->field($model, 'content')->hiddenInput(['id' => 'context-content'])->label(false) ?>
 
         <div class="resizable-editor-container mb-3">

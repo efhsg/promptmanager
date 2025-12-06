@@ -117,4 +117,38 @@ class ContextTest extends Unit
         $context->name = 'Context with Invalid Project';
         verify($context->validate())->false();
     }
+
+    public function testOrderFieldDefaultsToZero()
+    {
+        $context = new Context();
+        $context->project_id = 1;
+        $context->name = 'Test Context with Order';
+        verify($context->validate())->true();
+        verify($context->order)->equals(0);
+    }
+
+    public function testOrderFieldAcceptsInteger()
+    {
+        $context = new Context();
+        $context->project_id = 1;
+        $context->name = 'Test Context with Custom Order';
+        $context->order = 5;
+        verify($context->validate())->true();
+        verify($context->order)->equals(5);
+    }
+
+    public function testOrderFieldValidation()
+    {
+        $context = new Context();
+        $context->project_id = 1;
+        $context->name = 'Test Context Order Validation';
+        $context->order = 10;
+        verify($context->validate())->true();
+
+        $context->order = 0;
+        verify($context->validate())->true();
+
+        $context->order = -1;
+        verify($context->validate())->true();
+    }
 }

@@ -19,7 +19,7 @@ class ContextSearch extends Context
     public function rules(): array
     {
         return [
-            [['id', 'project_id', 'created_at', 'updated_at'], 'integer'],
+            [['id', 'project_id', 'created_at', 'updated_at', 'order'], 'integer'],
             [['name', 'content'], 'safe'],
             ['projectName', 'safe'],
         ];
@@ -59,6 +59,13 @@ class ContextSearch extends Context
             'query' => $query,
             'pagination' => [
                 'pageSize' => 10,
+            ],
+            'sort' => [
+                'defaultOrder' => [
+                    'order' => SORT_ASC,
+                    'is_default' => SORT_DESC,
+                    'name' => SORT_ASC,
+                ],
             ],
         ]);
 
