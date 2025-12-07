@@ -5,6 +5,7 @@ namespace app\services;
 use app\models\Context;
 use app\models\query\ContextQuery;
 use Throwable;
+use Yii;
 use yii\base\Component;
 use yii\db\Exception;
 use yii\helpers\ArrayHelper;
@@ -154,5 +155,45 @@ class ContextService extends Component
     {
         return Context::find()
             ->forUser($userId);
+    }
+
+    public function renumberContexts(int $projectId): bool
+    {
+        $contexts = Context::find()
+            ->forProject($projectId)
+            ->orderedByOrder()
+            ->all();
+
+        if (empty($contexts)) {
+            return true;
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $newOrder = 10;
+            $previousOriginalOrder = null;
+
+            foreach ($contexts as $context) {
+                $originalOrder = $context->order;
+
+                if ($previousOriginalOrder !== null && $originalOrder !== $previousOriginalOrder) {
+                    $newOrder += 10;
+                }
+
+                $context->order = $newOrder;
+                if (!$context->save(false)) {
+                    throw new Exception('Failed to save context.');
+                }
+
+                $previousOriginalOrder = $originalOrder;
+            }
+
+            $transaction->commit();
+            return true;
+        } catch (Throwable $e) {
+            $transaction->rollBack();
+            Yii::error($e->getMessage(), 'database');
+            return false;
+        }
     }
 }

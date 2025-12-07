@@ -13,12 +13,25 @@ echo $this->render('_breadcrumbs', [
     'model' => null,
     'actionLabel' => null,
 ]);
+
+$currentProject = Yii::$app->projectContext->getCurrentProject();
 ?>
 
 <div class="context-index container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
-        <?= Html::a('Create Context', ['create'], ['class' => 'btn btn-primary']) ?>
+        <div>
+            <?php if ($currentProject !== null): ?>
+                <?= Html::a('Renumber', ['renumber', 'projectId' => $currentProject->id], [
+                    'class' => 'btn btn-primary me-2',
+                    'data' => [
+                        'method' => 'post',
+                        'confirm' => 'This will renumber all contexts in this project starting from 10 with increments of 10. Contexts with the same order will retain the same new order. Continue?',
+                    ],
+                ]) ?>
+            <?php endif; ?>
+            <?= Html::a('Create Context', ['create'], ['class' => 'btn btn-primary']) ?>
+        </div>
     </div>
 
     <div class="card">

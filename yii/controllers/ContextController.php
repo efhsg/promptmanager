@@ -4,6 +4,7 @@ namespace app\controllers;
 
 use app\models\Context;
 use app\models\ContextSearch;
+use app\models\Project;
 use app\services\ContextService;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
@@ -47,7 +48,7 @@ class ContextController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index'],
+                        'actions' => ['index', 'renumber'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -154,6 +155,25 @@ class ContextController extends Controller
     private function redirectWithError(): Response
     {
         Yii::$app->session->setFlash('error', 'Unable to delete the context. Please try again later.');
+        return $this->redirect(['index']);
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionRenumber(int $projectId): Response
+    {
+        $project = Project::find()->findUserProject($projectId, Yii::$app->user->id);
+        if ($project === null) {
+            throw new NotFoundHttpException('The requested project does not exist or is not yours.');
+        }
+
+        if ($this->contextService->renumberContexts($projectId)) {
+            Yii::$app->session->setFlash('success', 'Contexts have been renumbered.');
+        } else {
+            Yii::$app->session->setFlash('error', 'Unable to renumber contexts. Please try again.');
+        }
+
         return $this->redirect(['index']);
     }
 

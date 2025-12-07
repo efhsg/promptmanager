@@ -4,12 +4,24 @@ namespace app\models\query;
 
 use app\models\Project;
 use yii\db\ActiveQuery;
+use yii\db\ActiveRecord;
 
 /**
  * @extends ActiveQuery<Project>
  */
 class ProjectQuery extends ActiveQuery
 {
+    /**
+     * @return ActiveRecord<Project>|null
+     */
+    public function findUserProject(int $projectId, int $userId): ?Project
+    {
+        return $this
+            ->forUser($userId)
+            ->andWhere([Project::tableName() . '.id' => $projectId])
+            ->one();
+    }
+
     public function forUser(int $userId): self
     {
         return $this->andWhere(['user_id' => $userId]);

@@ -42,6 +42,32 @@ class ProjectTest extends Unit
         ];
     }
 
+    /**
+     * @dataProvider userProjectProvider
+     */
+    public function testFindUserProject(int $projectId, int $userId, ?int $expectedProjectId): void
+    {
+        $project = Project::find()->findUserProject($projectId, $userId);
+
+        if ($expectedProjectId === null) {
+            verify($project)->empty();
+            return;
+        }
+
+        verify($project)->notEmpty();
+        verify($project->id)->equals($expectedProjectId);
+        verify($project->user_id)->equals($userId);
+    }
+
+    public static function userProjectProvider(): array
+    {
+        return [
+            'project owned by user' => [1, 100, 1],
+            'project not owned by user' => [1, 1, null],
+            'project does not exist' => [9999, 100, null],
+        ];
+    }
+
     public function testProjectBelongsToUser(): void
     {
         $project = Project::findOne(1);
