@@ -237,6 +237,23 @@ class FieldController extends Controller
     /**
      * @throws NotFoundHttpException
      */
+    public function actionRenumber(int $id): Response
+    {
+        /** @var Field $model */
+        $model = $this->findModel($id);
+
+        if ($this->fieldService->renumberFieldOptions($model)) {
+            Yii::$app->session->setFlash('success', 'Field options have been renumbered.');
+        } else {
+            Yii::$app->session->setFlash('error', 'Unable to renumber field options. Please try again.');
+        }
+
+        return $this->redirect(['view', 'id' => $model->id]);
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
     protected function findModel(int $id): ActiveRecord
     {
         return Field::find()->with('project')->where([

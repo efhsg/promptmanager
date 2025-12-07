@@ -7,6 +7,7 @@ return [
                 'view' => 'viewField',
                 'update' => 'updateField',
                 'delete' => 'deleteField',
+                'renumber' => 'updateField',
             ],
             'permissions' => [
                 'createField' => [

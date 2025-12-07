@@ -37,6 +37,15 @@ $pathPreview = $showPath
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
         <div>
+            <?php if (in_array($model->type, FieldConstants::OPTION_FIELD_TYPES, true)): ?>
+                <?= Html::a('Renumber', ['renumber', 'id' => $model->id], [
+                        'class' => 'btn btn-primary me-2',
+                        'data' => [
+                                'method' => 'post',
+                                'confirm' => 'This will renumber all options starting from 10 with increments of 10. Continue?',
+                        ],
+                ]) ?>
+            <?php endif; ?>
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
                     'class' => 'btn btn-danger me-2',

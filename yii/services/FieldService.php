@@ -166,4 +166,32 @@ class FieldService
         }
     }
 
+    public function renumberFieldOptions(Field $field): bool
+    {
+        $fieldOptions = $field->getFieldOptions()->all();
+
+        if (empty($fieldOptions)) {
+            return true;
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $order = 10;
+            foreach ($fieldOptions as $option) {
+                $option->order = $order;
+                if (!$option->save(false)) {
+                    throw new Exception('Failed to save field option.');
+                }
+                $order += 10;
+            }
+
+            $transaction->commit();
+            return true;
+        } catch (Throwable $e) {
+            $transaction->rollBack();
+            Yii::error($e->getMessage(), 'database');
+            return false;
+        }
+    }
+
 }
