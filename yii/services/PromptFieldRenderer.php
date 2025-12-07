@@ -107,7 +107,7 @@ class PromptFieldRenderer
                         'placeholder' => $placeholderText,
                         'modules' => [
                             'toolbar' => [
-                                ['bold', 'italic', 'underline', 'strike'],
+                                ['bold', 'italic', 'underline', 'strike', 'code'],
                                 ['blockquote', 'code-block'],
                                 [['list' => 'ordered'], ['list' => 'bullet']],
                                 [['indent' => '-1'], ['indent' => '+1']],

@@ -405,7 +405,7 @@ function initQuillEditor() {
             theme: 'snow',
             modules: {
                 toolbar: [
-                    ['bold', 'italic', 'underline'],
+                    ['bold', 'italic', 'underline', 'strike', 'code'],
                     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                     ['clean']
                 ]
