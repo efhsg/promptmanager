@@ -1,12 +1,26 @@
 <?php
 
 use yii\helpers\Html;
+use yii\helpers\Json;
 use Yii2\Extensions\DynamicForm\DynamicFormWidget;
 
 /** @var yii\widgets\ActiveForm $form */
 /** @var app\models\Field $modelField */
 /** @var app\models\FieldOption[] $modelsFieldOption */
 
+$quillConfig = Json::encode([
+    'theme' => 'snow',
+    'modules' => [
+        'toolbar' => [
+            ['code'],
+            ['blockquote', 'code-block'],
+            [['list' => 'ordered'], ['list' => 'bullet']],
+            [['indent' => '-1'], ['indent' => '+1']],
+            [['header' => [1, 2, 3, 4, 5, 6, false]]],
+            ['clean'],
+        ],
+    ],
+]);
 ?>
 <hr>
 <h4>Options</h4>
@@ -71,10 +85,21 @@ DynamicFormWidget::begin([
             ?>
 
             <div class="col-md-4">
-                <?= $form->field($option, "[$i]value")
-                    ->textarea(['rows' => 4])
-                    ->label('Value')
-                ?>
+                <div class="form-group field-fieldoption-<?= $i ?>-value">
+                    <label class="control-label">Value</label>
+                    <?= Html::activeHiddenInput($option, "[$i]value", [
+                        'id' => "fieldoption-{$i}-value",
+                        'class' => 'field-option-value-input',
+                    ]) ?>
+                    <div
+                        data-editor="quill"
+                        data-target="fieldoption-<?= $i ?>-value"
+                        data-config='<?= $quillConfig ?>'
+                        class="resizable-editor field-option-editor"
+                        style="min-height: 100px;"
+                    ></div>
+                    <div class="help-block"></div>
+                </div>
             </div>
 
             <div class="col-md-3">
@@ -131,11 +156,41 @@ jQuery(function($) {
         return maxOrder;
     }
 
+    function reinitEditorInItem(item) {
+        const editorEl = item.querySelector('[data-editor="quill"]');
+        const hiddenInput = item.querySelector('.field-option-value-input');
+
+        if (!editorEl || !hiddenInput) return;
+
+        delete editorEl.dataset.inited;
+        hiddenInput.value = '';
+
+        const newIndex = $(item).index();
+        const newHiddenId = 'fieldoption-' + newIndex + '-value';
+        hiddenInput.id = newHiddenId;
+        editorEl.dataset.target = newHiddenId;
+
+        const ql = editorEl.querySelector('.ql-container');
+        const tb = editorEl.querySelector('.ql-toolbar');
+        if (ql) ql.remove();
+        if (tb) tb.remove();
+
+        const cfg = JSON.parse(editorEl.dataset.config);
+        const quill = new Quill(editorEl, cfg);
+        editorEl.dataset.inited = '1';
+
+        quill.on('text-change', function() {
+            hiddenInput.value = JSON.stringify(quill.getContents());
+        });
+    }
+
     $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
         let currentMax = getMaxOrder() || 0;
         let newOrder = currentMax + 10;
 
         $(item).find('input[name*="[order]"]').val(newOrder);
+
+        reinitEditorInItem(item);
     });
 });
 JS;
