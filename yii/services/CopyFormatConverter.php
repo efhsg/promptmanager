@@ -222,7 +222,7 @@ class CopyFormatConverter
 
         foreach ($blocks as $block) {
             $attrs = $block['attrs'] ?? [];
-            $lineText = $this->renderSegmentsPlain($block['segments']);
+            $lineText = $this->renderSegmentsPlain($block['segments'], true);
 
             if (!empty($attrs['code-block'])) {
                 $endList();
@@ -447,7 +447,7 @@ class CopyFormatConverter
         return implode('', $parts);
     }
 
-    private function renderSegmentsPlain(array $segments): string
+    private function renderSegmentsPlain(array $segments, bool $wrapInlineCode = false): string
     {
         $parts = [];
         foreach ($segments as $segment) {
@@ -455,7 +455,12 @@ class CopyFormatConverter
                 $parts[] = $this->renderEmbedPlain($segment['embed']);
                 continue;
             }
-            $parts[] = $segment['text'] ?? '';
+
+            $text = $segment['text'] ?? '';
+            if ($wrapInlineCode && !empty($segment['attrs']['code'])) {
+                $text = '`' . $text . '`';
+            }
+            $parts[] = $text;
         }
 
         return implode('', $parts);
@@ -480,7 +485,7 @@ class CopyFormatConverter
         $value = $skipEscape ? ($text ?? '') : $this->escapeMarkdown($text ?? '');
 
         if (!empty($attrs['code'])) {
-            $value = '`' . str_replace('`', '\`', $text ?? '') . '`';
+            $value = '`' . ($text ?? '') . '`';
         } else {
             if (!empty($attrs['strike'])) {
                 $value = '~~' . $value . '~~';
@@ -575,7 +580,7 @@ class CopyFormatConverter
 
     private function escapeMarkdown(string $text): string
     {
-        return preg_replace('/([\\\\`*_\\[\\]])/', '\\\\$1', $text);
+        return preg_replace('/([\\\\*_\\[\\]])/', '\\\\$1', $text);
     }
 
     private function htmlToMarkdown(string $content): string

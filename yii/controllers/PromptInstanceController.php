@@ -6,6 +6,7 @@ namespace app\controllers;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
+use app\models\PromptTemplate;
 use app\services\ContextService;
 use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
@@ -328,6 +329,11 @@ class PromptInstanceController extends Controller
 
         $template = $this->promptTemplateService->getTemplateById($templateId, $userId);
 
+        $copyConverter = new CopyFormatConverter();
+        if ($template) {
+            $fieldValues = $this->convertOptionFieldValuesToText($template, $fieldValues, $copyConverter);
+        }
+
         $fieldValues = $this->fileFieldProcessor->processFileFields($template, $fieldValues);
 
         $deltaJson = $this->promptGenerationService->generateFinalPrompt(
@@ -341,7 +347,6 @@ class PromptInstanceController extends Controller
         $copyContent = '';
         if ($template && $template->project) {
             $copyFormat = $template->project->getPromptInstanceCopyFormatEnum();
-            $copyConverter = new CopyFormatConverter();
             $copyContent = $copyConverter->convertFromQuillDelta($deltaJson, $copyFormat);
         }
 
@@ -393,5 +398,68 @@ class PromptInstanceController extends Controller
         }
 
         return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];
+    }
+
+    private function convertOptionFieldValuesToText(
+        PromptTemplate $template,
+        array $fieldValues,
+        CopyFormatConverter $converter
+    ): array {
+        foreach ($template->fields as $field) {
+            if (!in_array($field->type, FieldConstants::OPTION_FIELD_TYPES, true)) {
+                continue;
+            }
+
+            foreach ($field->fieldOptions as $option) {
+                $option->value = $this->convertDeltaStringToText($option->value, $converter);
+            }
+
+            $stringId = (string)$field->id;
+            $intId = (int)$field->id;
+
+            if (array_key_exists($stringId, $fieldValues)) {
+                $fieldValues[$stringId] = $this->convertOptionValue($fieldValues[$stringId], $converter);
+            } elseif (array_key_exists($intId, $fieldValues)) {
+                $fieldValues[$intId] = $this->convertOptionValue($fieldValues[$intId], $converter);
+            }
+        }
+
+        return $fieldValues;
+    }
+
+    private function convertOptionValue(mixed $value, CopyFormatConverter $converter): mixed
+    {
+        if (is_array($value)) {
+            foreach ($value as $index => $item) {
+                $value[$index] = $this->convertDeltaStringToText($item, $converter);
+            }
+            return $value;
+        }
+
+        return $this->convertDeltaStringToText($value, $converter);
+    }
+
+    private function convertDeltaStringToText(mixed $value, CopyFormatConverter $converter): mixed
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return $trimmed;
+        }
+
+        try {
+            $decoded = Json::decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+        } catch (InvalidArgumentException) {
+            return $value;
+        }
+
+        if (!is_array($decoded)) {
+            return $value;
+        }
+
+        return $converter->convertFromQuillDelta($trimmed, CopyType::TEXT);
     }
 }

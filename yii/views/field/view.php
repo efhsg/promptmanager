@@ -1,8 +1,11 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\services\CopyFormatConverter;
 use app\widgets\PathPreviewWidget;
 use app\widgets\QuillViewerWidget;
 use common\constants\FieldConstants;
+use common\enums\CopyType;
+use Yii;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\DetailView;
@@ -120,6 +123,7 @@ $pathPreview = $showPath
     </div>
 
     <?php if (!empty($model->fieldOptions)): ?>
+        <?php $copyFormatConverter = new CopyFormatConverter(); ?>
         <div class="card mb-4">
             <div class="card-header">
                 <strong>Field Options</strong>
@@ -137,7 +141,10 @@ $pathPreview = $showPath
                     <tbody>
                     <?php foreach ($model->fieldOptions as $option): ?>
                         <tr>
-                            <td><?= Html::encode($option->value) ?></td>
+                            <td>
+                                <?php $optionValue = $copyFormatConverter->convertFromQuillDelta($option->value, CopyType::TEXT); ?>
+                                <?= nl2br(Html::encode($optionValue)) ?>
+                            </td>
                             <td><?= Html::encode($option->label) ?></td>
                             <td><?= $option->selected_by_default ? 'Yes' : 'No' ?></td>
                             <td><?= Html::encode($option->order) ?></td>
