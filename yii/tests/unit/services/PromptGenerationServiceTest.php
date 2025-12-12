@@ -459,7 +459,7 @@ JSON,
                 'fieldContent' => '{"ops":[{"insert":"compared to\n"}]}',
                 'optionValues' => ['{"ops":[{"insert":"Exxon Mobil\n"}]}', '{"ops":[{"insert":"Shell\n"}]}', '{"ops":[{"insert":"BP\n"}]}', '{"ops":[{"insert":"TotalEnergies\n"}]}', '{"ops":[{"insert":"Chevron\n"}]}'],
                 'selectedValue' => 'Exxon Mobil',
-                'expectedOutput' => "Exxon Mobil compared to\nShell,BP,TotalEnergies,Chevron",
+                'expectedOutput' => 'Exxon Mobil compared toShell,BP,TotalEnergies,Chevron',
             ],
             'Empty content' => [
                 'fieldContent' => '{"ops":[{"insert":""}]}',

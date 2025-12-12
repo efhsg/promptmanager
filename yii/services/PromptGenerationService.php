@@ -303,9 +303,9 @@ class PromptGenerationService
         // Build the output as Quill Delta operations
         $ops = [];
 
-        // Add selected label
+        // Add selected label (strip newlines)
         if ($selectedLabel !== '') {
-            $ops[] = ['insert' => $selectedLabel];
+            $ops[] = ['insert' => str_replace(["\r\n", "\r", "\n"], '', $selectedLabel)];
         }
 
         // Add field content operations (decode from Quill Delta JSON)
@@ -321,13 +321,21 @@ class PromptGenerationService
                 $firstInsert['insert'] = ' ' . $firstInsert['insert'];
             }
         }
+        // Strip newlines from all content operations
         foreach ($contentOps as $op) {
+            if (isset($op['insert']) && is_string($op['insert'])) {
+                $op['insert'] = str_replace(["\r\n", "\r", "\n"], '', $op['insert']);
+            }
             $ops[] = $op;
         }
 
-        // Add unselected labels (comma-separated)
+        // Add unselected labels (comma-separated, strip newlines)
         if (!empty($unselectedLabels)) {
-            $ops[] = ['insert' => implode(',', $unselectedLabels)];
+            $cleanedLabels = array_map(
+                fn(string $label): string => str_replace(["\r\n", "\r", "\n"], '', $label),
+                $unselectedLabels
+            );
+            $ops[] = ['insert' => implode(',', $cleanedLabels)];
         }
 
         return $ops;
