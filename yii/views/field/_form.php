@@ -62,6 +62,10 @@ endif; ?>
 
     <?= $form->field($modelField, 'label')->textInput(['maxlength' => true])->label('Label (Optional)') ?>
 
+    <?= $form->field($modelField, 'render_label')->dropDownList(
+            [0 => 'No', 1 => 'Yes']
+    )->label('Render label in final prompt') ?>
+
     <div id="field-content-wrapper" style="display: none;">
         <?= $form->field($modelField, 'content')->hiddenInput(['id' => 'field-content'])->label(false) ?>
         <div class="resizable-editor-container mb-3">

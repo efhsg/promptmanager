@@ -212,6 +212,170 @@ JSON,
     }
 
     /**
+     * @throws Exception
+     */
+    public function testRenderLabelAddsHeadingForMultiSelect(): void
+    {
+        $field = new stdClass();
+        $field->id = 1;
+        $field->type = 'multi-select';
+        $field->label = 'Choices';
+        $field->render_label = true;
+
+        $templateBody = '{"ops":[{"insert":"GEN:{{1}}"}]}';
+
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) use ($templateBody, $field) {
+                    if ($property === 'template_body') {
+                        return $templateBody;
+                    }
+                    if ($property === 'fields') {
+                        return [$field];
+                    }
+                    return null;
+                },
+                'getAttribute' => function ($name) use ($templateBody) {
+                    if ($name === 'template_body') {
+                        return $templateBody;
+                    }
+                    return null;
+                }
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $result = $service->generateFinalPrompt(
+            1,
+            [],
+            [1 => ['Option A', 'Option B']],
+            self::USER_ID
+        );
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+        $this->assertEquals("Choices\nOption A\nOption B", $plainText);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testRenderLabelAddsHeadingForText(): void
+    {
+        $field = new stdClass();
+        $field->id = 1;
+        $field->type = 'text';
+        $field->label = 'Notes';
+        $field->render_label = true;
+
+        $templateBody = '{"ops":[{"insert":"GEN:{{1}}"}]}';
+
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) use ($templateBody, $field) {
+                    if ($property === 'template_body') {
+                        return $templateBody;
+                    }
+                    if ($property === 'fields') {
+                        return [$field];
+                    }
+                    return null;
+                },
+                'getAttribute' => function ($name) use ($templateBody) {
+                    if ($name === 'template_body') {
+                        return $templateBody;
+                    }
+                    return null;
+                }
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $result = $service->generateFinalPrompt(
+            1,
+            [],
+            [1 => 'Hello'],
+            self::USER_ID
+        );
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+        $this->assertEquals("Notes\nHello", $plainText);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testConsecutivePlaceholdersDoNotAddBlankLine(): void
+    {
+        $field1 = new stdClass();
+        $field1->id = 1;
+        $field1->type = 'text';
+
+        $field2 = new stdClass();
+        $field2->id = 2;
+        $field2->type = 'text';
+
+        $templateBody = '{"ops":[{"insert":"PRJ:{{1}}\\nPRJ:{{2}}\\n"}]}';
+
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) use ($templateBody, $field1, $field2) {
+                    if ($property === 'template_body') {
+                        return $templateBody;
+                    }
+                    if ($property === 'fields') {
+                        return [$field1, $field2];
+                    }
+                    return null;
+                },
+                'getAttribute' => function ($name) use ($templateBody) {
+                    if ($name === 'template_body') {
+                        return $templateBody;
+                    }
+                    return null;
+                }
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $result = $service->generateFinalPrompt(
+            1,
+            [],
+            [
+                1 => '{"ops":[{"insert":"First\\n"}]}',
+                2 => '{"ops":[{"insert":"Second\\n"}]}',
+            ],
+            self::USER_ID
+        );
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+        $this->assertEquals("First\nSecond", $plainText);
+    }
+
+    /**
      * @dataProvider selectInvertCasesProvider
      * @throws Exception
      */
@@ -281,43 +445,43 @@ JSON,
         return [
             'Basic example with simple content' => [
                 'fieldContent' => '{"ops":[{"insert":" compared to "}]}',
-                'optionValues' => ['Shell', 'Exxon', 'BP'],
+                'optionValues' => ['{"ops":[{"insert":"Shell\n"}]}', '{"ops":[{"insert":"Exxon\n"}]}', '{"ops":[{"insert":"BP\n"}]}'],
                 'selectedValue' => 'Shell',
                 'expectedOutput' => 'Shell compared to Exxon,BP',
             ],
             'Multi-word option names' => [
                 'fieldContent' => '{"ops":[{"insert":" compared to "}]}',
-                'optionValues' => ['Exxon Mobil', 'Shell', 'BP', 'TotalEnergies', 'Chevron'],
+                'optionValues' => ['{"ops":[{"insert":"Exxon Mobil\n"}]}', '{"ops":[{"insert":"Shell\n"}]}', '{"ops":[{"insert":"BP\n"}]}', '{"ops":[{"insert":"TotalEnergies\n"}]}', '{"ops":[{"insert":"Chevron\n"}]}'],
                 'selectedValue' => 'Exxon Mobil',
                 'expectedOutput' => 'Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron',
             ],
             'Content with newline' => [
                 'fieldContent' => '{"ops":[{"insert":"compared to\n"}]}',
-                'optionValues' => ['Exxon Mobil', 'Shell', 'BP', 'TotalEnergies', 'Chevron'],
+                'optionValues' => ['{"ops":[{"insert":"Exxon Mobil\n"}]}', '{"ops":[{"insert":"Shell\n"}]}', '{"ops":[{"insert":"BP\n"}]}', '{"ops":[{"insert":"TotalEnergies\n"}]}', '{"ops":[{"insert":"Chevron\n"}]}'],
                 'selectedValue' => 'Exxon Mobil',
                 'expectedOutput' => "Exxon Mobil compared to\nShell,BP,TotalEnergies,Chevron",
             ],
             'Empty content' => [
                 'fieldContent' => '{"ops":[{"insert":""}]}',
-                'optionValues' => ['Option1', 'Option2', 'Option3'],
+                'optionValues' => ['{"ops":[{"insert":"Option1\n"}]}', '{"ops":[{"insert":"Option2\n"}]}', '{"ops":[{"insert":"Option3\n"}]}'],
                 'selectedValue' => 'Option1',
                 'expectedOutput' => 'Option1Option2,Option3',
             ],
             'Last option selected' => [
                 'fieldContent' => '{"ops":[{"insert":" vs "}]}',
-                'optionValues' => ['A', 'B', 'C'],
+                'optionValues' => ['{"ops":[{"insert":"A\n"}]}', '{"ops":[{"insert":"B\n"}]}', '{"ops":[{"insert":"C\n"}]}'],
                 'selectedValue' => 'C',
                 'expectedOutput' => 'C vs A,B',
             ],
             'Middle option selected' => [
                 'fieldContent' => '{"ops":[{"insert":" vs "}]}',
-                'optionValues' => ['A', 'B', 'C'],
+                'optionValues' => ['{"ops":[{"insert":"A\n"}]}', '{"ops":[{"insert":"B\n"}]}', '{"ops":[{"insert":"C\n"}]}'],
                 'selectedValue' => 'B',
                 'expectedOutput' => 'B vs A,C',
             ],
             'Content with spaces' => [
                 'fieldContent' => '{"ops":[{"insert":"  compared to  "}]}',
-                'optionValues' => ['X', 'Y', 'Z'],
+                'optionValues' => ['{"ops":[{"insert":"X\n"}]}', '{"ops":[{"insert":"Y\n"}]}', '{"ops":[{"insert":"Z\n"}]}'],
                 'selectedValue' => 'X',
                 'expectedOutput' => 'X  compared to  Y,Z',
             ],
@@ -325,34 +489,34 @@ JSON,
     }
 
     /**
-     * Test with separate value and label (like real database records)
+     * Test with separate value and label (like real database records with Quill Delta format)
      * @throws Exception
      */
     public function testSelectInvertWithValueAndLabel(): void
     {
-        // Create field options with VALUE and LABEL (like real field_option records)
+        // Create field options with VALUE (Quill Delta) and LABEL (like real field_option records)
         $option1 = new stdClass();
-        $option1->value = 'shell';
+        $option1->value = '{"ops":[{"insert":"shell\n"}]}';
         $option1->label = 'Shell';
-        $option1->selected_by_default = 1;  // Shell is default
+        $option1->selected_by_default = 1;
 
         $option2 = new stdClass();
-        $option2->value = 'exxon';
+        $option2->value = '{"ops":[{"insert":"exxon\n"}]}';
         $option2->label = 'Exxon Mobil';
         $option2->selected_by_default = 0;
 
         $option3 = new stdClass();
-        $option3->value = 'bp';
+        $option3->value = '{"ops":[{"insert":"bp\n"}]}';
         $option3->label = 'BP';
         $option3->selected_by_default = 0;
 
         $option4 = new stdClass();
-        $option4->value = 'total';
+        $option4->value = '{"ops":[{"insert":"total\n"}]}';
         $option4->label = 'TotalEnergies';
         $option4->selected_by_default = 0;
 
         $option5 = new stdClass();
-        $option5->value = 'chevron';
+        $option5->value = '{"ops":[{"insert":"chevron\n"}]}';
         $option5->label = 'Chevron';
         $option5->selected_by_default = 0;
 
@@ -393,18 +557,17 @@ JSON,
 
         $service = new PromptGenerationService($templateService);
 
-        // User selects 'exxon' (the VALUE, not the label)
+        // User selects 'exxon' (plain text VALUE from the form after conversion)
         $result = $service->generateFinalPrompt(
             1,
             [],
-            [1 => 'exxon'],  // Form submits the VALUE
+            [1 => 'exxon'],
             self::USER_ID
         );
 
         $plainText = $this->getPlainTextFromQuillDelta($result);
 
         // Should output: "Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron"
-        // NOT: "Shell compared to ..." or "exxon compared to ..."
         $this->assertEquals('Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron', $plainText);
     }
 }

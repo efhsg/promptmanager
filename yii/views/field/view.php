@@ -5,7 +5,6 @@ use app\widgets\PathPreviewWidget;
 use app\widgets\QuillViewerWidget;
 use common\constants\FieldConstants;
 use common\enums\CopyType;
-use Yii;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\DetailView;
@@ -72,7 +71,7 @@ $pathPreview = $showPath
                                     'value' => static function ($model): string {
                                         return $model->project
                                                 ? Html::encode($model->project->name)
-                                                : Yii::$app->formatter->nullDisplay;
+                                                : \Yii::$app->formatter->nullDisplay;
                                     },
                             ],
                             'name',
@@ -83,6 +82,11 @@ $pathPreview = $showPath
                                     'label' => 'Share with linked projects',
                             ],
                             'label',
+                            [
+                                    'attribute' => 'render_label',
+                                    'value' => $model->render_label ? 'Yes' : 'No',
+                                    'label' => 'Render label in final prompt',
+                            ],
                             [
                                     'attribute' => 'created_at',
                                     'format' => ['datetime', 'php:Y-m-d H:i:s'],
