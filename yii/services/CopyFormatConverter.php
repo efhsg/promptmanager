@@ -580,7 +580,7 @@ class CopyFormatConverter
 
     private function escapeMarkdown(string $text): string
     {
-        return preg_replace('/([\\\\*_\\[\\]])/', '\\\\$1', $text);
+        return preg_replace('/([\\\\])/', '\\\\$1', $text);
     }
 
     private function htmlToMarkdown(string $content): string

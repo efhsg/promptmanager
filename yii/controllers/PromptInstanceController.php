@@ -305,8 +305,8 @@ class PromptInstanceController extends Controller
                 $fieldData['default'] = count($default) ? reset($default) : null;
                 $allOptions = array_keys($options);
                 $fieldData['invert'] = $fieldData['default'] !== null
-                    ? implode(', ', array_values(array_diff($allOptions, [$fieldData['default']])))
-                    : implode(', ', $allOptions);
+                    ? implode(',', array_values(array_diff($allOptions, [$fieldData['default']])))
+                    : implode(',', $allOptions);
             } else {
                 $fieldData['default'] = count($default) ? reset($default) : null;
             }
