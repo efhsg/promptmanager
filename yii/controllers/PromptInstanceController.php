@@ -289,10 +289,13 @@ class PromptInstanceController extends Controller
         if (in_array($field->type, FieldConstants::OPTION_FIELD_TYPES)) {
             $options = [];
             $default = [];
+            $converter = new CopyFormatConverter();
             foreach ($field->fieldOptions as $option) {
-                $options[$option->value] = $option->label ?: $option->value;
+                $plainValue = $this->convertDeltaStringToText($option->value, $converter);
+                $plainLabel = $option->label ? $this->convertDeltaStringToText($option->label, $converter) : '';
+                $options[$plainValue] = $plainLabel !== '' ? $plainLabel : $plainValue;
                 if ($option->selected_by_default) {
-                    $default[] = $option->value;
+                    $default[] = $plainValue;
                 }
             }
             $fieldData['options'] = $options;

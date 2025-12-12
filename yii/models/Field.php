@@ -22,6 +22,7 @@ use yii\db\ActiveRecord;
  * @property string|null $content
  * @property bool $share
  * @property string|null $label
+ * @property bool $render_label
  * @property int $created_at
  * @property int $updated_at
  *
@@ -55,7 +56,7 @@ class Field extends ActiveRecord
         return [
             [['user_id', 'name', 'type'], 'required'],
             [['user_id', 'project_id', 'created_at', 'updated_at'], 'integer'],
-            [['share'], 'boolean'],
+            [['share', 'render_label'], 'boolean'],
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],
             [['name', 'label'], 'string', 'max' => 255],
@@ -69,7 +70,7 @@ class Field extends ActiveRecord
             ],
             [['content'], 'string'],
             [['content'], 'validatePathContent'],
-            [['share'], 'default', 'value' => false],
+            [['share', 'render_label'], 'default', 'value' => false],
             [['project_id'],
                 'exist',
                 'skipOnError' => true,
@@ -101,6 +102,7 @@ class Field extends ActiveRecord
             'type' => 'Type',
             'share' => 'Share with linked projects',
             'label' => 'Label',
+            'render_label' => 'Render label in final prompt',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];

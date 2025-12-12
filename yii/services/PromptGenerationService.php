@@ -196,10 +196,28 @@ class PromptGenerationService
     private function buildFieldOperations(mixed $fieldValue, int $fieldId): array
     {
         $fieldType = $this->templateFieldTypes[$fieldId] ?? null;
+        $field = $this->templateFields[$fieldId] ?? null;
+
+        $labelOps = [];
+        if (
+            $field !== null
+            && isset($field->render_label)
+            && $field->render_label
+            && in_array($fieldType, ['text', 'select', 'multi-select', 'code', 'file', 'directory'], true)
+        ) {
+            $labelText = trim((string)($field->label ?? ''));
+            if ($labelText !== '') {
+                $labelOps[] = [
+                    'insert' => $labelText . "\n",
+                    'attributes' => ['header' => 2],
+                ];
+            }
+        }
 
         // Handle select-invert field type
         if ($fieldType === 'select-invert') {
-            return $this->buildSelectInvertOperations($fieldValue, $fieldId);
+            $ops = $this->buildSelectInvertOperations($fieldValue, $fieldId);
+            return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
         }
 
         // Handle array field values (non-JSON strings)
@@ -218,7 +236,7 @@ class PromptGenerationService
                             'attributes' => ['list' => 'bullet'],
                         ];
                     }
-                    return $ops;
+                    return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
                 }
 
                 foreach ($fieldValue as $value) {
@@ -233,16 +251,18 @@ class PromptGenerationService
                 }
             }
 
-            return $ops;
+            return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
         }
 
         // Handle JSON string field values
         try {
             $decoded = json_decode($fieldValue, true, 512, JSON_THROW_ON_ERROR);
-            return $decoded['ops'] ?? [];
+            $ops = $decoded['ops'] ?? [];
+            return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
         } catch (JsonException) {
             // If JSON decoding fails, treat as plain text
-            return [['insert' => (string)$fieldValue]];
+            $ops = [['insert' => (string)$fieldValue]];
+            return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
         }
     }
 
@@ -263,12 +283,15 @@ class PromptGenerationService
 
         // Build mapping of values to labels and find selected/unselected
         foreach (($field->fieldOptions ?? []) as $option) {
-            $label = !empty($option->label) ? $option->label : $option->value;
+            $optionValuePlain = $this->extractPlainTextFromDelta($option->value);
+            $labelPlain = !empty($option->label)
+                ? $this->extractPlainTextFromDelta($option->label)
+                : $optionValuePlain;
 
-            if ($option->value === $selectedValueStr) {
-                $selectedLabel = $label;
+            if ($optionValuePlain === $selectedValueStr) {
+                $selectedLabel = $labelPlain;
             } else {
-                $unselectedLabels[] = $label;
+                $unselectedLabels[] = $labelPlain;
             }
         }
 
@@ -355,7 +378,7 @@ class PromptGenerationService
                 }
             }
 
-            return $text;
+            return trim($text);
         } catch (JsonException) {
             // If it's not valid JSON, return as-is
             return $deltaJson;
@@ -433,6 +456,17 @@ class PromptGenerationService
             return $finalOps;
         }
 
+        if ($beforeText === "\n" && !empty($finalOps)) {
+            $lastOp = $finalOps[array_key_last($finalOps)];
+            if (
+                isset($lastOp['insert'])
+                && is_string($lastOp['insert'])
+                && str_ends_with($lastOp['insert'], "\n")
+            ) {
+                return $finalOps;
+            }
+        }
+
         $beforeRaw = $beforeText;
         $beforeTrimmed = rtrim($beforeRaw);
 
@@ -471,6 +505,17 @@ class PromptGenerationService
             $finalOps[] = ['insert' => "\n"];
         }
 
+        if (!empty($fieldOps) && isset($fieldOps[0]['attributes']['header'])) {
+            if (!empty($finalOps)) {
+                $lastOp = $finalOps[array_key_last($finalOps)];
+                $needsNewline = !isset($lastOp['insert'])
+                    || !is_string($lastOp['insert'])
+                    || !str_ends_with($lastOp['insert'], "\n");
+                if ($needsNewline) {
+                    $finalOps[] = ['insert' => "\n"];
+                }
+            }
+        }
 
         // Add all field operations
         foreach ($fieldOps as $fieldOp) {
