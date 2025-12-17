@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+For detailed architecture, domain models, services, and code patterns, see `.claude/codebase_analysis.md`.
+
 ## Project Structure & Module Organization
 - Core PHP/Yii2 backend lives in `yii/`; controllers, modules, services, and widgets follow Yii’s default PSR-4 namespaces (`app\`, `modules\identity\`, etc.).
 - Vue-free UI assets and compiled Quill bundles are checked into `yii/web`, while the Quill build tooling sits in `npm/` with `src/js` for custom editors.
@@ -14,7 +16,7 @@
 - The application’s development entrypoint is accessible locally once containers and schema are available.
 
 ## Coding Style & Naming Conventions
-- PHP follows PSR-12 (4-space indent, `declare(strict_types=1)` when feasible). Controllers remain lean, delegating orchestration to services under `yii/services`.
+- PHP follows PSR-12 (4-space indent, no `declare(strict_types=1)`). Controllers remain lean, delegating orchestration to services under `yii/services`.
 - PHP class names use StudlyCase (e.g., `PromptTemplateService`), while view files follow snake-case naming in `yii/views/<controller>/`.
 - JavaScript in `npm/src` follows ES2019 conventions with 2-space indentation.
 - Docker and Compose files use clean 2-space YAML indentation; new environment variables must be documented in `.env.example`.
