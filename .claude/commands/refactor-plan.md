@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Grep, Glob, Task
+allowed-tools: Read, Grep, Glob, Task, AskUserQuestion
 description: Analyze codebase and create a refactoring plan to follow code standards
 ---
 
@@ -17,11 +17,26 @@ Read these files first to understand the project standards:
 
 ---
 
-## Analysis Instructions
+## Phase Selection
 
-Perform the following analysis using Grep and Glob tools. For each category, search the codebase and document findings.
+Ask the user which phase(s) to run using AskUserQuestion:
 
-### Phase 1: Code Style Violations
+**Question**: "Which analysis phase(s) should I run?"
+
+**Options** (multiSelect: true):
+1. **Code Style** — strict_types, inline FQCNs, missing type hints
+2. **Service Layer** — file sizes, query logic in services
+3. **Data Structures** — array returns, DTO candidates
+4. **Architecture** — business logic placement, DI violations, missing Query classes
+5. **Test Coverage** — missing service/model tests
+
+If user selects nothing or cancels, run **all phases**.
+
+---
+
+## Phase 1: Code Style Violations
+
+**Severity**: Critical
 
 Search for the following violations:
 
@@ -35,7 +50,13 @@ Search for the following violations:
    - Use Grep to find function declarations missing `): ` pattern
    - Exclude `__construct` methods
 
-### Phase 2: Service Layer Analysis
+**Output**: List violations with `file:line` references.
+
+---
+
+## Phase 2: Service Layer Analysis
+
+**Severity**: High
 
 1. **Service file sizes** (candidates for splitting if >300 lines)
    - Use Glob to list `./yii/services/*.php`
@@ -44,7 +65,13 @@ Search for the following violations:
 2. **Query logic in services** (should be in Query classes)
    - Use Grep to search for `->where`, `->andWhere`, `->orWhere`, `::find()` in `./yii/services`
 
-### Phase 3: Data Structure Analysis
+**Output**: Table of services with line counts and query logic occurrences.
+
+---
+
+## Phase 3: Data Structure Analysis
+
+**Severity**: Medium
 
 1. **Array returns that could be DTOs**
    - Use Grep to search for `): array` in service files
@@ -52,7 +79,13 @@ Search for the following violations:
 2. **Associative array usage**
    - Use Grep to search for patterns like `['key' =>` in service methods
 
-### Phase 4: Architecture Violations
+**Output**: List of methods returning arrays that could benefit from DTOs.
+
+---
+
+## Phase 4: Architecture Violations
+
+**Severity**: High
 
 1. **Business logic in controllers** (should be in services)
    - Use Grep to search for `->save()`, `->delete()`, `->validate()` in `./yii/controllers`
@@ -64,7 +97,13 @@ Search for the following violations:
    - Use Glob to list `./yii/models/*.php`
    - Check if corresponding `./yii/models/query/*Query.php` exists
 
-### Phase 5: Test Coverage Gaps
+**Output**: List of violations grouped by type.
+
+---
+
+## Phase 5: Test Coverage Gaps
+
+**Severity**: Low
 
 1. **Services without corresponding tests**
    - Compare `./yii/services/*.php` with `./yii/tests/unit/services/*Test.php`
@@ -72,19 +111,26 @@ Search for the following violations:
 2. **Models without corresponding tests**
    - Compare `./yii/models/*.php` with `./yii/tests/unit/models/*Test.php`
 
+**Output**: List of files missing test coverage.
+
 ---
 
 ## Output Requirements
 
-After completing the analysis, write the refactoring plan to `.claude/refactor_plan.md` with:
+After completing the **selected phases**, write findings to `.claude/refactor_plan.md`:
 
-1. **Executive Summary**: Overall health score (1-10) and main issues found
-2. **Violations Table**: Markdown table with File, Line, Issue, Severity columns
-3. **Refactoring Tasks**: Prioritized list with effort estimates (S/M/L)
-4. **Suggested Order**: Which files to tackle first based on impact and dependencies
-5. **Quick Wins**: Changes that can be made immediately with low risk
+### Per-Phase Output
 
-Include specific `file:line` references for each issue found.
+Each phase should produce:
+- **Violations found**: Count and list
+- **Specific locations**: `file:line` references
+- **Effort estimate**: S/M/L per item
+
+### Summary Section (only if multiple phases run)
+
+1. **Executive Summary**: Overall health score (1-10) based on phases run
+2. **Quick Wins**: Changes that can be made immediately with low risk
+3. **Suggested Order**: Which files to tackle first based on impact
 
 ### Priority Levels
 

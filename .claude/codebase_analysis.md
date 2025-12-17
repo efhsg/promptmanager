@@ -1,5 +1,7 @@
 # PromptManager Codebase Analysis
 
+This document is informational (architecture/domain overview). If anything here conflicts with project instructions, follow `RULES.md` first, then `.claude/CLAUDE.md`.
+
 ## 1. Project Overview
 
 **PromptManager** is a PHP 8.2 / Yii2 web application for organizing LLM prompts into projects, contexts, fields, and templates.
@@ -567,46 +569,7 @@ try {
 
 ---
 
-## 8. Development Commands
-
-### Tests
-```bash
-# Run all unit tests
-docker exec pma_yii vendor/bin/codecept run unit
-
-# Run specific test file
-docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest
-
-# Run specific test method
-docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest:testMethod
-```
-
-### Migrations
-```bash
-# Apply migrations (main database)
-docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-
-# Apply migrations (test database)
-docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
-```
-
-### Frontend Build
-```bash
-docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
-```
-
-### Code Style
-```bash
-# Run PHP-CS-Fixer
-docker exec pma_yii vendor/bin/php-cs-fixer fix
-
-# Run linter script
-docker exec pma_yii bash ./linter.sh
-```
-
----
-
-## 9. Architecture Diagram
+## 8. Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -655,7 +618,7 @@ docker exec pma_yii bash ./linter.sh
 
 ---
 
-## 10. Key Paths
+## 9. Key Paths
 
 | Path | Contents |
 |------|----------|
@@ -678,7 +641,7 @@ docker exec pma_yii bash ./linter.sh
 
 ---
 
-## 11. Testing Structure
+## 10. Testing Structure
 
 ```
 yii/tests/
@@ -699,7 +662,7 @@ yii/tests/
 
 ---
 
-## 12. Database Tables
+## 11. Database Tables
 
 | Table | Description |
 |-------|-------------|
@@ -716,20 +679,7 @@ yii/tests/
 
 ---
 
-## 13. Code Conventions (from RULES.md)
-
-1. **No `declare(strict_types=1)`**
-2. **Full type hints** on parameters, returns, and properties
-3. **PSR-12** code style
-4. **Use imports** at file top (never FQCNs in method bodies)
-5. **DI in services** preferred over `Yii::$app` access
-6. **No unnecessary curly braces** for single-statement control structures
-7. **ActiveRecord columns** are magic attributes (no typed properties for DB columns)
-8. **Migrations** use `{{%table_name}}` prefix syntax
-
----
-
-## 14. Key Insights
+## 12. Key Insights
 
 1. **Quill Delta Format**: All rich text content (contexts, field content, templates, instances) uses Quill Delta JSON format
 2. **Placeholder System**: Three-tier placeholders (GEN/PRJ/EXT) enable field reuse across projects
@@ -738,7 +688,3 @@ yii/tests/
 5. **Owner Validation**: All entities validated against current user via RBAC rules
 6. **File System Integration**: File/directory fields integrate with project root directories with blacklist support
 7. **Service Layer**: Business logic centralized in services, controllers are thin
-
----
-
-*Generated: 2025-12-17*
