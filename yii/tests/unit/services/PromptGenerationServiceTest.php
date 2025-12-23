@@ -48,12 +48,6 @@ class PromptGenerationServiceTest extends Unit
                     }
                     return null;
                 },
-                'getAttribute' => function ($name) use ($templateContent) {
-                    if ($name === 'template_body') {
-                        return $templateContent;
-                    }
-                    return null;
-                }
             ]
         );
 
@@ -72,48 +66,16 @@ class PromptGenerationServiceTest extends Unit
             self::USER_ID
         );
 
-        // For PHP code tests with contexts, we need to manually verify
-        if (!empty($contexts) && isset($fieldValues[1]) && is_string($fieldValues[1]) && str_contains($fieldValues[1], '<?php') &&
-            (str_contains($fieldValues[1], 'FieldConstants') || str_contains($fieldValues[1], 'QuillAsset'))) {
+        // Verify output is valid JSON
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('ops', $decoded);
 
-            // Get context text
-            $contextText = '';
-            foreach ($contexts as $context) {
-                try {
-                    $data = json_decode($context, true, 512, JSON_THROW_ON_ERROR);
-                    if (is_array($data) && isset($data['ops'])) {
-                        foreach ($data['ops'] as $op) {
-                            if (isset($op['insert']) && is_string($op['insert'])) {
-                                $contextText .= $op['insert'];
-                            }
-                        }
-                    }
-                } catch (Exception) {
-                    // Skip invalid contexts
-                }
-            }
-
-            // Verify that result contains both context text and PHP code
-            $resultText = $this->getPlainTextFromQuillDelta($result);
-            $this->assertStringContainsString($contextText, $resultText, 'Result should contain context text');
-            $this->assertStringContainsString('<?php', $resultText, 'Result should contain PHP code');
-            $this->assertStringContainsString('namespace', $resultText, 'Result should contain namespace');
-            return;
-        }
-
-        // Special case for PHP code tests without contexts
-        if (empty($contexts) && isset($fieldValues[1]) && is_string($fieldValues[1]) && str_contains($fieldValues[1], '<?php') &&
-            (str_contains($fieldValues[1], 'FieldConstants') || str_contains($fieldValues[1], 'QuillAsset'))) {
-            // This is a PHP code test without contexts
-            $this->assertNotEmpty($result, 'Result should not be empty');
-            return;
-        }
-
-        // For all other tests, normalize and compare
+        // Compare normalized plain text content
         $normalizedResult = preg_replace('/\n+/', "\n", $this->getPlainTextFromQuillDelta($result));
         $normalizedExpected = preg_replace('/\n+/', "\n", $this->getPlainTextFromQuillDelta($expectedOutput));
 
-        $this->assertEquals($normalizedExpected, $normalizedResult, 'Plain text content should match');
+        $this->assertSame($normalizedExpected, $normalizedResult, 'Plain text content should match');
     }
 
     private function getPlainTextFromQuillDelta(string $jsonString): string
@@ -168,25 +130,17 @@ class PromptGenerationServiceTest extends Unit
                     6 => 'text',
                 ],
             ],
-            'Change functionality2' => [
-                '{"ops":[{"insert":"This is the code we want to change:GEN:{{1}}\nAnd this is the change I want: GEN:{{4}}\nGEN:{{3}}\n"}]}',
+            'Simple code block with placeholders' => [
+                '{"ops":[{"insert":"Code:GEN:{{1}}\nTask: GEN:{{2}}\n"}]}',
                 [],
                 [
-                    1 =>
-                        <<<'JSON'
-{"ops":[{"insert":"<?php"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"namespace app\\assets;"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"use yii\\web\\AssetBundle;"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"class QuillAsset extends AssetBundle"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"{"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    public $basePath = '@webroot/quill/1.3.7';"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    public $baseUrl = '@web/quill/1.3.7';"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $css = ["},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'quill.snow.css',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'highlight/default.min.css',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    ];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $js = ["},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'highlight/highlight.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'quill.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'editor-init.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    ];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $jsOptions = ['defer' => true];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $depends = ['yii\\web\\YiiAsset'];"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"}"},{"attributes":{"code-block":"plain"},"insert":"\n"}]}
-JSON,
-                    4 => '{"ops":[{"insert":"Refactor the code.\n"}]}',
-                    3 => [0 => 'use SOLID, DRY, YAGNI principles', 1 => 'Only add necessary code to solve the problem, nothing else'],
+                    1 => '{"ops":[{"insert":"function test() {}"},{"attributes":{"code-block":"javascript"},"insert":"\\n"}]}',
+                    2 => '{"ops":[{"insert":"Refactor this.\\n"}]}',
                 ],
-                <<<'JSON'
-{"ops":[{"insert":"<?php"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"namespace app\\assets;"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"use yii\\web\\AssetBundle;"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"class QuillAsset extends AssetBundle"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"{"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    public $basePath = '@webroot/quill/1.3.7';"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    public $baseUrl = '@web/quill/1.3.7';"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $css = ["},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'quill.snow.css',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'highlight/default.min.css',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    ];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $js = ["},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'highlight/highlight.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'quill.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"        'editor-init.min.js',"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"    ];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $jsOptions = ['defer' => true];"},{"attributes":{"code-block":"plain"},"insert":"\n\n"},{"insert":"    public $depends = ['yii\\web\\YiiAsset'];"},{"attributes":{"code-block":"plain"},"insert":"\n"},{"insert":"}"},{"attributes":{"code-block":"plain"},"insert":"\n"}]}
-JSON,
+                '{"ops":[{"insert":"Code:\\nfunction test() {}\\nTask: Refactor this.\\n"}]}',
                 [
-                    1 => 'text',
-                    3 => 'multi-select',
-                    4 => 'text',
-                    6 => 'text',
+                    1 => 'code',
+                    2 => 'text',
                 ],
             ],
         ];
@@ -199,7 +153,7 @@ JSON,
     {
         $templateService = Stub::make(
             PromptTemplateService::class,
-            ['getTemplateById' => Expected::once()],
+            ['getTemplateById' => Expected::once(null)],
             $this
         );
 
@@ -261,7 +215,7 @@ JSON,
         );
 
         $plainText = $this->getPlainTextFromQuillDelta($result);
-        $this->assertEquals("Choices\nOption A\nOption B", $plainText);
+        $this->assertSame("Choices\nOption A\nOption B", $plainText);
     }
 
     /**
@@ -314,7 +268,7 @@ JSON,
         );
 
         $plainText = $this->getPlainTextFromQuillDelta($result);
-        $this->assertEquals("Notes\nHello", $plainText);
+        $this->assertSame("Notes\nHello", $plainText);
     }
 
     /**
@@ -372,7 +326,7 @@ JSON,
         );
 
         $plainText = $this->getPlainTextFromQuillDelta($result);
-        $this->assertEquals("First\nSecond", $plainText);
+        $this->assertSame("First\nSecond", $plainText);
     }
 
     /**
@@ -437,7 +391,7 @@ JSON,
         );
 
         $plainText = $this->getPlainTextFromQuillDelta($result);
-        $this->assertEquals($expectedOutput, $plainText);
+        $this->assertSame($expectedOutput, $plainText);
     }
 
     public static function selectInvertCasesProvider(): array
@@ -568,6 +522,247 @@ JSON,
         $plainText = $this->getPlainTextFromQuillDelta($result);
 
         // Should output: "Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron"
-        $this->assertEquals('Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron', $plainText);
+        $this->assertSame('Exxon Mobil compared to Shell,BP,TotalEnergies,Chevron', $plainText);
+    }
+
+    // --- Edge case tests for service orchestration ---
+
+    /**
+     * @throws Exception
+     */
+    public function testInvalidTemplateJsonReturnsEmptyOps(): void
+    {
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) {
+                    if ($property === 'template_body') {
+                        return '{invalid json';
+                    }
+                    if ($property === 'fields') {
+                        return [];
+                    }
+                    return null;
+                },
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $result = $service->generateFinalPrompt(1, [], [], self::USER_ID);
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('ops', $decoded);
+        $this->assertSame([], $decoded['ops']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testTemplateJsonWithoutOpsReturnsEmptyOps(): void
+    {
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) {
+                    if ($property === 'template_body') {
+                        return '{"foo":"bar"}';
+                    }
+                    if ($property === 'fields') {
+                        return [];
+                    }
+                    return null;
+                },
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $result = $service->generateFinalPrompt(1, [], [], self::USER_ID);
+
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('ops', $decoded);
+        $this->assertSame([], $decoded['ops']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testInvalidContextJsonIsIgnored(): void
+    {
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) {
+                    if ($property === 'template_body') {
+                        return '{"ops":[{"insert":"Template\n"}]}';
+                    }
+                    if ($property === 'fields') {
+                        return [];
+                    }
+                    return null;
+                },
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $contexts = [
+            '{invalid json',
+            '{"ops":[{"insert":"Valid context\n"}]}',
+            'also invalid',
+        ];
+
+        $result = $service->generateFinalPrompt(1, $contexts, [], self::USER_ID);
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+        $this->assertStringContainsString('Valid context', $plainText);
+        $this->assertStringContainsString('Template', $plainText);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testContextOrderIsPreserved(): void
+    {
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) {
+                    if ($property === 'template_body') {
+                        return '{"ops":[{"insert":"End\n"}]}';
+                    }
+                    if ($property === 'fields') {
+                        return [];
+                    }
+                    return null;
+                },
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $contexts = [
+            '{"ops":[{"insert":"First\n"}]}',
+            '{"ops":[{"insert":"Second\n"}]}',
+            '{"ops":[{"insert":"Third\n"}]}',
+        ];
+
+        $result = $service->generateFinalPrompt(1, $contexts, [], self::USER_ID);
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+
+        // Verify order: First, Second, Third, End
+        $posFirst = strpos($plainText, 'First');
+        $posSecond = strpos($plainText, 'Second');
+        $posThird = strpos($plainText, 'Third');
+        $posEnd = strpos($plainText, 'End');
+
+        $this->assertLessThan($posSecond, $posFirst, 'First should come before Second');
+        $this->assertLessThan($posThird, $posSecond, 'Second should come before Third');
+        $this->assertLessThan($posEnd, $posThird, 'Third should come before End');
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testOutputIsValidJson(): void
+    {
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) {
+                    if ($property === 'template_body') {
+                        return '{"ops":[{"insert":"Hello\n"}]}';
+                    }
+                    if ($property === 'fields') {
+                        return [];
+                    }
+                    return null;
+                },
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $result = $service->generateFinalPrompt(1, [], [], self::USER_ID);
+
+        // Should not throw
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('ops', $decoded);
+        $this->assertIsArray($decoded['ops']);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function testContextWithoutOpsArrayIsIgnored(): void
+    {
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) {
+                    if ($property === 'template_body') {
+                        return '{"ops":[{"insert":"Template\n"}]}';
+                    }
+                    if ($property === 'fields') {
+                        return [];
+                    }
+                    return null;
+                },
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        $contexts = [
+            '{"foo":"bar"}',
+            '{"ops":"not an array"}',
+        ];
+
+        $result = $service->generateFinalPrompt(1, $contexts, [], self::USER_ID);
+
+        $plainText = $this->getPlainTextFromQuillDelta($result);
+        $this->assertSame('Template', $plainText);
     }
 }
