@@ -282,6 +282,7 @@ class PromptInstanceController extends Controller
             'id' => $field->id,
             'type' => $field->type,
             'label' => $field->label,
+            'render_label' => $field->render_label,
         ];
         if (in_array($field->type, FieldConstants::PATH_FIELD_TYPES, true)) {
             $fieldData['project_id'] = $field->project_id;

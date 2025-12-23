@@ -59,12 +59,23 @@ class PromptFieldRenderer
         $fieldType = (string)($field['type'] ?? 'text');
         $name = "PromptInstanceForm[fields][$placeholder]";
 
-        return match ($fieldType) {
+        $labelHtml = '';
+        if (
+            !empty($field['render_label']) &&
+            isset($field['label']) &&
+            trim((string)$field['label']) !== ''
+        ) {
+            $labelHtml = Html::tag('h2', Html::encode($field['label']));
+        }
+
+        $fieldHtml = match ($fieldType) {
             'text', 'code' => $this->renderTextCodeField($field, $placeholder, $name),
             'select', 'multi-select', 'select-invert' => $this->renderSelectField($field, $placeholder, $name, $fieldType),
             'file' => $this->renderFileField($field, $placeholder, $name),
             default => $this->renderTextareaField($field, $placeholder, $name),
         };
+
+        return $labelHtml . $fieldHtml;
     }
 
     private function buildEditorPlaceholder(string $fieldType, string $label, string $customPlaceholder): string
@@ -306,7 +317,7 @@ class PromptFieldRenderer
 if (typeof window.PathSelectorField === 'undefined') {
     console.error('PathSelectorField asset not loaded');
 } else {
-    window.PathSelectorField.init($config);
+    window.PathSelectorField.init($config)
 }
 JS;
 

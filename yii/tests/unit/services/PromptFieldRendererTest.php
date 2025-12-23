@@ -372,6 +372,120 @@ class PromptFieldRendererTest extends Unit
         $this->assertStringContainsString('Text', $html);
     }
 
+    public function testRenderFieldAddsH2LabelWhenRenderLabelTrue(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => 'My Field Label',
+            'render_label' => 1,
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringContainsString('<h2>My Field Label</h2>', $html);
+    }
+
+    public function testRenderFieldAddsH2LabelWhenRenderLabelBoolean(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => 'My Field Label',
+            'render_label' => true,
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringContainsString('<h2>My Field Label</h2>', $html);
+    }
+
+    public function testRenderFieldSkipsLabelWhenRenderLabelFalse(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => 'My Field Label',
+            'render_label' => 0,
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringNotContainsString('<h2>', $html);
+        $this->assertStringNotContainsString('<h2>My Field Label</h2>', $html);
+    }
+
+    public function testRenderFieldSkipsLabelWhenRenderLabelBooleanFalse(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => 'My Field Label',
+            'render_label' => false,
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringNotContainsString('<h2>', $html);
+        $this->assertStringNotContainsString('<h2>My Field Label</h2>', $html);
+    }
+
+    public function testRenderFieldSkipsLabelWhenRenderLabelMissing(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => 'My Field Label',
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringNotContainsString('<h2>', $html);
+    }
+
+    public function testRenderFieldSkipsLabelWhenLabelEmpty(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => '',
+            'render_label' => 1,
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringNotContainsString('<h2>', $html);
+    }
+
+    public function testRenderFieldSkipsLabelWhenLabelWhitespace(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => '   ',
+            'render_label' => 1,
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringNotContainsString('<h2>', $html);
+    }
+
+    public function testRenderFieldEscapesLabelHtml(): void
+    {
+        $field = [
+            'type' => 'text',
+            'label' => '<script>alert("xss")</script>',
+            'render_label' => 1,
+            'default' => '',
+        ];
+
+        $html = $this->renderer->renderField($field, '123');
+
+        $this->assertStringContainsString('&lt;script&gt;', $html);
+        $this->assertStringNotContainsString('<script>alert', $html);
+    }
+
     /**
      * @dataProvider selectInvertFieldProvider
      */
