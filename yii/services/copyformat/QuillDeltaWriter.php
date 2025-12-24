@@ -32,16 +32,22 @@ class QuillDeltaWriter extends AbstractFormatWriter
                 if (isset($segment['embed'])) {
                     $ops[] = ['insert' => $segment['embed']];
                 } else {
-                    $op = ['insert' => ($segment['text'] ?? '') . "\n"];
-                    if (!empty($segment['attrs'])) {
-                        $op['attributes'] = $segment['attrs'];
+                    $text = $segment['text'] ?? '';
+                    if ($text !== '' || !empty($segment['attrs'])) {
+                        $op = ['insert' => $text];
+                        if (!empty($segment['attrs'])) {
+                            $op['attributes'] = $segment['attrs'];
+                        }
+                        $ops[] = $op;
                     }
-                    if (!empty($block['attrs'])) {
-                        $op['attributes'] = array_merge($op['attributes'] ?? [], $block['attrs']);
-                    }
-                    $ops[] = $op;
                 }
             }
+
+            $newlineOp = ['insert' => "\n"];
+            if (!empty($block['attrs'])) {
+                $newlineOp['attributes'] = $block['attrs'];
+            }
+            $ops[] = $newlineOp;
         }
         return $ops;
     }

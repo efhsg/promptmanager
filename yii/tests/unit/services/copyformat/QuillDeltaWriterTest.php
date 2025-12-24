@@ -56,9 +56,13 @@ class QuillDeltaWriterTest extends Unit
 
         $decoded = json_decode($result, true);
         $this->assertArrayHasKey('ops', $decoded);
-        $op = $decoded['ops'][0] ?? [];
-        $this->assertArrayHasKey('attributes', $op);
-        $this->assertSame(1, $op['attributes']['header']);
+        // In proper Quill Delta, block attrs are on the newline op (last op for this block)
+        $ops = $decoded['ops'];
+        $this->assertCount(2, $ops);
+        $this->assertSame('Header', $ops[0]['insert']);
+        $this->assertSame("\n", $ops[1]['insert']);
+        $this->assertArrayHasKey('attributes', $ops[1]);
+        $this->assertSame(1, $ops[1]['attributes']['header']);
     }
 
     public function testWritePreservesInlineAttributes(): void
