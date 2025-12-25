@@ -4,6 +4,7 @@
 use app\assets\QuillAsset;
 use common\enums\CopyType;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
@@ -11,6 +12,7 @@ use yii\widgets\ActiveForm;
 
 QuillAsset::register($this);
 $copyTypes = CopyType::labels();
+$isUpdate = !$model->isNewRecord;
 ?>
 
 <div class="scratch-pad-form focus-on-first-field">
@@ -40,14 +42,45 @@ $copyTypes = CopyType::labels();
 
     <div class="form-group mt-4 text-end">
         <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], ['class' => 'btn btn-secondary me-2']) ?>
+        <?php if ($isUpdate): ?>
+        <button type="button" id="save-as-btn" class="btn btn-primary me-2">Save As</button>
+        <?php endif; ?>
         <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
     </div>
 
     <?php ActiveForm::end(); ?>
 </div>
 
+<?php if ($isUpdate): ?>
+<!-- Save As Modal -->
+<div class="modal fade" id="saveAsModal" tabindex="-1" aria-labelledby="saveAsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="saveAsModalLabel">Save As</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none" id="save-as-error-alert"></div>
+                <div class="mb-3">
+                    <label for="save-as-name" class="form-label">New Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="save-as-name" value="<?= Html::encode($model->name) ?> (copy)" placeholder="Enter a name...">
+                    <div class="invalid-feedback" id="save-as-name-error"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-as-confirm-btn">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php
 $content = json_encode($model->content);
+$saveUrl = Url::to(['/scratch-pad/save']);
+$projectId = $model->project_id ?? 'null';
 $script = <<<JS
 var quill = new Quill('#scratch-pad-editor', {
     theme: 'snow',
@@ -115,6 +148,70 @@ document.getElementById('copy-content-btn').addEventListener('click', function()
         navigator.clipboard.writeText(text);
     });
 });
+
+// Save As functionality
+const saveAsBtn = document.getElementById('save-as-btn');
+if (saveAsBtn) {
+    saveAsBtn.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('saveAsModal'));
+        document.getElementById('save-as-error-alert').classList.add('d-none');
+        document.getElementById('save-as-name').classList.remove('is-invalid');
+        modal.show();
+    });
+
+    document.getElementById('save-as-confirm-btn').addEventListener('click', function() {
+        const nameInput = document.getElementById('save-as-name');
+        const name = nameInput.value.trim();
+        const errorAlert = document.getElementById('save-as-error-alert');
+
+        errorAlert.classList.add('d-none');
+        nameInput.classList.remove('is-invalid');
+
+        if (!name) {
+            nameInput.classList.add('is-invalid');
+            document.getElementById('save-as-name-error').textContent = 'Name is required.';
+            return;
+        }
+
+        const deltaContent = JSON.stringify(quill.getContents());
+
+        fetch('$saveUrl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                name: name,
+                content: deltaContent,
+                project_id: $projectId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('saveAsModal')).hide();
+                window.location.href = '/scratch-pad/update?id=' + data.id;
+            } else {
+                if (data.errors) {
+                    Object.entries(data.errors).forEach(([, messages]) => {
+                        errorAlert.textContent = messages[0];
+                        errorAlert.classList.remove('d-none');
+                    });
+                } else if (data.message) {
+                    errorAlert.textContent = data.message;
+                    errorAlert.classList.remove('d-none');
+                }
+            }
+        })
+        .catch(error => {
+            errorAlert.textContent = 'An unexpected error occurred.';
+            errorAlert.classList.remove('d-none');
+            console.error('Save As error:', error);
+        });
+    });
+}
 JS;
 
 $this->registerJs($script);
