@@ -5,12 +5,16 @@
 use app\assets\QuillAsset;
 use common\enums\CopyType;
 use yii\helpers\Html;
+use yii\helpers\Url;
 
 /** @var yii\web\View $this */
+/** @var app\models\Project|null $currentProject */
+/** @var array $projectList */
 
 QuillAsset::register($this);
 
 $this->title = 'Scratch Pad';
+$this->params['breadcrumbs'][] = $this->title;
 $copyTypes = CopyType::labels();
 ?>
 
@@ -20,13 +24,22 @@ $copyTypes = CopyType::labels();
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h1 class="h4 mb-0"><?= Html::encode($this->title) ?></h1>
                 <div class="d-flex align-items-center gap-2">
-                    <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
-                        'id' => 'copy-format-select',
-                        'class' => 'form-select form-select-sm',
-                        'style' => 'width: auto;',
-                    ]) ?>
-                    <button type="button" id="copy-content-btn" class="btn btn-sm btn-primary" title="Copy to clipboard">
-                        <i class="bi bi-clipboard"></i> Copy
+                    <input type="file" id="load-md-file" accept=".md,.markdown,.txt" style="display: none;">
+                    <button type="button" id="load-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Load markdown file">
+                        <i class="bi bi-file-earmark-arrow-up"></i> Load MD
+                    </button>
+                    <div class="input-group input-group-sm">
+                        <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
+                            'id' => 'copy-format-select',
+                            'class' => 'form-select',
+                            'style' => 'width: auto;',
+                        ]) ?>
+                        <button type="button" id="copy-content-btn" class="btn btn-primary text-nowrap" title="Copy to clipboard">
+                            <i class="bi bi-clipboard"></i> Copy to Clipboard
+                        </button>
+                    </div>
+                    <button type="button" id="save-content-btn" class="btn btn-sm btn-primary" title="Save to database">
+                        <i class="bi bi-save"></i> Save
                     </button>
                 </div>
             </div>
@@ -38,7 +51,39 @@ $copyTypes = CopyType::labels();
                 </div>
             </div>
             <div class="mt-3 text-muted small">
-                Quick edit imported markdown content. Use the Copy button to copy formatted content to your clipboard.
+                Quick edit imported markdown content. Use Copy to copy to clipboard or Save to store in the database.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Save Modal -->
+<div class="modal fade" id="saveModal" tabindex="-1" aria-labelledby="saveModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="saveModalLabel">Save Scratch Pad</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger d-none" id="save-error-alert"></div>
+                <div class="mb-3">
+                    <label for="scratch-pad-name" class="form-label">Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="scratch-pad-name" placeholder="Enter a name...">
+                    <div class="invalid-feedback" id="scratch-pad-name-error"></div>
+                </div>
+                <div class="mb-3">
+                    <label for="scratch-pad-project" class="form-label">Project</label>
+                    <?= Html::dropDownList('project_id', $currentProject?->id, $projectList, [
+                        'id' => 'scratch-pad-project',
+                        'class' => 'form-select',
+                        'prompt' => 'No project',
+                    ]) ?>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-confirm-btn">Save</button>
             </div>
         </div>
     </div>
@@ -47,6 +92,9 @@ $copyTypes = CopyType::labels();
 <label for="copy-content-hidden"></label><textarea id="copy-content-hidden" style="display: none;"></textarea>
 
 <?php
+$saveUrl = Url::to(['/scratch-pad/save']);
+$savedListUrl = Url::to(['/scratch-pad/index']);
+
 $script = <<<JS
 window.quill = new Quill('#editor', {
     theme: 'snow',
@@ -77,6 +125,54 @@ if (importedData) {
         console.error('Failed to parse imported data:', e);
     }
 }
+
+// Load MD file functionality
+document.getElementById('load-md-btn').addEventListener('click', function() {
+    document.getElementById('load-md-file').click();
+});
+
+document.getElementById('load-md-file').addEventListener('change', function() {
+    const file = this.files[0];
+    if (!file) return;
+
+    const btn = document.getElementById('load-md-btn');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('mdFile', file);
+
+    fetch('/scratch-pad/import-markdown', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.importData && data.importData.content) {
+            const delta = typeof data.importData.content === 'string'
+                ? JSON.parse(data.importData.content)
+                : data.importData.content;
+            window.quill.setContents(delta);
+        } else {
+            const errorMsg = data.errors?.mdFile?.[0] || data.message || 'Failed to load file.';
+            alert(errorMsg);
+        }
+    })
+    .catch(error => {
+        console.error('Load error:', error);
+        alert('Failed to load file. Please try again.');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        document.getElementById('load-md-file').value = '';
+    });
+});
 
 // Copy functionality with format conversion
 document.getElementById('copy-content-btn').addEventListener('click', function() {
@@ -120,6 +216,70 @@ document.getElementById('copy-content-btn').addEventListener('click', function()
         // Fallback to plain text
         const text = window.quill.getText();
         navigator.clipboard.writeText(text);
+    });
+});
+
+// Save functionality
+document.getElementById('save-content-btn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('saveModal'));
+    document.getElementById('scratch-pad-name').value = '';
+    document.getElementById('save-error-alert').classList.add('d-none');
+    document.getElementById('scratch-pad-name').classList.remove('is-invalid');
+    modal.show();
+});
+
+document.getElementById('save-confirm-btn').addEventListener('click', function() {
+    const nameInput = document.getElementById('scratch-pad-name');
+    const name = nameInput.value.trim();
+    const errorAlert = document.getElementById('save-error-alert');
+
+    errorAlert.classList.add('d-none');
+    nameInput.classList.remove('is-invalid');
+
+    if (!name) {
+        nameInput.classList.add('is-invalid');
+        document.getElementById('scratch-pad-name-error').textContent = 'Name is required.';
+        return;
+    }
+
+    const projectSelect = document.getElementById('scratch-pad-project');
+    const projectId = projectSelect.value || null;
+    const deltaContent = JSON.stringify(window.quill.getContents());
+
+    fetch('$saveUrl', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            name: name,
+            content: deltaContent,
+            project_id: projectId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('saveModal')).hide();
+            window.location.href = '$savedListUrl';
+        } else {
+            if (data.errors) {
+                Object.entries(data.errors).forEach(([field, messages]) => {
+                    errorAlert.textContent = messages[0];
+                    errorAlert.classList.remove('d-none');
+                });
+            } else if (data.message) {
+                errorAlert.textContent = data.message;
+                errorAlert.classList.remove('d-none');
+            }
+        }
+    })
+    .catch(error => {
+        errorAlert.textContent = 'An unexpected error occurred.';
+        errorAlert.classList.remove('d-none');
+        console.error('Save error:', error);
     });
 });
 JS;

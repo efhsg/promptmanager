@@ -144,6 +144,32 @@ return [
                 ],
             ],
         ],
+        'scratchPad' => [
+            'actionPermissionMap' => [
+                'create' => 'createScratchPad',
+                'view' => 'viewScratchPad',
+                'update' => 'updateScratchPad',
+                'delete' => 'deleteScratchPad',
+            ],
+            'permissions' => [
+                'createScratchPad' => [
+                    'description' => 'Create a Scratch Pad',
+                    'rule' => null,
+                ],
+                'viewScratchPad' => [
+                    'description' => 'View a Scratch Pad',
+                    'rule' => 'app\rbac\ScratchPadOwnerRule',
+                ],
+                'updateScratchPad' => [
+                    'description' => 'Update a Scratch Pad',
+                    'rule' => 'app\rbac\ScratchPadOwnerRule',
+                ],
+                'deleteScratchPad' => [
+                    'description' => 'Delete a Scratch Pad',
+                    'rule' => 'app\rbac\ScratchPadOwnerRule',
+                ],
+            ],
+        ],
     ],
     'roles' => [
         'user' => [
@@ -170,6 +196,10 @@ return [
                 'updatePromptInstance',
                 'deletePromptInstance',
                 'generatePrompt',
+                'createScratchPad',
+                'viewScratchPad',
+                'updateScratchPad',
+                'deleteScratchPad',
             ],
             'children' => [],
         ],

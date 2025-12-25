@@ -44,7 +44,10 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                             'label' => 'Templates',
                             'url' => ['/prompt-template/index']
                         ],
-
+                        [
+                            'label' => 'Generated',
+                            'url' => ['/prompt-instance/index'],
+                        ],
                     ],
                 ],
                 [
@@ -52,8 +55,17 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                     'url' => ['/prompt-instance/create'],
                 ],
                 [
-                    'label' => 'History',
-                    'url' => ['/prompt-instance/index'],
+                    'label' => 'Scratch Pad',
+                    'items' => [
+                        [
+                            'label' => 'Create',
+                            'url' => ['/scratch-pad/create'],
+                        ],
+                        [
+                            'label' => 'Saved',
+                            'url' => ['/scratch-pad/index'],
+                        ],
+                    ],
                 ],
             ],
         ]);
@@ -73,14 +85,6 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                 'onchange' => 'this.form.submit()',
             ]);
             echo Html::endForm();
-
-            echo '<ul class="navbar-nav"><li class="nav-item">'
-                . Html::a('Create from MD', '#', [
-                    'class' => 'nav-link',
-                    'data-bs-toggle' => 'modal',
-                    'data-bs-target' => '#scratchPadImportModal',
-                ])
-                . '</li></ul>';
         }
 
         echo '</div>';
@@ -115,9 +119,5 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
             <?= $content ?>
         </div>
     </main>
-
-<?php if (!Yii::$app->user->isGuest): ?>
-    <?= $this->render('@app/views/scratch-pad/_import-modal') ?>
-<?php endif; ?>
 
 <?php $this->endContent(); ?>
