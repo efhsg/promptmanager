@@ -188,11 +188,16 @@ class MarkdownParserTest extends Unit
         $md = "# Title\n\nSome **bold** text.\n\n- Item 1\n- Item 2";
         $blocks = $this->parser->parse($md);
 
-        $this->assertCount(4, $blocks);
+        // Should have: Title, blank, paragraph, blank, Item 1, Item 2 = 6 blocks
+        $this->assertCount(6, $blocks);
         $this->assertSame(['header' => 1], $blocks[0]['attrs']);
-        $this->assertSame([], $blocks[1]['attrs']);
-        $this->assertSame(['list' => 'bullet'], $blocks[2]['attrs']);
-        $this->assertSame(['list' => 'bullet'], $blocks[3]['attrs']);
+        $this->assertSame([], $blocks[1]['attrs']); // blank line
+        $this->assertSame('', $blocks[1]['segments'][0]['text']);
+        $this->assertSame([], $blocks[2]['attrs']); // paragraph
+        $this->assertStringContainsString('bold', $blocks[2]['segments'][1]['text']);
+        $this->assertSame([], $blocks[3]['attrs']); // blank line
+        $this->assertSame(['list' => 'bullet'], $blocks[4]['attrs']);
+        $this->assertSame(['list' => 'bullet'], $blocks[5]['attrs']);
     }
 
     public function testParseMultipleInlineFormats(): void
@@ -229,14 +234,19 @@ class MarkdownParserTest extends Unit
         $this->assertSame(['bold' => true], $blocks[0]['segments'][1]['attrs']);
     }
 
-    public function testParseEmptyLinesSkipped(): void
+    public function testParseEmptyLinesPreserved(): void
     {
         $md = "Line 1\n\n\n\nLine 2";
         $blocks = $this->parser->parse($md);
 
-        $this->assertCount(2, $blocks);
+        // Should have: Line 1, blank, blank, blank, Line 2 = 5 blocks
+        $this->assertCount(5, $blocks);
         $this->assertSame('Line 1', $blocks[0]['segments'][0]['text']);
-        $this->assertSame('Line 2', $blocks[1]['segments'][0]['text']);
+        $this->assertSame('', $blocks[1]['segments'][0]['text']);
+        $this->assertSame([], $blocks[1]['attrs']);
+        $this->assertSame('', $blocks[2]['segments'][0]['text']);
+        $this->assertSame('', $blocks[3]['segments'][0]['text']);
+        $this->assertSame('Line 2', $blocks[4]['segments'][0]['text']);
     }
 
     public function testParseAsteriskListMarker(): void
@@ -293,5 +303,196 @@ class MarkdownParserTest extends Unit
         $this->assertJson($deltaJson);
         $delta = json_decode($deltaJson, true);
         $this->assertArrayHasKey('ops', $delta);
+    }
+
+    public function testPreserveBlankLinesInComprehensiveMarkdown(): void
+    {
+        $md = <<<'MD'
+# Heading1
+
+Test normal
+
+## Heading2
+
+text **bold**
+
+### Heading3
+
+test `code`
+
+#### Heading4
+
+> test quote
+
+##### Heading5
+
+```
+<html lang="en">Code</html>
+```
+
+###### Heading6
+
+1. Numbered list 1
+2. Numbered list 2
+3. Numbered list 3
+
+- List item 1
+- List item 1
+- List item 1
+
+1. Level1
+  1. level2
+    1. level3
+MD;
+
+        $blocks = $this->parser->parse($md);
+
+        // Expected: 33 blocks total
+        // - 6 headers
+        // - 3 paragraphs (Test normal, text **bold**, test `code`)
+        // - 1 blockquote
+        // - 1 code-block line
+        // - 6 list items (3 numbered + 3 bullet)
+        // - 3 nested list items
+        // - 13 blank lines (after each header, after code block, between lists)
+        $this->assertCount(33, $blocks, 'Should preserve blank lines as empty paragraph blocks');
+
+        // Verify blank lines are represented as empty paragraph blocks
+        $emptyBlocks = array_filter($blocks, function ($block) {
+            return $block['attrs'] === []
+                && count($block['segments']) === 1
+                && $block['segments'][0]['text'] === '';
+        });
+
+        $this->assertCount(13, $emptyBlocks, 'Should have 13 blank line blocks');
+
+        // Verify structure: H1, blank, paragraph, blank, H2, blank, paragraph, ...
+        $this->assertSame(['header' => 1], $blocks[0]['attrs'], 'First block should be H1');
+        $this->assertSame([], $blocks[1]['attrs'], 'Second block should be blank line');
+        $this->assertSame('', $blocks[1]['segments'][0]['text'], 'Blank line should have empty text');
+        $this->assertSame([], $blocks[2]['attrs'], 'Third block should be paragraph');
+        $this->assertSame('Test normal', $blocks[2]['segments'][0]['text']);
+    }
+
+    public function testBlankLinesAtDocumentStart(): void
+    {
+        $md = "\n\n\nContent here";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertCount(4, $blocks);
+        $this->assertSame('', $blocks[0]['segments'][0]['text'], 'First three blocks should be blank');
+        $this->assertSame('', $blocks[1]['segments'][0]['text']);
+        $this->assertSame('', $blocks[2]['segments'][0]['text']);
+        $this->assertSame('Content here', $blocks[3]['segments'][0]['text']);
+    }
+
+    public function testBlankLinesAtDocumentEnd(): void
+    {
+        $md = "Content here\n\n\n";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertCount(4, $blocks);
+        $this->assertSame('Content here', $blocks[0]['segments'][0]['text']);
+        $this->assertSame('', $blocks[1]['segments'][0]['text'], 'Last three blocks should be blank');
+        $this->assertSame('', $blocks[2]['segments'][0]['text']);
+        $this->assertSame('', $blocks[3]['segments'][0]['text']);
+    }
+
+    public function testBlankLinesWithinCodeBlock(): void
+    {
+        $md = "```\nline 1\n\nline 3\n```";
+        $blocks = $this->parser->parse($md);
+
+        // Code blocks should preserve internal blank lines as code content
+        $this->assertCount(3, $blocks);
+        $this->assertSame(['code-block' => true], $blocks[0]['attrs']);
+        $this->assertSame('line 1', $blocks[0]['segments'][0]['text']);
+        $this->assertSame(['code-block' => true], $blocks[1]['attrs']);
+        $this->assertSame('', $blocks[1]['segments'][0]['text'], 'Blank line within code block');
+        $this->assertSame(['code-block' => true], $blocks[2]['attrs']);
+        $this->assertSame('line 3', $blocks[2]['segments'][0]['text']);
+    }
+
+    public function testWhitespaceOnlyLines(): void
+    {
+        $md = "Line 1\n   \n\t\nLine 2";
+        $blocks = $this->parser->parse($md);
+
+        // Lines with only spaces/tabs should be treated as blank (via trim())
+        $this->assertCount(4, $blocks);
+        $this->assertSame('Line 1', $blocks[0]['segments'][0]['text']);
+        $this->assertSame('', $blocks[1]['segments'][0]['text'], 'Spaces-only line should be blank');
+        $this->assertSame('', $blocks[2]['segments'][0]['text'], 'Tab-only line should be blank');
+        $this->assertSame('Line 2', $blocks[3]['segments'][0]['text']);
+    }
+
+    public function testDocumentWithOnlyBlankLines(): void
+    {
+        $md = "\n\n\n";
+        $blocks = $this->parser->parse($md);
+
+        // preg_split on "\n\n\n" produces 4 elements: ["", "", "", ""]
+        $this->assertCount(4, $blocks);
+        foreach ($blocks as $block) {
+            $this->assertSame([], $block['attrs']);
+            $this->assertSame('', $block['segments'][0]['text']);
+        }
+    }
+
+    public function testBlankLinesBetweenListItems(): void
+    {
+        $md = "- Item 1\n\n- Item 2\n\n- Item 3";
+        $blocks = $this->parser->parse($md);
+
+        // Blank lines between list items should be preserved
+        $this->assertCount(5, $blocks);
+        $this->assertSame(['list' => 'bullet'], $blocks[0]['attrs']);
+        $this->assertSame('Item 1', $blocks[0]['segments'][0]['text']);
+        $this->assertSame([], $blocks[1]['attrs'], 'Blank line between list items');
+        $this->assertSame(['list' => 'bullet'], $blocks[2]['attrs']);
+        $this->assertSame('Item 2', $blocks[2]['segments'][0]['text']);
+        $this->assertSame([], $blocks[3]['attrs']);
+        $this->assertSame(['list' => 'bullet'], $blocks[4]['attrs']);
+        $this->assertSame('Item 3', $blocks[4]['segments'][0]['text']);
+    }
+
+    public function testBlankLinesBeforeAndAfterCodeBlock(): void
+    {
+        $md = "Text before\n\n```\ncode\n```\n\nText after";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertCount(5, $blocks);
+        $this->assertSame('Text before', $blocks[0]['segments'][0]['text']);
+        $this->assertSame([], $blocks[1]['attrs'], 'Blank before code block');
+        $this->assertSame(['code-block' => true], $blocks[2]['attrs']);
+        $this->assertSame([], $blocks[3]['attrs'], 'Blank after code block');
+        $this->assertSame('Text after', $blocks[4]['segments'][0]['text']);
+    }
+
+    public function testManyConsecutiveBlankLines(): void
+    {
+        $md = "Start\n\n\n\n\n\n\n\n\nEnd";
+        $blocks = $this->parser->parse($md);
+
+        // Should preserve all blank lines
+        $this->assertCount(10, $blocks);
+        $this->assertSame('Start', $blocks[0]['segments'][0]['text']);
+        for ($i = 1; $i < 9; $i++) {
+            $this->assertSame('', $blocks[$i]['segments'][0]['text'], "Block $i should be blank");
+        }
+        $this->assertSame('End', $blocks[9]['segments'][0]['text']);
+    }
+
+    public function testBlankLinesAroundBlockquote(): void
+    {
+        $md = "Before\n\n> Quote\n\nAfter";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertCount(5, $blocks);
+        $this->assertSame('Before', $blocks[0]['segments'][0]['text']);
+        $this->assertSame([], $blocks[1]['attrs'], 'Blank before blockquote');
+        $this->assertSame(['blockquote' => true], $blocks[2]['attrs']);
+        $this->assertSame([], $blocks[3]['attrs'], 'Blank after blockquote');
+        $this->assertSame('After', $blocks[4]['segments'][0]['text']);
     }
 }

@@ -62,7 +62,10 @@ class MarkdownParser
     private function parseLine(string $line): ?array
     {
         if (trim($line) === '') {
-            return null;
+            return [
+                'segments' => [['text' => '']],
+                'attrs' => [],
+            ];
         }
 
         if (preg_match(self::HEADER_PATTERN, $line, $m)) {

@@ -73,6 +73,14 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
                 'onchange' => 'this.form.submit()',
             ]);
             echo Html::endForm();
+
+            echo '<ul class="navbar-nav"><li class="nav-item">'
+                . Html::a('Create from MD', '#', [
+                    'class' => 'nav-link',
+                    'data-bs-toggle' => 'modal',
+                    'data-bs-target' => '#scratchPadImportModal',
+                ])
+                . '</li></ul>';
         }
 
         echo '</div>';
@@ -107,5 +115,9 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
             <?= $content ?>
         </div>
     </main>
+
+<?php if (!Yii::$app->user->isGuest): ?>
+    <?= $this->render('@app/views/scratch-pad/_import-modal') ?>
+<?php endif; ?>
 
 <?php $this->endContent(); ?>
