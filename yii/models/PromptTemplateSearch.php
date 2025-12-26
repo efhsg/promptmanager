@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\components\ProjectContext;
 use InvalidArgumentException;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
@@ -47,12 +48,15 @@ class PromptTemplateSearch extends PromptTemplate
             throw new InvalidArgumentException('User ID is required.');
         }
 
-        $query = PromptTemplate::find()
-            ->joinWith('project p')
-            ->andWhere(['p.user_id' => $userId]);
+        $query = PromptTemplate::find()->joinWith('project p');
 
-        if ($projectId !== null) {
-            $query->andWhere(['p.id' => $projectId]);
+        if ($projectId === ProjectContext::NO_PROJECT_ID) {
+            $query->andWhere(['{{%prompt_template}}.project_id' => null]);
+        } else {
+            $query->andWhere(['p.user_id' => $userId]);
+            if ($projectId !== null) {
+                $query->andWhere(['p.id' => $projectId]);
+            }
         }
 
         $dataProvider = new ActiveDataProvider([

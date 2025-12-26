@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\components\ProjectContext;
 use InvalidArgumentException;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
@@ -51,7 +52,10 @@ class FieldSearch extends Field
             ->joinWith('user u', false, 'INNER JOIN')
             ->joinWith('project')
             ->andWhere(['u.id' => $userId]);
-        if ($projectId !== null) {
+
+        if ($projectId === ProjectContext::NO_PROJECT_ID) {
+            $query->andWhere(['{{%field}}.project_id' => null]);
+        } elseif ($projectId !== null) {
             $query->andWhere(['project.id' => $projectId]);
         }
         $dataProvider = new ActiveDataProvider([

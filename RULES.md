@@ -86,6 +86,5 @@ If instructions conflict, follow this order:
 
 ## Repo hygiene
 
-- Never stage `RULES.md` or `.claude/` contents (local operating instructions).
 - New environment variables must be documented in `.env.example`.
 - Don’t hand-edit compiled frontend assets in `yii/web`; change sources in `npm/` and rebuild.

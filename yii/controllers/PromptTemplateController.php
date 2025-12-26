@@ -3,6 +3,7 @@
 
 namespace app\controllers;
 
+use app\components\ProjectContext;
 use app\models\MarkdownImportForm;
 use app\models\PromptTemplate;
 use app\models\PromptTemplateSearch;
@@ -75,10 +76,20 @@ class PromptTemplateController extends Controller
     public function actionIndex(): string|array
     {
         $searchModel = new PromptTemplateSearch();
+        $projectContext = Yii::$app->projectContext;
+
+        if ($projectContext->isNoProjectContext()) {
+            $projectId = ProjectContext::NO_PROJECT_ID;
+        } elseif ($projectContext->isAllProjectsContext()) {
+            $projectId = null;
+        } else {
+            $projectId = $projectContext->getCurrentProject()?->id;
+        }
+
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             Yii::$app->user->id,
-            (Yii::$app->projectContext)->getCurrentProject()?->id
+            $projectId
         );
 
         // Default sort by template name if no explicit sort is provided
@@ -103,7 +114,7 @@ class PromptTemplateController extends Controller
         }
 
         $projects = $this->projectService->fetchProjectsList(Yii::$app->user->id);
-        $currentProjectId = (Yii::$app->projectContext)->getCurrentProject()?->id;
+        $currentProjectId = $projectContext->getCurrentProject()?->id;
 
         return $this->render('index', compact('searchModel', 'dataProvider', 'projects', 'currentProjectId'));
     }

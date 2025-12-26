@@ -1,15 +1,19 @@
 <?php
+/** @noinspection DuplicatedCode */
+
+/** @noinspection PhpUnused */
 
 namespace app\controllers;
 
+use app\components\ProjectContext;
 use app\models\Field;
 use app\models\FieldOption;
 use app\models\FieldSearch;
 use app\models\Project;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
-use app\services\ProjectService;
 use app\services\PathService;
+use app\services\ProjectService;
 use common\constants\FieldConstants;
 use UnexpectedValueException;
 use Yii;
@@ -68,13 +72,34 @@ class FieldController extends Controller
         ];
     }
 
+    /**
+     * @throws NotFoundHttpException
+     */
+    protected function findModel(int $id): ActiveRecord
+    {
+        return Field::find()->with('project')->where([
+            'id' => $id,
+            'user_id' => Yii::$app->user->id,
+        ])->one() ?? throw new NotFoundHttpException('The requested field does not exist or is not yours.');
+    }
+
     public function actionIndex(): string
     {
         $searchModel = new FieldSearch();
+        $projectContext = Yii::$app->projectContext;
+
+        if ($projectContext->isNoProjectContext()) {
+            $projectId = ProjectContext::NO_PROJECT_ID;
+        } elseif ($projectContext->isAllProjectsContext()) {
+            $projectId = null;
+        } else {
+            $projectId = $projectContext->getCurrentProject()?->id;
+        }
+
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             Yii::$app->user->id,
-            (Yii::$app->projectContext)->getCurrentProject()?->id
+            $projectId
         );
         return $this->render('index', compact('searchModel', 'dataProvider'));
     }
@@ -90,6 +115,28 @@ class FieldController extends Controller
     public function actionCreate(): Response|string
     {
         return $this->handleCreateOrUpdate(new Field(['user_id' => Yii::$app->user->id]), []);
+    }
+
+    private function handleCreateOrUpdate(Field $modelField, array $modelsFieldOption): Response|string
+    {
+        $postData = Yii::$app->request->post();
+        if ($modelField->load($postData)) {
+            if (isset($postData['FieldOption']) && is_array($postData['FieldOption'])) {
+                $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
+                Model::loadMultiple($modelsFieldOption, $postData);
+            } else {
+                $modelsFieldOption = [];
+            }
+
+            if ($this->fieldService->saveFieldWithOptions($modelField, $modelsFieldOption)) {
+                return $this->redirect(['view', 'id' => $modelField->id]);
+            }
+        }
+        return $this->render($modelField->isNewRecord ? 'create' : 'update', [
+            'modelField' => $modelField,
+            'modelsFieldOption' => $modelsFieldOption ?: [new FieldOption()],
+            'projects' => $this->projectService->fetchProjectsList(Yii::$app->user->id),
+        ]);
     }
 
     /**
@@ -158,7 +205,11 @@ class FieldController extends Controller
         /** @var Field $field */
         $field = $this->findModel($id);
 
-        if (!in_array($field->type, FieldConstants::PATH_PREVIEWABLE_FIELD_TYPES, true) || $field->project === null || empty($field->project->root_directory)) {
+        if (!in_array(
+                $field->type,
+                FieldConstants::PATH_PREVIEWABLE_FIELD_TYPES,
+                true
+            ) || $field->project === null || empty($field->project->root_directory)) {
             return ['success' => false, 'message' => 'Preview unavailable for this field.'];
         }
 
@@ -189,28 +240,6 @@ class FieldController extends Controller
             'success' => true,
             'preview' => $preview,
         ];
-    }
-
-    private function handleCreateOrUpdate(Field $modelField, array $modelsFieldOption): Response|string
-    {
-        $postData = Yii::$app->request->post();
-        if ($modelField->load($postData)) {
-            if (isset($postData['FieldOption']) && is_array($postData['FieldOption'])) {
-                $modelsFieldOption = Model::createMultiple(FieldOption::class, $modelsFieldOption);
-                Model::loadMultiple($modelsFieldOption, $postData);
-            } else {
-                $modelsFieldOption = [];
-            }
-
-            if ($this->fieldService->saveFieldWithOptions($modelField, $modelsFieldOption)) {
-                return $this->redirect(['view', 'id' => $modelField->id]);
-            }
-        }
-        return $this->render($modelField->isNewRecord ? 'create' : 'update', [
-            'modelField' => $modelField,
-            'modelsFieldOption' => $modelsFieldOption ?: [new FieldOption()],
-            'projects' => $this->projectService->fetchProjectsList(Yii::$app->user->id),
-        ]);
     }
 
     /**
@@ -249,16 +278,5 @@ class FieldController extends Controller
         }
 
         return $this->redirect(['view', 'id' => $model->id]);
-    }
-
-    /**
-     * @throws NotFoundHttpException
-     */
-    protected function findModel(int $id): ActiveRecord
-    {
-        return Field::find()->with('project')->where([
-            'id' => $id,
-            'user_id' => Yii::$app->user->id,
-        ])->one() ?? throw new NotFoundHttpException('The requested field does not exist or is not yours.');
     }
 }

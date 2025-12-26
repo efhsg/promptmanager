@@ -11,6 +11,7 @@ use yii\helpers\Url;
 /** @var ScratchPadSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 /** @var app\models\Project|null $currentProject */
+/** @var bool $isAllProjects */
 
 $this->title = 'Saved Scratch Pads';
 $this->params['breadcrumbs'][] = $this->title;
@@ -23,7 +24,11 @@ $this->params['breadcrumbs'][] = $this->title;
         <?= Html::a('New Scratch Pad', ['create'], ['class' => 'btn btn-primary']) ?>
     </div>
 
-    <?php if ($currentProject): ?>
+    <?php if ($isAllProjects): ?>
+        <div class="alert alert-info">
+            Showing scratch pads from all projects.
+        </div>
+    <?php elseif ($currentProject): ?>
         <div class="alert alert-info">
             Showing scratch pads for project: <strong><?= Html::encode($currentProject->name) ?></strong> and global pads.
         </div>

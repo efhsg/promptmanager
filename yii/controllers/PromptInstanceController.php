@@ -1,8 +1,11 @@
 <?php
+/** @noinspection DuplicatedCode */
+
 /** @noinspection PhpUnused */
 
 namespace app\controllers;
 
+use app\components\ProjectContext;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
@@ -123,10 +126,20 @@ class PromptInstanceController extends Controller
     public function actionIndex(): string
     {
         $searchModel = new PromptInstanceSearch();
+        $projectContext = Yii::$app->projectContext;
+
+        if ($projectContext->isNoProjectContext()) {
+            $projectId = ProjectContext::NO_PROJECT_ID;
+        } elseif ($projectContext->isAllProjectsContext()) {
+            $projectId = null;
+        } else {
+            $projectId = $projectContext->getCurrentProject()?->id;
+        }
+
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             Yii::$app->user->id,
-            (Yii::$app->projectContext)->getCurrentProject()?->id
+            $projectId
         );
         return $this->render('index', compact('searchModel', 'dataProvider'));
     }
@@ -317,6 +330,30 @@ class PromptInstanceController extends Controller
         return $fieldData;
     }
 
+    private function convertDeltaStringToText(mixed $value, CopyFormatConverter $converter): mixed
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return $trimmed;
+        }
+
+        try {
+            $decoded = Json::decode($trimmed);
+        } catch (InvalidArgumentException) {
+            return $value;
+        }
+
+        if (!is_array($decoded)) {
+            return $value;
+        }
+
+        return $converter->convertFromQuillDelta($trimmed, CopyType::TEXT);
+    }
+
     /**
      * @throws NotFoundHttpException
      */
@@ -361,6 +398,45 @@ class PromptInstanceController extends Controller
         ];
     }
 
+    private function convertOptionFieldValuesToText(
+        PromptTemplate $template,
+        array $fieldValues,
+        CopyFormatConverter $converter
+    ): array {
+        foreach ($template->fields as $field) {
+            if (!in_array($field->type, FieldConstants::OPTION_FIELD_TYPES, true)) {
+                continue;
+            }
+
+            foreach ($field->fieldOptions as $option) {
+                $option->value = $this->convertDeltaStringToText($option->value, $converter);
+            }
+
+            $stringId = (string)$field->id;
+            $intId = $field->id;
+
+            if (array_key_exists($stringId, $fieldValues)) {
+                $fieldValues[$stringId] = $this->convertOptionValue($fieldValues[$stringId], $converter);
+            } elseif (array_key_exists($intId, $fieldValues)) {
+                $fieldValues[$intId] = $this->convertOptionValue($fieldValues[$intId], $converter);
+            }
+        }
+
+        return $fieldValues;
+    }
+
+    private function convertOptionValue(mixed $value, CopyFormatConverter $converter): mixed
+    {
+        if (is_array($value)) {
+            foreach ($value as $index => $item) {
+                $value[$index] = $this->convertDeltaStringToText($item, $converter);
+            }
+            return $value;
+        }
+
+        return $this->convertDeltaStringToText($value, $converter);
+    }
+
     /**
      * Saves a new PromptInstance using the generated final prompt.
      *
@@ -376,7 +452,7 @@ class PromptInstanceController extends Controller
         }
 
         try {
-            $delta = Json::decode($finalPrompt, true, 512, JSON_THROW_ON_ERROR);
+            $delta = Json::decode($finalPrompt);
         } catch (InvalidArgumentException) {
             return ['success' => false];
         }
@@ -402,68 +478,5 @@ class PromptInstanceController extends Controller
         }
 
         return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];
-    }
-
-    private function convertOptionFieldValuesToText(
-        PromptTemplate $template,
-        array $fieldValues,
-        CopyFormatConverter $converter
-    ): array {
-        foreach ($template->fields as $field) {
-            if (!in_array($field->type, FieldConstants::OPTION_FIELD_TYPES, true)) {
-                continue;
-            }
-
-            foreach ($field->fieldOptions as $option) {
-                $option->value = $this->convertDeltaStringToText($option->value, $converter);
-            }
-
-            $stringId = (string)$field->id;
-            $intId = (int)$field->id;
-
-            if (array_key_exists($stringId, $fieldValues)) {
-                $fieldValues[$stringId] = $this->convertOptionValue($fieldValues[$stringId], $converter);
-            } elseif (array_key_exists($intId, $fieldValues)) {
-                $fieldValues[$intId] = $this->convertOptionValue($fieldValues[$intId], $converter);
-            }
-        }
-
-        return $fieldValues;
-    }
-
-    private function convertOptionValue(mixed $value, CopyFormatConverter $converter): mixed
-    {
-        if (is_array($value)) {
-            foreach ($value as $index => $item) {
-                $value[$index] = $this->convertDeltaStringToText($item, $converter);
-            }
-            return $value;
-        }
-
-        return $this->convertDeltaStringToText($value, $converter);
-    }
-
-    private function convertDeltaStringToText(mixed $value, CopyFormatConverter $converter): mixed
-    {
-        if (!is_string($value)) {
-            return $value;
-        }
-
-        $trimmed = trim($value);
-        if ($trimmed === '') {
-            return $trimmed;
-        }
-
-        try {
-            $decoded = Json::decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
-        } catch (InvalidArgumentException) {
-            return $value;
-        }
-
-        if (!is_array($decoded)) {
-            return $value;
-        }
-
-        return $converter->convertFromQuillDelta($trimmed, CopyType::TEXT);
     }
 }

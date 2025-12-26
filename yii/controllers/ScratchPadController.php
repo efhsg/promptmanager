@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection PhpUnused */
 
 namespace app\controllers;
 
@@ -13,6 +13,7 @@ use common\enums\CopyType;
 use Throwable;
 use Yii;
 use yii\db\ActiveRecord;
+use yii\db\Exception;
 use yii\filters\AccessControl;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
@@ -73,16 +74,19 @@ class ScratchPadController extends Controller
     {
         $searchModel = new ScratchPadSearch();
         $currentProject = $this->projectContext->getCurrentProject();
+        $isAllProjects = $this->projectContext->isAllProjectsContext();
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             Yii::$app->user->id,
-            $currentProject?->id
+            $currentProject?->id,
+            $isAllProjects
         );
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'currentProject' => $currentProject,
+            'isAllProjects' => $isAllProjects,
         ]);
     }
 
@@ -96,6 +100,9 @@ class ScratchPadController extends Controller
         ]);
     }
 
+    /**
+     * @throws NotFoundHttpException
+     */
     public function actionView(int $id): string
     {
         $model = $this->findModel($id);
@@ -104,10 +111,15 @@ class ScratchPadController extends Controller
         ]);
     }
 
+    /**
+     * @throws Exception
+     * @throws NotFoundHttpException
+     */
     public function actionUpdate(int $id): Response|string
     {
         $model = $this->findModel($id);
 
+        /** @var ScratchPad $model */
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
@@ -117,6 +129,9 @@ class ScratchPadController extends Controller
         ]);
     }
 
+    /**
+     * @throws NotFoundHttpException
+     */
     public function actionDelete(int $id): Response|string
     {
         $model = $this->findModel($id);
@@ -137,6 +152,9 @@ class ScratchPadController extends Controller
         return $this->redirect(['index']);
     }
 
+    /**
+     * @throws Exception
+     */
     public function actionSave(): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -268,6 +286,9 @@ class ScratchPadController extends Controller
         ];
     }
 
+    /**
+     * @throws NotFoundHttpException
+     */
     protected function findModel(int $id): ActiveRecord
     {
         return ScratchPad::find()->where([

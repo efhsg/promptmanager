@@ -1,7 +1,10 @@
-<?php
+<?php /** @noinspection DuplicatedCode */
+
+/** @noinspection PhpUnused */
 
 namespace app\controllers;
 
+use app\components\ProjectContext;
 use app\models\Context;
 use app\models\ContextSearch;
 use app\models\Project;
@@ -71,7 +74,17 @@ class ContextController extends Controller
     public function actionIndex(): string
     {
         $searchModel = new ContextSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, Yii::$app->user->id, (Yii::$app->projectContext)->getCurrentProject()?->id);
+        $projectContext = Yii::$app->projectContext;
+
+        if ($projectContext->isNoProjectContext()) {
+            $projectId = ProjectContext::NO_PROJECT_ID;
+        } elseif ($projectContext->isAllProjectsContext()) {
+            $projectId = null;
+        } else {
+            $projectId = $projectContext->getCurrentProject()?->id;
+        }
+
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, Yii::$app->user->id, $projectId);
         return $this->render('index', compact('searchModel', 'dataProvider'));
     }
 

@@ -1,6 +1,10 @@
 # CLAUDE.md
 
-Operational checklist for Claude Code. Read `RULES.md` first (canonical rules). See `.claude/codebase_analysis.md` for architecture details.
+Operational checklist for Claude Code. See `.claude/codebase_analysis.md` for architecture details.
+
+## Before making any code changes
+
+1. Read `RULES.md` and follow all rules strictly
 
 ## Agent workflow
 

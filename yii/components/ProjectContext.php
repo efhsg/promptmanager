@@ -19,6 +19,8 @@ use yii\web\User as WebUser;
  */
 class ProjectContext extends BaseObject
 {
+    public const ALL_PROJECTS_ID = -1;
+    public const NO_PROJECT_ID = 0;
     private const PREF_KEY = 'default_project_id';
     private const SESSION_KEY = 'currentProjectId';
 
@@ -51,6 +53,10 @@ class ProjectContext extends BaseObject
     {
         $projectId = $this->getSessionProjectId();
 
+        if ($projectId === self::ALL_PROJECTS_ID || $projectId === self::NO_PROJECT_ID) {
+            return null;
+        }
+
         if ($projectId !== null) {
             $project = $this->getValidatedProject($projectId);
             if ($project !== null) {
@@ -65,6 +71,11 @@ class ProjectContext extends BaseObject
 
         $projectId = $this->getUserPreferenceProjectId();
         if ($projectId === null) {
+            return null;
+        }
+
+        if ($projectId === self::ALL_PROJECTS_ID || $projectId === self::NO_PROJECT_ID) {
+            $this->setSessionProjectId($projectId);
             return null;
         }
 
@@ -91,27 +102,47 @@ class ProjectContext extends BaseObject
      */
     public function setCurrentProject(int $projectId): void
     {
-        // Handle the "no project" scenario
-        if ($projectId === 0) {
-            $this->clearCurrentProject();
+        if ($projectId === self::NO_PROJECT_ID) {
+            $this->setSessionProjectId($projectId);
             if ($this->isUserLoggedIn()) {
-                $this->removeUserPreferenceProjectId();
+                $this->saveProjectIdToUserPreferences($projectId);
             }
             return;
         }
 
-        // Validate the project belongs to the current user
+        if ($projectId === self::ALL_PROJECTS_ID) {
+            $this->setSessionProjectId($projectId);
+            if ($this->isUserLoggedIn()) {
+                $this->saveProjectIdToUserPreferences($projectId);
+            }
+            return;
+        }
+
         if (!$this->isProjectValidForUser($projectId)) {
             throw new InvalidArgumentException('Invalid project ID for the current user.');
         }
 
-        // Cache in session
         $this->setSessionProjectId($projectId);
 
-        // Persist to user preferences
         if ($this->isUserLoggedIn()) {
             $this->saveProjectIdToUserPreferences($projectId);
         }
+    }
+
+    /**
+     * Check if the current context is "All Projects".
+     */
+    public function isAllProjectsContext(): bool
+    {
+        return $this->getSessionProjectId() === self::ALL_PROJECTS_ID;
+    }
+
+    /**
+     * Check if the current context is "No Project".
+     */
+    public function isNoProjectContext(): bool
+    {
+        return $this->getSessionProjectId() === self::NO_PROJECT_ID;
     }
 
     /**

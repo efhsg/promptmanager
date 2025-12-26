@@ -22,11 +22,17 @@ class ScratchPadSearch extends ScratchPad
         return Model::scenarios();
     }
 
-    public function search(array $params, int $userId, ?int $currentProjectId = null): ActiveDataProvider
-    {
-        $query = ScratchPad::find()
-            ->forUserWithProject($userId, $currentProjectId)
-            ->orderedByUpdated();
+    public function search(
+        array $params,
+        int $userId,
+        ?int $currentProjectId = null,
+        bool $isAllProjects = false
+    ): ActiveDataProvider {
+        $query = $isAllProjects
+            ? ScratchPad::find()->forUser($userId)
+            : ScratchPad::find()->forUserWithProject($userId, $currentProjectId);
+
+        $query->orderedByUpdated();
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

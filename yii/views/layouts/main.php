@@ -4,6 +4,7 @@
 
 /** @var string $content */
 
+use app\components\ProjectContext;
 use app\widgets\Alert;
 use yii\bootstrap5\{Breadcrumbs, Html, Nav, NavBar};
 
@@ -72,14 +73,19 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
 
         if (!Yii::$app->user->isGuest) {
             $projectList = Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id);
-            $currentProject = Yii::$app->projectContext->getCurrentProject();
-            $currentProjectId = $currentProject?->id;
+            $projectContext = Yii::$app->projectContext;
+            $currentProject = $projectContext->getCurrentProject();
+            $currentProjectId = $projectContext->isAllProjectsContext()
+                ? ProjectContext::ALL_PROJECTS_ID
+                : $currentProject?->id;
+
+            $projectListWithAll = [ProjectContext::ALL_PROJECTS_ID => 'All Projects'] + $projectList;
 
             echo Html::beginForm(['/project/set-current'], 'post', [
                 'class' => 'd-flex align-items-center ms-4 me-3',
                 'id' => 'set-context-project-form',
             ]);
-            echo Html::dropDownList('project_id', $currentProjectId, $projectList, [
+            echo Html::dropDownList('project_id', $currentProjectId, $projectListWithAll, [
                 'class' => 'form-select me-2',
                 'prompt' => 'No Project',
                 'onchange' => 'this.form.submit()',
