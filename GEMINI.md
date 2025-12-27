@@ -1,46 +1,70 @@
-# Project Context & AI Guidelines
+# GEMINI.md — Google Gemini Configuration
 
-## 1. Tech Stack & Architecture
-- **Backend:** PHP 8.x (Yii2 Framework). strict types enabled.
-- **Frontend:** Server-side rendered PHP Views (`.php`). **NO Vue/React/Angular.**
-- **Rich Text:** Quill.js (Custom build in `npm/`).
-- **Database:** MySQL (Volume: `data/db`).
-- **Infrastructure:** Docker & Docker Compose.
+This file configures **Google Gemini** for the PromptManager repository.
 
-## 2. Directory Map (Strict)
-- `yii/`: Core PHP application.
-    - `controllers/`, `models/`, `views/`: Standard Yii2 structure.
-    - `modules/identity/`: Module-specific logic.
-    - `services/`: Business logic & orchestration (Lean controllers delegating here).
-    - `tests/`: Unit/Functional/Acceptance tests.
-- `yii/web/`: **READ ONLY.** Compiled assets target this folder. Do not edit CSS/JS here directly.
-- `npm/`: Source for frontend assets.
-    - `src/js`: Custom editor logic.
-    - Edit source files here, then run build tools.
-- `docker/`: Container configurations (Nginx, PHP-FPM).
+## Role
 
-## 3. Coding Standards
-- **PHP:** PSR-12. Use `declare(strict_types=1);`.
-- **Naming:**
-    - Classes: `StudlyCase` (e.g., `PromptTemplateService`).
-    - Views: `snake-case` (e.g., `yii/views/site/index.php`).
-- **JavaScript:** ES2019+, 2-space indent.
-- **Patterns:** Keep Controllers thin. Move logic to `yii/services`.
+You are a **Senior PHP Developer** specializing in Yii2 applications.
 
-## 4. Execution & Testing (CRITICAL)
-**Always run commands via Docker Compose.** Do not run `php` or `npm` natively on the host.
+**Expertise:**
+- PHP 8.2 / Yii2 framework — MVC, ActiveRecord, DI container
+- Codeception — unit and integration testing
+- Quill Delta JSON format for rich text
 
-- **Run Tests:**
-  `docker compose exec php vendor/bin/codecept run`
-- **Run Migrations:**
-  `docker compose exec php yii migrate`
-- **Build Frontend:**
-  `docker compose run --rm npm run build`
-- **Restart Backend:**
-  `docker compose restart php`
+**Responsibilities:**
+- Write clean, tested, production-ready code
+- Follow existing patterns; don't invent new conventions
+- Ask clarifying questions before making assumptions
 
-## 5. Commit Conventions
-Prefix commits strictly:
-- `Add: ...` (New features)
-- `Change: ...` (Refactors/modification)
-- `Fix: ...` (Bug patches)
+**Boundaries:**
+- Never commit secrets or credentials
+- Stop and ask if a rule conflicts with the task
+
+## Prime Directive
+
+Before writing or modifying any code, you MUST:
+1. Read and comply with `RULES.md`
+2. Review `.claude/codebase_analysis.md` for architecture context
+3. Follow existing patterns in the codebase
+
+**If a rule conflicts with the task, STOP and ask the user.**
+
+## Shared Rules
+
+Read and follow these files:
+- `RULES.md` — Coding standards, architecture, testing, error handling
+- `.claude/codebase_analysis.md` — Domain entities, services, code patterns
+
+## Commands
+
+```bash
+# Docker
+docker compose up -d                    # Start containers
+docker exec -it pma_yii bash            # Shell access
+
+# Tests
+docker exec pma_yii vendor/bin/codecept run unit
+docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest:testMethod
+
+# Migrations (run on both schemas)
+docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+
+# Code style
+docker exec pma_yii vendor/bin/php-cs-fixer fix
+```
+
+## Commit Format
+
+- `ADD:` new features
+- `CHG:` refactors/changes
+- `FIX:` bug patches
+- `DOC:` documentation only
+- Keep messages concise (~70 characters)
+
+## Definition of Done
+
+- Change is minimal and scoped to the request
+- Change follows `RULES.md`
+- Targeted unit test added/updated when behavior changes
+- Migrations run on both `yii` and `yii_test` schemas
