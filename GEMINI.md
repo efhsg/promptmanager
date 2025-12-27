@@ -23,17 +23,30 @@ You are a **Senior PHP Developer** specializing in Yii2 applications.
 ## Prime Directive
 
 Before writing or modifying any code, you MUST:
-1. Read and comply with `RULES.md`
-2. Review `.claude/codebase_analysis.md` for architecture context
-3. Follow existing patterns in the codebase
+1. Read and comply with `docs/rules/coding-standards.md`
+2. Use only approved patterns from `docs/rules/architecture.md`
+3. Never violate `docs/rules/security.md` — no exceptions
+4. Follow test requirements in `docs/rules/testing.md`
+5. Use commit format from `docs/rules/commits.md`
+6. Follow workflow in `docs/rules/workflow.md`
 
 **If a rule conflicts with the task, STOP and ask the user.**
 
 ## Shared Rules
 
 Read and follow these files:
-- `RULES.md` — Coding standards, architecture, testing, error handling
-- `.claude/codebase_analysis.md` — Domain entities, services, code patterns
+- `docs/rules/coding-standards.md` — PSR-12, type hints, DI patterns
+- `docs/rules/architecture.md` — Folder structure, controller patterns
+- `docs/rules/security.md` — Access control, secrets, validation
+- `docs/rules/testing.md` — Codeception, coverage requirements
+- `docs/rules/commits.md` — Commit message format
+- `docs/rules/workflow.md` — Development process
+
+For architecture details, see `.claude/codebase_analysis.md`.
+
+## Skills System
+
+Before implementing, check `docs/skills/index.md` for relevant skills.
 
 ## Commands
 
@@ -54,17 +67,9 @@ docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --int
 docker exec pma_yii vendor/bin/php-cs-fixer fix
 ```
 
-## Commit Format
-
-- `ADD:` new features
-- `CHG:` refactors/changes
-- `FIX:` bug patches
-- `DOC:` documentation only
-- Keep messages concise (~70 characters)
-
 ## Definition of Done
 
 - Change is minimal and scoped to the request
-- Change follows `RULES.md`
+- Change follows `docs/rules/`
 - Targeted unit test added/updated when behavior changes
 - Migrations run on both `yii` and `yii_test` schemas

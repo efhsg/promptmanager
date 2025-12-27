@@ -1,6 +1,6 @@
-# AGENTS.md — OpenAI Codex Configuration
+# CLAUDE.md — Claude Code Configuration
 
-This file configures **OpenAI Codex** for the PromptManager repository.
+This file configures **Claude Code (CLI)** for the PromptManager repository.
 
 ## Role
 
@@ -47,6 +47,7 @@ For architecture details, see `.claude/codebase_analysis.md`.
 ## Skills System
 
 Before implementing, check `docs/skills/index.md` for relevant skills.
+Use slash commands to invoke skills (e.g., `/new-model`, `/check-standards`).
 
 ## Commands
 
@@ -63,6 +64,9 @@ docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest:testMeth
 docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
 docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
 
+# Frontend build (after Quill/JS changes)
+docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
+
 # Code style
 docker exec pma_yii vendor/bin/php-cs-fixer fix
 ```
@@ -73,3 +77,13 @@ docker exec pma_yii vendor/bin/php-cs-fixer fix
 - Change follows `docs/rules/`
 - Targeted unit test added/updated when behavior changes
 - Migrations run on both `yii` and `yii_test` schemas
+
+## Response Format
+
+When implementing tasks, respond with:
+
+**Files changed:**
+- `path/to/file` — summary of change
+
+**Tests:**
+- Commands run or why skipped
