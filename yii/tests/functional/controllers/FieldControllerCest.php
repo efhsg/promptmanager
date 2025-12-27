@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpExpressionResultUnusedInspection */
+<?php
+
+/** @noinspection PhpExpressionResultUnusedInspection */
 
 namespace tests\functional\controllers;
 
@@ -18,7 +20,6 @@ use yii\base\InvalidConfigException;
 
 class FieldControllerCest
 {
-
     private int $userId = 1;
 
     /**

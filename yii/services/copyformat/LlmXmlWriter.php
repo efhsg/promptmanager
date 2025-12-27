@@ -6,8 +6,7 @@ class LlmXmlWriter extends AbstractFormatWriter
 {
     public function __construct(
         private readonly MarkdownWriter $markdownWriter = new MarkdownWriter()
-    ) {
-    }
+    ) {}
 
     public function writeFromBlocks(array $blocks): string
     {
@@ -84,7 +83,7 @@ class LlmXmlWriter extends AbstractFormatWriter
             return ['text' => '', 'isListItem' => false];
         }
 
-        $isListItem = (bool)preg_match('/^[-*+]\s+|^\d+\.\s+|^\[(?:\s|x|X)]\s+/', $raw);
+        $isListItem = (bool) preg_match('/^[-*+]\s+|^\d+\.\s+|^\[(?:\s|x|X)]\s+/', $raw);
         $raw = preg_replace('/^[-*+]\s+/', '', $raw);
         $raw = preg_replace('/^\d+\.\s+/', '', $raw);
         $raw = preg_replace('/^\[(?:\s|x|X)]\s+/', '', $raw);

@@ -20,8 +20,7 @@ class PathService
         bool $directoriesOnly,
         array $allowedFileExtensions = [],
         array $blacklistedDirectories = []
-    ): array
-    {
+    ): array {
         $resolvedRoot = $this->resolveRootDirectory($rootDirectory);
         if (!is_dir($resolvedRoot)) {
             throw new UnexpectedValueException('Root directory does not exist or is not accessible.');
@@ -103,8 +102,7 @@ class PathService
         string $rootDirectory,
         string $relativePath,
         array $blacklistedDirectories = []
-    ): ?string
-    {
+    ): ?string {
         $base = $this->resolveRootDirectory($rootDirectory);
         $normalizedBase = str_replace('\\', '/', $base);
         $normalizedRelative = ltrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $relativePath), DIRECTORY_SEPARATOR);
@@ -118,8 +116,8 @@ class PathService
 
         $normalizedBlacklist = $this->normalizeBlacklistedDirectories($blacklistedDirectories);
         if (
-            $normalizedBlacklist !== [] &&
-            $this->isBlacklistedPath($this->makeRelativePath($normalizedBase, $normalizedCandidate), $normalizedBlacklist)
+            $normalizedBlacklist !== []
+            && $this->isBlacklistedPath($this->makeRelativePath($normalizedBase, $normalizedCandidate), $normalizedBlacklist)
         ) {
             return null;
         }
@@ -159,7 +157,7 @@ class PathService
                 $exceptions = [];
                 if (isset($entry['exceptions']) && is_array($entry['exceptions'])) {
                     foreach ($entry['exceptions'] as $exception) {
-                        $cleanedException = trim(str_replace('\\', '/', (string)$exception), " \t\n\r\0\x0B/");
+                        $cleanedException = trim(str_replace('\\', '/', (string) $exception), " \t\n\r\0\x0B/");
                         if ($cleanedException !== '') {
                             $exceptions[] = strtolower($cleanedException);
                         }

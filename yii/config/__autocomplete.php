@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUndefinedNamespaceInspection */
+<?php
+
+/** @noinspection PhpUndefinedNamespaceInspection */
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 /** @noinspection PhpUndefinedClassInspection */
 
@@ -34,13 +36,9 @@ class Yii
  * @property mixed|object|null $permissionService
  *
  */
-class __Application
-{
-}
+class __Application {}
 
 /**
  * @property app\modules\identity\models\User $identity
  */
-class __WebUser
-{
-}
+class __WebUser {}

@@ -43,27 +43,27 @@ endif; ?>
     $form = ActiveForm::begin(['id' => 'field-form']); ?>
 
     <?= $form->field($modelField, 'project_id')->dropDownList(
-            $projects,
-            ['prompt' => '(not set)']
+        $projects,
+        ['prompt' => '(not set)']
     )->label('Project') ?>
 
     <?= $form->field($modelField, 'name')->textInput(['maxlength' => true])->label('Field Name') ?>
 
     <?= $form->field($modelField, 'type')->dropDownList(
-            array_combine(FieldConstants::TYPES, FieldConstants::TYPES),
-            [
-                    'onchange' => 'toggleFieldOptions(this.value)'
-            ]
+        array_combine(FieldConstants::TYPES, FieldConstants::TYPES),
+        [
+            'onchange' => 'toggleFieldOptions(this.value)',
+        ]
     )->label('Field Type') ?>
 
     <?= $form->field($modelField, 'share')->dropDownList(
-            [0 => 'No', 1 => 'Yes']
+        [0 => 'No', 1 => 'Yes']
     )->label('Share with linked projects') ?>
 
     <?= $form->field($modelField, 'label')->textInput(['maxlength' => true])->label('Label (Optional)') ?>
 
     <?= $form->field($modelField, 'render_label')->dropDownList(
-            [0 => 'No', 1 => 'Yes']
+        [0 => 'No', 1 => 'Yes']
     )->label('Render label in final prompt') ?>
 
     <div id="field-content-wrapper" style="display: none;">
@@ -74,22 +74,22 @@ endif; ?>
     </div>
 
     <?= PathSelectorWidget::widget([
-            'initialValue' => in_array(
-                    $modelField->type,
-                    FieldConstants::PATH_FIELD_TYPES,
-                    true
-            ) ? $modelField->content : null,
-            'pathListUrl' => Url::to(['field/path-list']),
-            'projectRootDirectory' => $modelField->project?->root_directory,
-            'hiddenContentInputId' => 'field-content',
-            'wrapperOptions' => ['id' => 'field-path-wrapper'],
+        'initialValue' => in_array(
+            $modelField->type,
+            FieldConstants::PATH_FIELD_TYPES,
+            true
+        ) ? $modelField->content : null,
+        'pathListUrl' => Url::to(['field/path-list']),
+        'projectRootDirectory' => $modelField->project?->root_directory,
+        'hiddenContentInputId' => 'field-content',
+        'wrapperOptions' => ['id' => 'field-path-wrapper'],
     ]) ?>
 
     <div id="field-options-wrapper" style="display: none;">
         <?= $this->render('_fieldOptionsForm', [
-                'form' => $form,
-                'modelField' => $modelField,
-                'modelsFieldOption' => $modelsFieldOption,
+            'form' => $form,
+            'modelField' => $modelField,
+            'modelsFieldOption' => $modelsFieldOption,
         ]) ?>
     </div>
 
@@ -108,7 +108,7 @@ endif; ?>
     const pathTypes = <?= json_encode(FieldConstants::PATH_FIELD_TYPES) ?>;
     const optionsWrapper = document.getElementById('field-options-wrapper');
     const nonOptionFieldElements = optionsWrapper.querySelectorAll(<?= json_encode(
-            FieldConstants::NO_OPTION_FIELD_TYPES
+        FieldConstants::NO_OPTION_FIELD_TYPES
     ) ?>);
     const contentWrapper = document.getElementById('field-content-wrapper');
     const pathWrapper = document.getElementById('field-path-wrapper');
@@ -189,52 +189,52 @@ $contentTypesJson = json_encode(FieldConstants::CONTENT_FIELD_TYPES);
 $currentType = json_encode($modelField->type);
 $fieldType = json_encode($modelField->type);
 $script = <<<JS
-window.fieldFormContentTypes = window.fieldFormContentTypes || $contentTypesJson;
-window.fieldFormCurrentType = window.fieldFormCurrentType || $currentType;
-var quill = new Quill('#editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline', 'strike', 'code'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'indent': '-1' }, { 'indent': '+1' }],
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'align': [] }],
-            ['clean']
-        ]
-    }
-});
+    window.fieldFormContentTypes = window.fieldFormContentTypes || $contentTypesJson;
+    window.fieldFormCurrentType = window.fieldFormCurrentType || $currentType;
+    var quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike', 'code'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['clean']
+            ]
+        }
+    });
 
-function fieldFormUsesEditor() {
-    if (!Array.isArray(window.fieldFormContentTypes)) {
-        return false;
+    function fieldFormUsesEditor() {
+        if (!Array.isArray(window.fieldFormContentTypes)) {
+            return false;
+        }
+        return window.fieldFormContentTypes.includes(window.fieldFormCurrentType || '');
     }
-    return window.fieldFormContentTypes.includes(window.fieldFormCurrentType || '');
-}
 
-if (fieldFormUsesEditor()) {
-    try {
-        quill.setContents(JSON.parse($templateContent))
-    } catch (error) {
-        console.error('Error injecting content:', error);
+    if (fieldFormUsesEditor()) {
+        try {
+            quill.setContents(JSON.parse($templateContent))
+        } catch (error) {
+            console.error('Error injecting content:', error);
+        }
     }
-}
 
-quill.on('text-change', function() {
-    if (!fieldFormUsesEditor()) {
-        return;
-    }
-    var target = document.querySelector('#field-content');
-    if (target) {
-        target.value = JSON.stringify(quill.getContents());
-    }
-});
+    quill.on('text-change', function() {
+        if (!fieldFormUsesEditor()) {
+            return;
+        }
+        var target = document.querySelector('#field-content');
+        if (target) {
+            target.value = JSON.stringify(quill.getContents());
+        }
+    });
 
-if (typeof toggleFieldOptions === 'function') {
-    toggleFieldOptions($fieldType)
-}
-JS;
+    if (typeof toggleFieldOptions === 'function') {
+        toggleFieldOptions($fieldType)
+    }
+    JS;
 $this->registerJs($script);
 ?>

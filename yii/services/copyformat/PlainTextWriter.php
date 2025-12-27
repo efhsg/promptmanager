@@ -44,7 +44,7 @@ class PlainTextWriter extends AbstractFormatWriter
 
             if (!empty($attrs['list'])) {
                 $listActive = true;
-                $indent = (int)($attrs['indent'] ?? 0);
+                $indent = (int) ($attrs['indent'] ?? 0);
                 $indent = max($indent, 0);
                 $indentSpaces = str_repeat('  ', $indent);
 
@@ -57,9 +57,9 @@ class PlainTextWriter extends AbstractFormatWriter
                     $listCounters[$indent] = $count + 1;
                 } elseif ($attrs['list'] === 'checked' || $attrs['list'] === 'unchecked') {
                     $prefix = '- [' . ($attrs['list'] === 'checked' ? 'x' : ' ') . '] ';
-                    $listCounters[$indent] = $listCounters[$indent] ?? 1;
+                    $listCounters[$indent] ??= 1;
                 } else {
-                    $listCounters[$indent] = $listCounters[$indent] ?? 1;
+                    $listCounters[$indent] ??= 1;
                 }
 
                 $lines[] = $indentSpaces . $prefix . trim($lineText);

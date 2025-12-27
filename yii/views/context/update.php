@@ -9,7 +9,7 @@ use yii\helpers\Html;
 $this->title = 'Update ' . $model->name;
 echo $this->render('_breadcrumbs', [
     'model' => null,
-    'actionLabel' => $this->title ,
+    'actionLabel' => $this->title,
 ]);
 ?>
 <div class="context-update container py-4">

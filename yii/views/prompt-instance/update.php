@@ -54,42 +54,42 @@ echo $this->render('_breadcrumbs', [
     </div>
 <?php
 $script = <<<JS
-var quill = new Quill('#editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline', 'strike', 'code'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'indent': '-1' }, { 'indent': '+1' }],
-            [{ 'direction': 'rtl' }],
-            [{ 'size': ['small', false, 'large', 'huge'] }],
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'font': [] }],
-            [{ 'align': [] }],
-            ['link', 'image'],
-            ['clean']
-        ]
-    }
-});
+                        var quill = new Quill('#editor', {
+                            theme: 'snow',
+                            modules: {
+                                toolbar: [
+                                    ['bold', 'italic', 'underline', 'strike', 'code'],
+                                    ['blockquote', 'code-block'],
+                                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                    [{ 'indent': '-1' }, { 'indent': '+1' }],
+                                    [{ 'direction': 'rtl' }],
+                                    [{ 'size': ['small', false, 'large', 'huge'] }],
+                                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                                    [{ 'color': [] }, { 'background': [] }],
+                                    [{ 'font': [] }],
+                                    [{ 'align': [] }],
+                                    ['link', 'image'],
+                                    ['clean']
+                                ]
+                            }
+                        });
 
-var finalPromptData = $model->final_prompt;
-try {
-    if (finalPromptData && typeof finalPromptData === 'object' && finalPromptData.ops) {
-        quill.setContents(finalPromptData);
-    } else {
-        quill.clipboard.dangerouslyPasteHTML(finalPromptData);
-    }
-} catch (error) {
-    console.error('Error loading delta data, falling back to HTML:', error);
-    quill.clipboard.dangerouslyPasteHTML(finalPromptData);
-}
+                        var finalPromptData = $model->final_prompt;
+                        try {
+                            if (finalPromptData && typeof finalPromptData === 'object' && finalPromptData.ops) {
+                                quill.setContents(finalPromptData);
+                            } else {
+                                quill.clipboard.dangerouslyPasteHTML(finalPromptData);
+                            }
+                        } catch (error) {
+                            console.error('Error loading delta data, falling back to HTML:', error);
+                            quill.clipboard.dangerouslyPasteHTML(finalPromptData);
+                        }
 
-quill.on('text-change', function() {
-    var deltaObj = quill.getContents();
-    document.querySelector('#final-prompt').value = JSON.stringify(deltaObj);
-});
-JS;
+                        quill.on('text-change', function() {
+                            var deltaObj = quill.getContents();
+                            document.querySelector('#final-prompt').value = JSON.stringify(deltaObj);
+                        });
+                        JS;
 $this->registerJs($script);
 ?>

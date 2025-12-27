@@ -82,15 +82,15 @@ DynamicFormWidget::begin([
             if (!$option->isNewRecord) {
                 echo Html::activeHiddenInput($option, "[$i]id");
             }
-            ?>
+        ?>
 
             <div class="col-md-4">
                 <div class="form-group field-fieldoption-<?= $i ?>-value">
                     <label class="control-label">Value</label>
                     <?= Html::activeHiddenInput($option, "[$i]value", [
-                        'id' => "fieldoption-{$i}-value",
-                        'class' => 'field-option-value-input',
-                    ]) ?>
+                    'id' => "fieldoption-{$i}-value",
+                    'class' => 'field-option-value-input',
+                ]) ?>
                     <div
                         data-editor="quill"
                         data-target="fieldoption-<?= $i ?>-value"
@@ -104,23 +104,23 @@ DynamicFormWidget::begin([
 
             <div class="col-md-3">
                 <?= $form->field($option, "[$i]label")
-                    ->textInput(['maxlength' => true])
-                    ->label('Label')
-                ?>
+                ->textInput(['maxlength' => true])
+                ->label('Label')
+        ?>
             </div>
 
             <div class="col-md-2">
                 <?= $form->field($option, "[$i]selected_by_default")
-                    ->dropDownList([0 => 'No', 1 => 'Yes'])
-                    ->label('Default On')
-                ?>
+            ->dropDownList([0 => 'No', 1 => 'Yes'])
+            ->label('Default On')
+        ?>
             </div>
 
             <div class="col-md-2">
                 <?= $form->field($option, "[$i]order")
-                    ->textInput(['type' => 'number'])
-                    ->label('Order')
-                ?>
+            ->textInput(['type' => 'number'])
+            ->label('Order')
+        ?>
             </div>
             <div class="col-md-1 d-flex align-items-end justify-content-end">
                 <button type="button" class="remove-option btn btn-danger btn-sm mt-auto">
@@ -142,58 +142,58 @@ DynamicFormWidget::begin([
 
 <?php
 $script = <<<JS
-jQuery(function($) {
+            jQuery(function($) {
 
-    function getMaxOrder() {
-        let maxOrder = 0;
+                function getMaxOrder() {
+                    let maxOrder = 0;
 
-        $('input[name*="[order]"]').each(function() {
-            let val = parseInt($(this).val());
-            if (!isNaN(val) && val > maxOrder) {
-                maxOrder = val;
-            }
-        });
-        return maxOrder;
-    }
+                    $('input[name*="[order]"]').each(function() {
+                        let val = parseInt($(this).val());
+                        if (!isNaN(val) && val > maxOrder) {
+                            maxOrder = val;
+                        }
+                    });
+                    return maxOrder;
+                }
 
-    function reinitEditorInItem(item) {
-        const editorEl = item.querySelector('[data-editor="quill"]');
-        const hiddenInput = item.querySelector('.field-option-value-input');
+                function reinitEditorInItem(item) {
+                    const editorEl = item.querySelector('[data-editor="quill"]');
+                    const hiddenInput = item.querySelector('.field-option-value-input');
 
-        if (!editorEl || !hiddenInput) return;
+                    if (!editorEl || !hiddenInput) return;
 
-        delete editorEl.dataset.inited;
-        hiddenInput.value = '';
+                    delete editorEl.dataset.inited;
+                    hiddenInput.value = '';
 
-        const newIndex = $(item).index();
-        const newHiddenId = 'fieldoption-' + newIndex + '-value';
-        hiddenInput.id = newHiddenId;
-        editorEl.dataset.target = newHiddenId;
+                    const newIndex = $(item).index();
+                    const newHiddenId = 'fieldoption-' + newIndex + '-value';
+                    hiddenInput.id = newHiddenId;
+                    editorEl.dataset.target = newHiddenId;
 
-        const ql = editorEl.querySelector('.ql-container');
-        const tb = editorEl.querySelector('.ql-toolbar');
-        if (ql) ql.remove();
-        if (tb) tb.remove();
+                    const ql = editorEl.querySelector('.ql-container');
+                    const tb = editorEl.querySelector('.ql-toolbar');
+                    if (ql) ql.remove();
+                    if (tb) tb.remove();
 
-        const cfg = JSON.parse(editorEl.dataset.config);
-        const quill = new Quill(editorEl, cfg);
-        editorEl.dataset.inited = '1';
+                    const cfg = JSON.parse(editorEl.dataset.config);
+                    const quill = new Quill(editorEl, cfg);
+                    editorEl.dataset.inited = '1';
 
-        quill.on('text-change', function() {
-            hiddenInput.value = JSON.stringify(quill.getContents());
-        });
-    }
+                    quill.on('text-change', function() {
+                        hiddenInput.value = JSON.stringify(quill.getContents());
+                    });
+                }
 
-    $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
-        let currentMax = getMaxOrder() || 0;
-        let newOrder = currentMax + 10;
+                $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
+                    let currentMax = getMaxOrder() || 0;
+                    let newOrder = currentMax + 10;
 
-        $(item).find('input[name*="[order]"]').val(newOrder);
+                    $(item).find('input[name*="[order]"]').val(newOrder);
 
-        reinitEditorInItem(item);
-    });
-});
-JS;
+                    reinitEditorInItem(item);
+                });
+            });
+            JS;
 
 $this->registerJs($script);
 ?>

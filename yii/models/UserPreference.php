@@ -20,7 +20,6 @@ use yii\db\ActiveRecord;
  */
 class UserPreference extends ActiveRecord
 {
-
     use TimestampTrait;
 
     /**

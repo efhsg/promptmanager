@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace app\controllers;
 
@@ -9,7 +11,6 @@ use yii\web\{Controller};
 
 class SiteController extends Controller
 {
-
     public function behaviors(): array
     {
         return [

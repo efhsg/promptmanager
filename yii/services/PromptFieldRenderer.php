@@ -56,14 +56,14 @@ class PromptFieldRenderer
      */
     public function renderField(array $field, string $placeholder): string
     {
-        $fieldType = (string)($field['type'] ?? 'text');
+        $fieldType = (string) ($field['type'] ?? 'text');
         $name = "PromptInstanceForm[fields][$placeholder]";
 
         $labelHtml = '';
         if (
-            !empty($field['render_label']) &&
-            isset($field['label']) &&
-            trim((string)$field['label']) !== ''
+            !empty($field['render_label'])
+            && isset($field['label'])
+            && trim((string) $field['label']) !== ''
         ) {
             $labelHtml = Html::tag('h2', Html::encode($field['label']));
         }
@@ -95,17 +95,17 @@ class PromptFieldRenderer
     {
         $hiddenId = "hidden-$placeholder";
         $editorId = "editor-$placeholder";
-        $fieldType = (string)($field['type'] ?? 'text');
+        $fieldType = (string) ($field['type'] ?? 'text');
 
         $defaultValue = $this->toDeltaJson($field['default'] ?? '');
 
-        $label = trim((string)($field['label'] ?? ''));
-        $customPlaceholder = trim((string)($field['placeholder'] ?? ''));
+        $label = trim((string) ($field['label'] ?? ''));
+        $customPlaceholder = trim((string) ($field['placeholder'] ?? ''));
         $placeholderText = $this->buildEditorPlaceholder($fieldType, $label, $customPlaceholder);
 
         return
-            Html::hiddenInput($name, $defaultValue, ['id' => $hiddenId]) .
-            Html::tag(
+            Html::hiddenInput($name, $defaultValue, ['id' => $hiddenId])
+            . Html::tag(
                 'div',
                 Html::tag('div', '', [
                     'id' => $editorId,
@@ -174,7 +174,7 @@ class PromptFieldRenderer
         $saveButtonId = "save-path-btn-$placeholder";
         $projectId = $field['project_id'] ?? null;
         $fieldId = $field['id'] ?? $placeholder;
-        $currentPath = (string)($field['default'] ?? '');
+        $currentPath = (string) ($field['default'] ?? '');
 
         $html = Html::hiddenInput($name, $currentPath, ['id' => $hiddenInputId]);
         $html .= Html::beginTag('div', ['class' => 'd-flex align-items-center gap-2']);
@@ -223,7 +223,7 @@ class PromptFieldRenderer
     {
         return Html::textarea(
             $name,
-            (string)($field['default'] ?? ''),
+            (string) ($field['default'] ?? ''),
             [
                 'id' => "field-$placeholder",
                 'class' => 'form-control custom-textarea',
@@ -314,12 +314,12 @@ class PromptFieldRenderer
         ]);
 
         $script = <<<JS
-if (typeof window.PathSelectorField === 'undefined') {
-    console.error('PathSelectorField asset not loaded');
-} else {
-    window.PathSelectorField.init($config)
-}
-JS;
+            if (typeof window.PathSelectorField === 'undefined') {
+                console.error('PathSelectorField asset not loaded');
+            } else {
+                window.PathSelectorField.init($config)
+            }
+            JS;
 
         $this->view->registerJs($script, View::POS_END);
     }

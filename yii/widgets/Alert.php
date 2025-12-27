@@ -36,7 +36,7 @@ class Alert extends \yii\bootstrap5\Widget
         'danger'  => 'alert-danger',
         'success' => 'alert-success',
         'info'    => 'alert-info',
-        'warning' => 'alert-warning'
+        'warning' => 'alert-warning',
     ];
     /**
      * @var array the options for rendering the close button tag.

@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnused */
 
 namespace app\controllers;
@@ -59,7 +60,7 @@ class PromptTemplateController extends Controller
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
                             $callback = $this->permissionService->isModelBasedAction($action->id)
-                                ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
+                                ? fn() => $this->findModel((int) Yii::$app->request->get('id'))
                                 : null;
                             return $this->permissionService->hasActionPermission(
                                 'promptTemplate',
@@ -140,7 +141,7 @@ class PromptTemplateController extends Controller
 
         return $this->render('view', [
             'model' => $model,
-            'isDeltaFormat' => true
+            'isDeltaFormat' => true,
         ]);
     }
 
@@ -224,7 +225,7 @@ class PromptTemplateController extends Controller
         if (Yii::$app->request->isPost) {
             $postedProjectId = Yii::$app->request->post('PromptTemplate')['project_id'] ?? null;
             if ($postedProjectId !== null && $postedProjectId !== '') {
-                $projectId = (int)$postedProjectId;
+                $projectId = (int) $postedProjectId;
             }
         }
 
@@ -315,7 +316,7 @@ class PromptTemplateController extends Controller
             $generalFieldsMap,
             $projectFieldsMap,
             $externalFieldsMap,
-            array_merge($generalFieldsMap, $projectFieldsMap, $externalFieldsMap)
+            array_merge($generalFieldsMap, $projectFieldsMap, $externalFieldsMap),
         ];
     }
 }

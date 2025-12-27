@@ -40,7 +40,7 @@ class PromptTransformationService extends Component
             '<ul>' => '',
             '</ul>' => "\n",
             '<li>' => '- ',
-            '</li>' => "\n"
+            '</li>' => "\n",
         ];
         $decoded = str_ireplace(array_keys($replacements), array_values($replacements), $decoded);
         $decoded = preg_replace('/<\s*pre\s*>\s*<\s*code\s*>/i', '', $decoded);

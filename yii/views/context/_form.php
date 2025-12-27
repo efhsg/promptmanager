@@ -56,29 +56,29 @@ QuillAsset::register($this);
 <?php
 $templateBody = json_encode($model->content);
 $script = <<<JS
-var quill = new Quill('#editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline', 'strike', 'code'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'indent': '-1' }, { 'indent': '+1' }],
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'align': [] }],
-            ['clean']
-        ]
+    var quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike', 'code'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['clean']
+            ]
+        }
+    });
+    try {
+        quill.setContents(JSON.parse($templateBody))
+    } catch (error) {
+        console.error('Error injecting template body:', error)
     }
-});
-try {
-    quill.setContents(JSON.parse($templateBody))
-} catch (error) {
-    console.error('Error injecting template body:', error)
-}
-quill.on('text-change', function() {
-    document.querySelector('#context-content').value = JSON.stringify(quill.getContents())
-});
-JS;
+    quill.on('text-change', function() {
+        document.querySelector('#context-content').value = JSON.stringify(quill.getContents())
+    });
+    JS;
 $this->registerJs($script);
 ?>

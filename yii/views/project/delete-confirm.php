@@ -30,7 +30,7 @@ echo $this->render('_breadcrumbs', [
             <!-- Delete Form (inline) -->
             <?= Html::beginForm(['delete', 'id' => $model->id], 'post', [
                 'class' => 'd-inline',
-                'id' => 'delete-confirmation-form'
+                'id' => 'delete-confirmation-form',
             ]) ?>
             <?= Html::hiddenInput('confirm', 1) ?>
             <?= Html::submitButton('Yes, Delete', ['class' => 'btn btn-danger']) ?>

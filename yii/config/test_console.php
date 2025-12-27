@@ -37,7 +37,7 @@ $config = [
     ],
     'container' => [
         'definitions' => [
-            app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class
+            app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class,
         ],
     ],
 ];
@@ -58,4 +58,3 @@ if (YII_ENV_DEV) {
     ];
 }
 return ArrayHelper::merge($main, $config);
-

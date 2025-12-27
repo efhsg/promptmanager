@@ -1,6 +1,5 @@
 <?php
 
-
 namespace app\rbac;
 
 use app\models\PromptInstance;
@@ -15,6 +14,6 @@ class PromptInstanceOwnerRule extends Rule
         if (!isset($params['model']) || !($params['model'] instanceof PromptInstance)) {
             return false;
         }
-        return $params['model']->template->project->user_id === (int)$user;
+        return $params['model']->template->project->user_id === (int) $user;
     }
 }

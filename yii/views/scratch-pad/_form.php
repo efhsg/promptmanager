@@ -82,100 +82,38 @@ $content = json_encode($model->content);
 $saveUrl = Url::to(['/scratch-pad/save']);
 $projectId = $model->project_id ?? 'null';
 $script = <<<JS
-var quill = new Quill('#scratch-pad-editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline', 'strike', 'code'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'indent': '-1' }, { 'indent': '+1' }],
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'align': [] }],
-            ['clean']
-        ]
+    var quill = new Quill('#scratch-pad-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike', 'code'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'align': [] }],
+                ['clean']
+            ]
+        }
+    });
+
+    try {
+        quill.setContents(JSON.parse($content))
+    } catch (error) {
+        console.error('Error loading content:', error);
     }
-});
 
-try {
-    quill.setContents(JSON.parse($content))
-} catch (error) {
-    console.error('Error loading content:', error);
-}
-
-quill.on('text-change', function() {
-    document.querySelector('#scratch-pad-content').value = JSON.stringify(quill.getContents());
-});
-
-// Copy functionality with format conversion
-document.getElementById('copy-content-btn').addEventListener('click', function() {
-    const formatSelect = document.getElementById('copy-format-select');
-    const selectedFormat = formatSelect.value;
-    const deltaContent = JSON.stringify(quill.getContents());
-
-    fetch('/scratch-pad/convert-format', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({
-            content: deltaContent,
-            format: selectedFormat
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.content !== undefined) {
-            navigator.clipboard.writeText(data.content).then(function() {
-                const btn = document.getElementById('copy-content-btn');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="bi bi-check"></i> Copied';
-                setTimeout(function() {
-                    btn.innerHTML = originalText;
-                }, 1000);
-            });
-        } else {
-            console.error('Failed to convert format:', data.message);
-            const text = quill.getText();
-            navigator.clipboard.writeText(text);
-        }
-    })
-    .catch(function(err) {
-        console.error('Failed to copy:', err);
-        const text = quill.getText();
-        navigator.clipboard.writeText(text);
-    });
-});
-
-// Save As functionality
-const saveAsBtn = document.getElementById('save-as-btn');
-if (saveAsBtn) {
-    saveAsBtn.addEventListener('click', function() {
-        const modal = new bootstrap.Modal(document.getElementById('saveAsModal'));
-        document.getElementById('save-as-error-alert').classList.add('d-none');
-        document.getElementById('save-as-name').classList.remove('is-invalid');
-        modal.show();
+    quill.on('text-change', function() {
+        document.querySelector('#scratch-pad-content').value = JSON.stringify(quill.getContents());
     });
 
-    document.getElementById('save-as-confirm-btn').addEventListener('click', function() {
-        const nameInput = document.getElementById('save-as-name');
-        const name = nameInput.value.trim();
-        const errorAlert = document.getElementById('save-as-error-alert');
-
-        errorAlert.classList.add('d-none');
-        nameInput.classList.remove('is-invalid');
-
-        if (!name) {
-            nameInput.classList.add('is-invalid');
-            document.getElementById('save-as-name-error').textContent = 'Name is required.';
-            return;
-        }
-
+    // Copy functionality with format conversion
+    document.getElementById('copy-content-btn').addEventListener('click', function() {
+        const formatSelect = document.getElementById('copy-format-select');
+        const selectedFormat = formatSelect.value;
         const deltaContent = JSON.stringify(quill.getContents());
 
-        fetch('$saveUrl', {
+        fetch('/scratch-pad/convert-format', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -183,36 +121,98 @@ if (saveAsBtn) {
                 'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify({
-                name: name,
                 content: deltaContent,
-                project_id: $projectId
+                format: selectedFormat
             })
         })
         .then(response => response.json())
         .then(data => {
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('saveAsModal')).hide();
-                window.location.href = '/scratch-pad/update?id=' + data.id;
+            if (data.success && data.content !== undefined) {
+                navigator.clipboard.writeText(data.content).then(function() {
+                    const btn = document.getElementById('copy-content-btn');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check"></i> Copied';
+                    setTimeout(function() {
+                        btn.innerHTML = originalText;
+                    }, 1000);
+                });
             } else {
-                if (data.errors) {
-                    Object.entries(data.errors).forEach(([, messages]) => {
-                        errorAlert.textContent = messages[0];
-                        errorAlert.classList.remove('d-none');
-                    });
-                } else if (data.message) {
-                    errorAlert.textContent = data.message;
-                    errorAlert.classList.remove('d-none');
-                }
+                console.error('Failed to convert format:', data.message);
+                const text = quill.getText();
+                navigator.clipboard.writeText(text);
             }
         })
-        .catch(error => {
-            errorAlert.textContent = 'An unexpected error occurred.';
-            errorAlert.classList.remove('d-none');
-            console.error('Save As error:', error);
+        .catch(function(err) {
+            console.error('Failed to copy:', err);
+            const text = quill.getText();
+            navigator.clipboard.writeText(text);
         });
     });
-}
-JS;
+
+    // Save As functionality
+    const saveAsBtn = document.getElementById('save-as-btn');
+    if (saveAsBtn) {
+        saveAsBtn.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('saveAsModal'));
+            document.getElementById('save-as-error-alert').classList.add('d-none');
+            document.getElementById('save-as-name').classList.remove('is-invalid');
+            modal.show();
+        });
+
+        document.getElementById('save-as-confirm-btn').addEventListener('click', function() {
+            const nameInput = document.getElementById('save-as-name');
+            const name = nameInput.value.trim();
+            const errorAlert = document.getElementById('save-as-error-alert');
+
+            errorAlert.classList.add('d-none');
+            nameInput.classList.remove('is-invalid');
+
+            if (!name) {
+                nameInput.classList.add('is-invalid');
+                document.getElementById('save-as-name-error').textContent = 'Name is required.';
+                return;
+            }
+
+            const deltaContent = JSON.stringify(quill.getContents());
+
+            fetch('$saveUrl', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    content: deltaContent,
+                    project_id: $projectId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(document.getElementById('saveAsModal')).hide();
+                    window.location.href = '/scratch-pad/update?id=' + data.id;
+                } else {
+                    if (data.errors) {
+                        Object.entries(data.errors).forEach(([, messages]) => {
+                            errorAlert.textContent = messages[0];
+                            errorAlert.classList.remove('d-none');
+                        });
+                    } else if (data.message) {
+                        errorAlert.textContent = data.message;
+                        errorAlert.classList.remove('d-none');
+                    }
+                }
+            })
+            .catch(error => {
+                errorAlert.textContent = 'An unexpected error occurred.';
+                errorAlert.classList.remove('d-none');
+                console.error('Save As error:', error);
+            });
+        });
+    }
+    JS;
 
 $this->registerJs($script);
 ?>

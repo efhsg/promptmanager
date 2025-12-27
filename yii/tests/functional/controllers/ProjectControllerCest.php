@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpSameParameterValueInspection */
+<?php
+
+/** @noinspection PhpSameParameterValueInspection */
 /** @noinspection PhpExpressionResultUnusedInspection */
 
 namespace tests\functional\controllers;

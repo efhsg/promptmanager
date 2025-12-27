@@ -42,14 +42,14 @@ class CopyFormatConverterTest extends Unit
         ]);
 
         $expected = <<<MD
-1. Item 1
-- [x] Item 2
+            1. Item 1
+            - [x] Item 2
 
-```php
-Snippet
-More
-```
-MD;
+            ```php
+            Snippet
+            More
+            ```
+            MD;
 
         $result = $this->converter->convertFromQuillDelta($delta, CopyType::MD);
 
@@ -69,12 +69,12 @@ MD;
         $result = $this->converter->convertFromQuillDelta($delta, CopyType::LLM_XML);
 
         $expected = <<<XML
-<instructions>
-  <instruction>Step 1</instruction>
-  <instruction>Bullet item</instruction>
-  <instruction>Step 2</instruction>
-</instructions>
-XML;
+            <instructions>
+              <instruction>Step 1</instruction>
+              <instruction>Bullet item</instruction>
+              <instruction>Step 2</instruction>
+            </instructions>
+            XML;
 
         $this->assertSame($expected, $result);
     }
@@ -93,9 +93,9 @@ XML;
         $result = $this->converter->convertFromQuillDelta($delta, CopyType::HTML);
 
         $expected = <<<HTML
-<h2>Title</h2>
-<p>Paragraph with <a href="https://example.com">link</a></p>
-HTML;
+            <h2>Title</h2>
+            <p>Paragraph with <a href="https://example.com">link</a></p>
+            HTML;
 
         $this->assertSame($expected, $result);
     }

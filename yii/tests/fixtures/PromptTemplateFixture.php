@@ -1,6 +1,5 @@
 <?php
 
-
 namespace tests\fixtures;
 
 use app\models\PromptTemplate;

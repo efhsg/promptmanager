@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace app\controllers;
 
@@ -60,7 +62,7 @@ class ScratchPadController extends Controller
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
                             $callback = $this->permissionService->isModelBasedAction($action->id)
-                                ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
+                                ? fn() => $this->findModel((int) Yii::$app->request->get('id'))
                                 : null;
                             return $this->permissionService->hasActionPermission('scratchPad', $action->id, $callback);
                         },

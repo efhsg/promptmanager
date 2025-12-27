@@ -17,11 +17,11 @@ abstract class AbstractFormatWriter implements FormatWriterInterface
     protected function renderEmbedPlain(array $embed): string
     {
         if (isset($embed['image'])) {
-            return (string)$embed['image'];
+            return (string) $embed['image'];
         }
 
         if (isset($embed['video'])) {
-            return (string)$embed['video'];
+            return (string) $embed['video'];
         }
 
         return '';

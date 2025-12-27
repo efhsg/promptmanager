@@ -14,6 +14,6 @@ class ContextOwnerRule extends Rule
         if (!isset($params['model']) || !($params['model'] instanceof Context)) {
             return false;
         }
-        return $params['model']->project->user_id === (int)$user;
+        return $params['model']->project->user_id === (int) $user;
     }
 }

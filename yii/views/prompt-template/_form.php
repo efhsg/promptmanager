@@ -3,6 +3,7 @@
 use app\assets\QuillAsset;
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
+
 /** @var yii\web\View $this */
 /** @var app\models\PromptTemplate $model */
 /** @var yii\widgets\ActiveForm $form */
@@ -18,7 +19,7 @@ QuillAsset::register($this);
             'enableClientValidation' => true,
         ]); ?>
         <?= $form->field($model, 'project_id')->dropDownList($projects, [
-            'prompt' => 'Select a Project'
+            'prompt' => 'Select a Project',
         ]) ?>
 
         <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
@@ -44,145 +45,145 @@ $projectFieldsJson = json_encode($projectFieldsMap, JSON_UNESCAPED_UNICODE | JSO
 $externalFieldsJson = json_encode($externalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 $script = <<<JS
-window.quill = new Quill('#editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: {
-            container: [
-                ['bold', 'italic', 'underline', 'strike', 'code'],
-                ['blockquote', 'code-block'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'indent': '-1' }, { 'indent': '+1' }],
-                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                [{ 'align': [] }],
-                ['clean'],
-                [{ 'insertGeneralField': [] }],
-                [{ 'insertProjectField': [] }],
-                [{ 'insertExternalField': [] }]
-            ]
+    window.quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: {
+                container: [
+                    ['bold', 'italic', 'underline', 'strike', 'code'],
+                    ['blockquote', 'code-block'],
+                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                    [{ 'indent': '-1' }, { 'indent': '+1' }],
+                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                    [{ 'align': [] }],
+                    ['clean'],
+                    [{ 'insertGeneralField': [] }],
+                    [{ 'insertProjectField': [] }],
+                    [{ 'insertExternalField': [] }]
+                ]
+            }
+        }
+    });
+
+    var toolbar = window.quill.getModule('toolbar');
+    var toolbarContainer = toolbar.container;
+
+    var generalFieldDropdown = document.createElement('select');
+    generalFieldDropdown.classList.add('ql-insertGeneralField', 'ql-picker', 'ql-font');
+    generalFieldDropdown.innerHTML = '<option value="" selected disabled>General Field</option>';
+
+    var projectFieldDropdown = document.createElement('select');
+    projectFieldDropdown.classList.add('ql-insertProjectField', 'ql-picker', 'ql-font');
+    projectFieldDropdown.innerHTML = '<option value="" selected disabled>Project Field</option>';
+
+    var externalFieldDropdown = document.createElement('select');
+    externalFieldDropdown.classList.add('ql-insertExternalField', 'ql-picker', 'ql-font');
+    externalFieldDropdown.innerHTML = '<option value="" selected disabled>External Field</option>';
+
+    var generalFields = $generalFieldsJson;
+    Object.keys(generalFields).forEach(function(key) {
+        var option = document.createElement('option');
+        option.value = key;
+        option.textContent = generalFields[key].label;
+        generalFieldDropdown.appendChild(option);
+    });
+
+    var projectFields = $projectFieldsJson;
+    Object.keys(projectFields).forEach(function(key) {
+        var option = document.createElement('option');
+        option.value = key;
+        option.textContent = projectFields[key].label;
+        projectFieldDropdown.appendChild(option);
+    });
+
+    var externalFields = $externalFieldsJson;
+    Object.keys(externalFields).forEach(function(key) {
+        var option = document.createElement('option');
+        option.value = key;
+        option.textContent = externalFields[key].label;
+        externalFieldDropdown.appendChild(option);
+    });
+
+    toolbarContainer.querySelector('.ql-insertGeneralField').replaceWith(generalFieldDropdown);
+    toolbarContainer.querySelector('.ql-insertProjectField').replaceWith(projectFieldDropdown);
+    toolbarContainer.querySelector('.ql-insertExternalField').replaceWith(externalFieldDropdown);
+
+    function insertFieldText(dropdown) {
+        var value = dropdown.value;
+        if (value) {
+            var position = window.quill.getSelection().index;
+            window.quill.insertText(position, value);
+            window.quill.setSelection(position + value.length);
+            dropdown.value = '';
         }
     }
-});
 
-var toolbar = window.quill.getModule('toolbar');
-var toolbarContainer = toolbar.container;
+    generalFieldDropdown.addEventListener('change', function() {
+        insertFieldText(this);
+    });
 
-var generalFieldDropdown = document.createElement('select');
-generalFieldDropdown.classList.add('ql-insertGeneralField', 'ql-picker', 'ql-font');
-generalFieldDropdown.innerHTML = '<option value="" selected disabled>General Field</option>';
+    projectFieldDropdown.addEventListener('change', function() {
+        insertFieldText(this);
+    });
 
-var projectFieldDropdown = document.createElement('select');
-projectFieldDropdown.classList.add('ql-insertProjectField', 'ql-picker', 'ql-font');
-projectFieldDropdown.innerHTML = '<option value="" selected disabled>Project Field</option>';
-
-var externalFieldDropdown = document.createElement('select');
-externalFieldDropdown.classList.add('ql-insertExternalField', 'ql-picker', 'ql-font');
-externalFieldDropdown.innerHTML = '<option value="" selected disabled>External Field</option>';
-
-var generalFields = $generalFieldsJson;
-Object.keys(generalFields).forEach(function(key) {
-    var option = document.createElement('option');
-    option.value = key;
-    option.textContent = generalFields[key].label;
-    generalFieldDropdown.appendChild(option);
-});
-
-var projectFields = $projectFieldsJson;
-Object.keys(projectFields).forEach(function(key) {
-    var option = document.createElement('option');
-    option.value = key;
-    option.textContent = projectFields[key].label;
-    projectFieldDropdown.appendChild(option);
-});
-
-var externalFields = $externalFieldsJson;
-Object.keys(externalFields).forEach(function(key) {
-    var option = document.createElement('option');
-    option.value = key;
-    option.textContent = externalFields[key].label;
-    externalFieldDropdown.appendChild(option);
-});
-
-toolbarContainer.querySelector('.ql-insertGeneralField').replaceWith(generalFieldDropdown);
-toolbarContainer.querySelector('.ql-insertProjectField').replaceWith(projectFieldDropdown);
-toolbarContainer.querySelector('.ql-insertExternalField').replaceWith(externalFieldDropdown);
-
-function insertFieldText(dropdown) {
-    var value = dropdown.value;
-    if (value) {
-        var position = window.quill.getSelection().index;
-        window.quill.insertText(position, value);
-        window.quill.setSelection(position + value.length);
-        dropdown.value = '';
-    }
-}
-
-generalFieldDropdown.addEventListener('change', function() {
-    insertFieldText(this);
-});
-
-projectFieldDropdown.addEventListener('change', function() {
-    insertFieldText(this);
-});
-
-externalFieldDropdown.addEventListener('change', function() {
-    insertFieldText(this);
-});
-JS;
+    externalFieldDropdown.addEventListener('change', function() {
+        insertFieldText(this);
+    });
+    JS;
 
 $this->registerJs($script);
 
 $initialDeltaJson = $model->template_body ?: '{"ops":[{"insert":"\n"}]}';
 $initialDeltaEncoded = json_encode($initialDeltaJson, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 $script = <<<JS
-(function() {
-    // Check for imported data in localStorage
-    var importedData = localStorage.getItem('importedTemplate');
-    var deltaToLoad = $initialDeltaEncoded;
+    (function() {
+        // Check for imported data in localStorage
+        var importedData = localStorage.getItem('importedTemplate');
+        var deltaToLoad = $initialDeltaEncoded;
 
-    if (importedData) {
-        try {
-            var parsed = JSON.parse(importedData);
-            console.log('Found imported data in localStorage:', parsed);
+        if (importedData) {
+            try {
+                var parsed = JSON.parse(importedData);
+                console.log('Found imported data in localStorage:', parsed);
 
-            // Set form fields
-            if (parsed.project_id) {
-                var projectSelect = document.getElementById('prompttemplate-project_id');
-                if (projectSelect) {
-                    projectSelect.value = parsed.project_id;
+                // Set form fields
+                if (parsed.project_id) {
+                    var projectSelect = document.getElementById('prompttemplate-project_id');
+                    if (projectSelect) {
+                        projectSelect.value = parsed.project_id;
+                    }
                 }
-            }
-            if (parsed.name) {
-                var nameInput = document.getElementById('prompttemplate-name');
-                if (nameInput) {
-                    nameInput.value = parsed.name;
+                if (parsed.name) {
+                    var nameInput = document.getElementById('prompttemplate-name');
+                    if (nameInput) {
+                        nameInput.value = parsed.name;
+                    }
                 }
-            }
-            if (parsed.template_body) {
-                deltaToLoad = parsed.template_body;
-                // Also update the hidden input
-                document.getElementById('template-body').value = parsed.template_body;
-            }
+                if (parsed.template_body) {
+                    deltaToLoad = parsed.template_body;
+                    // Also update the hidden input
+                    document.getElementById('template-body').value = parsed.template_body;
+                }
 
-            // Clear localStorage after use
-            localStorage.removeItem('importedTemplate');
-        } catch (e) {
-            console.error('Failed to parse imported data:', e);
+                // Clear localStorage after use
+                localStorage.removeItem('importedTemplate');
+            } catch (e) {
+                console.error('Failed to parse imported data:', e);
+            }
         }
-    }
 
-    // Load delta into Quill
-    try {
-        var delta = typeof deltaToLoad === 'string' ? JSON.parse(deltaToLoad) : deltaToLoad;
-        console.log('Loading delta into Quill:', delta);
-        window.quill.setContents(delta);
-    } catch (e) {
-        console.error('Failed to parse delta:', e, deltaToLoad);
-    }
-})();
-window.quill.on('text-change', function() {
-    document.getElementById('template-body').value = JSON.stringify(window.quill.getContents());
-});
-JS;
+        // Load delta into Quill
+        try {
+            var delta = typeof deltaToLoad === 'string' ? JSON.parse(deltaToLoad) : deltaToLoad;
+            console.log('Loading delta into Quill:', delta);
+            window.quill.setContents(delta);
+        } catch (e) {
+            console.error('Failed to parse delta:', e, deltaToLoad);
+        }
+    })();
+    window.quill.on('text-change', function() {
+        document.getElementById('template-body').value = JSON.stringify(window.quill.getContents());
+    });
+    JS;
 
 $this->registerJs($script);

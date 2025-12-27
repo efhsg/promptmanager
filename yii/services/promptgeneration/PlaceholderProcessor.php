@@ -12,8 +12,7 @@ class PlaceholderProcessor
     public function __construct(
         private readonly FieldValueBuilder $fieldValueBuilder = new FieldValueBuilder(),
         private readonly DeltaOpsHelper $deltaHelper = new DeltaOpsHelper()
-    ) {
-    }
+    ) {}
 
     public function setFieldMappings(array $fieldTypes, array $fields): void
     {
@@ -47,7 +46,7 @@ class PlaceholderProcessor
     {
         foreach ($matches as $match) {
             $placeholder = $match[0];
-            $fieldId = (int)$match[1];
+            $fieldId = (int) $match[1];
 
             [$beforeText, $afterText] = array_pad(explode($placeholder, $text, 2), 2, '');
 

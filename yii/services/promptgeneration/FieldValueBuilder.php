@@ -8,8 +8,7 @@ class FieldValueBuilder
 {
     public function __construct(
         private readonly DeltaOpsHelper $deltaHelper = new DeltaOpsHelper()
-    ) {
-    }
+    ) {}
 
     public function build(mixed $fieldValue, ?string $fieldType, ?object $field): array
     {
@@ -44,7 +43,7 @@ class FieldValueBuilder
             return [];
         }
 
-        $labelText = trim((string)($field->label ?? ''));
+        $labelText = trim((string) ($field->label ?? ''));
         if ($labelText === '') {
             return [];
         }
@@ -64,7 +63,7 @@ class FieldValueBuilder
         if (array_keys($fieldValue) === range(0, count($fieldValue) - 1)) {
             if ($fieldType === 'multi-select') {
                 foreach ($fieldValue as $value) {
-                    $trimmed = trim((string)$value);
+                    $trimmed = trim((string) $value);
                     if ($trimmed === '') {
                         continue;
                     }
@@ -96,17 +95,17 @@ class FieldValueBuilder
             $decoded = json_decode($fieldValue, true, 512, JSON_THROW_ON_ERROR);
             return $decoded['ops'] ?? [];
         } catch (JsonException) {
-            return [['insert' => (string)$fieldValue]];
+            return [['insert' => (string) $fieldValue]];
         }
     }
 
     private function buildSelectInvertOperations(mixed $selectedValue, ?object $field): array
     {
         if ($field === null) {
-            return [['insert' => (string)$selectedValue]];
+            return [['insert' => (string) $selectedValue]];
         }
 
-        $selectedValueStr = (string)$selectedValue;
+        $selectedValueStr = (string) $selectedValue;
         $selectedLabel = null;
         $unselectedLabels = [];
 
@@ -137,10 +136,10 @@ class FieldValueBuilder
         if ($selectedLabel !== '' && $contentOps !== []) {
             $firstInsert = &$contentOps[0];
             if (
-                isset($firstInsert['insert']) &&
-                is_string($firstInsert['insert']) &&
-                $firstInsert['insert'] !== '' &&
-                !preg_match('/^\s/', $firstInsert['insert'])
+                isset($firstInsert['insert'])
+                && is_string($firstInsert['insert'])
+                && $firstInsert['insert'] !== ''
+                && !preg_match('/^\s/', $firstInsert['insert'])
             ) {
                 $firstInsert['insert'] = ' ' . $firstInsert['insert'];
             }

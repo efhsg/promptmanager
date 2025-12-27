@@ -70,8 +70,8 @@ class QuillViewerWidget extends Widget
 
         $viewerDiv = Html::tag(
             'div',
-            Html::tag('noscript', Html::encode($fallbackContent)) .
-            Html::tag('div', '', ['class' => 'ql-editor', 'style' => 'display:none;']),
+            Html::tag('noscript', Html::encode($fallbackContent))
+            . Html::tag('div', '', ['class' => 'ql-editor', 'style' => 'display:none;']),
             array_merge(
                 $this->options,
                 [
@@ -145,24 +145,24 @@ class QuillViewerWidget extends Widget
         $encoded = Json::htmlEncode($delta);
         $this->getView()->registerJs(
             <<<JS
-(function () {
-    const container = document.getElementById('$containerId');
-    if (!container) return;
-    
-    // Hide noscript fallback and show editor
-    const noscript = container.querySelector('noscript');
-    const editor = container.querySelector('.ql-editor');
-    if (noscript) noscript.style.display = 'none';
-    if (editor) editor.style.display = 'block';
-    
-    const quill = new Quill('#$containerId', {
-        readOnly: true,
-        theme: '$theme',
-        modules: { toolbar: false }
-    });
-    quill.setContents({$encoded})
-})();
-JS
+                (function () {
+                    const container = document.getElementById('$containerId');
+                    if (!container) return;
+                    
+                    // Hide noscript fallback and show editor
+                    const noscript = container.querySelector('noscript');
+                    const editor = container.querySelector('.ql-editor');
+                    if (noscript) noscript.style.display = 'none';
+                    if (editor) editor.style.display = 'block';
+                    
+                    const quill = new Quill('#$containerId', {
+                        readOnly: true,
+                        theme: '$theme',
+                        modules: { toolbar: false }
+                    });
+                    quill.setContents({$encoded})
+                })();
+                JS
         );
     }
 }

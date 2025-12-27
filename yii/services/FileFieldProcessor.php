@@ -9,8 +9,7 @@ class FileFieldProcessor
     public function __construct(
         private readonly PathService $pathService,
         private readonly PromptTransformationService $promptTransformationService
-    ) {
-    }
+    ) {}
 
     public function processFileFields(PromptTemplate $template, array $fieldValues): array
     {
@@ -51,7 +50,7 @@ class FileFieldProcessor
 
             $isCode = $this->promptTransformationService->detectCode($fileContent)
                 || in_array(
-                    strtolower((string)pathinfo($absolutePath, PATHINFO_EXTENSION)),
+                    strtolower((string) pathinfo($absolutePath, PATHINFO_EXTENSION)),
                     [
                         'php',
                         'js',
@@ -67,7 +66,7 @@ class FileFieldProcessor
                         'sh',
                         'bash',
                         'zsh',
-                        'py'
+                        'py',
                     ],
                     true
                 );

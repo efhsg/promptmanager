@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace app\modules\identity\commands;
 
@@ -11,7 +13,6 @@ use yii\console\{Controller, ExitCode};
 
 class UserController extends Controller
 {
-
     protected UserService $userService;
 
     public function __construct($id, $module, UserService $userService, $config = [])

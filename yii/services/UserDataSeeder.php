@@ -29,9 +29,9 @@ class UserDataSeeder implements UserDataSeederInterface
                 'type' => 'multi-select',
                 'options' => [
                     "don't write any comment",
-                    "use SOLID, DRY, YAGNI principles"
+                    "use SOLID, DRY, YAGNI principles",
                 ],
-            ]
+            ],
         ];
 
         foreach ($data as $fieldName => $fieldData) {

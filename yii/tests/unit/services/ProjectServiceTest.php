@@ -53,7 +53,7 @@ class ProjectServiceTest extends Unit
 
             $this->assertCount(2, $result);
             $this->assertSame('Test Project', $result[1]);
-            $this->assertSame('Additional Project', $result[(int)$project->id]);
+            $this->assertSame('Additional Project', $result[(int) $project->id]);
         } finally {
             $project->delete();
         }

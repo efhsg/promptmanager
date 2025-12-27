@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace identity\tests\functional;
 
@@ -54,7 +56,7 @@ class LoginFormCest
         $I->expectTo('see validations errors');
         $this->seeValidationErrors($I, [
             'Username cannot be blank.',
-            'Password cannot be blank.'
+            'Password cannot be blank.',
         ]);
     }
 

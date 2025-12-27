@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpPossiblePolymorphicInvocationInspection */
+<?php
+
+/** @noinspection PhpPossiblePolymorphicInvocationInspection */
 
 namespace identity\tests\unit\models;
 
@@ -16,7 +18,6 @@ use yii\di\NotInstantiableException;
 
 class UserTest extends Unit
 {
-
     private UserService $userService;
 
     public function _fixtures(): array

@@ -10,7 +10,6 @@ use yii\db\ActiveQuery;
  */
 class FieldQuery extends ActiveQuery
 {
-
     public function sharedFromProjects(int $userId, array $projectIds): self
     {
         return $this

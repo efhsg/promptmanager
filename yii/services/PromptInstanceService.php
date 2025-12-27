@@ -1,6 +1,5 @@
 <?php
 
-
 namespace app\services;
 
 use app\models\PromptInstance;
@@ -37,7 +36,7 @@ class PromptInstanceService
                 PromptTemplate::find()
                     ->innerJoin('project', 'prompt_template.project_id = project.id')
                     ->where('prompt_template.id = prompt_instance.template_id')
-                    ->andWhere(['project.user_id' => $userId])
+                    ->andWhere(['project.user_id' => $userId]),
             ])
             ->one();
 

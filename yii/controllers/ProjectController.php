@@ -66,7 +66,7 @@ class ProjectController extends Controller
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
                             $callback = $this->permissionService->isModelBasedAction($action->id)
-                                ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
+                                ? fn() => $this->findModel((int) Yii::$app->request->get('id'))
                                 : null;
                             return $this->permissionService->hasActionPermission('project', $action->id, $callback);
                         },
@@ -201,7 +201,7 @@ class ProjectController extends Controller
     public function actionSetCurrent(): Response
     {
         $projectId = Yii::$app->request->post('project_id');
-        $this->projectContext->setCurrentProject((int)$projectId);
+        $this->projectContext->setCurrentProject((int) $projectId);
 
         return $this->redirect(Yii::$app->request->referrer ?: ['index']);
     }

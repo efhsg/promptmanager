@@ -192,7 +192,7 @@ class FileFieldProcessorTest extends Unit
 
     private function createProject(string $rootDirectory = '/test', array $blacklistedDirectories = []): object
     {
-        return new class($rootDirectory, $blacklistedDirectories) {
+        return new class ($rootDirectory, $blacklistedDirectories) {
             public string $root_directory;
             private array $blacklistedDirectories;
 
@@ -216,7 +216,7 @@ class FileFieldProcessorTest extends Unit
 
     private function createField(int $id, string $type, ?string $content = null): object
     {
-        $field = (object)[
+        $field = (object) [
             'id' => $id,
             'type' => $type,
         ];
@@ -230,10 +230,8 @@ class FileFieldProcessorTest extends Unit
 
     private function createTemplate(?object $project, array $fields): PromptTemplate
     {
-        $template = new class() extends PromptTemplate {
-            public function init(): void
-            {
-            }
+        $template = new class extends PromptTemplate {
+            public function init(): void {}
 
             public function attributes(): array
             {

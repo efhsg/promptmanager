@@ -31,12 +31,12 @@ class PromptTemplateServiceTest extends Unit
         $deltaInput = '{"ops":[{"insert":"Hello, GEN:{{codeType}} and PRJ:{{projectType}}!\n"}]}';
         $postData = [
             'PromptTemplate' => [
-                'template_body' => $deltaInput
-            ]
+                'template_body' => $deltaInput,
+            ],
         ];
         $fieldsMapping = [
             'GEN:{{codeType}}' => ['id' => 3],
-            'PRJ:{{projectType}}' => ['id' => 7]
+            'PRJ:{{projectType}}' => ['id' => 7],
         ];
 
         // Expected converted delta format
@@ -66,8 +66,8 @@ class PromptTemplateServiceTest extends Unit
             ->getMock();
         $postData = [
             'PromptTemplate' => [
-                'template_body' => '{"ops":[{"insert":"Hello, GEN:{{codeType}}!\n"}]}'
-            ]
+                'template_body' => '{"ops":[{"insert":"Hello, GEN:{{codeType}}!\n"}]}',
+            ],
         ];
         $fieldsMapping = [];
         $model->expects($this->once())
@@ -88,7 +88,7 @@ class PromptTemplateServiceTest extends Unit
         $mockQuery->method('all')->willReturn([]);
         $mockQuery->method('orderBy')->willReturnSelf();
 
-        Yii::configure((object)PromptTemplate::class, ['find' => fn() => $mockQuery]);
+        Yii::configure((object) PromptTemplate::class, ['find' => fn() => $mockQuery]);
         $result = $this->service->getTemplatesByUser(999);
         $this->assertEquals([], $result);
     }
@@ -99,7 +99,7 @@ class PromptTemplateServiceTest extends Unit
 
         $fieldsMapping = [
             'GEN:{{codeType}}' => ['id' => 3],
-            'PRJ:{{projectType}}' => ['id' => 7]
+            'PRJ:{{projectType}}' => ['id' => 7],
         ];
         $result = $this->service->convertPlaceholdersToIds($template, $fieldsMapping);
 
@@ -124,7 +124,7 @@ class PromptTemplateServiceTest extends Unit
 
         $fieldsMapping = [
             'GEN:{{codeType}}' => ['id' => 3],
-            'PRJ:{{projectType}}' => ['id' => 7]
+            'PRJ:{{projectType}}' => ['id' => 7],
         ];
         $result = $this->service->convertPlaceholdersToLabels($template, $fieldsMapping);
 
@@ -180,7 +180,7 @@ class PromptTemplateServiceTest extends Unit
 
         $fieldsMapping = [
             'GEN:{{codeType}}' => ['id' => 3],
-            'PRJ:{{projectType}}' => ['id' => 7]
+            'PRJ:{{projectType}}' => ['id' => 7],
         ];
 
         $result = $this->service->convertPlaceholdersToIds($template, $fieldsMapping);
@@ -195,35 +195,35 @@ class PromptTemplateServiceTest extends Unit
                 'template' => '{"ops":[{"insert":"Hello, GEN:{{codeType}} and PRJ:{{projectType}}!\n"}]}',
                 'fieldsMapping' => [
                     'GEN:{{codeType}}' => ['id' => 3],
-                    'PRJ:{{projectType}}' => ['id' => 7]
+                    'PRJ:{{projectType}}' => ['id' => 7],
                 ],
                 'expectedInvalid' => [],
             ],
             'invalid fields' => [
                 'template' => '{"ops":[{"insert":"Hello, GEN:{{invalidField}} and PRJ:{{anotherInvalid}}!\n"}]}',
                 'fieldsMapping' => [
-                    'GEN:{{codeType}}' => ['id' => 3]
+                    'GEN:{{codeType}}' => ['id' => 3],
                 ],
                 'expectedInvalid' => ['GEN:{{invalidField}}', 'PRJ:{{anotherInvalid}}'],
             ],
             'mixed valid and invalid' => [
                 'template' => '{"ops":[{"insert":"Use GEN:{{codeType}} and GEN:{{invalidField}}.\n"}]}',
                 'fieldsMapping' => [
-                    'GEN:{{codeType}}' => ['id' => 3]
+                    'GEN:{{codeType}}' => ['id' => 3],
                 ],
                 'expectedInvalid' => ['GEN:{{invalidField}}'],
             ],
             'external fields' => [
                 'template' => '{"ops":[{"insert":"Use EXT:{{Project Alpha: externalField}} and EXT:{{Invalid: field}}.\n"}]}',
                 'fieldsMapping' => [
-                    'EXT:{{Project Alpha: externalField}}' => ['id' => 9]
+                    'EXT:{{Project Alpha: externalField}}' => ['id' => 9],
                 ],
                 'expectedInvalid' => ['EXT:{{Invalid: field}}'],
             ],
             'duplicate valid fields - not checked here' => [
                 'template' => '{"ops":[{"insert":"GEN:{{codeType}}, GEN:{{codeType}}.\n"}]}',
                 'fieldsMapping' => [
-                    'GEN:{{codeType}}' => ['id' => 3]
+                    'GEN:{{codeType}}' => ['id' => 3],
                 ],
                 'expectedInvalid' => [],
             ],
@@ -235,7 +235,7 @@ class PromptTemplateServiceTest extends Unit
             'no placeholders' => [
                 'template' => '{"ops":[{"insert":"Just plain text with no placeholders.\n"}]}',
                 'fieldsMapping' => [
-                    'GEN:{{codeType}}' => ['id' => 3]
+                    'GEN:{{codeType}}' => ['id' => 3],
                 ],
                 'expectedInvalid' => [],
             ],
@@ -275,12 +275,12 @@ class PromptTemplateServiceTest extends Unit
             'PromptTemplate' => [
                 'name' => 'Test Template',
                 'project_id' => 1,
-                'template_body' => $deltaInput
-            ]
+                'template_body' => $deltaInput,
+            ],
         ];
 
         $fieldsMapping = [
-            'GEN:{{validField}}' => ['id' => 3]
+            'GEN:{{validField}}' => ['id' => 3],
         ];
 
         $result = $this->service->saveTemplateWithFields($model, $postData, $fieldsMapping);
@@ -353,7 +353,7 @@ class PromptTemplateServiceTest extends Unit
                 'deltaInput' => '{"ops":[{"insert":"GEN:{{field1}}, GEN:{{field1}}, PRJ:{{field2}}, PRJ:{{field2}}.\n"}]}',
                 'fieldsMapping' => [
                     'GEN:{{field1}}' => ['id' => 3],
-                    'PRJ:{{field2}}' => ['id' => 7]
+                    'PRJ:{{field2}}' => ['id' => 7],
                 ],
                 'expectedErrorSubstring' => 'Duplicate field placeholders found',
                 'expectedErrorContains' => ['GEN:{{field1}}', 'PRJ:{{field2}}'],
@@ -384,7 +384,7 @@ class PromptTemplateServiceTest extends Unit
                 'deltaInput' => '{"ops":[{"insert":"EXT:{{Alpha: shared}}, GEN:{{local}}, EXT:{{Alpha: shared}}.\n"}]}',
                 'fieldsMapping' => [
                     'GEN:{{local}}' => ['id' => 3],
-                    'EXT:{{Alpha: shared}}' => ['id' => 9]
+                    'EXT:{{Alpha: shared}}' => ['id' => 9],
                 ],
                 'expectedErrorSubstring' => 'Duplicate field placeholders found',
                 'expectedErrorContains' => ['EXT:{{Alpha: shared}}'],
@@ -420,8 +420,8 @@ class PromptTemplateServiceTest extends Unit
             'PromptTemplate' => [
                 'name' => 'Test Template',
                 'project_id' => 1,
-                'template_body' => $deltaInput
-            ]
+                'template_body' => $deltaInput,
+            ],
         ];
 
         $result = $this->service->saveTemplateWithFields($model, $postData, $fieldsMapping);
@@ -454,14 +454,14 @@ class PromptTemplateServiceTest extends Unit
             'PromptTemplate' => [
                 'name' => 'Test Template',
                 'project_id' => 1,
-                'template_body' => $deltaInput
-            ]
+                'template_body' => $deltaInput,
+            ],
         ];
 
         $fieldsMapping = [
             'GEN:{{field1}}' => ['id' => 3],
             'PRJ:{{field2}}' => ['id' => 7],
-            'EXT:{{Project: field3}}' => ['id' => 9]
+            'EXT:{{Project: field3}}' => ['id' => 9],
         ];
 
         $expectedDelta = '{"ops":[{"insert":"Use GEN:{{3}}, PRJ:{{7}}, and EXT:{{9}}.\n"}]}';
@@ -469,8 +469,8 @@ class PromptTemplateServiceTest extends Unit
             'PromptTemplate' => [
                 'name' => 'Test Template',
                 'project_id' => 1,
-                'template_body' => $expectedDelta
-            ]
+                'template_body' => $expectedDelta,
+            ],
         ];
 
         $model->expects($this->once())
@@ -504,12 +504,12 @@ class PromptTemplateServiceTest extends Unit
             'PromptTemplate' => [
                 'name' => 'New Name',
                 'project_id' => 2,
-                'template_body' => $deltaInput
-            ]
+                'template_body' => $deltaInput,
+            ],
         ];
 
         $fieldsMapping = [
-            'GEN:{{valid}}' => ['id' => 3]
+            'GEN:{{valid}}' => ['id' => 3],
         ];
 
         $result = $this->service->saveTemplateWithFields($model, $postData, $fieldsMapping);

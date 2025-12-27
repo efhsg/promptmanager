@@ -14,7 +14,6 @@ use yii\captcha\CaptchaValidator;
 
 class SignupFormTest extends Unit
 {
-
     /**
      * @throws Exception
      */
@@ -29,13 +28,13 @@ class SignupFormTest extends Unit
                 ]);
                 $user->setPassword($password);
                 return $user;
-            }
+            },
         ]);
 
         $captchaValidator = Stub::make(CaptchaValidator::class, [
             'validateAttribute' => function () {
                 return true;
-            }
+            },
         ]);
 
         Yii::$container->set(CaptchaValidator::class, $captchaValidator);
@@ -105,7 +104,7 @@ class SignupFormTest extends Unit
         $userService = Stub::make(UserService::class, [
             'create' => function () {
                 throw new UserCreationException('User creation failed');
-            }
+            },
         ]);
 
         /** @var UserService $userService */

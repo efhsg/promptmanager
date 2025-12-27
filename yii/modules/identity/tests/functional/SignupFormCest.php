@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpPropertyOnlyWrittenInspection */
+<?php
+
+/** @noinspection PhpPropertyOnlyWrittenInspection */
 
 /** @noinspection PhpUnused */
 
@@ -18,7 +20,6 @@ use yii\di\NotInstantiableException;
 
 class SignupFormCest
 {
-
     private UserService $userService;
 
     /**

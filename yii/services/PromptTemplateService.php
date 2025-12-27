@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection PhpUnused */
 
 namespace app\services;
@@ -10,7 +11,6 @@ use yii\helpers\ArrayHelper;
 
 class PromptTemplateService
 {
-
     /**
      * @throws Exception
      */
@@ -233,7 +233,7 @@ class PromptTemplateService
                     '/(GEN|PRJ|EXT):\{\{(\d+)}}/',
                     function ($matches) use ($normalizedMapping) {
                         $prefix = $matches[1];
-                        $fieldId = (int)$matches[2];
+                        $fieldId = (int) $matches[2];
                         if (isset($normalizedMapping[$prefix][$fieldId])) {
                             $fieldName = $normalizedMapping[$prefix][$fieldId];
                             return "$prefix:{{{$fieldName}}}";

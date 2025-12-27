@@ -21,5 +21,3 @@ class AppAsset extends AssetBundle
         'yii\bootstrap5\BootstrapPluginAsset',
     ];
 }
-
-

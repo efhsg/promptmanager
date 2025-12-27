@@ -171,7 +171,7 @@ class ProjectContext extends BaseObject
     private function getSessionProjectId(): ?int
     {
         $val = $this->session->get(self::SESSION_KEY);
-        return is_numeric($val) ? (int)$val : null;
+        return is_numeric($val) ? (int) $val : null;
     }
 
     private function setSessionProjectId(?int $projectId): void
@@ -193,7 +193,7 @@ class ProjectContext extends BaseObject
             return null;
         }
         $projectId = $this->userPreference->getValue($userId, self::PREF_KEY);
-        return is_numeric($projectId) ? (int)$projectId : null;
+        return is_numeric($projectId) ? (int) $projectId : null;
     }
 
     /**
@@ -203,7 +203,7 @@ class ProjectContext extends BaseObject
     {
         $userId = $this->webUser->id;
         if ($userId) {
-            $this->userPreference->setValue($userId, self::PREF_KEY, (string)$projectId);
+            $this->userPreference->setValue($userId, self::PREF_KEY, (string) $projectId);
         }
     }
 

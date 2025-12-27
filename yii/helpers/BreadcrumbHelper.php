@@ -98,7 +98,7 @@ class BreadcrumbHelper
         }
 
         if (method_exists($model, '__toString')) {
-            $asString = (string)$model;
+            $asString = (string) $model;
             if ($asString !== '') {
                 return $asString;
             }

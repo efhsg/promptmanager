@@ -1,4 +1,5 @@
 <?php
+
 use yii\helpers\ArrayHelper;
 
 $rbac = require __DIR__ . '/rbac.php';

@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection DuplicatedCode */
 
 /** @noinspection PhpUnused */
@@ -31,10 +32,8 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
-
 class PromptInstanceController extends Controller
 {
-
     /**
      * @var array
      */
@@ -100,7 +99,7 @@ class PromptInstanceController extends Controller
                                 );
                             } elseif ($this->permissionService->isModelBasedAction($action->id)) {
                                 $callback = fn() => $this->promptInstanceService->findModelWithOwner(
-                                    (int)Yii::$app->request->get('id'),
+                                    (int) Yii::$app->request->get('id'),
                                     Yii::$app->user->id
                                 );
                             } else {
@@ -281,7 +280,7 @@ class PromptInstanceController extends Controller
         $templateBody = $template->template_body;
         $fields = [];
         foreach ($template->fields as $field) {
-            $fields[(string)$field->id] = $this->getFieldData($field);
+            $fields[(string) $field->id] = $this->getFieldData($field);
         }
         return $this->renderAjax('_template_form', [
             'templateBody' => $templateBody,
@@ -362,7 +361,7 @@ class PromptInstanceController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $userId = Yii::$app->user->id;
-        $templateId = (int)Yii::$app->request->post('template_id');
+        $templateId = (int) Yii::$app->request->post('template_id');
         $contextIds = Yii::$app->request->post('context_ids') ?? [];
         $fieldValues = Yii::$app->request->post('PromptInstanceForm')['fields'] ?? [];
 
@@ -412,7 +411,7 @@ class PromptInstanceController extends Controller
                 $option->value = $this->convertDeltaStringToText($option->value, $converter);
             }
 
-            $stringId = (string)$field->id;
+            $stringId = (string) $field->id;
             $intId = $field->id;
 
             if (array_key_exists($stringId, $fieldValues)) {
@@ -468,7 +467,7 @@ class PromptInstanceController extends Controller
         }
 
         $model = new PromptInstance([
-            'template_id' => (int)Yii::$app->request->post('template_id'),
+            'template_id' => (int) Yii::$app->request->post('template_id'),
             'label' => $label,
             'final_prompt' => $finalPrompt,
         ]);

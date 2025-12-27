@@ -22,7 +22,6 @@ use yii\db\ActiveRecord;
  */
 class FieldOption extends ActiveRecord
 {
-
     use TimestampTrait;
 
     /**

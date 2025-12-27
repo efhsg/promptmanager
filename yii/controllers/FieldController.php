@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection DuplicatedCode */
 
 /** @noinspection PhpUnused */
@@ -62,7 +63,7 @@ class FieldController extends Controller
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
                             $callback = $this->permissionService->isModelBasedAction($action->id)
-                                ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
+                                ? fn() => $this->findModel((int) Yii::$app->request->get('id'))
                                 : null;
                             return $this->permissionService->hasActionPermission('field', $action->id, $callback);
                         },
@@ -153,8 +154,8 @@ class FieldController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $projectId = (int)Yii::$app->request->get('projectId');
-        $type = (string)Yii::$app->request->get('type', '');
+        $projectId = (int) Yii::$app->request->get('projectId');
+        $type = (string) Yii::$app->request->get('type', '');
 
         if ($projectId <= 0 || !in_array($type, FieldConstants::PATH_FIELD_TYPES, true)) {
             return ['success' => false, 'message' => 'Invalid request.'];
@@ -206,14 +207,14 @@ class FieldController extends Controller
         $field = $this->findModel($id);
 
         if (!in_array(
-                $field->type,
-                FieldConstants::PATH_PREVIEWABLE_FIELD_TYPES,
-                true
-            ) || $field->project === null || empty($field->project->root_directory)) {
+            $field->type,
+            FieldConstants::PATH_PREVIEWABLE_FIELD_TYPES,
+            true
+        ) || $field->project === null || empty($field->project->root_directory)) {
             return ['success' => false, 'message' => 'Preview unavailable for this field.'];
         }
 
-        $path = trim((string)Yii::$app->request->get('path', ''));
+        $path = trim((string) Yii::$app->request->get('path', ''));
         if ($path === '') {
             return ['success' => false, 'message' => 'Invalid file path.'];
         }

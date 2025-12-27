@@ -72,95 +72,95 @@ use yii\helpers\Url;
 <?php
 $importUrl = Url::to(['import-markdown']);
 $js = <<<JS
-document.getElementById('import-markdown-form').addEventListener('submit', function(e) {
-    e.preventDefault();
+    document.getElementById('import-markdown-form').addEventListener('submit', function(e) {
+        e.preventDefault();
 
-    const form = this;
-    const submitBtn = document.getElementById('import-submit-btn');
-    const spinner = submitBtn.querySelector('.spinner-border');
-    const errorAlert = document.getElementById('import-error-alert');
+        const form = this;
+        const submitBtn = document.getElementById('import-submit-btn');
+        const spinner = submitBtn.querySelector('.spinner-border');
+        const errorAlert = document.getElementById('import-error-alert');
 
-    // Clear previous errors
-    errorAlert.classList.add('d-none');
-    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        // Clear previous errors
+        errorAlert.classList.add('d-none');
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
 
-    // Validate required fields
-    let hasErrors = false;
-    const projectId = document.getElementById('import-project-id');
-    const file = document.getElementById('import-file');
+        // Validate required fields
+        let hasErrors = false;
+        const projectId = document.getElementById('import-project-id');
+        const file = document.getElementById('import-file');
 
-    if (!projectId.value) {
-        projectId.classList.add('is-invalid');
-        document.getElementById('import-project-error').textContent = 'Project is required.';
-        hasErrors = true;
-    }
-    if (!file.files.length) {
-        file.classList.add('is-invalid');
-        document.getElementById('import-file-error').textContent = 'Please select a file.';
-        hasErrors = true;
-    }
-
-    if (hasErrors) return;
-
-    // Show loading state
-    submitBtn.disabled = true;
-    spinner.classList.remove('d-none');
-
-    const formData = new FormData(form);
-
-    fetch('$importUrl', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
+        if (!projectId.value) {
+            projectId.classList.add('is-invalid');
+            document.getElementById('import-project-error').textContent = 'Project is required.';
+            hasErrors = true;
         }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Store import data in localStorage for the create page to pick up
-            if (data.importData) {
-                localStorage.setItem('importedTemplate', JSON.stringify(data.importData));
-            }
-            window.location.href = data.redirectUrl;
-        } else {
-            if (data.errors) {
-                const fieldMap = {
-                    'project_id': ['import-project-id', 'import-project-error'],
-                    'name': ['import-name', 'import-name-error'],
-                    'mdFile': ['import-file', 'import-file-error']
-                };
-                Object.keys(data.errors).forEach(field => {
-                    if (fieldMap[field]) {
-                        const [inputId, errorId] = fieldMap[field];
-                        const input = document.getElementById(inputId);
-                        input.classList.add('is-invalid');
-                        document.getElementById(errorId).textContent = data.errors[field][0];
-                    }
-                });
-            } else if (data.message) {
-                errorAlert.textContent = data.message;
-                errorAlert.classList.remove('d-none');
-            }
+        if (!file.files.length) {
+            file.classList.add('is-invalid');
+            document.getElementById('import-file-error').textContent = 'Please select a file.';
+            hasErrors = true;
         }
-    })
-    .catch(error => {
-        errorAlert.textContent = 'An unexpected error occurred. Please try again.';
-        errorAlert.classList.remove('d-none');
-        console.error('Import error:', error);
-    })
-    .finally(() => {
-        submitBtn.disabled = false;
-        spinner.classList.add('d-none');
+
+        if (hasErrors) return;
+
+        // Show loading state
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+
+        const formData = new FormData(form);
+
+        fetch('$importUrl', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Store import data in localStorage for the create page to pick up
+                if (data.importData) {
+                    localStorage.setItem('importedTemplate', JSON.stringify(data.importData));
+                }
+                window.location.href = data.redirectUrl;
+            } else {
+                if (data.errors) {
+                    const fieldMap = {
+                        'project_id': ['import-project-id', 'import-project-error'],
+                        'name': ['import-name', 'import-name-error'],
+                        'mdFile': ['import-file', 'import-file-error']
+                    };
+                    Object.keys(data.errors).forEach(field => {
+                        if (fieldMap[field]) {
+                            const [inputId, errorId] = fieldMap[field];
+                            const input = document.getElementById(inputId);
+                            input.classList.add('is-invalid');
+                            document.getElementById(errorId).textContent = data.errors[field][0];
+                        }
+                    });
+                } else if (data.message) {
+                    errorAlert.textContent = data.message;
+                    errorAlert.classList.remove('d-none');
+                }
+            }
+        })
+        .catch(error => {
+            errorAlert.textContent = 'An unexpected error occurred. Please try again.';
+            errorAlert.classList.remove('d-none');
+            console.error('Import error:', error);
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            spinner.classList.add('d-none');
+        });
     });
-});
 
-document.getElementById('importMarkdownModal').addEventListener('hidden.bs.modal', function() {
-    const form = document.getElementById('import-markdown-form');
-    form.reset();
-    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
-    document.getElementById('import-error-alert').classList.add('d-none');
-});
-JS;
+    document.getElementById('importMarkdownModal').addEventListener('hidden.bs.modal', function() {
+        const form = document.getElementById('import-markdown-form');
+        form.reset();
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        document.getElementById('import-error-alert').classList.add('d-none');
+    });
+    JS;
 $this->registerJs($js);
 ?>

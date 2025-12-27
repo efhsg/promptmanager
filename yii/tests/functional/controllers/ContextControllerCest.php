@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpPossiblePolymorphicInvocationInspection */
+<?php
+
+/** @noinspection PhpPossiblePolymorphicInvocationInspection */
 /** @noinspection PhpExpressionResultUnusedInspection */
 
 /** @noinspection PhpUnused */

@@ -37,8 +37,8 @@ class m250610_000003_add_file_and_directory_field_types extends Migration
 
         if ($hasNewTypes) {
             throw new RuntimeException(
-                'Cannot downgrade: there are fields with type "file" or "directory". ' .
-                'Please migrate their type first.'
+                'Cannot downgrade: there are fields with type "file" or "directory". '
+                . 'Please migrate their type first.'
             );
         }
 

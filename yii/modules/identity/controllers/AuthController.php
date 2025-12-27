@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace app\modules\identity\controllers;
 
@@ -10,7 +12,6 @@ use yii\web\{Controller, Response};
 
 class AuthController extends Controller
 {
-
     protected UserService $userService;
 
     public function __construct($id, $module, UserService $userService, $config = [])

@@ -96,193 +96,193 @@ $saveUrl = Url::to(['/scratch-pad/save']);
 $savedListUrl = Url::to(['/scratch-pad/index']);
 
 $script = <<<JS
-window.quill = new Quill('#editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline', 'strike', 'code'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'indent': '-1' }, { 'indent': '+1' }],
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'align': [] }],
-            ['clean']
-        ]
-    }
-});
-
-// Check for imported data in localStorage
-const importedData = localStorage.getItem('scratchPadContent');
-if (importedData) {
-    try {
-        const parsed = JSON.parse(importedData);
-        if (parsed.content) {
-            const delta = typeof parsed.content === 'string' ? JSON.parse(parsed.content) : parsed.content;
-            window.quill.setContents(delta);
+    window.quill = new Quill('#editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike', 'code'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'align': [] }],
+                ['clean']
+            ]
         }
-        localStorage.removeItem('scratchPadContent');
-    } catch (e) {
-        console.error('Failed to parse imported data:', e);
-    }
-}
-
-// Load MD file functionality
-document.getElementById('load-md-btn').addEventListener('click', function() {
-    document.getElementById('load-md-file').click();
-});
-
-document.getElementById('load-md-file').addEventListener('change', function() {
-    const file = this.files[0];
-    if (!file) return;
-
-    const btn = document.getElementById('load-md-btn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
-    btn.disabled = true;
-
-    const formData = new FormData();
-    formData.append('mdFile', file);
-
-    fetch('/scratch-pad/import-markdown', {
-        method: 'POST',
-        body: formData,
-        headers: {
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.importData && data.importData.content) {
-            const delta = typeof data.importData.content === 'string'
-                ? JSON.parse(data.importData.content)
-                : data.importData.content;
-            window.quill.setContents(delta);
-        } else {
-            const errorMsg = data.errors?.mdFile?.[0] || data.message || 'Failed to load file.';
-            alert(errorMsg);
-        }
-    })
-    .catch(error => {
-        console.error('Load error:', error);
-        alert('Failed to load file. Please try again.');
-    })
-    .finally(() => {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-        document.getElementById('load-md-file').value = '';
     });
-});
 
-// Copy functionality with format conversion
-document.getElementById('copy-content-btn').addEventListener('click', function() {
-    const formatSelect = document.getElementById('copy-format-select');
-    const selectedFormat = formatSelect.value;
-    const deltaContent = JSON.stringify(window.quill.getContents());
+    // Check for imported data in localStorage
+    const importedData = localStorage.getItem('scratchPadContent');
+    if (importedData) {
+        try {
+            const parsed = JSON.parse(importedData);
+            if (parsed.content) {
+                const delta = typeof parsed.content === 'string' ? JSON.parse(parsed.content) : parsed.content;
+                window.quill.setContents(delta);
+            }
+            localStorage.removeItem('scratchPadContent');
+        } catch (e) {
+            console.error('Failed to parse imported data:', e);
+        }
+    }
 
-    // Convert delta to selected format via AJAX
-    fetch('/scratch-pad/convert-format', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({
-            content: deltaContent,
-            format: selectedFormat
+    // Load MD file functionality
+    document.getElementById('load-md-btn').addEventListener('click', function() {
+        document.getElementById('load-md-file').click();
+    });
+
+    document.getElementById('load-md-file').addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+
+        const btn = document.getElementById('load-md-btn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+        btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('mdFile', file);
+
+        fetch('/scratch-pad/import-markdown', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.content !== undefined) {
-            navigator.clipboard.writeText(data.content).then(function() {
-                const btn = document.getElementById('copy-content-btn');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<i class="bi bi-check"></i> Copied';
-                setTimeout(function() {
-                    btn.innerHTML = originalText;
-                }, 1000);
-            });
-        } else {
-            console.error('Failed to convert format:', data.message);
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.importData && data.importData.content) {
+                const delta = typeof data.importData.content === 'string'
+                    ? JSON.parse(data.importData.content)
+                    : data.importData.content;
+                window.quill.setContents(delta);
+            } else {
+                const errorMsg = data.errors?.mdFile?.[0] || data.message || 'Failed to load file.';
+                alert(errorMsg);
+            }
+        })
+        .catch(error => {
+            console.error('Load error:', error);
+            alert('Failed to load file. Please try again.');
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            document.getElementById('load-md-file').value = '';
+        });
+    });
+
+    // Copy functionality with format conversion
+    document.getElementById('copy-content-btn').addEventListener('click', function() {
+        const formatSelect = document.getElementById('copy-format-select');
+        const selectedFormat = formatSelect.value;
+        const deltaContent = JSON.stringify(window.quill.getContents());
+
+        // Convert delta to selected format via AJAX
+        fetch('/scratch-pad/convert-format', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                content: deltaContent,
+                format: selectedFormat
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.content !== undefined) {
+                navigator.clipboard.writeText(data.content).then(function() {
+                    const btn = document.getElementById('copy-content-btn');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check"></i> Copied';
+                    setTimeout(function() {
+                        btn.innerHTML = originalText;
+                    }, 1000);
+                });
+            } else {
+                console.error('Failed to convert format:', data.message);
+                // Fallback to plain text
+                const text = window.quill.getText();
+                navigator.clipboard.writeText(text);
+            }
+        })
+        .catch(function(err) {
+            console.error('Failed to copy:', err);
             // Fallback to plain text
             const text = window.quill.getText();
             navigator.clipboard.writeText(text);
-        }
-    })
-    .catch(function(err) {
-        console.error('Failed to copy:', err);
-        // Fallback to plain text
-        const text = window.quill.getText();
-        navigator.clipboard.writeText(text);
+        });
     });
-});
 
-// Save functionality
-document.getElementById('save-content-btn').addEventListener('click', function() {
-    const modal = new bootstrap.Modal(document.getElementById('saveModal'));
-    document.getElementById('scratch-pad-name').value = '';
-    document.getElementById('save-error-alert').classList.add('d-none');
-    document.getElementById('scratch-pad-name').classList.remove('is-invalid');
-    modal.show();
-});
+    // Save functionality
+    document.getElementById('save-content-btn').addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('saveModal'));
+        document.getElementById('scratch-pad-name').value = '';
+        document.getElementById('save-error-alert').classList.add('d-none');
+        document.getElementById('scratch-pad-name').classList.remove('is-invalid');
+        modal.show();
+    });
 
-document.getElementById('save-confirm-btn').addEventListener('click', function() {
-    const nameInput = document.getElementById('scratch-pad-name');
-    const name = nameInput.value.trim();
-    const errorAlert = document.getElementById('save-error-alert');
+    document.getElementById('save-confirm-btn').addEventListener('click', function() {
+        const nameInput = document.getElementById('scratch-pad-name');
+        const name = nameInput.value.trim();
+        const errorAlert = document.getElementById('save-error-alert');
 
-    errorAlert.classList.add('d-none');
-    nameInput.classList.remove('is-invalid');
+        errorAlert.classList.add('d-none');
+        nameInput.classList.remove('is-invalid');
 
-    if (!name) {
-        nameInput.classList.add('is-invalid');
-        document.getElementById('scratch-pad-name-error').textContent = 'Name is required.';
-        return;
-    }
+        if (!name) {
+            nameInput.classList.add('is-invalid');
+            document.getElementById('scratch-pad-name-error').textContent = 'Name is required.';
+            return;
+        }
 
-    const projectSelect = document.getElementById('scratch-pad-project');
-    const projectId = projectSelect.value || null;
-    const deltaContent = JSON.stringify(window.quill.getContents());
+        const projectSelect = document.getElementById('scratch-pad-project');
+        const projectId = projectSelect.value || null;
+        const deltaContent = JSON.stringify(window.quill.getContents());
 
-    fetch('$saveUrl', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: JSON.stringify({
-            name: name,
-            content: deltaContent,
-            project_id: projectId
+        fetch('$saveUrl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                name: name,
+                content: deltaContent,
+                project_id: projectId
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            bootstrap.Modal.getInstance(document.getElementById('saveModal')).hide();
-            window.location.href = '$savedListUrl';
-        } else {
-            if (data.errors) {
-                Object.entries(data.errors).forEach(([field, messages]) => {
-                    errorAlert.textContent = messages[0];
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('saveModal')).hide();
+                window.location.href = '$savedListUrl';
+            } else {
+                if (data.errors) {
+                    Object.entries(data.errors).forEach(([field, messages]) => {
+                        errorAlert.textContent = messages[0];
+                        errorAlert.classList.remove('d-none');
+                    });
+                } else if (data.message) {
+                    errorAlert.textContent = data.message;
                     errorAlert.classList.remove('d-none');
-                });
-            } else if (data.message) {
-                errorAlert.textContent = data.message;
-                errorAlert.classList.remove('d-none');
+                }
             }
-        }
-    })
-    .catch(error => {
-        errorAlert.textContent = 'An unexpected error occurred.';
-        errorAlert.classList.remove('d-none');
-        console.error('Save error:', error);
+        })
+        .catch(error => {
+            errorAlert.textContent = 'An unexpected error occurred.';
+            errorAlert.classList.remove('d-none');
+            console.error('Save error:', error);
+        });
     });
-});
-JS;
+    JS;
 
 $this->registerJs($script);
 ?>

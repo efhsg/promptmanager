@@ -103,7 +103,7 @@ echo $this->render('_breadcrumbs', [
                     ],
                 ],
             ]);
-            ?>
+?>
         </div>
     </div>
 </div>

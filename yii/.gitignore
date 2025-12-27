@@ -35,4 +35,4 @@ tests/_support/_generated
 /.vagrant
 
 # personal scratch
-/scratch
+/scratchyii/.php-cs-fixer.cache

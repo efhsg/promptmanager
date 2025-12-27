@@ -1,4 +1,5 @@
 <?php
+
 /** @noinspection JSPrimitiveTypeWrapperUsage */
 
 namespace app\widgets;
@@ -108,209 +109,209 @@ class PathSelectorWidget extends Widget
         $errorText = Json::encode($this->errorText);
 
         $script = <<<JS
-/* eslint-disable */
-// noinspection JSAnnotator
+            /* eslint-disable */
+            // noinspection JSAnnotator
 
-(function() {
-    const pathInput = document.getElementById({$inputIdJson})
-    const pathSuggestions = document.getElementById({$suggestionsIdJson})
-    const pathStatus = document.getElementById({$statusIdJson})
-    const pathRootLabel = document.getElementById({$rootLabelIdJson})
-    const hiddenContentInput = document.getElementById({$hiddenContentInputId})
-    const pathListUrl = {$pathListUrl}
-    let availablePaths = []
-    let initialPathValue = {$initialValue}
+            (function() {
+                const pathInput = document.getElementById({$inputIdJson})
+                const pathSuggestions = document.getElementById({$suggestionsIdJson})
+                const pathStatus = document.getElementById({$statusIdJson})
+                const pathRootLabel = document.getElementById({$rootLabelIdJson})
+                const hiddenContentInput = document.getElementById({$hiddenContentInputId})
+                const pathListUrl = {$pathListUrl}
+                let availablePaths = []
+                let initialPathValue = {$initialValue}
 
-    const messages = {
-        placeholder: {$placeholderText},
-        loading: {$loadingText},
-        noProject: {$noProjectText},
-        noPaths: {$noPathsText},
-        noMatch: {$noMatchText},
-        notFound: {$notFoundText},
-        error: {$errorText}
-    }
-
-    function syncHiddenContentFromPath() {
-        if (hiddenContentInput && pathInput) {
-            hiddenContentInput.value = pathInput.value || ''
-        }
-    }
-
-    function resetPathWidget(placeholder = messages.placeholder, clearHiddenContent = true) {
-        availablePaths = []
-        if (pathInput) {
-            pathInput.value = ''
-            pathInput.placeholder = placeholder
-            pathInput.disabled = true
-        }
-        if (pathSuggestions) {
-            pathSuggestions.innerHTML = ''
-            pathSuggestions.classList.add('d-none')
-        }
-        if (hiddenContentInput && clearHiddenContent) {
-            hiddenContentInput.value = ''
-        }
-    }
-
-    function handlePathError(message) {
-        if (pathStatus) {
-            pathStatus.textContent = message
-        }
-        resetPathWidget(messages.error, false)
-    }
-
-    function renderPathOptions(forceValue = null) {
-        if (!pathInput || !pathSuggestions) {
-            return
-        }
-
-        if (forceValue !== null) {
-            pathInput.value = forceValue
-        }
-
-        const filterTerm = pathInput.value.trim().toLowerCase()
-        const filteredPaths = filterTerm === ''
-            ? availablePaths
-            : availablePaths.filter((path) => path.toLowerCase().includes(filterTerm))
-
-        const currentValue = pathInput.value
-        pathSuggestions.innerHTML = ''
-        if (filteredPaths.length === 1 && currentValue === filteredPaths[0]) {
-            pathSuggestions.classList.add('d-none')
-            pathSuggestions.innerHTML = ''
-        } else {
-            filteredPaths.forEach((path) => {
-                const option = document.createElement('button')
-                option.type = 'button'
-                option.className = 'list-group-item list-group-item-action'
-                option.textContent = path
-                option.dataset.value = path
-                if (currentValue === path) {
-                    option.classList.add('active')
+                const messages = {
+                    placeholder: {$placeholderText},
+                    loading: {$loadingText},
+                    noProject: {$noProjectText},
+                    noPaths: {$noPathsText},
+                    noMatch: {$noMatchText},
+                    notFound: {$notFoundText},
+                    error: {$errorText}
                 }
-                option.addEventListener('mousedown', (event) => {
-                    event.preventDefault()
-                    pathInput.value = path
-                    renderPathOptions()
-                })
-                pathSuggestions.appendChild(option)
-            })
 
-            if (filteredPaths.length === 0) {
-                pathSuggestions.classList.add('d-none')
-            } else {
-                pathSuggestions.classList.remove('d-none')
-            }
-        }
+                function syncHiddenContentFromPath() {
+                    if (hiddenContentInput && pathInput) {
+                        hiddenContentInput.value = pathInput.value || ''
+                    }
+                }
 
-        if (pathStatus) {
-            if (availablePaths.length === 0) {
-                pathStatus.textContent = messages.noPaths
-            } else if (filteredPaths.length === 0 && filterTerm !== '') {
-                pathStatus.textContent = messages.noMatch
-            } else if (currentValue && !availablePaths.includes(currentValue)) {
-                pathStatus.textContent = messages.notFound
-            } else {
-                pathStatus.textContent = ''
-            }
-        }
+                function resetPathWidget(placeholder = messages.placeholder, clearHiddenContent = true) {
+                    availablePaths = []
+                    if (pathInput) {
+                        pathInput.value = ''
+                        pathInput.placeholder = placeholder
+                        pathInput.disabled = true
+                    }
+                    if (pathSuggestions) {
+                        pathSuggestions.innerHTML = ''
+                        pathSuggestions.classList.add('d-none')
+                    }
+                    if (hiddenContentInput && clearHiddenContent) {
+                        hiddenContentInput.value = ''
+                    }
+                }
 
-        syncHiddenContentFromPath()
-    }
+                function handlePathError(message) {
+                    if (pathStatus) {
+                        pathStatus.textContent = message
+                    }
+                    resetPathWidget(messages.error, false)
+                }
 
-    async function loadPathOptions(fieldType, projectId) {
-        if (!pathInput) {
-            return
-        }
+                function renderPathOptions(forceValue = null) {
+                    if (!pathInput || !pathSuggestions) {
+                        return
+                    }
 
-        if (!projectId) {
-            if (pathStatus) {
-                pathStatus.textContent = messages.noProject
-            }
-            if (pathRootLabel) {
-                pathRootLabel.textContent = ''
-            }
-            resetPathWidget(messages.placeholder)
-            return
-        }
+                    if (forceValue !== null) {
+                        pathInput.value = forceValue
+                    }
 
-        if (pathStatus) {
-            pathStatus.textContent = 'Loading...'
-        }
-        if (pathInput) {
-            pathInput.disabled = true
-            pathInput.placeholder = messages.loading
-        }
-        if (pathSuggestions) {
-            pathSuggestions.innerHTML = ''
-            pathSuggestions.classList.add('d-none')
-        }
+                    const filterTerm = pathInput.value.trim().toLowerCase()
+                    const filteredPaths = filterTerm === ''
+                        ? availablePaths
+                        : availablePaths.filter((path) => path.toLowerCase().includes(filterTerm))
 
-        try {
-            const response = await fetch(`\${pathListUrl}?projectId=\${projectId}&type=\${fieldType}`, {
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            })
+                    const currentValue = pathInput.value
+                    pathSuggestions.innerHTML = ''
+                    if (filteredPaths.length === 1 && currentValue === filteredPaths[0]) {
+                        pathSuggestions.classList.add('d-none')
+                        pathSuggestions.innerHTML = ''
+                    } else {
+                        filteredPaths.forEach((path) => {
+                            const option = document.createElement('button')
+                            option.type = 'button'
+                            option.className = 'list-group-item list-group-item-action'
+                            option.textContent = path
+                            option.dataset.value = path
+                            if (currentValue === path) {
+                                option.classList.add('active')
+                            }
+                            option.addEventListener('mousedown', (event) => {
+                                event.preventDefault()
+                                pathInput.value = path
+                                renderPathOptions()
+                            })
+                            pathSuggestions.appendChild(option)
+                        })
 
-            if (!response.ok) {
-                handlePathError(messages.error)
-                return
-            }
+                        if (filteredPaths.length === 0) {
+                            pathSuggestions.classList.add('d-none')
+                        } else {
+                            pathSuggestions.classList.remove('d-none')
+                        }
+                    }
 
-            const data = await response.json()
-            if (!data.success) {
-                handlePathError(data.message || messages.error)
-                return
-            }
+                    if (pathStatus) {
+                        if (availablePaths.length === 0) {
+                            pathStatus.textContent = messages.noPaths
+                        } else if (filteredPaths.length === 0 && filterTerm !== '') {
+                            pathStatus.textContent = messages.noMatch
+                        } else if (currentValue && !availablePaths.includes(currentValue)) {
+                            pathStatus.textContent = messages.notFound
+                        } else {
+                            pathStatus.textContent = ''
+                        }
+                    }
 
-            availablePaths = Array.isArray(data.paths) ? data.paths : []
-            if (pathRootLabel) {
-                pathRootLabel.textContent = data.root || ''
-            }
+                    syncHiddenContentFromPath()
+                }
 
-            if (pathInput) {
-                pathInput.disabled = false
-                pathInput.placeholder = messages.placeholder
-            }
+                async function loadPathOptions(fieldType, projectId) {
+                    if (!pathInput) {
+                        return
+                    }
 
-            const targetValue = (hiddenContentInput ? hiddenContentInput.value : '') || initialPathValue || ''
-            renderPathOptions(targetValue)
-            initialPathValue = null
-        } catch (error) {
-            handlePathError(error.message)
-        }
-    }
+                    if (!projectId) {
+                        if (pathStatus) {
+                            pathStatus.textContent = messages.noProject
+                        }
+                        if (pathRootLabel) {
+                            pathRootLabel.textContent = ''
+                        }
+                        resetPathWidget(messages.placeholder)
+                        return
+                    }
 
-    if (pathInput) {
-        pathInput.addEventListener('input', () => {
-            renderPathOptions()
-        })
-        pathInput.addEventListener('focus', () => {
-            if (pathSuggestions && pathSuggestions.children.length > 0) {
-                pathSuggestions.classList.remove('d-none')
-            }
-        })
-        pathInput.addEventListener('blur', () => {
-            if (pathSuggestions) {
-                setTimeout(() => pathSuggestions.classList.add('d-none'), 100)
-            }
-        })
-    }
+                    if (pathStatus) {
+                        pathStatus.textContent = 'Loading...'
+                    }
+                    if (pathInput) {
+                        pathInput.disabled = true
+                        pathInput.placeholder = messages.loading
+                    }
+                    if (pathSuggestions) {
+                        pathSuggestions.innerHTML = ''
+                        pathSuggestions.classList.add('d-none')
+                    }
 
-    window.pathSelectorWidgets = window.pathSelectorWidgets || {}
-    window.pathSelectorWidgets[{$baseIdJson}] = {
-        load: loadPathOptions,
-        reset: resetPathWidget,
-        render: renderPathOptions,
-        sync: syncHiddenContentFromPath
-    }
+                    try {
+                        const response = await fetch(`\${pathListUrl}?projectId=\${projectId}&type=\${fieldType}`, {
+                            headers: {'X-Requested-With': 'XMLHttpRequest'}
+                        })
 
-    if (!window.pathSelectorWidget) {
-        window.pathSelectorWidget = window.pathSelectorWidgets[{$baseIdJson}]
-    }
-})()
-/* eslint-enable */
-JS;
+                        if (!response.ok) {
+                            handlePathError(messages.error)
+                            return
+                        }
+
+                        const data = await response.json()
+                        if (!data.success) {
+                            handlePathError(data.message || messages.error)
+                            return
+                        }
+
+                        availablePaths = Array.isArray(data.paths) ? data.paths : []
+                        if (pathRootLabel) {
+                            pathRootLabel.textContent = data.root || ''
+                        }
+
+                        if (pathInput) {
+                            pathInput.disabled = false
+                            pathInput.placeholder = messages.placeholder
+                        }
+
+                        const targetValue = (hiddenContentInput ? hiddenContentInput.value : '') || initialPathValue || ''
+                        renderPathOptions(targetValue)
+                        initialPathValue = null
+                    } catch (error) {
+                        handlePathError(error.message)
+                    }
+                }
+
+                if (pathInput) {
+                    pathInput.addEventListener('input', () => {
+                        renderPathOptions()
+                    })
+                    pathInput.addEventListener('focus', () => {
+                        if (pathSuggestions && pathSuggestions.children.length > 0) {
+                            pathSuggestions.classList.remove('d-none')
+                        }
+                    })
+                    pathInput.addEventListener('blur', () => {
+                        if (pathSuggestions) {
+                            setTimeout(() => pathSuggestions.classList.add('d-none'), 100)
+                        }
+                    })
+                }
+
+                window.pathSelectorWidgets = window.pathSelectorWidgets || {}
+                window.pathSelectorWidgets[{$baseIdJson}] = {
+                    load: loadPathOptions,
+                    reset: resetPathWidget,
+                    render: renderPathOptions,
+                    sync: syncHiddenContentFromPath
+                }
+
+                if (!window.pathSelectorWidget) {
+                    window.pathSelectorWidget = window.pathSelectorWidgets[{$baseIdJson}]
+                }
+            })()
+            /* eslint-enable */
+            JS;
 
         $this->view->registerJs($script);
     }

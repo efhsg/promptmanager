@@ -1,4 +1,5 @@
 <?php
+
 namespace app\models;
 
 use app\models\traits\TimestampTrait;
@@ -47,7 +48,7 @@ class PromptTemplate extends ActiveRecord
                 ['name', 'project_id'],
                 'unique',
                 'targetAttribute' => ['name', 'project_id'],
-                'message' => 'The template name has already been taken in this project.'
+                'message' => 'The template name has already been taken in this project.',
             ],
             [['project_id'],
                 'exist',

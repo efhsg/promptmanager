@@ -32,7 +32,6 @@ use yii\db\ActiveRecord;
  */
 class Field extends ActiveRecord
 {
-
     use TimestampTrait;
 
     /**
@@ -78,7 +77,7 @@ class Field extends ActiveRecord
                 'targetAttribute' => ['project_id' => 'id'],
                 'when' => function ($model) {
                     return $model->project_id !== null;
-                }
+                },
             ],
             [['user_id'],
                 'exist',
@@ -196,7 +195,7 @@ class Field extends ActiveRecord
             return;
         }
 
-        $relativePath = trim((string)$this->$attribute);
+        $relativePath = trim((string) $this->$attribute);
         if ($relativePath === '') {
             return;
         }

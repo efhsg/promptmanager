@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace app\models;
 
@@ -25,7 +27,6 @@ use yii\db\ActiveRecord;
  */
 class Context extends ActiveRecord
 {
-
     use TimestampTrait;
 
     /**
@@ -58,7 +59,7 @@ class Context extends ActiveRecord
                 ['project_id', 'name'],
                 'unique',
                 'targetAttribute' => ['project_id', 'name'],
-                'message' => 'The context name has already been taken in this sector.'
+                'message' => 'The context name has already been taken in this sector.',
             ],
             [['project_id'],
                 'exist',

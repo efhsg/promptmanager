@@ -20,4 +20,3 @@ class m251212_000001_add_render_label_to_field extends Migration
         $this->dropColumn('{{%field}}', 'render_label');
     }
 }
-

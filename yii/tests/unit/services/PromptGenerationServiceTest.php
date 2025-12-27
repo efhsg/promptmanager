@@ -14,7 +14,6 @@ use yii\web\NotFoundHttpException;
 
 class PromptGenerationServiceTest extends Unit
 {
-
     private const USER_ID = 100;
 
     /**
@@ -195,7 +194,7 @@ class PromptGenerationServiceTest extends Unit
                         return $templateBody;
                     }
                     return null;
-                }
+                },
             ]
         );
 
@@ -248,7 +247,7 @@ class PromptGenerationServiceTest extends Unit
                         return $templateBody;
                     }
                     return null;
-                }
+                },
             ]
         );
 
@@ -303,7 +302,7 @@ class PromptGenerationServiceTest extends Unit
                         return $templateBody;
                     }
                     return null;
-                }
+                },
             ]
         );
 
@@ -371,7 +370,7 @@ class PromptGenerationServiceTest extends Unit
                         return $templateBody;
                     }
                     return null;
-                }
+                },
             ]
         );
 
@@ -499,7 +498,7 @@ class PromptGenerationServiceTest extends Unit
                         return $templateBody;
                     }
                     return null;
-                }
+                },
             ]
         );
 

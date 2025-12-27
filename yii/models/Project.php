@@ -50,7 +50,7 @@ class Project extends ActiveRecord
         } elseif ($value === '' || $value === null) {
             $this->_linkedProjectIds = [];
         } else {
-            $this->_linkedProjectIds = (array)$value;
+            $this->_linkedProjectIds = (array) $value;
         }
     }
 
@@ -196,7 +196,7 @@ class Project extends ActiveRecord
             return true;
         }
 
-        $normalized = ltrim(strtolower((string)$extension), '.');
+        $normalized = ltrim(strtolower((string) $extension), '.');
         if ($normalized === '') {
             return false;
         }
@@ -298,7 +298,7 @@ class Project extends ActiveRecord
 
     public function getPromptInstanceCopyFormatEnum(): CopyType
     {
-        return CopyType::tryFrom((string)$this->prompt_instance_copy_format) ?? CopyType::MD;
+        return CopyType::tryFrom((string) $this->prompt_instance_copy_format) ?? CopyType::MD;
     }
 
     private function normalizeAllowedFileExtensionsField(): void
@@ -333,7 +333,7 @@ class Project extends ActiveRecord
             return;
         }
 
-        $parts = $this->parseBlacklistDirectories((string)$this->$attribute);
+        $parts = $this->parseBlacklistDirectories((string) $this->$attribute);
 
         foreach ($parts as $directory) {
             $trimmed = trim($directory);

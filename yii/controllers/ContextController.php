@@ -1,4 +1,6 @@
-<?php /** @noinspection DuplicatedCode */
+<?php
+
+/** @noinspection DuplicatedCode */
 
 /** @noinspection PhpUnused */
 
@@ -38,8 +40,7 @@ class ContextController extends Controller
         private readonly ContextService $contextService,
         private readonly EntityPermissionService $permissionService,
         $config = []
-    )
-    {
+    ) {
         parent::__construct($id, $module, $config);
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('context');
     }
@@ -61,7 +62,7 @@ class ContextController extends Controller
                         'actions' => array_keys($this->actionPermissionMap),
                         'matchCallback' => function ($rule, $action) {
                             $callback = $this->permissionService->isModelBasedAction($action->id)
-                                ? fn() => $this->findModel((int)Yii::$app->request->get('id'))
+                                ? fn() => $this->findModel((int) Yii::$app->request->get('id'))
                                 : null;
                             return $this->permissionService->hasActionPermission('context', $action->id, $callback);
                         },

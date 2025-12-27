@@ -274,20 +274,20 @@ class UserServiceTest extends Unit
     {
         $connection->createCommand(
             <<<SQL
-CREATE TABLE user (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL,
-    email TEXT NOT NULL,
-    password_hash TEXT NOT NULL,
-    auth_key TEXT,
-    password_reset_token TEXT,
-    access_token TEXT,
-    status INTEGER,
-    created_at INTEGER,
-    updated_at INTEGER,
-    deleted_at INTEGER
-)
-SQL
+                CREATE TABLE user (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT NOT NULL,
+                    email TEXT NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    auth_key TEXT,
+                    password_reset_token TEXT,
+                    access_token TEXT,
+                    status INTEGER,
+                    created_at INTEGER,
+                    updated_at INTEGER,
+                    deleted_at INTEGER
+                )
+                SQL
         )->execute();
     }
 

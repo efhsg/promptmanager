@@ -60,7 +60,7 @@ class MarkdownWriter extends AbstractFormatWriter
 
             if (!empty($attrs['list'])) {
                 $listActive = true;
-                $indent = (int)($attrs['indent'] ?? 0);
+                $indent = (int) ($attrs['indent'] ?? 0);
                 $indent = max($indent, 0);
                 $indentSpaces = str_repeat('  ', $indent);
 
@@ -73,9 +73,9 @@ class MarkdownWriter extends AbstractFormatWriter
                     $listCounters[$indent] = $count + 1;
                 } elseif ($attrs['list'] === 'checked' || $attrs['list'] === 'unchecked') {
                     $prefix = '- [' . ($attrs['list'] === 'checked' ? 'x' : ' ') . '] ';
-                    $listCounters[$indent] = $listCounters[$indent] ?? 1;
+                    $listCounters[$indent] ??= 1;
                 } else {
-                    $listCounters[$indent] = $listCounters[$indent] ?? 1;
+                    $listCounters[$indent] ??= 1;
                 }
 
                 $lines[] = $indentSpaces . $prefix . trim($lineText);
@@ -87,7 +87,7 @@ class MarkdownWriter extends AbstractFormatWriter
             }
 
             if (!empty($attrs['header'])) {
-                $headerLevel = (int)$attrs['header'];
+                $headerLevel = (int) $attrs['header'];
                 $headerLevel = $headerLevel < 1 ? 1 : (min($headerLevel, 6));
                 $hashes = str_repeat('#', $headerLevel);
                 $lines[] = $hashes . ' ' . trim($lineText);
@@ -185,7 +185,7 @@ class MarkdownWriter extends AbstractFormatWriter
         }
 
         if (isset($embed['video'])) {
-            return (string)$embed['video'];
+            return (string) $embed['video'];
         }
 
         return '';

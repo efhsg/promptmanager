@@ -51,11 +51,11 @@ QuillAsset::register($this);
             ],
         ])
         ->hint('Select other projects whose fields can be used as external (EXT) fields in prompt instances.');
-    ?>
+?>
 
     <?= $form->field($model, 'description')
-        ->hiddenInput(['id' => 'project-description'])
-        ->label('Description') ?>
+    ->hiddenInput(['id' => 'project-description'])
+    ->label('Description') ?>
 
     <div class="resizable-editor-container mb-3">
         <div id="project-editor" class="resizable-editor"></div>
@@ -63,8 +63,8 @@ QuillAsset::register($this);
 
     <div class="form-group mt-4 text-end">
         <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], [
-            'class' => 'btn btn-secondary me-2',
-        ]) ?>
+        'class' => 'btn btn-secondary me-2',
+    ]) ?>
         <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
     </div>
 
@@ -74,33 +74,33 @@ QuillAsset::register($this);
 <?php
 $templateBody = json_encode($model->description);
 $script = <<<JS
-var quill = new Quill('#project-editor', {
-    theme: 'snow',
-    modules: {
-        toolbar: [
-            ['bold', 'italic', 'underline', 'strike', 'code'],
-            ['blockquote', 'code-block'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            [{ 'indent': '-1' }, { 'indent': '+1' }],
-            [{ 'size': ['small', false, 'large', 'huge'] }],
-            [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'align': [] }],
-            ['clean']
-        ]
+    var quill = new Quill('#project-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike', 'code'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'size': ['small', false, 'large', 'huge'] }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['clean']
+            ]
+        }
+    });
+
+    try {
+        quill.setContents(JSON.parse($templateBody))
+    } catch (error) {
+        console.error('Error injecting template body:', error);
     }
-});
 
-try {
-    quill.setContents(JSON.parse($templateBody))
-} catch (error) {
-    console.error('Error injecting template body:', error);
-}
-
-quill.on('text-change', function() {
-    document.querySelector('#project-description').value = JSON.stringify(quill.getContents());
-});
-JS;
+    quill.on('text-change', function() {
+        document.querySelector('#project-description').value = JSON.stringify(quill.getContents());
+    });
+    JS;
 
 $this->registerJs($script);
 ?>

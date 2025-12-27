@@ -308,42 +308,42 @@ class MarkdownParserTest extends Unit
     public function testPreserveBlankLinesInComprehensiveMarkdown(): void
     {
         $md = <<<'MD'
-# Heading1
+            # Heading1
 
-Test normal
+            Test normal
 
-## Heading2
+            ## Heading2
 
-text **bold**
+            text **bold**
 
-### Heading3
+            ### Heading3
 
-test `code`
+            test `code`
 
-#### Heading4
+            #### Heading4
 
-> test quote
+            > test quote
 
-##### Heading5
+            ##### Heading5
 
-```
-<html lang="en">Code</html>
-```
+            ```
+            <html lang="en">Code</html>
+            ```
 
-###### Heading6
+            ###### Heading6
 
-1. Numbered list 1
-2. Numbered list 2
-3. Numbered list 3
+            1. Numbered list 1
+            2. Numbered list 2
+            3. Numbered list 3
 
-- List item 1
-- List item 1
-- List item 1
+            - List item 1
+            - List item 1
+            - List item 1
 
-1. Level1
-  1. level2
-    1. level3
-MD;
+            1. Level1
+              1. level2
+                1. level3
+            MD;
 
         $blocks = $this->parser->parse($md);
 

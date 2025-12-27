@@ -84,23 +84,23 @@ class PathPreviewWidget extends Widget
     private function renderModal(string $modalId, string $titleId, string $languageId, string $contentId): string
     {
         return <<<HTML
-<div class="modal fade" id="$modalId" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title mb-0 flex-grow-1 text-truncate">
-                    <span id="$titleId">File Preview</span>
-                    <span id="$languageId" class="badge text-bg-secondary ms-2 d-none"></span>
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal fade" id="$modalId" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-xl modal-dialog-scrollable">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title mb-0 flex-grow-1 text-truncate">
+                                <span id="$titleId">File Preview</span>
+                                <span id="$languageId" class="badge text-bg-secondary ms-2 d-none"></span>
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <pre class="mb-0 border-0"><code id="$contentId" class="font-monospace"></code></pre>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="modal-body">
-                <pre class="mb-0 border-0"><code id="$contentId" class="font-monospace"></code></pre>
-            </div>
-        </div>
-    </div>
-</div>
-HTML;
+            HTML;
     }
 
     private function registerClientScript(
@@ -114,152 +114,152 @@ HTML;
 
         $this->getView()->registerJs(
             <<<JS
-(function () {
-    var button = document.getElementById('$buttonId');
-    var modalElement = document.getElementById('$modalId');
+                (function () {
+                    var button = document.getElementById('$buttonId');
+                    var modalElement = document.getElementById('$modalId');
 
-    if (!button || !modalElement || !window.bootstrap) {
-        return;
-    }
+                    if (!button || !modalElement || !window.bootstrap) {
+                        return;
+                    }
 
-    var modalBody = document.getElementById('$contentId');
-    var modalTitle = document.getElementById('$titleId');
-    var languageBadge = document.getElementById('$languageId');
-    var modal = new bootstrap.Modal(modalElement);
-    var defaultErrorMessage = $defaultError;
+                    var modalBody = document.getElementById('$contentId');
+                    var modalTitle = document.getElementById('$titleId');
+                    var languageBadge = document.getElementById('$languageId');
+                    var modal = new bootstrap.Modal(modalElement);
+                    var defaultErrorMessage = $defaultError;
 
-    function resetLanguageBadge() {
-        if (!languageBadge) {
-            return;
-        }
-        languageBadge.textContent = '';
-        languageBadge.classList.add('d-none');
-    }
+                    function resetLanguageBadge() {
+                        if (!languageBadge) {
+                            return;
+                        }
+                        languageBadge.textContent = '';
+                        languageBadge.classList.add('d-none');
+                    }
 
-    function updateLanguageBadge(label) {
-        if (!languageBadge) {
-            return;
-        }
-        languageBadge.textContent = label;
-        languageBadge.classList.remove('d-none');
-    }
+                    function updateLanguageBadge(label) {
+                        if (!languageBadge) {
+                            return;
+                        }
+                        languageBadge.textContent = label;
+                        languageBadge.classList.remove('d-none');
+                    }
 
-    function applyLanguageClass(language) {
-        if (!modalBody) {
-            return;
-        }
-        var classes = ['font-monospace', 'hljs', 'text-light', 'language-' + language];
-        modalBody.className = classes.join(' ');
-    }
+                    function applyLanguageClass(language) {
+                        if (!modalBody) {
+                            return;
+                        }
+                        var classes = ['font-monospace', 'hljs', 'text-light', 'language-' + language];
+                        modalBody.className = classes.join(' ');
+                    }
 
-    function tweakPhpSuppressions(root) {
-        if (!root) {
-            return;
-        }
+                    function tweakPhpSuppressions(root) {
+                        if (!root) {
+                            return;
+                        }
 
-        root.querySelectorAll('.hljs-comment').forEach(function (commentEl) {
-            if (!commentEl.querySelector('.hljs-doctag')) {
-                return;
-            }
+                        root.querySelectorAll('.hljs-comment').forEach(function (commentEl) {
+                            if (!commentEl.querySelector('.hljs-doctag')) {
+                                return;
+                            }
 
-            var walker = document.createTreeWalker(
-                commentEl,
-                NodeFilter.SHOW_TEXT,
-                null
-            );
+                            var walker = document.createTreeWalker(
+                                commentEl,
+                                NodeFilter.SHOW_TEXT,
+                                null
+                            );
 
-            var textNodes = [];
-            while (walker.nextNode()) {
-                textNodes.push(walker.currentNode);
-            }
+                            var textNodes = [];
+                            while (walker.nextNode()) {
+                                textNodes.push(walker.currentNode);
+                            }
 
-            textNodes.forEach(function (node) {
-                var text = node.nodeValue;
-                var target = 'PhpUnused';
-                var index = text.indexOf(target);
+                            textNodes.forEach(function (node) {
+                                var text = node.nodeValue;
+                                var target = 'PhpUnused';
+                                var index = text.indexOf(target);
 
-                if (index === -1) {
-                    return;
-                }
+                                if (index === -1) {
+                                    return;
+                                }
 
-                var before = text.slice(0, index);
-                var after = text.slice(index + target.length);
+                                var before = text.slice(0, index);
+                                var after = text.slice(index + target.length);
 
-                var span = document.createElement('span');
-                span.className = 'hljs-inspection-name';
-                span.textContent = target;
+                                var span = document.createElement('span');
+                                span.className = 'hljs-inspection-name';
+                                span.textContent = target;
 
-                var parent = node.parentNode;
-                if (!parent) {
-                    return;
-                }
+                                var parent = node.parentNode;
+                                if (!parent) {
+                                    return;
+                                }
 
-                if (before) {
-                    parent.insertBefore(document.createTextNode(before), node);
-                }
-                parent.insertBefore(span, node);
-                if (after) {
-                    parent.insertBefore(document.createTextNode(after), node);
-                }
+                                if (before) {
+                                    parent.insertBefore(document.createTextNode(before), node);
+                                }
+                                parent.insertBefore(span, node);
+                                if (after) {
+                                    parent.insertBefore(document.createTextNode(after), node);
+                                }
 
-                parent.removeChild(node);
-            });
-        });
-    }
+                                parent.removeChild(node);
+                            });
+                        });
+                    }
 
-    function setPreviewContent(text) {
-        if (!modalBody) {
-            return;
-        }
-        modalBody.textContent = text;
+                    function setPreviewContent(text) {
+                        if (!modalBody) {
+                            return;
+                        }
+                        modalBody.textContent = text;
 
-        if (window.hljs) {
-            window.hljs.highlightElement(modalBody);
-            tweakPhpSuppressions(modalBody);
-        }
-    }
+                        if (window.hljs) {
+                            window.hljs.highlightElement(modalBody);
+                            tweakPhpSuppressions(modalBody);
+                        }
+                    }
 
-    function showError(message) {
-        resetLanguageBadge();
-        setPreviewContent(message ? 'Preview error: ' + message : defaultErrorMessage);
-    }
+                    function showError(message) {
+                        resetLanguageBadge();
+                        setPreviewContent(message ? 'Preview error: ' + message : defaultErrorMessage);
+                    }
 
-    button.addEventListener('click', function () {
-        var language = button.getAttribute('data-language') || 'plaintext';
-        var languageLabel = button.getAttribute('data-language-label') || language.toUpperCase();
-        var previewUrl = button.getAttribute('data-url');
+                    button.addEventListener('click', function () {
+                        var language = button.getAttribute('data-language') || 'plaintext';
+                        var languageLabel = button.getAttribute('data-language-label') || language.toUpperCase();
+                        var previewUrl = button.getAttribute('data-url');
 
-        if (modalTitle) {
-            modalTitle.textContent = button.getAttribute('data-path-label') || 'File Preview';
-        }
+                        if (modalTitle) {
+                            modalTitle.textContent = button.getAttribute('data-path-label') || 'File Preview';
+                        }
 
-        resetLanguageBadge();
-        applyLanguageClass(language);
-        setPreviewContent('Loading...');
-        modal.show();
+                        resetLanguageBadge();
+                        applyLanguageClass(language);
+                        setPreviewContent('Loading...');
+                        modal.show();
 
-        if (!previewUrl) {
-            showError('');
-            return;
-        }
+                        if (!previewUrl) {
+                            showError('');
+                            return;
+                        }
 
-        fetch(previewUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (!data.success) {
-                    showError(data.message || '');
-                    return;
-                }
-                updateLanguageBadge(languageLabel);
-                setPreviewContent(data.preview);
-            })
-            .catch(function (error) {
-                console.error('Path preview failed:', error);
-                showError('');
-            });
-    });
-})();
-JS
+                        fetch(previewUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                            .then(function (response) { return response.json(); })
+                            .then(function (data) {
+                                if (!data.success) {
+                                    showError(data.message || '');
+                                    return;
+                                }
+                                updateLanguageBadge(languageLabel);
+                                setPreviewContent(data.preview);
+                            })
+                            .catch(function (error) {
+                                console.error('Path preview failed:', error);
+                                showError('');
+                            });
+                    });
+                })();
+                JS
         );
     }
 

@@ -208,10 +208,10 @@ class PlaceholderProcessorTest extends Unit
             $current = $result[$i];
             $next = $result[$i + 1];
             if (
-                isset($current['insert']) &&
-                is_string($current['insert']) &&
-                str_ends_with($current['insert'], "\n") &&
-                isset($next['attributes']['list'])
+                isset($current['insert'])
+                && is_string($current['insert'])
+                && str_ends_with($current['insert'], "\n")
+                && isset($next['attributes']['list'])
             ) {
                 $foundNewlineBeforeList = true;
                 break;

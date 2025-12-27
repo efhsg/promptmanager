@@ -52,7 +52,7 @@ class HtmlWriter extends AbstractFormatWriter
 
             if (!empty($attrs['list'])) {
                 $type = $attrs['list'] === 'ordered' ? 'ol' : 'ul';
-                $indent = (int)($attrs['indent'] ?? 0);
+                $indent = (int) ($attrs['indent'] ?? 0);
                 $indent = $indent < 0 ? 0 : $indent;
 
                 $closeListsTo($indent);
@@ -73,7 +73,7 @@ class HtmlWriter extends AbstractFormatWriter
             $closeListsTo(0);
 
             if (!empty($attrs['header'])) {
-                $level = (int)$attrs['header'];
+                $level = (int) $attrs['header'];
                 $level = $level < 1 ? 1 : ($level > 6 ? 6 : $level);
                 $html[] = '<h' . $level . '>' . $lineText . '</h' . $level . '>';
                 continue;
@@ -148,7 +148,7 @@ class HtmlWriter extends AbstractFormatWriter
         }
 
         if (!empty($attrs['link'])) {
-            $href = htmlspecialchars((string)$attrs['link'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $href = htmlspecialchars((string) $attrs['link'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $value = '<a href="' . $href . '">' . $value . '</a>';
         }
 
@@ -163,7 +163,7 @@ class HtmlWriter extends AbstractFormatWriter
         }
 
         if (isset($embed['video'])) {
-            $src = htmlspecialchars((string)$embed['video'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+            $src = htmlspecialchars((string) $embed['video'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             return '<a href="' . $src . '">' . $src . '</a>';
         }
 

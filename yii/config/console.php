@@ -21,7 +21,7 @@ $config = [
     ],
     'container' => [
         'definitions' => [
-            app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class
+            app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class,
         ],
     ],
 ];

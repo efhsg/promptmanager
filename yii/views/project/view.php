@@ -109,11 +109,11 @@ echo $this->render('_breadcrumbs', [
                     ],
                     [
                         'attribute' => 'created_at',
-                        'format' => ['datetime', 'php:Y-m-d H:i:s']
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
                     [
                         'attribute' => 'updated_at',
-                        'format' => ['datetime', 'php:Y-m-d H:i:s']
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
                 ],
             ]) ?>

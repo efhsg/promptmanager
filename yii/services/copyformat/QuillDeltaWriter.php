@@ -6,8 +6,7 @@ class QuillDeltaWriter extends AbstractFormatWriter
 {
     public function __construct(
         private readonly DeltaParser $parser = new DeltaParser()
-    ) {
-    }
+    ) {}
 
     public function writeFromBlocks(array $blocks): string
     {

@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace app\modules\identity\models;
 
@@ -24,12 +26,10 @@ use yii\web\IdentityInterface;
  */
 class User extends ActiveRecord implements IdentityInterface
 {
+    public const TOKEN_EXPIRATION_SECONDS = 3600;
 
-
-    const TOKEN_EXPIRATION_SECONDS = 3600;
-
-    const STATUS_INACTIVE = 0;
-    const STATUS_ACTIVE = 10;
+    public const STATUS_INACTIVE = 0;
+    public const STATUS_ACTIVE = 10;
 
     public static function tableName(): string
     {
@@ -70,7 +70,7 @@ class User extends ActiveRecord implements IdentityInterface
             return false;
         }
         $parts = explode('_', $token);
-        $timestamp = (int)end($parts);
+        $timestamp = (int) end($parts);
         $expire = Yii::$app->params['user.passwordResetTokenExpire'] ?? self::TOKEN_EXPIRATION_SECONDS;
 
         return $timestamp + $expire >= time();

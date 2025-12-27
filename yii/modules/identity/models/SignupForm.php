@@ -14,7 +14,7 @@ class SignupForm extends Model
     public string $username = '';
     public string $email = '';
     public string $password = '';
-    public ?string $captcha = Null;
+    public ?string $captcha = null;
 
     private UserService $userService;
 

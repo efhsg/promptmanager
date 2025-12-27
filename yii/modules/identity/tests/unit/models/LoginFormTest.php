@@ -9,7 +9,6 @@ use Yii;
 
 class LoginFormTest extends Unit
 {
-
     public function _fixtures(): array
     {
         return [

@@ -1,4 +1,6 @@
-<?php /** @noinspection PhpUnused */
+<?php
+
+/** @noinspection PhpUnused */
 
 namespace app\modules\identity\services;
 
@@ -12,7 +14,6 @@ use yii\rbac\ManagerInterface;
 
 class UserService
 {
-
     use ValidationErrorFormatterTrait;
 
     private ?UserDataSeederInterface $userDataSeeder;

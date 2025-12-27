@@ -46,14 +46,14 @@ class ProjectLinkedProject extends ActiveRecord
                 'exist',
                 'skipOnError' => true,
                 'targetClass' => Project::class,
-                'targetAttribute' => ['project_id' => 'id']
+                'targetAttribute' => ['project_id' => 'id'],
             ],
             [
                 ['linked_project_id'],
                 'exist',
                 'skipOnError' => true,
                 'targetClass' => Project::class,
-                'targetAttribute' => ['linked_project_id' => 'id']
+                'targetAttribute' => ['linked_project_id' => 'id'],
             ],
             ['linked_project_id', 'validateNotSameAsProject'],
         ];
