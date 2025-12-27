@@ -14,6 +14,7 @@
 - Keep messages concise (~70 characters)
 - Description is imperative ("add" not "added")
 - Body explains *why*, not *what* (optional)
+- No `Co-Authored-By` or AI attribution in commits
 
 ## Examples
 
