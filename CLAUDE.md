@@ -44,6 +44,13 @@ Read and follow these files:
 
 For architecture details, see `.claude/codebase_analysis.md`.
 
+## Domain Essentials
+
+- **Entities**: Project → { Context, Field, PromptTemplate, ScratchPad } → PromptInstance
+- **Placeholders**: `GEN:{{name}}` (global), `PRJ:{{name}}` (project), `EXT:{{label:name}}` (linked)
+- **Rich text**: All content stored as Quill Delta JSON
+- **File fields**: Path validated at selection, content read at prompt generation
+
 ## Skills System
 
 Before implementing, check `docs/skills/index.md` for relevant skills.
