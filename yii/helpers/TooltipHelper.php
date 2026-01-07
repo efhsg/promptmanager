@@ -12,7 +12,19 @@ class TooltipHelper
     public static function prepareTexts(array $items, int $maxLength): array
     {
         return array_map(static function ($content) use ($maxLength) {
-            $cleanContent = strip_tags($content);
+            $decoded = json_decode($content, true);
+            if (json_last_error() === JSON_ERROR_NONE && isset($decoded['ops'])) {
+                $text = '';
+                foreach ($decoded['ops'] as $op) {
+                    if (isset($op['insert']) && is_string($op['insert'])) {
+                        $text .= $op['insert'];
+                    }
+                }
+                $cleanContent = trim($text);
+            } else {
+                $cleanContent = strip_tags($content);
+            }
+
             return (strlen($cleanContent) > $maxLength)
                 ? substr($cleanContent, 0, $maxLength) . '...'
                 : $cleanContent;
