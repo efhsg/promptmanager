@@ -98,7 +98,8 @@ description: Generate comprehensive analysis and documentation of entire codebas
 @npm/package.json
 
 ## Documentation
-@RULES.md
+@.claude/rules/coding-standards.md
+@.claude/rules/architecture.md
 
 ## Entry Points
 @yii/web/index.php

@@ -3,7 +3,7 @@
 ## Instruction Precedence
 
 If instructions conflict, follow this order:
-1. `docs/rules/` (this directory)
+1. `.claude/rules/` (this directory)
 2. `CLAUDE.md` (root)
 3. `.claude/codebase_analysis.md`
 

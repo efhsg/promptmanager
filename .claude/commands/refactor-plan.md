@@ -10,7 +10,8 @@ description: Analyze codebase and create a refactoring plan to follow code stand
 Read these files first to understand the project standards:
 
 ### Project Rules
-@RULES.md
+- `.claude/rules/coding-standards.md`
+- `.claude/rules/architecture.md`
 
 ### Current Architecture
 @.claude/codebase_analysis.md
@@ -40,7 +41,7 @@ If user selects nothing or cancels, run **all phases**.
 
 Search for the following violations:
 
-1. **`declare(strict_types=1)` usage** (should be NONE per RULES.md)
+1. **`declare(strict_types=1)` usage** (should be NONE per `.claude/rules/coding-standards.md`)
    - Use Grep to search for `declare(strict_types=1)` in `./yii` PHP files
 
 2. **Inline FQCNs in method bodies** (should use `use` imports)
@@ -134,7 +135,7 @@ Each phase should produce:
 
 ### Priority Levels
 
-- **Critical**: Direct violations of RULES.md (strict_types, missing type hints, inline FQCNs)
+- **Critical**: Direct violations of `.claude/rules/` (strict_types, missing type hints, inline FQCNs)
 - **High**: Architecture violations (query logic in services, business logic in controllers)
 - **Medium**: Data structure improvements (array returns that should be DTOs)
 - **Low**: Test coverage gaps, documentation improvements

@@ -23,24 +23,24 @@ You are a **Senior PHP Developer** specializing in Yii2 applications.
 ## Prime Directive
 
 Before writing or modifying any code, you MUST:
-1. Read and comply with `docs/rules/coding-standards.md`
-2. Use only approved patterns from `docs/rules/architecture.md`
-3. Never violate `docs/rules/security.md` — no exceptions
-4. Follow test requirements in `docs/rules/testing.md`
-5. Use commit format from `docs/rules/commits.md`
-6. Follow workflow in `docs/rules/workflow.md`
+1. Read and comply with `.claude/rules/coding-standards.md`
+2. Use only approved patterns from `.claude/rules/architecture.md`
+3. Never violate `.claude/rules/security.md` — no exceptions
+4. Follow test requirements in `.claude/rules/testing.md`
+5. Use commit format from `.claude/rules/commits.md`
+6. Follow workflow in `.claude/rules/workflow.md`
 
 **If a rule conflicts with the task, STOP and ask the user.**
 
 ## Shared Rules
 
 Read and follow these files:
-- `docs/rules/coding-standards.md` — PSR-12, type hints, DI patterns
-- `docs/rules/architecture.md` — Folder structure, controller patterns
-- `docs/rules/security.md` — Access control, secrets, validation
-- `docs/rules/testing.md` — Codeception, coverage requirements
-- `docs/rules/commits.md` — Commit message format
-- `docs/rules/workflow.md` — Development process
+- `.claude/rules/coding-standards.md` — PSR-12, type hints, DI patterns
+- `.claude/rules/architecture.md` — Folder structure, controller patterns
+- `.claude/rules/security.md` — Access control, secrets, validation
+- `.claude/rules/testing.md` — Codeception, coverage requirements
+- `.claude/rules/commits.md` — Commit message format
+- `.claude/rules/workflow.md` — Development process
 
 For architecture details, see `.claude/codebase_analysis.md`.
 
@@ -53,7 +53,7 @@ For architecture details, see `.claude/codebase_analysis.md`.
 
 ## Skills System
 
-Before implementing, check `docs/skills/index.md` for relevant skills.
+Before implementing, check `.claude/skills/index.md` for relevant skills.
 Use slash commands to invoke skills (e.g., `/new-model`, `/check-standards`).
 
 ## Commands
@@ -81,7 +81,7 @@ docker exec pma_yii vendor/bin/php-cs-fixer fix
 ## Definition of Done
 
 - Change is minimal and scoped to the request
-- Change follows `docs/rules/`
+- Change follows `.claude/rules/`
 - Targeted unit test added/updated when behavior changes
 - Migrations run on both `yii` and `yii_test` schemas
 

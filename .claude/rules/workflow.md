@@ -2,17 +2,16 @@
 
 ## Before Coding
 
-1. Read project rules in `docs/rules/`
-2. Check `docs/skills/index.md` for relevant skills
+1. Read project rules in `.claude/rules/`
+2. Check `.claude/skills/index.md` for relevant skills
 3. Understand existing patterns in codebase
 4. Plan changes before implementing
 
 ## Migrations
 
 - Use `{{%table_name}}` syntax for table prefix support.
-- Migrations must be atomic and reversible with `up()` and `down()` methods.
+- Use `safeUp()` and `safeDown()` methods (not `up()`/`down()`) for automatic transaction handling.
 - Migration filenames use a timestamp prefix (e.g., `m251123_123456_add_new_table.php`).
-- Include a short class-level comment describing the migration's purpose.
 - Run on both schemas:
   ```bash
   docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
@@ -40,9 +39,3 @@
 - New environment variables must be documented in `.env.example`.
 - Don't hand-edit compiled frontend assets in `yii/web`; change sources in `npm/` and rebuild.
 
-## Definition of Done
-
-- Change is minimal and scoped to the request
-- Change follows `docs/rules/`
-- Targeted unit test added/updated when behavior changes
-- Migrations run on both `yii` and `yii_test` schemas

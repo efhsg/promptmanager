@@ -7,54 +7,27 @@ description: Create unit tests for all staged PHP classes that lack tests
 
 Create unit tests for all staged PHP classes that don't have tests yet.
 
+Follow the skill contract in `skills/test.md` for test patterns.
+
 ## Process
 
-1. **Get staged files**
-   ```bash
-   git diff --cached --name-only --diff-filter=A
-   ```
-   Filter for newly added PHP files in relevant directories.
-
-2. **Filter relevant classes**
-   Only include files from:
-   - `yii/services/` (not tests)
-   - `yii/models/` (not tests)
-   - `yii/common/enums/`
-   - `yii/widgets/`
-
-   Exclude:
-   - Files already in `tests/` directories
-   - Interfaces (`*Interface.php`)
-   - Abstract classes (check file content for `abstract class`)
-
-3. **Check for existing tests**
-   For each class, check if a corresponding test file exists:
-   - `yii/services/Foo.php` → `yii/tests/unit/services/FooTest.php`
-   - `yii/services/bar/Baz.php` → `yii/tests/unit/services/bar/BazTest.php`
-   - `yii/models/Foo.php` → `yii/tests/unit/models/FooTest.php`
-
-4. **Generate tests**
-   For each class without a test, create a test following the patterns in `/new-test`:
-
-## Test Patterns
-
-Reference: @.claude/commands/new-test.md
+1. Get staged files: `git diff --cached --name-only --diff-filter=A`
+2. Filter for: `yii/services/`, `yii/models/`, `yii/common/enums/`, `yii/widgets/`
+3. Exclude: tests/, interfaces, abstract classes
+4. Check for existing tests
+5. Generate missing tests using `skills/test.md` patterns
 
 ## Output
 
-Report which tests were created:
-
 ```
 Created tests:
-- yii/tests/unit/services/copyformat/DeltaParserTest.php
-- yii/tests/unit/services/copyformat/MarkdownWriterTest.php
+- yii/tests/unit/services/FooTest.php
 
 Skipped (test exists):
-- yii/services/CopyFormatConverter.php
+- yii/services/Bar.php
 
 Skipped (interface/abstract):
-- yii/services/copyformat/FormatWriterInterface.php
-- yii/services/copyformat/AbstractFormatWriter.php
+- yii/services/BazInterface.php
 ```
 
 ## Task

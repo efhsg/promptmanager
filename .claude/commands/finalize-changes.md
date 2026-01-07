@@ -13,9 +13,9 @@ description: Validate changes, run linter and tests, prepare commit
 git status --porcelain
 ```
 
-### 2. Check RULES.md compliance
+### 2. Check rules compliance
 
-Read `RULES.md`, then read each changed PHP file and verify compliance. Report violations.
+Read `.claude/rules/coding-standards.md`, then verify each changed PHP file. Report violations.
 
 ### 3. Run linter
 
@@ -28,7 +28,6 @@ docker exec pma_yii vendor/bin/php-cs-fixer fix
 Map changed files to test files:
 - `models/Foo.php` → `tests/unit/models/FooTest.php`
 - `services/FooService.php` → `tests/unit/services/FooServiceTest.php`
-- `components/Foo.php` → `tests/unit/components/FooTest.php`
 
 ```bash
 docker exec pma_yii vendor/bin/codecept run unit <test-path>
@@ -44,7 +43,7 @@ git status
 git diff --staged
 ```
 
-Suggest commit message (ADD:/CHG:/FIX:/DOC:, ~70 chars). Ask user for confirmation.
+Suggest commit message per `.claude/rules/commits.md`. Ask user for confirmation.
 
 ## Task
 
