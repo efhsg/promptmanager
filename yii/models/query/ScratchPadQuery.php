@@ -28,11 +28,7 @@ class ScratchPadQuery extends ActiveQuery
         $query = $this->forUser($userId);
 
         if ($projectId !== null) {
-            return $query->andWhere([
-                'or',
-                [ScratchPad::tableName() . '.project_id' => null],
-                [ScratchPad::tableName() . '.project_id' => $projectId],
-            ]);
+            return $query->forProject($projectId);
         }
 
         return $query->andWhere([ScratchPad::tableName() . '.project_id' => null]);
