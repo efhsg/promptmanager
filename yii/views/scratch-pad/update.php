@@ -4,6 +4,7 @@ use yii\helpers\Html;
 
 /** @var yii\web\View $this */
 /** @var app\models\ScratchPad $model */
+/** @var array $projectList */
 
 $this->title = 'Update: ' . $model->name;
 $this->params['breadcrumbs'][] = ['label' => 'Saved Scratch Pads', 'url' => ['index']];
@@ -19,6 +20,7 @@ $this->params['breadcrumbs'][] = 'Update';
 
                 <?= $this->render('_form', [
                     'model' => $model,
+                    'projectList' => $projectList,
                 ]) ?>
             </div>
         </div>

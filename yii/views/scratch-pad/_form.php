@@ -9,6 +9,7 @@ use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
 /** @var app\models\ScratchPad $model */
+/** @var array $projectList */
 
 QuillAsset::register($this);
 $copyTypes = CopyType::labels();
@@ -19,6 +20,11 @@ $isUpdate = !$model->isNewRecord;
     <?php $form = ActiveForm::begin(['id' => 'scratch-pad-form']); ?>
 
     <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
+
+    <?= $form->field($model, 'project_id')->dropDownList(
+        $projectList,
+        ['prompt' => '(not set)']
+    )->label('Project') ?>
 
     <?= $form->field($model, 'content')->hiddenInput(['id' => 'scratch-pad-content'])->label(false) ?>
 
@@ -80,7 +86,6 @@ $isUpdate = !$model->isNewRecord;
 <?php
 $content = json_encode($model->content);
 $saveUrl = Url::to(['/scratch-pad/save']);
-$projectId = $model->project_id ?? 'null';
 $script = <<<JS
     var quill = new Quill('#scratch-pad-editor', {
         theme: 'snow',
@@ -185,7 +190,7 @@ $script = <<<JS
                 body: JSON.stringify({
                     name: name,
                     content: deltaContent,
-                    project_id: $projectId
+                    project_id: document.getElementById('scratchpad-project_id')?.value || null
                 })
             })
             .then(response => response.json())

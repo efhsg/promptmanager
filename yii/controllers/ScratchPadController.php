@@ -128,6 +128,7 @@ class ScratchPadController extends Controller
 
         return $this->render('update', [
             'model' => $model,
+            'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
         ]);
     }
 
