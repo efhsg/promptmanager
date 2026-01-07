@@ -5,6 +5,7 @@
 namespace app\controllers;
 
 use app\components\ProjectContext;
+use app\helpers\MarkdownDetector;
 use app\models\ScratchPad;
 use app\models\ScratchPadSearch;
 use app\services\CopyFormatConverter;
@@ -52,7 +53,7 @@ class ScratchPadController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index', 'create', 'import-markdown', 'convert-format', 'save'],
+                        'actions' => ['index', 'create', 'import-markdown', 'import-text', 'convert-format', 'save'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -258,6 +259,51 @@ class ScratchPadController extends Controller
             'importData' => [
                 'content' => $deltaJson,
             ],
+        ];
+    }
+
+    public function actionImportText(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'message' => 'Invalid request method.'];
+        }
+
+        $rawBody = Yii::$app->request->rawBody;
+        $data = json_decode($rawBody, true);
+
+        if ($data === null) {
+            return ['success' => false, 'message' => 'Invalid JSON data.'];
+        }
+
+        $text = $data['text'] ?? '';
+
+        if (trim($text) === '') {
+            return ['success' => false, 'message' => 'Text content is empty.'];
+        }
+
+        $isMarkdown = MarkdownDetector::isMarkdown($text);
+
+        if ($isMarkdown) {
+            $parser = new MarkdownParser();
+            $blocks = $parser->parse($text);
+            $deltaWriter = new QuillDeltaWriter();
+            $deltaJson = $deltaWriter->writeFromBlocks($blocks);
+        } else {
+            $deltaJson = json_encode([
+                'ops' => [
+                    ['insert' => $text . "\n"],
+                ],
+            ]);
+        }
+
+        return [
+            'success' => true,
+            'importData' => [
+                'content' => $deltaJson,
+            ],
+            'format' => $isMarkdown ? 'md' : 'txt',
         ];
     }
 

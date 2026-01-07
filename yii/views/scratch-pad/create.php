@@ -28,6 +28,9 @@ $copyTypes = CopyType::labels();
                     <button type="button" id="load-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Load markdown file">
                         <i class="bi bi-file-earmark-arrow-up"></i> Load MD
                     </button>
+                    <button type="button" id="paste-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Paste from clipboard">
+                        <i class="bi bi-clipboard-plus"></i> Paste
+                    </button>
                     <div class="input-group input-group-sm">
                         <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
                             'id' => 'copy-format-select',
@@ -90,6 +93,15 @@ $copyTypes = CopyType::labels();
 </div>
 
 <label for="copy-content-hidden"></label><textarea id="copy-content-hidden" style="display: none;"></textarea>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="paste-toast" class="toast align-items-center text-bg-secondary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
 
 <?php
 $saveUrl = Url::to(['/scratch-pad/save']);
@@ -172,6 +184,59 @@ $script = <<<JS
             btn.disabled = false;
             document.getElementById('load-md-file').value = '';
         });
+    });
+
+    // Toast helper
+    function showToast(message) {
+        const toastEl = document.getElementById('paste-toast');
+        toastEl.querySelector('.toast-body').textContent = message;
+        const toast = new bootstrap.Toast(toastEl, {delay: 2000});
+        toast.show();
+    }
+
+    // Paste from clipboard functionality
+    document.getElementById('paste-md-btn').addEventListener('click', async function() {
+        const btn = this;
+        const originalText = btn.innerHTML;
+
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!text.trim()) {
+                showToast('Clipboard is empty');
+                return;
+            }
+
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+            btn.disabled = true;
+
+            const response = await fetch('/scratch-pad/import-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ text: text })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.importData && data.importData.content) {
+                const delta = typeof data.importData.content === 'string'
+                    ? JSON.parse(data.importData.content)
+                    : data.importData.content;
+                window.quill.setContents(delta);
+                showToast(data.format === 'md' ? 'Pasted as markdown' : 'Pasted as text');
+            } else {
+                showToast(data.message || 'Failed to paste content');
+            }
+        } catch (err) {
+            console.error('Paste error:', err);
+            showToast('Unable to read clipboard');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     });
 
     // Copy functionality with format conversion

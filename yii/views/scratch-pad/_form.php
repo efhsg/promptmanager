@@ -30,15 +30,20 @@ $isUpdate = !$model->isNewRecord;
 
     <div class="d-flex justify-content-between align-items-center mb-2">
         <label class="form-label mb-0">Content</label>
-        <div class="input-group input-group-sm" style="width: auto;">
-            <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
-                'id' => 'copy-format-select',
-                'class' => 'form-select',
-                'style' => 'width: auto;',
-            ]) ?>
-            <button type="button" id="copy-content-btn" class="btn btn-primary text-nowrap" title="Copy to clipboard">
-                <i class="bi bi-clipboard"></i> Copy to Clipboard
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" id="paste-md-btn" class="btn btn-sm btn-outline-primary text-nowrap" title="Paste from clipboard">
+                <i class="bi bi-clipboard-plus"></i> Paste
             </button>
+            <div class="input-group input-group-sm" style="width: auto;">
+                <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
+                    'id' => 'copy-format-select',
+                    'class' => 'form-select',
+                    'style' => 'width: auto;',
+                ]) ?>
+                <button type="button" id="copy-content-btn" class="btn btn-primary text-nowrap" title="Copy to clipboard">
+                    <i class="bi bi-clipboard"></i> Copy to Clipboard
+                </button>
+            </div>
         </div>
     </div>
 
@@ -83,6 +88,15 @@ $isUpdate = !$model->isNewRecord;
 </div>
 <?php endif; ?>
 
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="paste-toast" class="toast align-items-center text-bg-secondary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body"></div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+</div>
+
 <?php
 $content = json_encode($model->content);
 $saveUrl = Url::to(['/scratch-pad/save']);
@@ -110,6 +124,60 @@ $script = <<<JS
 
     quill.on('text-change', function() {
         document.querySelector('#scratch-pad-content').value = JSON.stringify(quill.getContents());
+    });
+
+    // Toast helper
+    function showToast(message) {
+        const toastEl = document.getElementById('paste-toast');
+        toastEl.querySelector('.toast-body').textContent = message;
+        const toast = new bootstrap.Toast(toastEl, {delay: 2000});
+        toast.show();
+    }
+
+    // Paste from clipboard functionality
+    document.getElementById('paste-md-btn').addEventListener('click', async function() {
+        const btn = this;
+        const originalText = btn.innerHTML;
+
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!text.trim()) {
+                showToast('Clipboard is empty');
+                return;
+            }
+
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+            btn.disabled = true;
+
+            const response = await fetch('/scratch-pad/import-text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ text: text })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.importData && data.importData.content) {
+                const delta = typeof data.importData.content === 'string'
+                    ? JSON.parse(data.importData.content)
+                    : data.importData.content;
+                quill.setContents(delta);
+                document.querySelector('#scratch-pad-content').value = JSON.stringify(quill.getContents());
+                showToast(data.format === 'md' ? 'Pasted as markdown' : 'Pasted as text');
+            } else {
+                showToast(data.message || 'Failed to paste content');
+            }
+        } catch (err) {
+            console.error('Paste error:', err);
+            showToast('Unable to read clipboard');
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
     });
 
     // Copy functionality with format conversion
