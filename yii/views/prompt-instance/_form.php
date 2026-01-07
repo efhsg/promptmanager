@@ -141,15 +141,15 @@ echo $form->field($model, 'template_id')
                     <div id="final-prompt-container">
                         <div id="final-prompt-container-view">
                             <?= app\widgets\ContentViewerWidget::widget([
-            'content' => '',
-            'copyButtonOptions' => [
-                'class' => 'btn btn-sm position-absolute',
-                'style' => 'bottom: 10px; right: 20px;',
-                'title' => 'Copy to clipboard',
-                'aria-label' => 'Copy content to clipboard',
-                'copyFormat' => $projectCopyFormat,
-            ],
-        ]) ?>
+                                'content' => '',
+                                'copyButtonOptions' => [
+                                    'class' => 'btn btn-sm position-absolute',
+                                    'style' => 'bottom: 10px; right: 20px;',
+                                    'title' => 'Copy to clipboard',
+                                    'aria-label' => 'Copy content to clipboard',
+                                    'copyFormat' => $projectCopyFormat,
+                                ],
+                            ]) ?>
                         </div>
                         <div id="final-prompt-container-edit" class="d-none">
                             <div id="quill-editor"></div>

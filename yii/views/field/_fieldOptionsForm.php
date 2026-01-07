@@ -88,9 +88,9 @@ DynamicFormWidget::begin([
                 <div class="form-group field-fieldoption-<?= $i ?>-value">
                     <label class="control-label">Value</label>
                     <?= Html::activeHiddenInput($option, "[$i]value", [
-                    'id' => "fieldoption-{$i}-value",
-                    'class' => 'field-option-value-input',
-                ]) ?>
+                        'id' => "fieldoption-{$i}-value",
+                        'class' => 'field-option-value-input',
+                    ]) ?>
                     <div
                         data-editor="quill"
                         data-target="fieldoption-<?= $i ?>-value"

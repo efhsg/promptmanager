@@ -63,8 +63,8 @@ QuillAsset::register($this);
 
     <div class="form-group mt-4 text-end">
         <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], [
-        'class' => 'btn btn-secondary me-2',
-    ]) ?>
+            'class' => 'btn btn-secondary me-2',
+        ]) ?>
         <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
     </div>
 
