@@ -108,6 +108,7 @@ $saveUrl = Url::to(['/scratch-pad/save']);
 $savedListUrl = Url::to(['/scratch-pad/index']);
 
 $script = <<<JS
+    const Delta = Quill.import('delta');
     window.quill = new Quill('#editor', {
         theme: 'snow',
         modules: {
@@ -225,7 +226,13 @@ $script = <<<JS
                 const delta = typeof data.importData.content === 'string'
                     ? JSON.parse(data.importData.content)
                     : data.importData.content;
-                window.quill.setContents(delta);
+                const length = window.quill.getLength();
+                if (length <= 1) {
+                    window.quill.setContents(delta);
+                } else {
+                    const range = window.quill.getSelection(true);
+                    window.quill.updateContents(new Delta().retain(range.index).concat(delta));
+                }
                 showToast(data.format === 'md' ? 'Pasted as markdown' : 'Pasted as text');
             } else {
                 showToast(data.message || 'Failed to paste content');

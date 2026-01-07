@@ -101,6 +101,7 @@ $isUpdate = !$model->isNewRecord;
 $content = json_encode($model->content);
 $saveUrl = Url::to(['/scratch-pad/save']);
 $script = <<<JS
+    const Delta = Quill.import('delta');
     var quill = new Quill('#scratch-pad-editor', {
         theme: 'snow',
         modules: {
@@ -165,7 +166,13 @@ $script = <<<JS
                 const delta = typeof data.importData.content === 'string'
                     ? JSON.parse(data.importData.content)
                     : data.importData.content;
-                quill.setContents(delta);
+                const length = quill.getLength();
+                if (length <= 1) {
+                    quill.setContents(delta);
+                } else {
+                    const range = quill.getSelection(true);
+                    quill.updateContents(new Delta().retain(range.index).concat(delta));
+                }
                 document.querySelector('#scratch-pad-content').value = JSON.stringify(quill.getContents());
                 showToast(data.format === 'md' ? 'Pasted as markdown' : 'Pasted as text');
             } else {
