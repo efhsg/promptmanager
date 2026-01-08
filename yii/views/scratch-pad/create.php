@@ -29,7 +29,7 @@ $copyTypes = CopyType::labels();
                         <i class="bi bi-file-earmark-arrow-up"></i> Load MD
                     </button>
                     <button type="button" id="paste-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Paste from clipboard">
-                        <i class="bi bi-clipboard-plus"></i> Paste
+                        <i class="bi bi-clipboard-plus"></i> Smart Paste
                     </button>
                     <div class="input-group input-group-sm">
                         <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
