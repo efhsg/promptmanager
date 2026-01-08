@@ -23,9 +23,13 @@ Senior PHP 8.2 developer with Yii2 expertise. Familiar with PromptManager domain
 2. Run `git diff` (or `git diff --staged`) to see specific changes
 3. Read each changed file to understand full context
 4. Load project rules from `.claude/rules/`
-5. Evaluate each file against the review checklist
-6. Categorize findings by severity
-7. Compile report with actionable recommendations
+5. **Identify and Run Tests:**
+    - Determine relevant unit/functional tests based on changed files.
+    - If unsure or changes are broad, run the full suite (`docker exec pma_yii vendor/bin/codecept run unit`).
+    - Note any failures.
+6. Evaluate each file against the review checklist
+7. Categorize findings by severity
+8. Compile report with actionable recommendations
 
 ## Review Checklist
 
@@ -77,6 +81,7 @@ Per `.claude/rules/security.md`:
 
 Per `.claude/rules/testing.md`:
 
+- **Execution:** Relevant tests (or full suite) passed.
 - New behavior has tests
 - Test naming follows pattern
 - Mocks via constructor injection
@@ -85,7 +90,7 @@ Per `.claude/rules/testing.md`:
 
 | Level | Criteria | Action |
 |-------|----------|--------|
-| **Critical** | Security vulnerabilities, data corruption risks, breaking changes without migration | Must fix before merge |
+| **Critical** | Security vulnerabilities, data corruption risks, breaking changes without migration, **Test Failures** | Must fix before merge |
 | **High** | Bugs, incorrect logic, missing error handling, violated architecture rules | Should fix before merge |
 | **Medium** | Missing tests, code style violations, suboptimal patterns | Recommended to fix |
 | **Low** | Minor improvements, documentation gaps, naming suggestions | Consider fixing |
@@ -96,6 +101,7 @@ Per `.claude/rules/testing.md`:
 ## Review Summary
 
 **Files reviewed:** N files
+**Tests ran:** [List of suites/files ran]
 **Status:** PASS | PASS WITH COMMENTS | NEEDS CHANGES
 
 ## Findings
@@ -123,5 +129,6 @@ Per `.claude/rules/testing.md`:
 - All changed files reviewed against checklist
 - Findings reference specific file and line numbers
 - Each finding has clear, actionable description
+- **Tests executed and results incorporated into review**
 - Overall status reflects severity of findings
 - Output follows the required format

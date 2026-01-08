@@ -1,5 +1,5 @@
 ---
-allowed-tools: Bash(git diff:*), Bash(git log:*), Read, Grep
+allowed-tools: Bash, Read, Grep
 description: Perform a comprehensive code review of recent changes
 ---
 

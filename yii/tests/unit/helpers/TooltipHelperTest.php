@@ -38,8 +38,8 @@ class TooltipHelperTest extends Unit
             'ops' => [
                 ['insert' => 'Hello '],
                 ['attributes' => ['bold' => true], 'insert' => 'World'],
-                ['insert' => "\n"]
-            ]
+                ['insert' => "\n"],
+            ],
         ]);
         $result = TooltipHelper::prepareTexts([$json], 50);
         $this->assertEquals(['Hello World'], $result);
@@ -51,8 +51,8 @@ class TooltipHelperTest extends Unit
             'ops' => [
                 ['insert' => 'Image '],
                 ['insert' => ['image' => 'https://example.com/image.png']],
-                ['insert' => ' End']
-            ]
+                ['insert' => ' End'],
+            ],
         ]);
         $result = TooltipHelper::prepareTexts([$json], 50);
         $this->assertEquals(['Image  End'], $result); // Expecting text only, trimmed spaces might vary but logic trims final result
