@@ -31,7 +31,7 @@ $isUpdate = !$model->isNewRecord;
     <div class="d-flex justify-content-between align-items-center mb-2">
         <label class="form-label mb-0">Content</label>
         <div class="d-flex align-items-center gap-2">
-            <button type="button" id="paste-md-btn" class="btn btn-sm btn-outline-primary text-nowrap" title="Paste from clipboard">
+            <button type="button" id="paste-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Paste from clipboard">
                 <i class="bi bi-clipboard-plus"></i> Smart Paste
             </button>
             <div class="input-group input-group-sm" style="width: auto;">
