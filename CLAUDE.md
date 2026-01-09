@@ -92,6 +92,7 @@ Use slash commands to invoke skills:
 | `/new-controller-action` | Add controller action |
 | `/new-test` | Create unit test |
 | `/new-tests-staged` | Create tests for staged PHP classes |
+| `/new-branch` | Create feature or fix branch |
 | `/check-standards` | Validate code against standards |
 | `/code-review` | Comprehensive code review |
 | `/finalize-changes` | Lint, test, prepare commit |

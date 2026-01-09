@@ -30,6 +30,12 @@ For commands, paths, and environment: `.claude/config/project.md`
 | Controller Action | Controller action patterns | `skills/controller-action.md` |
 | Test | Unit test with Codeception | `skills/test.md` |
 
+### Workflow Skills
+
+| Skill | Description | Contract |
+|-------|-------------|----------|
+| New Branch | Create feature/fix branch | `skills/new-branch.md` |
+
 ### Validation Skills
 
 | Skill | Description | Contract |
@@ -51,6 +57,7 @@ Commands are thin executable wrappers that invoke skills:
 | `/new-controller-action` | `skills/controller-action.md` | Add controller action |
 | `/new-test` | `skills/test.md` | Create unit test |
 | `/new-tests-staged` | `skills/test.md` | Batch test creation |
+| `/new-branch` | `skills/new-branch.md` | Create feature/fix branch |
 | `/check-standards` | (rules-based) | Validate code standards |
 | `/code-review` | `skills/code-review.md` | Review code changes |
 | `/finalize-changes` | (workflow) | Lint, test, commit prep |
