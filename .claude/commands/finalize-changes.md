@@ -39,9 +39,12 @@ If tests fail, stop and report.
 
 ```bash
 git add -A
+git reset HEAD -- .claude/screenshots/ 2>/dev/null || true
 git status
 git diff --staged
 ```
+
+Note: Screenshots in `.claude/screenshots/` are always unstaged - they are for reference only.
 
 Suggest commit message per `.claude/rules/commits.md`. Ask user for confirmation.
 
