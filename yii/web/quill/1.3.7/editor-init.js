@@ -177,7 +177,17 @@ window.QuillToolbar = (function() {
                     const delta = typeof data.importData.content === 'string'
                         ? JSON.parse(data.importData.content)
                         : data.importData.content;
-                    quill.setContents(delta);
+
+                    const Delta = Quill.import('delta');
+                    const length = quill.getLength();
+
+                    if (length <= 1) {
+                        quill.setContents(delta);
+                    } else {
+                        const range = quill.getSelection(true);
+                        quill.updateContents(new Delta().retain(range.index).concat(delta));
+                    }
+
                     if (hidden) {
                         hidden.value = JSON.stringify(quill.getContents());
                     }
