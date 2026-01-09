@@ -8,6 +8,7 @@ use app\models\PromptInstanceForm;
 use conquer\select2\Select2Widget;
 use common\enums\CopyType;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\web\JsExpression;
 use yii\web\View;
 use yii\widgets\ActiveForm;
@@ -29,6 +30,10 @@ $templateTooltipTexts = TooltipHelper::prepareTexts($templatesDescription, $maxC
 
 $this->registerJsVar('contextTooltipTexts', $contextTooltipTexts);
 $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
+$this->registerJsVar('quillUrlConfig', [
+    'importTextUrl' => Url::to(['/scratch-pad/import-text']),
+    'importMarkdownUrl' => Url::to(['/scratch-pad/import-markdown']),
+]);
 
 $projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
     ?? CopyType::MD->value;
@@ -407,10 +412,14 @@ $script = <<<'JS'
                             toolbar: [
                                 ['bold', 'italic', 'underline', 'strike', 'code'],
                                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                                ['clean']
+                                ['clean'],
+                                [{ 'smartPaste': [] }],
+                                [{ 'loadMd': [] }]
                             ]
                         }
                     });
+                    window.QuillToolbar.setupSmartPaste(quillEditor, null, quillUrlConfig);
+                    window.QuillToolbar.setupLoadMd(quillEditor, null, quillUrlConfig);
                 }
             }
 

@@ -3,7 +3,6 @@
 namespace app\services;
 
 use app\assets\PathSelectorFieldAsset;
-use app\assets\SmartPasteAsset;
 use app\widgets\PathPreviewWidget;
 use app\widgets\PathSelectorWidget;
 use conquer\select2\Select2Widget;
@@ -96,7 +95,6 @@ class PromptFieldRenderer
     {
         $hiddenId = "hidden-$placeholder";
         $editorId = "editor-$placeholder";
-        $pasteButtonId = "smart-paste-$placeholder";
         $fieldType = (string) ($field['type'] ?? 'text');
 
         $defaultValue = $this->toDeltaJson($field['default'] ?? '');
@@ -105,29 +103,8 @@ class PromptFieldRenderer
         $customPlaceholder = trim((string) ($field['placeholder'] ?? ''));
         $placeholderText = $this->buildEditorPlaceholder($fieldType, $label, $customPlaceholder);
 
-        $pasteButton = Html::button(
-            '<i class="bi bi-clipboard-plus"></i> Smart Paste',
-            [
-                'id' => $pasteButtonId,
-                'type' => 'button',
-                'class' => 'btn btn-sm btn-primary text-nowrap',
-                'title' => 'Paste from clipboard',
-            ]
-        );
-
-        SmartPasteAsset::register($this->view);
-        $config = Json::encode([
-            'buttonId' => $pasteButtonId,
-            'hiddenInputId' => $hiddenId,
-        ]);
-        $this->view->registerJs(
-            "if (window.SmartPaste) { window.SmartPaste.init($config); }",
-            View::POS_END
-        );
-
         return
             Html::hiddenInput($name, $defaultValue, ['id' => $hiddenId])
-            . Html::tag('div', $pasteButton, ['class' => 'mb-2 text-end'])
             . Html::tag(
                 'div',
                 Html::tag('div', '', [
@@ -148,6 +125,8 @@ class PromptFieldRenderer
                                 [['header' => [1, 2, 3, 4, 5, 6, false]]],
                                 [['align' => []]],
                                 ['clean'],
+                                [['smartPaste' => []]],
+                                [['loadMd' => []]],
                             ],
                         ],
                     ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),

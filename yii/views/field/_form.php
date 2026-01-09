@@ -188,6 +188,8 @@ $templateContent = json_encode($modelField->content);
 $contentTypesJson = json_encode(FieldConstants::CONTENT_FIELD_TYPES);
 $currentType = json_encode($modelField->type);
 $fieldType = json_encode($modelField->type);
+$importTextUrl = Url::to(['/scratch-pad/import-text']);
+$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $script = <<<JS
     window.fieldFormContentTypes = window.fieldFormContentTypes || $contentTypesJson;
     window.fieldFormCurrentType = window.fieldFormCurrentType || $currentType;
@@ -202,10 +204,20 @@ $script = <<<JS
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'color': [] }, { 'background': [] }],
                 [{ 'align': [] }],
-                ['clean']
+                ['clean'],
+                [{ 'smartPaste': [] }],
+                [{ 'loadMd': [] }]
             ]
         }
     });
+
+    var hidden = document.getElementById('field-content');
+    var urlConfig = {
+        importTextUrl: '$importTextUrl',
+        importMarkdownUrl: '$importMarkdownUrl'
+    };
+    window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 
     function fieldFormUsesEditor() {
         if (!Array.isArray(window.fieldFormContentTypes)) {
@@ -226,9 +238,8 @@ $script = <<<JS
         if (!fieldFormUsesEditor()) {
             return;
         }
-        var target = document.querySelector('#field-content');
-        if (target) {
-            target.value = JSON.stringify(quill.getContents());
+        if (hidden) {
+            hidden.value = JSON.stringify(quill.getContents());
         }
     });
 

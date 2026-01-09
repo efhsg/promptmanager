@@ -1,7 +1,11 @@
-<?php /** @noinspection BadExpressionStatementJS */
+<?php
+
+/** @noinspection BadExpressionStatementJS */
 /** @noinspection JSUnresolvedReference */
+
 use app\assets\QuillAsset;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
@@ -13,36 +17,38 @@ use yii\widgets\ActiveForm;
 /** @var array $externalFieldsMap */
 QuillAsset::register($this);
 ?>
-    <div class="prompt-template-form focus-on-first-field">
-        <?php $form = ActiveForm::begin([
-            'id' => 'prompt-template-form',
-            'enableClientValidation' => true,
-        ]); ?>
-        <?= $form->field($model, 'project_id')->dropDownList($projects, [
-            'prompt' => 'Select a Project',
-        ]) ?>
+<div class="prompt-template-form focus-on-first-field">
+    <?php $form = ActiveForm::begin([
+        'id' => 'prompt-template-form',
+        'enableClientValidation' => true,
+    ]); ?>
+    <?= $form->field($model, 'project_id')->dropDownList($projects, [
+        'prompt' => 'Select a Project',
+    ]) ?>
 
-        <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
+    <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
 
-        <div class="form-group">
-            <label class="form-label">Template Body</label>
-            <?= Html::activeHiddenInput($model, 'template_body', ['id' => 'template-body']) ?>
-            <div class="resizable-editor-container">
-                <div id="editor" class="resizable-editor"></div>
-            </div>
-            <?= Html::error($model, 'template_body', ['class' => 'invalid-feedback d-block']) ?>
+    <div class="form-group">
+        <label class="form-label">Template Body</label>
+        <?= Html::activeHiddenInput($model, 'template_body', ['id' => 'template-body']) ?>
+        <div class="resizable-editor-container">
+            <div id="editor" class="resizable-editor"></div>
         </div>
-        <div class="form-group mt-4 text-end">
-            <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
-            <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
-        </div>
-        <?php ActiveForm::end(); ?>
+        <?= Html::error($model, 'template_body', ['class' => 'invalid-feedback d-block']) ?>
     </div>
+    <div class="form-group mt-4 text-end">
+        <?= Html::a('Cancel', ['index'], ['class' => 'btn btn-secondary me-2']) ?>
+        <?= Html::submitButton('Save', ['class' => 'btn btn-primary']) ?>
+    </div>
+    <?php ActiveForm::end(); ?>
+</div>
 
 <?php
 $generalFieldsJson = json_encode($generalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $projectFieldsJson = json_encode($projectFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $externalFieldsJson = json_encode($externalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+$importTextUrl = Url::to(['/scratch-pad/import-text']);
+$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 
 $script = <<<JS
     window.quill = new Quill('#editor', {
@@ -50,7 +56,7 @@ $script = <<<JS
         modules: {
             toolbar: {
                 container: [
-                    ['bold', 'italic', 'underline', 'strike', 'code'],
+                    ['bold', 'italic', 'code'],
                     ['blockquote', 'code-block'],
                     [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                     [{ 'indent': '-1' }, { 'indent': '+1' }],
@@ -59,7 +65,9 @@ $script = <<<JS
                     ['clean'],
                     [{ 'insertGeneralField': [] }],
                     [{ 'insertProjectField': [] }],
-                    [{ 'insertExternalField': [] }]
+                    [{ 'insertExternalField': [] }],
+                    [{ 'smartPaste': [] }],
+                    [{ 'loadMd': [] }]
                 ]
             }
         }
@@ -107,6 +115,14 @@ $script = <<<JS
     toolbarContainer.querySelector('.ql-insertGeneralField').replaceWith(generalFieldDropdown);
     toolbarContainer.querySelector('.ql-insertProjectField').replaceWith(projectFieldDropdown);
     toolbarContainer.querySelector('.ql-insertExternalField').replaceWith(externalFieldDropdown);
+
+    var hidden = document.getElementById('template-body');
+    var urlConfig = {
+        importTextUrl: '$importTextUrl',
+        importMarkdownUrl: '$importMarkdownUrl'
+    };
+    window.QuillToolbar.setupSmartPaste(window.quill, hidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(window.quill, hidden, urlConfig);
 
     function insertFieldText(dropdown) {
         var value = dropdown.value;

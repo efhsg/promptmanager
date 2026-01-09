@@ -4,6 +4,7 @@
 
 use app\assets\QuillAsset;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
@@ -55,6 +56,8 @@ QuillAsset::register($this);
 
 <?php
 $templateBody = json_encode($model->content);
+$importTextUrl = Url::to(['/scratch-pad/import-text']);
+$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $script = <<<JS
     var quill = new Quill('#editor', {
         theme: 'snow',
@@ -67,17 +70,28 @@ $script = <<<JS
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'color': [] }, { 'background': [] }],
                 [{ 'align': [] }],
-                ['clean']
+                ['clean'],
+                [{ 'smartPaste': [] }],
+                [{ 'loadMd': [] }]
             ]
         }
     });
+
+    var hidden = document.getElementById('context-content');
+    var urlConfig = {
+        importTextUrl: '$importTextUrl',
+        importMarkdownUrl: '$importMarkdownUrl'
+    };
+    window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
+
     try {
         quill.setContents(JSON.parse($templateBody))
     } catch (error) {
         console.error('Error injecting template body:', error)
     }
     quill.on('text-change', function() {
-        document.querySelector('#context-content').value = JSON.stringify(quill.getContents())
+        hidden.value = JSON.stringify(quill.getContents())
     });
     JS;
 $this->registerJs($script);

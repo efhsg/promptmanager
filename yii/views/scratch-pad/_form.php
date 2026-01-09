@@ -31,9 +31,6 @@ $isUpdate = !$model->isNewRecord;
     <div class="d-flex justify-content-between align-items-center mb-2">
         <label class="form-label mb-0">Content</label>
         <div class="d-flex align-items-center gap-2">
-            <button type="button" id="paste-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Paste from clipboard">
-                <i class="bi bi-clipboard-plus"></i> Smart Paste
-            </button>
             <div class="input-group input-group-sm" style="width: auto;">
                 <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
                     'id' => 'copy-format-select',
@@ -100,8 +97,9 @@ $isUpdate = !$model->isNewRecord;
 <?php
 $content = json_encode($model->content);
 $saveUrl = Url::to(['/scratch-pad/save']);
+$importTextUrl = Url::to(['/scratch-pad/import-text']);
+$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $script = <<<JS
-    const Delta = Quill.import('delta');
     var quill = new Quill('#scratch-pad-editor', {
         theme: 'snow',
         modules: {
@@ -112,10 +110,20 @@ $script = <<<JS
                 [{ 'indent': '-1' }, { 'indent': '+1' }],
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'align': [] }],
-                ['clean']
+                ['clean'],
+                [{ 'smartPaste': [] }],
+                [{ 'loadMd': [] }]
             ]
         }
     });
+
+    var hidden = document.getElementById('scratch-pad-content');
+    var urlConfig = {
+        importTextUrl: '$importTextUrl',
+        importMarkdownUrl: '$importMarkdownUrl'
+    };
+    window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 
     try {
         quill.setContents(JSON.parse($content))
@@ -124,68 +132,16 @@ $script = <<<JS
     }
 
     quill.on('text-change', function() {
-        document.querySelector('#scratch-pad-content').value = JSON.stringify(quill.getContents());
+        hidden.value = JSON.stringify(quill.getContents());
     });
 
-    // Toast helper
+    // Toast helper (used by copy functionality)
     function showToast(message) {
         const toastEl = document.getElementById('paste-toast');
         toastEl.querySelector('.toast-body').textContent = message;
         const toast = new bootstrap.Toast(toastEl, {delay: 2000});
         toast.show();
     }
-
-    // Paste from clipboard functionality
-    document.getElementById('paste-md-btn').addEventListener('click', async function() {
-        const btn = this;
-        const originalText = btn.innerHTML;
-
-        try {
-            const text = await navigator.clipboard.readText();
-            if (!text.trim()) {
-                showToast('Clipboard is empty');
-                return;
-            }
-
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
-            btn.disabled = true;
-
-            const response = await fetch('/scratch-pad/import-text', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ text: text })
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.importData && data.importData.content) {
-                const delta = typeof data.importData.content === 'string'
-                    ? JSON.parse(data.importData.content)
-                    : data.importData.content;
-                const length = quill.getLength();
-                if (length <= 1) {
-                    quill.setContents(delta);
-                } else {
-                    const range = quill.getSelection(true);
-                    quill.updateContents(new Delta().retain(range.index).concat(delta));
-                }
-                document.querySelector('#scratch-pad-content').value = JSON.stringify(quill.getContents());
-                showToast(data.format === 'md' ? 'Pasted as markdown' : 'Pasted as text');
-            } else {
-                showToast(data.message || 'Failed to paste content');
-            }
-        } catch (err) {
-            console.error('Paste error:', err);
-            showToast('Unable to read clipboard');
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    });
 
     // Copy functionality with format conversion
     document.getElementById('copy-content-btn').addEventListener('click', function() {

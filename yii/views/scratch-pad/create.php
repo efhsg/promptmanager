@@ -24,13 +24,6 @@ $copyTypes = CopyType::labels();
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h1 class="h4 mb-0"><?= Html::encode($this->title) ?></h1>
                 <div class="d-flex align-items-center gap-2">
-                    <input type="file" id="load-md-file" accept=".md,.markdown,.txt" style="display: none;">
-                    <button type="button" id="load-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Load markdown file">
-                        <i class="bi bi-file-earmark-arrow-up"></i> Load MD
-                    </button>
-                    <button type="button" id="paste-md-btn" class="btn btn-sm btn-primary text-nowrap" title="Paste from clipboard">
-                        <i class="bi bi-clipboard-plus"></i> Smart Paste
-                    </button>
                     <div class="input-group input-group-sm">
                         <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
                             'id' => 'copy-format-select',
@@ -106,9 +99,10 @@ $copyTypes = CopyType::labels();
 <?php
 $saveUrl = Url::to(['/scratch-pad/save']);
 $savedListUrl = Url::to(['/scratch-pad/index']);
+$importTextUrl = Url::to(['/scratch-pad/import-text']);
+$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 
 $script = <<<JS
-    const Delta = Quill.import('delta');
     window.quill = new Quill('#editor', {
         theme: 'snow',
         modules: {
@@ -119,10 +113,19 @@ $script = <<<JS
                 [{ 'indent': '-1' }, { 'indent': '+1' }],
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'align': [] }],
-                ['clean']
+                ['clean'],
+                [{ 'smartPaste': [] }],
+                [{ 'loadMd': [] }]
             ]
         }
     });
+
+    var urlConfig = {
+        importTextUrl: '$importTextUrl',
+        importMarkdownUrl: '$importMarkdownUrl'
+    };
+    window.QuillToolbar.setupSmartPaste(window.quill, null, urlConfig);
+    window.QuillToolbar.setupLoadMd(window.quill, null, urlConfig);
 
     // Check for imported data in localStorage
     const importedData = localStorage.getItem('scratchPadContent');
@@ -139,112 +142,13 @@ $script = <<<JS
         }
     }
 
-    // Load MD file functionality
-    document.getElementById('load-md-btn').addEventListener('click', function() {
-        document.getElementById('load-md-file').click();
-    });
-
-    document.getElementById('load-md-file').addEventListener('change', function() {
-        const file = this.files[0];
-        if (!file) return;
-
-        const btn = document.getElementById('load-md-btn');
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
-        btn.disabled = true;
-
-        const formData = new FormData();
-        formData.append('mdFile', file);
-
-        fetch('/scratch-pad/import-markdown', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.importData && data.importData.content) {
-                const delta = typeof data.importData.content === 'string'
-                    ? JSON.parse(data.importData.content)
-                    : data.importData.content;
-                window.quill.setContents(delta);
-            } else {
-                const errorMsg = data.errors?.mdFile?.[0] || data.message || 'Failed to load file.';
-                alert(errorMsg);
-            }
-        })
-        .catch(error => {
-            console.error('Load error:', error);
-            alert('Failed to load file. Please try again.');
-        })
-        .finally(() => {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            document.getElementById('load-md-file').value = '';
-        });
-    });
-
-    // Toast helper
+    // Toast helper (used by copy functionality)
     function showToast(message) {
         const toastEl = document.getElementById('paste-toast');
         toastEl.querySelector('.toast-body').textContent = message;
         const toast = new bootstrap.Toast(toastEl, {delay: 2000});
         toast.show();
     }
-
-    // Paste from clipboard functionality
-    document.getElementById('paste-md-btn').addEventListener('click', async function() {
-        const btn = this;
-        const originalText = btn.innerHTML;
-
-        try {
-            const text = await navigator.clipboard.readText();
-            if (!text.trim()) {
-                showToast('Clipboard is empty');
-                return;
-            }
-
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
-            btn.disabled = true;
-
-            const response = await fetch('/scratch-pad/import-text', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ text: text })
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.importData && data.importData.content) {
-                const delta = typeof data.importData.content === 'string'
-                    ? JSON.parse(data.importData.content)
-                    : data.importData.content;
-                const length = window.quill.getLength();
-                if (length <= 1) {
-                    window.quill.setContents(delta);
-                } else {
-                    const range = window.quill.getSelection(true);
-                    window.quill.updateContents(new Delta().retain(range.index).concat(delta));
-                }
-                showToast(data.format === 'md' ? 'Pasted as markdown' : 'Pasted as text');
-            } else {
-                showToast(data.message || 'Failed to paste content');
-            }
-        } catch (err) {
-            console.error('Paste error:', err);
-            showToast('Unable to read clipboard');
-        } finally {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-    });
 
     // Copy functionality with format conversion
     document.getElementById('copy-content-btn').addEventListener('click', function() {
