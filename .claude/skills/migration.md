@@ -1,3 +1,11 @@
+---
+name: migration
+description: Create database migrations with proper structure and rollback support
+area: database
+depends_on:
+  - rules/workflow.md
+---
+
 # Migration Skill
 
 Create database migrations following PromptManager patterns.

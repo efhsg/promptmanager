@@ -1,3 +1,14 @@
+---
+name: code-review
+description: Perform structured code review against project rules and best practices
+area: validation
+depends_on:
+  - rules/coding-standards.md
+  - rules/architecture.md
+  - rules/security.md
+  - rules/testing.md
+---
+
 # Code Review Skill
 
 Perform a structured code review of staged or unstaged changes against project rules and best practices.

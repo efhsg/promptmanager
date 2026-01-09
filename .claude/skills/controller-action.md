@@ -1,3 +1,12 @@
+---
+name: controller-action
+description: Add controller actions with RBAC and proper response handling
+area: web
+depends_on:
+  - rules/architecture.md
+  - rules/security.md
+---
+
 # Controller Action Skill
 
 Add controller actions following PromptManager patterns.

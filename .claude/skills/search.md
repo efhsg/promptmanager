@@ -1,3 +1,12 @@
+---
+name: search
+description: Create search models for filtering and listing with ActiveDataProvider
+area: data-access
+depends_on:
+  - rules/architecture.md
+  - rules/coding-standards.md
+---
+
 # Search Skill
 
 Create search models for filtering/listing following PromptManager patterns.

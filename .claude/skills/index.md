@@ -2,12 +2,18 @@
 
 Skills are reusable knowledge contracts with templates, patterns, and completion criteria. Commands reference these skills for consistent implementation.
 
+## Project Configuration
+
+For commands, paths, and environment: `.claude/config/project.md`
+
 ## How to Use
 
 1. **Read rules first** — `.claude/rules/` applies to everything
 2. **Scan this index** — find relevant skills for your task
 3. **Load only needed skills** — minimize context
 4. **Follow skill contracts** — inputs, outputs, DoD
+5. **Create skills for gaps** — if behavior isn't covered, write a skill
+6. **Update this index** — keep the registry current
 
 ## Skills by Category
 

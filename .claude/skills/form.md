@@ -1,3 +1,11 @@
+---
+name: form
+description: Create form models with validation following PromptManager patterns
+area: input-handling
+depends_on:
+  - rules/coding-standards.md
+---
+
 # Form Skill
 
 Create form models following PromptManager patterns.

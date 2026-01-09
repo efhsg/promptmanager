@@ -1,3 +1,12 @@
+---
+name: model
+description: Create ActiveRecord models with query classes following PromptManager patterns
+area: database
+depends_on:
+  - rules/architecture.md
+  - rules/coding-standards.md
+---
+
 # Model Skill
 
 Create ActiveRecord models with query classes following PromptManager patterns.

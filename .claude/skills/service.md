@@ -1,3 +1,12 @@
+---
+name: service
+description: Create service classes with dependency injection following PromptManager patterns
+area: business-logic
+depends_on:
+  - rules/architecture.md
+  - rules/coding-standards.md
+---
+
 # Service Skill
 
 Create service classes following PromptManager patterns.

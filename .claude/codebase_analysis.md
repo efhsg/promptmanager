@@ -1,6 +1,6 @@
 # PromptManager Codebase Analysis
 
-This document is informational (architecture/domain overview). If anything here conflicts with project instructions, follow `RULES.md` first, then `.claude/CLAUDE.md`.
+This document is informational (architecture/domain overview). If anything here conflicts with project instructions, follow `.claude/rules/` first, then `CLAUDE.md`.
 
 ## 1. Project Overview
 
@@ -216,6 +216,25 @@ Many-to-many relationship for project linking.
 
 ---
 
+#### ScratchPad (`yii/models/ScratchPad.php`)
+Workspace for prompt composition and editing.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `id` | int | Primary key |
+| `user_id` | int | Owner reference |
+| `project_id` | int\|null | Optional project scope |
+| `name` | string | Scratch pad name |
+| `content` | string\|null | Quill Delta JSON content |
+| `created_at` | int | Unix timestamp |
+| `updated_at` | int | Unix timestamp |
+
+**Relationships:**
+- `belongsTo User`
+- `belongsTo Project` (optional)
+
+---
+
 ## 3. Data Layer
 
 ### Query Classes
@@ -252,6 +271,12 @@ sharedFromProjects(int $userId, array $projectIds): static
 linkedProjectIdsFor(int $projectId, int $userId): static
 ```
 
+#### ScratchPadQuery (`yii/models/query/ScratchPadQuery.php`)
+```php
+forUser(int $userId): static
+forProject(?int $projectId): static
+```
+
 ### Search Models
 
 Search models handle GridView/ListView filtering using `SearchModelTrait`:
@@ -260,6 +285,7 @@ Search models handle GridView/ListView filtering using `SearchModelTrait`:
 - `FieldSearch` - Filter fields by project, name, type
 - `PromptTemplateSearch` - Filter templates by project, name
 - `PromptInstanceSearch` - Filter instances by template, label
+- `ScratchPadSearch` - Filter scratch pads by project, name
 
 ### Traits
 
@@ -481,6 +507,7 @@ generateAuthKey(): void
 | `FieldController` | Field CRUD with options |
 | `PromptTemplateController` | Template CRUD |
 | `PromptInstanceController` | Instance generation and management |
+| `ScratchPadController` | Scratch pad CRUD and content management |
 
 ### PromptInstanceController Actions
 
@@ -675,6 +702,7 @@ yii/tests/
 | `prompt_template` | Template definitions |
 | `template_field` | Template-field associations |
 | `prompt_instance` | Generated prompt instances |
+| `scratch_pad` | Scratch pad workspaces |
 | `user_preference` | User preferences |
 
 ---

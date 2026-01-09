@@ -7,7 +7,8 @@ This file configures **Google Gemini** for the PromptManager repository.
 All configuration, rules, and patterns are defined in `CLAUDE.md`. Read and follow that file completely.
 
 **Key references:**
-- `CLAUDE.md` — Main configuration, role, domain essentials, commands
+- `CLAUDE.md` — Main configuration, role, domain essentials, behavioral guidelines
+- `.claude/config/project.md` — Commands, file structure, test paths, domain concepts
 - `.claude/rules/` — Coding standards, architecture, security, testing, commits, workflow
 - `.claude/skills/` — Skill contracts for common tasks
 - `.claude/codebase_analysis.md` — Architecture documentation

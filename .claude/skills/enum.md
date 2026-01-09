@@ -1,3 +1,11 @@
+---
+name: enum
+description: Create string-backed enums with labels following PromptManager patterns
+area: types
+depends_on:
+  - rules/coding-standards.md
+---
+
 # Enum Skill
 
 Create string-backed enums following PromptManager patterns.

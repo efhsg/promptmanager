@@ -1,3 +1,11 @@
+---
+name: test
+description: Create Codeception unit tests with fixtures and mocking
+area: testing
+depends_on:
+  - rules/testing.md
+---
+
 # Test Skill
 
 Create unit tests following PromptManager patterns.

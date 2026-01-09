@@ -1,5 +1,16 @@
 # Development Workflow
 
+## Skill-Driven Development
+
+For every task:
+
+1. Read project rules first — `.claude/rules/` applies to everything
+2. Check `.claude/skills/index.md` — find relevant skills for your task
+3. Load only needed skills — minimize context
+4. Follow DoD — skill is done when Definition of Done passes
+5. Create skills for gaps — if behavior isn't covered, write a skill
+6. Update index — keep skill registry in `skills/index.md` current
+
 ## Before Coding
 
 1. Read project rules in `.claude/rules/`
@@ -39,3 +50,15 @@
 - New environment variables must be documented in `.env.example`.
 - Don't hand-edit compiled frontend assets in `yii/web`; change sources in `npm/` and rebuild.
 
+## Code Review Checklist
+
+Before approving changes:
+
+- [ ] Follows folder structure in `architecture.md`
+- [ ] Type hints present on params/returns/properties
+- [ ] Query methods use naming conventions (byX, withX, hasX)
+- [ ] Tests for new/changed logic
+- [ ] No silent failures (exceptions logged or thrown)
+- [ ] Security rules followed (RBAC, input validation, Html::encode)
+- [ ] Commit message follows format in `commits.md`
+- [ ] Migrations run on both schemas (if applicable)
