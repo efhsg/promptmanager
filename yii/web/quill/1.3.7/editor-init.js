@@ -1,3 +1,5 @@
+window.QuillEditors = window.QuillEditors || {};
+
 document.addEventListener('DOMContentLoaded', () => {
 
     const init = node => {
@@ -8,6 +10,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const cfg    = JSON.parse(node.dataset.config);
 
         const quill  = new Quill(node, cfg);      // Quill global is present
+
+        // Register in global registry for external access (e.g., SmartPaste)
+        if (hidden && hidden.id) {
+            window.QuillEditors[hidden.id] = quill;
+        }
+
         if (hidden.value) {
             try { quill.setContents(JSON.parse(hidden.value)); }
             catch (e) { console.warn('Delta parse', e); }
