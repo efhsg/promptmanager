@@ -149,4 +149,20 @@ class ScratchPadTest extends Unit
 
         verify($model->project)->empty();
     }
+
+    public function testContentCanStoreEmojiCharacters(): void
+    {
+        $contentWithEmoji = '{"ops":[{"insert":"🧠 Brain emoji test\\n"}]}';
+
+        $model = new ScratchPad();
+        $model->name = 'Emoji Content Test';
+        $model->user_id = 100;
+        $model->content = $contentWithEmoji;
+
+        verify($model->save())->true();
+
+        $loaded = ScratchPad::findOne($model->id);
+        verify($loaded)->notEmpty();
+        verify($loaded->content)->equals($contentWithEmoji);
+    }
 }

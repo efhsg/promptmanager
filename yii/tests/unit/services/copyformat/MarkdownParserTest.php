@@ -54,6 +54,18 @@ class MarkdownParserTest extends Unit
         $this->assertSame(['header' => 6], $blocks[4]['attrs']);
     }
 
+    public function testParseHeadersWithLeadingWhitespace(): void
+    {
+        $md = "   # Title with spaces\n   ## Subtitle with spaces";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertCount(2, $blocks);
+        $this->assertSame(['header' => 1], $blocks[0]['attrs']);
+        $this->assertSame('Title with spaces', $blocks[0]['segments'][0]['text']);
+        $this->assertSame(['header' => 2], $blocks[1]['attrs']);
+        $this->assertSame('Subtitle with spaces', $blocks[1]['segments'][0]['text']);
+    }
+
     public function testParseBoldText(): void
     {
         $blocks = $this->parser->parse('This is **bold** text');

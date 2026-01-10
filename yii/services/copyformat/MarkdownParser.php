@@ -4,7 +4,7 @@ namespace app\services\copyformat;
 
 class MarkdownParser
 {
-    private const HEADER_PATTERN = '/^(#{1,6})\s+(.+)$/';
+    private const HEADER_PATTERN = '/^\s*(#{1,6})\s+(.+)$/';
     private const ORDERED_LIST_PATTERN = '/^(\s*)(\d+)\.\s+(.+)$/';
     private const UNORDERED_LIST_PATTERN = '/^(\s*)[-*+]\s+(.+)$/';
     private const CHECKED_LIST_PATTERN = '/^(\s*)[-*+]\s+\[x]\s+(.+)$/i';
