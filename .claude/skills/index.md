@@ -25,6 +25,7 @@ For commands, paths, and environment: `.claude/config/project.md`
 | Service | Business logic service class | `skills/service.md` |
 | Form | Form model with validation | `skills/form.md` |
 | Enum | String-backed enum | `skills/enum.md` |
+| Frontend Design | UI components with Bootstrap/Quill | `skills/frontend-design.md` |
 | Migration | Database migration | `skills/migration.md` |
 | Search | Search model for filtering/listing | `skills/search.md` |
 | Controller Action | Controller action patterns | `skills/controller-action.md` |
