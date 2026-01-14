@@ -157,7 +157,9 @@ echo $form->field($model, 'template_id')
                             ]) ?>
                         </div>
                         <div id="final-prompt-container-edit" class="d-none">
-                            <div id="quill-editor"></div>
+                            <div class="resizable-editor-container">
+                                <div id="quill-editor" class="resizable-editor"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
