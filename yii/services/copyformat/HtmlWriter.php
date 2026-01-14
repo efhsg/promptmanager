@@ -55,7 +55,8 @@ class HtmlWriter extends AbstractFormatWriter
                 $indent = (int) ($attrs['indent'] ?? 0);
                 $indent = $indent < 0 ? 0 : $indent;
 
-                $closeListsTo($indent);
+                // Close nested lists deeper than current indent, but keep current level open
+                $closeListsTo($indent + 1);
                 if (!isset($listStack[$indent]) || $listStack[$indent]['tag'] !== $type) {
                     $listStack[$indent] = ['tag' => $type];
                     $html[] = '<' . $type . '>';
@@ -70,6 +71,12 @@ class HtmlWriter extends AbstractFormatWriter
                 continue;
             }
 
+            // Skip empty paragraphs inside lists to keep list items grouped
+            $isEmptyParagraph = $lineText === '' && empty($attrs);
+            if ($isEmptyParagraph && !empty($listStack)) {
+                continue;
+            }
+
             $closeListsTo(0);
 
             if (!empty($attrs['header'])) {
@@ -81,6 +88,11 @@ class HtmlWriter extends AbstractFormatWriter
 
             if (!empty($attrs['blockquote'])) {
                 $html[] = '<blockquote><p>' . $lineText . '</p></blockquote>';
+                continue;
+            }
+
+            // Skip empty paragraphs outside lists too (they don't add visual value)
+            if ($isEmptyParagraph) {
                 continue;
             }
 

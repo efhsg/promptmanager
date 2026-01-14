@@ -62,7 +62,7 @@ class MarkdownWriter extends AbstractFormatWriter
                 $listActive = true;
                 $indent = (int) ($attrs['indent'] ?? 0);
                 $indent = max($indent, 0);
-                $indentSpaces = str_repeat('  ', $indent);
+                $indentSpaces = str_repeat('    ', $indent);
 
                 $listCounters = array_slice($listCounters, 0, $indent + 1);
                 $prefix = '- ';

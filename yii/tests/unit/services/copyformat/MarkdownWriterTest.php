@@ -172,7 +172,7 @@ class MarkdownWriterTest extends Unit
 
         $result = $this->writer->writeFromBlocks($blocks);
 
-        $this->assertSame("- Parent\n  - Child\n    - Grandchild", $result);
+        $this->assertSame("- Parent\n    - Child\n        - Grandchild", $result);
     }
 
     public function testWriteNestedOrderedList(): void
@@ -186,7 +186,7 @@ class MarkdownWriterTest extends Unit
 
         $result = $this->writer->writeFromBlocks($blocks);
 
-        $this->assertSame("1. First\n  1. Sub A\n  2. Sub B\n2. Second", $result);
+        $this->assertSame("1. First\n    1. Sub A\n    2. Sub B\n2. Second", $result);
     }
 
     // --- List type transition tests ---

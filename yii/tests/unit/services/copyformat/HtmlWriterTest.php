@@ -164,4 +164,45 @@ class HtmlWriterTest extends Unit
 
         $this->assertStringContainsString('<img src="https://example.com/img.png"', $result);
     }
+
+    public function testWriteOrderedListWithBlankLinesBetweenItems(): void
+    {
+        // Simulates Quill Delta with blank lines between list items
+        $blocks = [
+            ['segments' => [['text' => 'First']], 'attrs' => ['list' => 'ordered']],
+            ['segments' => [['text' => '']], 'attrs' => []], // blank line
+            ['segments' => [['text' => 'Second']], 'attrs' => ['list' => 'ordered']],
+            ['segments' => [['text' => '']], 'attrs' => []], // blank line
+            ['segments' => [['text' => 'Third']], 'attrs' => ['list' => 'ordered']],
+        ];
+
+        $result = $this->writer->writeFromBlocks($blocks);
+
+        // Should produce a single <ol> with all items, not multiple <ol>s
+        $this->assertSame(1, substr_count($result, '<ol>'), 'Should have exactly one <ol> tag');
+        $this->assertSame(1, substr_count($result, '</ol>'), 'Should have exactly one </ol> tag');
+        $this->assertStringContainsString('<li>First</li>', $result);
+        $this->assertStringContainsString('<li>Second</li>', $result);
+        $this->assertStringContainsString('<li>Third</li>', $result);
+    }
+
+    public function testWriteNestedOrderedListWithBlankLines(): void
+    {
+        $blocks = [
+            ['segments' => [['text' => 'Parent 1']], 'attrs' => ['list' => 'ordered']],
+            ['segments' => [['text' => '']], 'attrs' => []], // blank line
+            ['segments' => [['text' => 'Child A']], 'attrs' => ['list' => 'ordered', 'indent' => 1]],
+            ['segments' => [['text' => 'Child B']], 'attrs' => ['list' => 'ordered', 'indent' => 1]],
+            ['segments' => [['text' => '']], 'attrs' => []], // blank line
+            ['segments' => [['text' => 'Parent 2']], 'attrs' => ['list' => 'ordered']],
+        ];
+
+        $result = $this->writer->writeFromBlocks($blocks);
+
+        // Should maintain list structure despite blank lines
+        $this->assertStringContainsString('<li>Parent 1</li>', $result);
+        $this->assertStringContainsString('<li>Child A</li>', $result);
+        $this->assertStringContainsString('<li>Child B</li>', $result);
+        $this->assertStringContainsString('<li>Parent 2</li>', $result);
+    }
 }

@@ -13,7 +13,11 @@ QuillAsset::register($this);
 $this->registerCss(<<<'CSS'
     .generated-prompt-form h2 { font-size: 1.25rem; line-height: 1.3; margin-bottom: 0.5rem; }
     .generated-prompt-form ol { list-style-type: decimal; padding-left: 2em; }
+    .generated-prompt-form ol ol { list-style-type: lower-alpha; }
+    .generated-prompt-form ol ol ol { list-style-type: lower-roman; }
     .generated-prompt-form ul { list-style-type: disc; padding-left: 2em; }
+    .generated-prompt-form ul ul { list-style-type: circle; }
+    .generated-prompt-form ul ul ul { list-style-type: square; }
     .generated-prompt-form li { list-style-type: inherit; }
     CSS);
 
