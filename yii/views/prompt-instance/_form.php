@@ -308,11 +308,11 @@ $script = <<<'JS'
                                     minimumResultsForSearch: 0,
                                     templateResult: function(state) {
                                         if (!state.id) return state.text;
-                                        return $('<span></span>').text(state.text);
+                                        return $('<span></span>').text(state.text).attr('title', state.id);
                                     },
                                     templateSelection: function(state) {
                                         if (!state.id) return state.text;
-                                        return $('<span></span>').text(state.text);
+                                        return $('<span></span>').text(state.text).attr('title', state.id);
                                     }
                                 });
                             });
