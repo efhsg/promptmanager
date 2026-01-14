@@ -96,6 +96,7 @@ Use slash commands to invoke skills:
 | `/check-standards` | Validate code against standards |
 | `/code-review` | Comprehensive code review |
 | `/finalize-changes` | Lint, test, prepare commit |
+| `/cp` | Commit staged changes and push to origin |
 | `/analyze-codebase` | Generate documentation |
 | `/refactor-plan` | Create refactoring plan |
 

@@ -14,7 +14,8 @@ class MarkdownParser
 
     public function parse(string $markdown): array
     {
-        $lines = preg_split('/\r?\n/', $markdown);
+        $markdown = str_replace(["\r\n", "\r"], "\n", $markdown);
+        $lines = explode("\n", $markdown);
         $blocks = [];
         $inCodeBlock = false;
         $codeLang = '';
@@ -56,7 +57,29 @@ class MarkdownParser
             ];
         }
 
-        return $blocks;
+        return $this->collapseBlankLinesAfterHeaders($blocks);
+    }
+
+    private function collapseBlankLinesAfterHeaders(array $blocks): array
+    {
+        $result = [];
+        $previousWasHeader = false;
+
+        foreach ($blocks as $block) {
+            $isBlankLine = $block['attrs'] === []
+                && count($block['segments']) === 1
+                && $block['segments'][0]['text'] === '';
+
+            if ($previousWasHeader && $isBlankLine) {
+                $previousWasHeader = false;
+                continue;
+            }
+
+            $result[] = $block;
+            $previousWasHeader = isset($block['attrs']['header']);
+        }
+
+        return $result;
     }
 
     private function parseLine(string $line): ?array

@@ -62,6 +62,7 @@ Commands are thin executable wrappers that invoke skills:
 | `/check-standards` | (rules-based) | Validate code standards |
 | `/code-review` | `skills/code-review.md` | Review code changes |
 | `/finalize-changes` | (workflow) | Lint, test, commit prep |
+| `/cp` | (workflow) | Commit and push to origin |
 | `/analyze-codebase` | (workflow) | Generate documentation |
 | `/refactor-plan` | (workflow) | Create refactoring plan |
 

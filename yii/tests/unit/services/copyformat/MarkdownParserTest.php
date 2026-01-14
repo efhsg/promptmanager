@@ -200,16 +200,15 @@ class MarkdownParserTest extends Unit
         $md = "# Title\n\nSome **bold** text.\n\n- Item 1\n- Item 2";
         $blocks = $this->parser->parse($md);
 
-        // Should have: Title, blank, paragraph, blank, Item 1, Item 2 = 6 blocks
-        $this->assertCount(6, $blocks);
+        // Should have: Title, paragraph, blank, Item 1, Item 2 = 5 blocks
+        // (blank line after header is collapsed)
+        $this->assertCount(5, $blocks);
         $this->assertSame(['header' => 1], $blocks[0]['attrs']);
-        $this->assertSame([], $blocks[1]['attrs']); // blank line
-        $this->assertSame('', $blocks[1]['segments'][0]['text']);
-        $this->assertSame([], $blocks[2]['attrs']); // paragraph
-        $this->assertStringContainsString('bold', $blocks[2]['segments'][1]['text']);
-        $this->assertSame([], $blocks[3]['attrs']); // blank line
+        $this->assertSame([], $blocks[1]['attrs']); // paragraph
+        $this->assertStringContainsString('bold', $blocks[1]['segments'][1]['text']);
+        $this->assertSame([], $blocks[2]['attrs']); // blank line before list
+        $this->assertSame(['list' => 'bullet'], $blocks[3]['attrs']);
         $this->assertSame(['list' => 'bullet'], $blocks[4]['attrs']);
-        $this->assertSame(['list' => 'bullet'], $blocks[5]['attrs']);
     }
 
     public function testParseMultipleInlineFormats(): void
@@ -359,15 +358,15 @@ class MarkdownParserTest extends Unit
 
         $blocks = $this->parser->parse($md);
 
-        // Expected: 33 blocks total
+        // Expected: 27 blocks total (6 blank lines after headers collapsed)
         // - 6 headers
         // - 3 paragraphs (Test normal, text **bold**, test `code`)
         // - 1 blockquote
         // - 1 code-block line
         // - 6 list items (3 numbered + 3 bullet)
         // - 3 nested list items
-        // - 13 blank lines (after each header, after code block, between lists)
-        $this->assertCount(33, $blocks, 'Should preserve blank lines as empty paragraph blocks');
+        // - 7 blank lines (between sections, NOT after headers)
+        $this->assertCount(27, $blocks, 'Blank lines after headers should be collapsed');
 
         // Verify blank lines are represented as empty paragraph blocks
         $emptyBlocks = array_filter($blocks, function ($block) {
@@ -376,14 +375,12 @@ class MarkdownParserTest extends Unit
                 && $block['segments'][0]['text'] === '';
         });
 
-        $this->assertCount(13, $emptyBlocks, 'Should have 13 blank line blocks');
+        $this->assertCount(7, $emptyBlocks, 'Should have 7 blank line blocks (after headers collapsed)');
 
-        // Verify structure: H1, blank, paragraph, blank, H2, blank, paragraph, ...
+        // Verify structure: H1, paragraph (no blank after header), blank, H2, ...
         $this->assertSame(['header' => 1], $blocks[0]['attrs'], 'First block should be H1');
-        $this->assertSame([], $blocks[1]['attrs'], 'Second block should be blank line');
-        $this->assertSame('', $blocks[1]['segments'][0]['text'], 'Blank line should have empty text');
-        $this->assertSame([], $blocks[2]['attrs'], 'Third block should be paragraph');
-        $this->assertSame('Test normal', $blocks[2]['segments'][0]['text']);
+        $this->assertSame([], $blocks[1]['attrs'], 'Second block should be paragraph');
+        $this->assertSame('Test normal', $blocks[1]['segments'][0]['text']);
     }
 
     public function testBlankLinesAtDocumentStart(): void
@@ -506,5 +503,87 @@ class MarkdownParserTest extends Unit
         $this->assertSame(['blockquote' => true], $blocks[2]['attrs']);
         $this->assertSame([], $blocks[3]['attrs'], 'Blank after blockquote');
         $this->assertSame('After', $blocks[4]['segments'][0]['text']);
+    }
+
+    public function testParseHeadersWithWindowsLineEndings(): void
+    {
+        $md = "## PERSONA\r\n\r\nYou are a developer.";
+        $blocks = $this->parser->parse($md);
+
+        // Blank line after header is collapsed
+        $this->assertCount(2, $blocks);
+        $this->assertSame('PERSONA', $blocks[0]['segments'][0]['text'], 'Header text should not have trailing CR');
+        $this->assertSame(['header' => 2], $blocks[0]['attrs']);
+        $this->assertSame('You are a developer.', $blocks[1]['segments'][0]['text']);
+    }
+
+    public function testParseWithMixedLineEndings(): void
+    {
+        // Mix of \r\n (Windows), \n (Unix), and \r (old Mac)
+        $md = "# Header1\r\n## Header2\n### Header3\rParagraph";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertCount(4, $blocks);
+        $this->assertSame('Header1', $blocks[0]['segments'][0]['text']);
+        $this->assertSame('Header2', $blocks[1]['segments'][0]['text']);
+        $this->assertSame('Header3', $blocks[2]['segments'][0]['text']);
+        $this->assertSame('Paragraph', $blocks[3]['segments'][0]['text']);
+    }
+
+    public function testParseWithCarriageReturnOnlyLineEndings(): void
+    {
+        $md = "## Title\r\rContent here";
+        $blocks = $this->parser->parse($md);
+
+        // Blank line after header is collapsed
+        $this->assertCount(2, $blocks);
+        $this->assertSame('Title', $blocks[0]['segments'][0]['text']);
+        $this->assertSame(['header' => 2], $blocks[0]['attrs']);
+        $this->assertSame('Content here', $blocks[1]['segments'][0]['text']);
+    }
+
+    public function testCollapseBlankLinesAfterHeaders(): void
+    {
+        $md = "## PERSONA\n\nYou are a developer.\n\n## LANGUAGE\n\nAll responses must be in English.";
+        $blocks = $this->parser->parse($md);
+
+        // Blank lines after headers collapsed, but blank between paragraph and header preserved
+        $this->assertCount(5, $blocks);
+        $this->assertSame('PERSONA', $blocks[0]['segments'][0]['text']);
+        $this->assertSame(['header' => 2], $blocks[0]['attrs']);
+        $this->assertSame('You are a developer.', $blocks[1]['segments'][0]['text']);
+        $this->assertSame('', $blocks[2]['segments'][0]['text']); // blank between paragraph and header
+        $this->assertSame('LANGUAGE', $blocks[3]['segments'][0]['text']);
+        $this->assertSame(['header' => 2], $blocks[3]['attrs']);
+        $this->assertSame('All responses must be in English.', $blocks[4]['segments'][0]['text']);
+    }
+
+    public function testPreserveBlankLinesBetweenParagraphs(): void
+    {
+        $md = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph.";
+        $blocks = $this->parser->parse($md);
+
+        // Blank lines between paragraphs should be preserved
+        $this->assertCount(5, $blocks);
+        $this->assertSame('First paragraph.', $blocks[0]['segments'][0]['text']);
+        $this->assertSame('', $blocks[1]['segments'][0]['text']);
+        $this->assertSame('Second paragraph.', $blocks[2]['segments'][0]['text']);
+        $this->assertSame('', $blocks[3]['segments'][0]['text']);
+        $this->assertSame('Third paragraph.', $blocks[4]['segments'][0]['text']);
+    }
+
+    public function testMultipleBlankLinesAfterHeaderCollapsedToOne(): void
+    {
+        $md = "## Header\n\n\n\nContent";
+        $blocks = $this->parser->parse($md);
+
+        // Multiple blank lines after header: first is collapsed, rest preserved
+        $this->assertCount(4, $blocks);
+        $this->assertSame('Header', $blocks[0]['segments'][0]['text']);
+        $this->assertSame(['header' => 2], $blocks[0]['attrs']);
+        // Remaining blank lines are preserved as paragraph separators
+        $this->assertSame('', $blocks[1]['segments'][0]['text']);
+        $this->assertSame('', $blocks[2]['segments'][0]['text']);
+        $this->assertSame('Content', $blocks[3]['segments'][0]['text']);
     }
 }
