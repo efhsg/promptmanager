@@ -10,7 +10,12 @@ use common\enums\CopyType;
 /* @var array $fields */
 
 QuillAsset::register($this);
-$this->registerCss('.generated-prompt-form h2{font-size:1.25rem;line-height:1.3;margin-bottom:0.5rem;}');
+$this->registerCss(<<<'CSS'
+    .generated-prompt-form h2 { font-size: 1.25rem; line-height: 1.3; margin-bottom: 0.5rem; }
+    .generated-prompt-form ol { list-style-type: decimal; padding-left: 2em; }
+    .generated-prompt-form ul { list-style-type: disc; padding-left: 2em; }
+    .generated-prompt-form li { list-style-type: inherit; }
+    CSS);
 
 $delta = json_decode($templateBody, true);
 if (!is_array($delta) || !isset($delta['ops'])) {
