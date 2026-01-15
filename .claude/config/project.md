@@ -33,11 +33,17 @@ docker restart pma_yii
 ### Linter
 
 ```bash
-# Fix all files
-docker exec pma_yii vendor/bin/php-cs-fixer fix
+# Check all files (dry run)
+./linter.sh check
 
-# Fix specific file
-docker exec pma_yii vendor/bin/php-cs-fixer fix path/to/file.php
+# Fix all files
+./linter.sh fix
+
+# Check staged files only (for pre-commit)
+./linter-staged.sh check
+
+# Fix staged files only
+./linter-staged.sh fix
 ```
 
 ### Tests

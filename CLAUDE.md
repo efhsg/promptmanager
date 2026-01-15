@@ -67,7 +67,8 @@ See `.claude/config/project.md` for:
 **Quick reference:**
 ```bash
 docker exec pma_yii vendor/bin/codecept run unit          # Run tests
-docker exec pma_yii vendor/bin/php-cs-fixer fix           # Run linter
+./linter.sh fix                                           # Run linter
+./linter-staged.sh fix                                    # Lint staged files only
 ```
 
 ## Domain Essentials
