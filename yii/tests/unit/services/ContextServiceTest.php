@@ -12,6 +12,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use tests\fixtures\ContextFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
+use tests\fixtures\ProjectLinkedProjectFixture;
 
 class ContextServiceTest extends Unit
 {
@@ -23,7 +24,7 @@ class ContextServiceTest extends Unit
             'users' => UserFixture::class,
             'projects' => ProjectFixture::class,
             'contexts' => ContextFixture::class,
-            'projectLinkedProjects' => \tests\fixtures\ProjectLinkedProjectFixture::class,
+            'projectLinkedProjects' => ProjectLinkedProjectFixture::class,
         ];
     }
 

@@ -2,10 +2,6 @@
 
 namespace app\services;
 
-use FilesystemIterator;
-use RecursiveDirectoryIterator;
-use RecursiveIteratorIterator;
-use SplFileInfo;
 use UnexpectedValueException;
 
 class PathService
@@ -13,7 +9,7 @@ class PathService
     private const PATH_LIST_MAX_DEPTH = 10;
 
     /**
-     * @throws \UnexpectedValueException
+     * @throws UnexpectedValueException
      */
     public function collectPaths(
         string $rootDirectory,

@@ -4,6 +4,8 @@ namespace tests\unit\services\copyformat;
 
 use app\services\copyformat\MarkdownParser;
 use Codeception\Test\Unit;
+use app\services\copyformat\MarkdownWriter;
+use app\services\copyformat\QuillDeltaWriter;
 
 class MarkdownParserTest extends Unit
 {
@@ -294,7 +296,7 @@ class MarkdownParserTest extends Unit
 
         $blocks = $this->parser->parse($originalMd);
 
-        $writer = new \app\services\copyformat\MarkdownWriter();
+        $writer = new MarkdownWriter();
         $outputMd = $writer->writeFromBlocks($blocks);
 
         $this->assertStringContainsString('# Title', $outputMd);
@@ -308,7 +310,7 @@ class MarkdownParserTest extends Unit
 
         $blocks = $this->parser->parse($md);
 
-        $deltaWriter = new \app\services\copyformat\QuillDeltaWriter();
+        $deltaWriter = new QuillDeltaWriter();
         $deltaJson = $deltaWriter->writeFromBlocks($blocks);
 
         $this->assertJson($deltaJson);

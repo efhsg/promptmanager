@@ -7,6 +7,7 @@ use app\services\EntityPermissionService;
 use Yii;
 use yii\db\Migration;
 use yii\rbac\DbManager;
+use RuntimeException;
 
 class m250715_120000_add_generate_prompt_permission extends Migration
 {
@@ -18,7 +19,7 @@ class m250715_120000_add_generate_prompt_permission extends Migration
     {
         $auth = Yii::$app->authManager;
         if (!$auth instanceof DbManager) {
-            throw new \RuntimeException('The authManager must use DbManager to run this migration.');
+            throw new RuntimeException('The authManager must use DbManager to run this migration.');
         }
 
         $rule = new PromptTemplateOwnerRule();

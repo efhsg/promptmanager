@@ -244,7 +244,6 @@ class m230101_000001_initial_migration extends Migration
         $this->dropIndex('idx_user_preference_user_key', '{{%user_preference}}');
         $this->dropTable('{{%user_preference}}');
 
-
         // Drop prompt_instance
         $this->dropForeignKey('fk_prompt_instance_template', '{{%prompt_instance}}');
         $this->dropTable('{{%prompt_instance}}');

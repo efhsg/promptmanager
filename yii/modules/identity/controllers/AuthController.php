@@ -33,7 +33,6 @@ class AuthController extends Controller
         ];
     }
 
-
     public function actionLogin(): Response|string
     {
         $loginForm = new LoginForm();

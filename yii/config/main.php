@@ -13,6 +13,7 @@ use app\services\ProjectService;
 use app\services\PromptTemplateService;
 use app\services\UserPreferenceService;
 use yii\symfonymailer\Mailer;
+use yii\console\Application;
 
 $params = require __DIR__ . '/params.php';
 
@@ -89,7 +90,7 @@ $config = [
             'enableAutoLogin' => true,
             'authTimeout' => 3600 * 24 * 30,
             'loginUrl' => ['/identity/auth/login'],
-            'enableSession' => !Yii::$app instanceof yii\console\Application,
+            'enableSession' => !Yii::$app instanceof Application,
         ],
         'session' => [
             'class' => 'yii\web\Session',

@@ -160,7 +160,6 @@ class FieldTest extends Unit
         verify($field->validate())->true();
     }
 
-
     public function testInvalidProjectId()
     {
         $field = new Field();
@@ -291,6 +290,5 @@ class FieldTest extends Unit
             FileHelper::removeDirectory($baseDir);
         }
     }
-
 
 }

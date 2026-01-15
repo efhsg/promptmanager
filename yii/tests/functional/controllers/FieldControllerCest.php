@@ -100,7 +100,6 @@ class FieldControllerCest
         $I->see('Type cannot be blank.');
     }
 
-
     public function testUpdateExistingFieldSuccessfully(FunctionalTester $I): void
     {
         $I->amOnRoute('/field/update', ['id' => 1]);
@@ -252,7 +251,6 @@ class FieldControllerCest
         $I->amOnRoute('/field/view', ['id' => 9999]);
         $I->seeResponseCodeIs(404);
     }
-
 
     /**
      * @throws ReflectionException

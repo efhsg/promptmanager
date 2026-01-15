@@ -133,5 +133,4 @@ class PromptInstanceControllerCest
         $I->seeResponseCodeIs(404);
     }
 
-
 }

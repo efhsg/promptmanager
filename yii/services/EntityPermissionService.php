@@ -64,7 +64,6 @@ class EntityPermissionService extends Component
         return $this->checkPermission($permissionName);
     }
 
-
     /**
      * Checks the permission for the current user.
      * If a model is provided, it uses its primary key (or object hash as fallback)

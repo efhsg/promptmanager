@@ -49,5 +49,4 @@ class PromptTransformationService extends Component
         return trim($decoded);
     }
 
-
 }

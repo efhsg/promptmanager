@@ -1,5 +1,9 @@
 <?php
 
+use app\modules\identity\models\User;
+use yii\rbac\DbManager;
+use yii\web\Application;
+
 /** @noinspection PhpUndefinedNamespaceInspection */
 /** @noinspection PhpFullyQualifiedNameUsageInspection */
 /** @noinspection PhpUndefinedClassInspection */
@@ -19,14 +23,14 @@
 class Yii
 {
     /**
-     * @var \yii\web\Application|\yii\console\Application|__Application
+     * @var Application|yii\console\Application|__Application
      */
-    public static \yii\console\Application|__Application|\yii\web\Application $app;
+    public static \yii\console\Application|__Application|Application $app;
 }
 
 /**
- * @property yii\rbac\DbManager $authManager
- * @property \yii\web\User|__WebUser $user
+ * @property DbManager $authManager
+ * @property yii\web\User|__WebUser $user
  * @property mixed|object|null $projectContext
  * @property mixed|object|null $userPreference
  * @property mixed|object|null $modelService
@@ -36,9 +40,13 @@ class Yii
  * @property mixed|object|null $permissionService
  *
  */
-class __Application {}
+class __Application
+{
+}
 
 /**
- * @property app\modules\identity\models\User $identity
+ * @property User $identity
  */
-class __WebUser {}
+class __WebUser
+{
+}

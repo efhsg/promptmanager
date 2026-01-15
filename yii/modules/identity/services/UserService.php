@@ -144,7 +144,6 @@ class UserService
         }
     }
 
-
     /**
      * @throws Exception
      */

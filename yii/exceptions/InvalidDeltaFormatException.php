@@ -2,4 +2,8 @@
 
 namespace app\exceptions;
 
-class InvalidDeltaFormatException extends \RuntimeException {}
+use RuntimeException;
+
+class InvalidDeltaFormatException extends RuntimeException
+{
+}

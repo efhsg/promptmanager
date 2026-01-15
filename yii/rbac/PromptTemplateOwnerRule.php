@@ -9,7 +9,6 @@ class PromptTemplateOwnerRule extends Rule
 {
     public $name = 'isPromptTemplateOwner';
 
-
     public function execute($user, $item, $params): bool
     {
         if (!isset($params['model']) || !($params['model'] instanceof PromptTemplate)) {

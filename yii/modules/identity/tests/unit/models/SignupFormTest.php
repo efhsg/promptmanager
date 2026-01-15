@@ -121,5 +121,4 @@ class SignupFormTest extends Unit
         verify($model->getFirstError('username'))->equals('User creation failed');
     }
 
-
 }

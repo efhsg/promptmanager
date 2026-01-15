@@ -34,7 +34,8 @@ class PromptFieldRenderer
 
     public function __construct(
         private readonly View $view,
-    ) {}
+    ) {
+    }
 
     /**
      * Normalize a value to a JSON-encoded Quill Delta or empty string

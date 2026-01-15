@@ -1,6 +1,7 @@
 <?php
 
 use yii\helpers\ArrayHelper;
+use app\modules\identity\services\UserService;
 
 $main = require __DIR__ . '/main.php';
 $db = require __DIR__ . '/test_db.php';
@@ -37,7 +38,7 @@ $config = [
     ],
     'container' => [
         'definitions' => [
-            app\modules\identity\services\UserService::class => app\modules\identity\services\UserService::class,
+            UserService::class => UserService::class,
         ],
     ],
 ];
