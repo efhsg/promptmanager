@@ -83,6 +83,41 @@ class DeltaOpsHelper
                 $result[] = $op;
             }
         }
+
+        return $this->removeEmptyLinesBetweenListItems($result);
+    }
+
+    /**
+     * Strips leading newlines from text ops that follow list-attributed newlines.
+     * This prevents Quill from creating separate lists for each item.
+     */
+    private function removeEmptyLinesBetweenListItems(array $ops): array
+    {
+        $result = [];
+
+        foreach ($ops as $op) {
+            // Check if previous op was a list-attributed newline
+            $prevIsListNewline = !empty($result) && $this->isListAttributedNewline($result[array_key_last($result)]);
+
+            if ($prevIsListNewline && isset($op['insert']) && is_string($op['insert'])) {
+                // Strip leading newlines from this op
+                $op['insert'] = ltrim($op['insert'], "\n");
+                if ($op['insert'] === '') {
+                    continue; // Skip if nothing left
+                }
+            }
+
+            $result[] = $op;
+        }
+
         return $result;
+    }
+
+    private function isListAttributedNewline(array $op): bool
+    {
+        return isset($op['insert'])
+            && is_string($op['insert'])
+            && str_contains($op['insert'], "\n")
+            && isset($op['attributes']['list']);
     }
 }

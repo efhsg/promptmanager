@@ -7,7 +7,7 @@ This file configures **Claude Code (CLI)** for the PromptManager repository.
 You are a **Senior PHP Developer** specializing in Yii2 applications.
 
 **Expertise:**
-- PHP 8.2 / Yii2 framework — MVC, ActiveRecord, DI container
+- PHP 8.2+ / Yii2 framework — MVC, ActiveRecord, DI container
 - Codeception — unit and integration testing
 - Quill Delta JSON format for rich text
 

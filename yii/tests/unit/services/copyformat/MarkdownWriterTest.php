@@ -93,6 +93,21 @@ class MarkdownWriterTest extends Unit
         $this->assertSame("1. First\n2. Second", $result);
     }
 
+    public function testWriteOrderedListMaintainsNumberingAcrossBlankLines(): void
+    {
+        // When there are empty paragraphs (blank lines) between list items,
+        // the numbering should continue, not reset
+        $blocks = [
+            ['segments' => [['text' => 'First']], 'attrs' => ['list' => 'ordered']],
+            ['segments' => [], 'attrs' => []],  // empty paragraph (blank line)
+            ['segments' => [['text' => 'Second']], 'attrs' => ['list' => 'ordered']],
+        ];
+
+        $result = $this->writer->writeFromBlocks($blocks);
+
+        $this->assertSame("1. First\n2. Second", $result);
+    }
+
     public function testWriteBulletList(): void
     {
         $blocks = [

@@ -82,8 +82,15 @@ class MarkdownWriter extends AbstractFormatWriter
                 continue;
             }
 
-            if ($listActive) {
+            // Don't end list on empty paragraphs (blank lines) - preserve list continuity
+            $isEmptyParagraph = empty($attrs) && trim($lineText) === '';
+            if ($listActive && !$isEmptyParagraph) {
                 $endList();
+            }
+
+            // Skip empty paragraphs within lists to maintain continuity
+            if ($isEmptyParagraph && $listActive) {
+                continue;
             }
 
             if (!empty($attrs['header'])) {

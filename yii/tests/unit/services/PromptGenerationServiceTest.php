@@ -764,4 +764,81 @@ class PromptGenerationServiceTest extends Unit
         $plainText = $this->getPlainTextFromQuillDelta($result);
         $this->assertSame('Template', $plainText);
     }
+
+    /**
+     * Integration test: Numbered list with placeholder using Quill's separate ops structure.
+     * Verifies the full pipeline: generation -> markdown conversion with correct numbering.
+     *
+     * @throws Exception
+     */
+    public function testNumberedListWithPlaceholderProducesCorrectMarkdown(): void
+    {
+        $field = new stdClass();
+        $field->id = 1;
+        $field->type = 'text';
+
+        // Actual Quill Delta structure: text and list attribute in SEPARATE ops
+        // This is how Quill stores: "1. Navigate to URL: GEN:{{1}}\n2. Extract transcript"
+        $templateBody = json_encode([
+            'ops' => [
+                ['insert' => 'Navigate to URL: GEN:{{1}}'],
+                ['insert' => "\n", 'attributes' => ['list' => 'ordered']],
+                ['insert' => "\nExtract the transcript"],  // Note: leading newline (blank line)
+                ['insert' => "\n", 'attributes' => ['list' => 'ordered']],
+            ],
+        ]);
+
+        $template = Stub::make(
+            PromptTemplate::class,
+            [
+                '__get' => function ($property) use ($templateBody, $field) {
+                    if ($property === 'template_body') {
+                        return $templateBody;
+                    }
+                    if ($property === 'fields') {
+                        return [$field];
+                    }
+                    return null;
+                },
+            ]
+        );
+
+        $templateService = Stub::make(
+            PromptTemplateService::class,
+            ['getTemplateById' => Expected::once($template)],
+            $this
+        );
+
+        $service = new PromptGenerationService($templateService);
+
+        // Field value with trailing newline (as Quill stores it)
+        $fieldValues = [1 => '{"ops":[{"insert":"https://example.com\n"}]}'];
+
+        $result = $service->generateFinalPrompt(1, [], $fieldValues, self::USER_ID);
+
+        // Verify the generated Delta has correct list attributes
+        $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('ops', $decoded);
+
+        // Find list-attributed ops
+        $listOps = array_filter($decoded['ops'], fn($op) => isset($op['attributes']['list']));
+        $this->assertCount(2, $listOps, 'Should have exactly 2 list-attributed newlines');
+
+        // Verify all list ops have 'ordered' type
+        foreach ($listOps as $op) {
+            $this->assertSame('ordered', $op['attributes']['list']);
+        }
+
+        // Convert to markdown and verify numbering
+        $converter = new \app\services\CopyFormatConverter();
+        $markdown = $converter->convertFromQuillDelta($result, \common\enums\CopyType::MD);
+
+        // Should have consecutive numbering: "1. ..." and "2. ..."
+        $this->assertStringContainsString('1. Navigate to URL: https://example.com', $markdown);
+        $this->assertStringContainsString('2. Extract the transcript', $markdown);
+
+        // Verify no duplicate "1." (which would indicate numbering reset)
+        $countOnes = substr_count($markdown, '1. ');
+        $this->assertSame(1, $countOnes, 'Should have exactly one "1. " (no numbering reset)');
+    }
 }

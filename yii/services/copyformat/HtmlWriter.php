@@ -72,7 +72,7 @@ class HtmlWriter extends AbstractFormatWriter
             }
 
             // Skip empty paragraphs inside lists to keep list items grouped
-            $isEmptyParagraph = $lineText === '' && empty($attrs);
+            $isEmptyParagraph = trim($lineText) === '' && empty($attrs);
             if ($isEmptyParagraph && !empty($listStack)) {
                 continue;
             }
@@ -96,7 +96,7 @@ class HtmlWriter extends AbstractFormatWriter
                 continue;
             }
 
-            $html[] = '<p>' . $lineText . '</p>';
+            $html[] = '<p>' . trim($lineText) . '</p>';
         }
 
         $flushCode();

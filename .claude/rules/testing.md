@@ -30,3 +30,13 @@ public function testReturnsNullWhenInputIsEmpty(): void
 - Simple getters/setters
 - Framework code
 - Third-party libraries
+
+## Debugging Complex Bugs
+
+When a bug involves data transformation (e.g., Quill Delta processing):
+
+1. **Capture actual data first.** Add temporary logging to see real production data structures before writing any fix.
+2. **Write tests using actual data.** Copy the real data into your test, not a simplified version you assume is equivalent.
+3. **Verify the test fails.** If your test passes immediately, you're probably testing the wrong pattern.
+
+A test that passes on assumed data proves nothing. A test that uses actual production data and fails, then passes after your fix, proves everything.
