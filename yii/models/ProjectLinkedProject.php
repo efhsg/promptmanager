@@ -15,8 +15,8 @@ use yii\db\ActiveRecord;
  * @property int $id
  * @property int $project_id
  * @property int $linked_project_id
- * @property int $created_at
- * @property int $updated_at
+ * @property string $created_at
+ * @property string $updated_at
  *
  * @property Project $project
  * @property Project $linkedProject
@@ -34,7 +34,8 @@ class ProjectLinkedProject extends ActiveRecord
     {
         return [
             [['project_id', 'linked_project_id'], 'required'],
-            [['project_id', 'linked_project_id', 'created_at', 'updated_at'], 'integer'],
+            [['project_id', 'linked_project_id'], 'integer'],
+            [['created_at', 'updated_at'], 'string'],
             [
                 ['project_id', 'linked_project_id'],
                 'unique',

@@ -90,7 +90,7 @@ class ContextTest extends Unit
     public function testTimestampsAreSetOnSave()
     {
         try {
-            Context::setTimestampOverride(1_700_000_100);
+            Context::setTimestampOverride(date('Y-m-d H:i:s', 1_700_000_100));
 
             $context = new Context();
             $context->project_id = 1;
@@ -101,7 +101,7 @@ class ContextTest extends Unit
             verify($context->updated_at)->notEmpty();
             verify($context->created_at)->equals($context->updated_at);
 
-            Context::setTimestampOverride($context->created_at + 5);
+            Context::setTimestampOverride(date('Y-m-d H:i:s', strtotime($context->created_at) + 5));
             $context->name = 'Updated Context';
             $context->save();
             verify($context->updated_at)->greaterThan($context->created_at);

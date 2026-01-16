@@ -83,7 +83,7 @@ class UserControllerTest extends Unit
 
         $mockUserService = $this->createMock(UserService::class);
         $mockUserService->method('softDelete')->willReturnCallback(function ($user) {
-            $user->deleted_at = time();
+            $user->deleted_at = date('Y-m-d H:i:s');
             return $user->save(false);
         });
 

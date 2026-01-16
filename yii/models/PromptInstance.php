@@ -13,8 +13,8 @@ use yii\db\ActiveRecord;
  * @property int $template_id
  * @property string $label
  * @property string $final_prompt
- * @property int $created_at
- * @property int $updated_at
+ * @property string $created_at
+ * @property string $updated_at
  *
  * @property PromptTemplate $template
  */
@@ -38,6 +38,7 @@ class PromptInstance extends ActiveRecord
         return [
             [['template_id', 'final_prompt'], 'required'],
             [['template_id'], 'integer'],
+            [['created_at', 'updated_at'], 'string'],
             [['label'], 'string', 'max' => 255],
             [['label'], 'default', 'value' => ''],
             [['final_prompt'], 'string'],

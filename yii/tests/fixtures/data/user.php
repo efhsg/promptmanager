@@ -11,8 +11,8 @@ try {
             'password_hash' => Yii::$app->security->generatePasswordHash('admin'),
             'access_token' => '100_access_token',
             'email' => 'admin@example.com',
-            'created_at' => time(),
-            'updated_at' => time(),
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
         ],
         'user2' => [
             'id' => 1,
@@ -21,8 +21,8 @@ try {
             'password_hash' => Yii::$app->security->generatePasswordHash('testpassword'),
             'access_token' => '1_access_token',
             'email' => 'userWithField@example.com',
-            'created_at' => time(),
-            'updated_at' => time(),
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
         ],
     ];
 } catch (\yii\base\Exception $e) {

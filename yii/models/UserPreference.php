@@ -13,8 +13,8 @@ use yii\db\ActiveRecord;
  * @property int $user_id
  * @property string $pref_key
  * @property string|null $pref_value
- * @property int $created_at
- * @property int $updated_at
+ * @property string $created_at
+ * @property string $updated_at
  *
  * @property User $user
  */
@@ -37,7 +37,8 @@ class UserPreference extends ActiveRecord
     {
         return [
             [['user_id', 'pref_key'], 'required'],
-            [['user_id', 'created_at', 'updated_at'], 'integer'],
+            [['user_id'], 'integer'],
+            [['created_at', 'updated_at'], 'string'],
             [['pref_key', 'pref_value'], 'string', 'max' => 255],
             [['user_id', 'pref_key'], 'unique', 'targetAttribute' => ['user_id', 'pref_key']],
             [['user_id'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['user_id' => 'id']],

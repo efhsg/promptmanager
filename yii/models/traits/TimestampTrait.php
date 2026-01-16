@@ -9,12 +9,12 @@ trait TimestampTrait
     /**
      * Optional override for the current timestamp, useful in tests to avoid sleep().
      */
-    protected static ?int $timestampOverride = null;
+    protected static ?string $timestampOverride = null;
 
     /**
      * Set a temporary timestamp override.
      */
-    public static function setTimestampOverride(?int $timestamp): void
+    public static function setTimestampOverride(?string $timestamp): void
     {
         static::$timestampOverride = $timestamp;
     }
@@ -27,7 +27,7 @@ trait TimestampTrait
      */
     protected function handleTimestamps(bool $insert): void
     {
-        $time = static::$timestampOverride ?? time();
+        $time = static::$timestampOverride ?? date('Y-m-d H:i:s');
         if ($insert) {
             $this->created_at = $time;
         }

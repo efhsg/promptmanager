@@ -25,7 +25,7 @@ class UserTest extends Unit
         $hash = hash('sha256', $token);
 
         $user->access_token_hash = $hash;
-        $user->access_token_expires_at = time() + 86400; // expires tomorrow
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() + 86400); // expires tomorrow
         $user->save(false);
 
         $found = User::findIdentityByAccessToken($token);
@@ -41,7 +41,7 @@ class UserTest extends Unit
         $hash = hash('sha256', $token);
 
         $user->access_token_hash = $hash;
-        $user->access_token_expires_at = time() + 86400;
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() + 86400);
         $user->save(false);
 
         $found = User::findIdentityByAccessToken('wrong_token');
@@ -56,7 +56,7 @@ class UserTest extends Unit
         $hash = hash('sha256', $token);
 
         $user->access_token_hash = $hash;
-        $user->access_token_expires_at = time() - 1; // expired
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() - 1); // expired
         $user->save(false);
 
         $found = User::findIdentityByAccessToken($token);
@@ -87,7 +87,7 @@ class UserTest extends Unit
         $hash = hash('sha256', $token);
 
         $user->access_token_hash = $hash;
-        $user->access_token_expires_at = time() + 86400;
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() + 86400);
         $user->status = User::STATUS_INACTIVE;
         $user->save(false);
 

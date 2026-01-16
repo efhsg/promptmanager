@@ -20,11 +20,11 @@ use yii\web\IdentityInterface;
  * @property string|null $password_reset_token
  * @property string|null $access_token
  * @property string|null $access_token_hash
- * @property int|null $access_token_expires_at
+ * @property string|null $access_token_expires_at
  * @property int $status
- * @property int $created_at
- * @property int $updated_at
- * @property int $deleted_at
+ * @property string $created_at
+ * @property string $updated_at
+ * @property string|null $deleted_at
  */
 class User extends ActiveRecord implements IdentityInterface
 {
@@ -56,7 +56,7 @@ class User extends ActiveRecord implements IdentityInterface
             ->andWhere(['access_token_hash' => $hash])
             ->andWhere(['or',
                 ['access_token_expires_at' => null],
-                ['>', 'access_token_expires_at', time()],
+                ['>', 'access_token_expires_at', date('Y-m-d H:i:s')],
             ])
             ->one();
     }
@@ -89,7 +89,10 @@ class User extends ActiveRecord implements IdentityInterface
     public function behaviors(): array
     {
         return [
-            TimestampBehavior::class,
+            [
+                'class' => TimestampBehavior::class,
+                'value' => fn() => date('Y-m-d H:i:s'),
+            ],
         ];
     }
 
@@ -97,7 +100,8 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return [
             [['username', 'email', 'password_hash'], 'required'],
-            [['status', 'created_at', 'updated_at', 'deleted_at', 'access_token_expires_at'], 'integer'],
+            [['status'], 'integer'],
+            [['created_at', 'updated_at', 'deleted_at', 'access_token_expires_at'], 'string'],
             [['username', 'email', 'password_hash', 'password_reset_token', 'access_token'], 'string', 'min' => 3, 'max' => 255],
             [['access_token_hash'], 'string', 'max' => 255],
             [['auth_key'], 'string', 'max' => 32],

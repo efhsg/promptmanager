@@ -57,7 +57,7 @@ class UserController extends Controller
         }
 
         $token = $this->userService->generateAccessToken($user, $expiryDays);
-        $expiresAt = date('Y-m-d H:i:s', $user->access_token_expires_at);
+        $expiresAt = $user->access_token_expires_at;
 
         $this->stdout("Access token for user '{$user->username}':\n");
         $this->stdout("$token\n\n");
@@ -80,7 +80,7 @@ class UserController extends Controller
         }
 
         $token = $this->userService->rotateAccessToken($user, $expiryDays);
-        $expiresAt = date('Y-m-d H:i:s', $user->access_token_expires_at);
+        $expiresAt = $user->access_token_expires_at;
 
         $this->stdout("New access token for user '{$user->username}':\n");
         $this->stdout("$token\n\n");

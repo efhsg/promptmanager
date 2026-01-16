@@ -145,8 +145,8 @@ class UserServiceTest extends Unit
         $result = $service->softDelete($user);
 
         self::assertSame(true, $result);
-        self::assertIsInt($user->deleted_at);
-        self::assertGreaterThan(0, $user->deleted_at);
+        self::assertIsString($user->deleted_at);
+        self::assertNotEmpty($user->deleted_at);
     }
 
     public function testSoftDeleteReturnsFalseWhenAlreadyDeleted(): void
@@ -154,7 +154,7 @@ class UserServiceTest extends Unit
         $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
 
         $user = new User();
-        $user->deleted_at = time();
+        $user->deleted_at = date('Y-m-d H:i:s');
 
         $service = new UserService();
 
@@ -186,7 +186,7 @@ class UserServiceTest extends Unit
             ->onlyMethods(['save'])
             ->getMock();
         $user->id = 40;
-        $user->deleted_at = time();
+        $user->deleted_at = date('Y-m-d H:i:s');
 
         $user->expects($this->once())
             ->method('save')
@@ -269,7 +269,7 @@ class UserServiceTest extends Unit
         self::assertSame(64, strlen($user->access_token_hash));
         self::assertSame(hash('sha256', $token), $user->access_token_hash);
         self::assertNotNull($user->access_token_expires_at);
-        self::assertGreaterThan(time(), $user->access_token_expires_at);
+        self::assertGreaterThan(date('Y-m-d H:i:s'), $user->access_token_expires_at);
     }
 
     public function testGenerateAccessTokenUsesCustomExpiry(): void
@@ -289,7 +289,7 @@ class UserServiceTest extends Unit
         $service->generateAccessToken($user, 30);
 
         $expectedExpiry = time() + (30 * 86400);
-        self::assertEqualsWithDelta($expectedExpiry, $user->access_token_expires_at, 5);
+        self::assertEqualsWithDelta($expectedExpiry, strtotime($user->access_token_expires_at), 5);
     }
 
     public function testGenerateAccessTokenThrowsOnSaveFailure(): void
@@ -343,7 +343,7 @@ class UserServiceTest extends Unit
             ->getMock();
         $user->id = 74;
         $user->access_token_hash = 'some_hash';
-        $user->access_token_expires_at = time() + 86400;
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() + 86400);
 
         $user->expects($this->once())
             ->method('save')
@@ -395,7 +395,7 @@ class UserServiceTest extends Unit
         $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
 
         $user = new User();
-        $user->access_token_expires_at = time() + 86400;
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() + 86400);
 
         $service = new UserService();
 
@@ -407,7 +407,7 @@ class UserServiceTest extends Unit
         $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
 
         $user = new User();
-        $user->access_token_expires_at = time() - 1;
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() - 1);
 
         $service = new UserService();
 
@@ -443,7 +443,7 @@ class UserServiceTest extends Unit
     private function createUserTable(Connection $connection): void
     {
         $connection->createCommand(
-            <<<SQL
+            <<<'SQL'
                 CREATE TABLE user (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     username TEXT NOT NULL,
@@ -453,11 +453,11 @@ class UserServiceTest extends Unit
                     password_reset_token TEXT,
                     access_token TEXT,
                     access_token_hash TEXT,
-                    access_token_expires_at INTEGER,
+                    access_token_expires_at TEXT,
                     status INTEGER,
-                    created_at INTEGER,
-                    updated_at INTEGER,
-                    deleted_at INTEGER
+                    created_at TEXT,
+                    updated_at TEXT,
+                    deleted_at TEXT
                 )
                 SQL
         )->execute();

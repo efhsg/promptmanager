@@ -15,8 +15,8 @@ use yii\db\ActiveRecord;
  * @property string|null $label
  * @property bool $selected_by_default
  * @property int|null $order
- * @property int $created_at
- * @property int $updated_at
+ * @property string $created_at
+ * @property string $updated_at
  *
  * @property Field $field
  */
@@ -39,7 +39,8 @@ class FieldOption extends ActiveRecord
     {
         return [
             [['field_id', 'value'], 'required'],
-            [['field_id', 'order', 'created_at', 'updated_at'], 'integer'],
+            [['field_id', 'order'], 'integer'],
+            [['created_at', 'updated_at'], 'string'],
             [['selected_by_default'], 'boolean'],
             [['selected_by_default'], 'default', 'value' => false],
             [['value'], 'string',],

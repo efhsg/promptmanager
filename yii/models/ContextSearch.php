@@ -20,8 +20,8 @@ class ContextSearch extends Context
     public function rules(): array
     {
         return [
-            [['id', 'project_id', 'created_at', 'updated_at', 'order'], 'integer'],
-            [['name', 'content'], 'safe'],
+            [['id', 'project_id', 'order'], 'integer'],
+            [['name', 'content', 'created_at', 'updated_at'], 'safe'],
             ['projectName', 'safe'],
         ];
     }

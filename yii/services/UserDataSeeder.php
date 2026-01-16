@@ -41,8 +41,8 @@ class UserDataSeeder implements UserDataSeederInterface
                 'name' => $fieldName,
                 'type' => $fieldData['type'],
                 'label' => $fieldData['label'],
-                'created_at' => time(),
-                'updated_at' => time(),
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ])->execute();
 
             $fieldId = Yii::$app->db->getLastInsertID();
@@ -59,8 +59,8 @@ class UserDataSeeder implements UserDataSeederInterface
                             ["don't write any comment", "use SOLID, DRY, YAGNI principles"]
                         ),
                         'order' => $order += 10,
-                        'created_at' => time(),
-                        'updated_at' => time(),
+                        'created_at' => date('Y-m-d H:i:s'),
+                        'updated_at' => date('Y-m-d H:i:s'),
                     ])->execute();
                 }
             }

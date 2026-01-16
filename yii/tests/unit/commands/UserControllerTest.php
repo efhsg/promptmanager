@@ -55,7 +55,7 @@ class UserControllerTest extends Unit
 
         $user->refresh();
         $expectedExpiry = time() + (30 * 86400);
-        self::assertEqualsWithDelta($expectedExpiry, $user->access_token_expires_at, 5);
+        self::assertEqualsWithDelta($expectedExpiry, strtotime($user->access_token_expires_at), 5);
     }
 
     public function testRotateTokenReplacesExistingToken(): void

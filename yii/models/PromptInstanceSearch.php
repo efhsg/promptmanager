@@ -25,8 +25,8 @@ class PromptInstanceSearch extends PromptInstance
     public function rules(): array
     {
         return [
-            [['id', 'template_id', 'created_at', 'updated_at'], 'integer'],
-            [['final_prompt', 'label'], 'safe'],
+            [['id', 'template_id'], 'integer'],
+            [['final_prompt', 'label', 'created_at', 'updated_at'], 'safe'],
             ['projectName', 'safe'],
         ];
     }

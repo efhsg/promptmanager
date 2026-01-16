@@ -223,9 +223,9 @@ class FieldServiceTest extends Unit
             'label' => 'string',
             'description' => 'text',
             'prompt_instance_copy_format' => "string NOT NULL DEFAULT 'md'",
-            'created_at' => 'integer',
-            'updated_at' => 'integer',
-            'deleted_at' => 'integer',
+            'created_at' => 'text',
+            'updated_at' => 'text',
+            'deleted_at' => 'text',
         ])->execute();
 
         $this->db->createCommand()->createTable(Field::tableName(), [
@@ -238,22 +238,22 @@ class FieldServiceTest extends Unit
             'selected_by_default' => 'integer NOT NULL DEFAULT 0',
             'share' => 'integer NOT NULL DEFAULT 0',
             'label' => 'string',
-            'created_at' => 'integer',
-            'updated_at' => 'integer',
+            'created_at' => 'text',
+            'updated_at' => 'text',
         ])->execute();
 
         $this->db->createCommand()->createTable(ProjectLinkedProject::tableName(), [
             'id' => 'pk',
             'project_id' => 'integer NOT NULL',
             'linked_project_id' => 'integer NOT NULL',
-            'created_at' => 'integer',
-            'updated_at' => 'integer',
+            'created_at' => 'text',
+            'updated_at' => 'text',
         ])->execute();
     }
 
     private function seedData(): void
     {
-        $timestamp = 1737766798;
+        $timestamp = date('Y-m-d H:i:s', 1737766798);
 
         $projects = [
             [

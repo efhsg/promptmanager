@@ -107,7 +107,7 @@ class UserService
             return false;
         }
 
-        return $this->updateUserAttribute($user, 'deleted_at', time());
+        return $this->updateUserAttribute($user, 'deleted_at', date('Y-m-d H:i:s'));
     }
 
     public function restoreSoftDelete(User $user): bool
@@ -186,7 +186,7 @@ class UserService
         $expiryDays ??= self::TOKEN_EXPIRY_DAYS;
 
         $user->access_token_hash = $hash;
-        $user->access_token_expires_at = time() + ($expiryDays * 86400);
+        $user->access_token_expires_at = date('Y-m-d H:i:s', time() + ($expiryDays * 86400));
 
         if (!$user->save(false, ['access_token_hash', 'access_token_expires_at'])) {
             throw new RuntimeException('Failed to save access token');
@@ -224,6 +224,6 @@ class UserService
         if ($user->access_token_expires_at === null) {
             return false;
         }
-        return $user->access_token_expires_at < time();
+        return strtotime($user->access_token_expires_at) < time();
     }
 }

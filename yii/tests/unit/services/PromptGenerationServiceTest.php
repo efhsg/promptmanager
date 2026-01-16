@@ -11,6 +11,8 @@ use Codeception\Test\Unit;
 use Exception;
 use stdClass;
 use yii\web\NotFoundHttpException;
+use app\services\CopyFormatConverter;
+use common\enums\CopyType;
 
 class PromptGenerationServiceTest extends Unit
 {
@@ -830,8 +832,8 @@ class PromptGenerationServiceTest extends Unit
         }
 
         // Convert to markdown and verify numbering
-        $converter = new \app\services\CopyFormatConverter();
-        $markdown = $converter->convertFromQuillDelta($result, \common\enums\CopyType::MD);
+        $converter = new CopyFormatConverter();
+        $markdown = $converter->convertFromQuillDelta($result, CopyType::MD);
 
         // Should have consecutive numbering: "1. ..." and "2. ..."
         $this->assertStringContainsString('1. Navigate to URL: https://example.com', $markdown);

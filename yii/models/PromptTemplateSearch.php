@@ -20,8 +20,8 @@ class PromptTemplateSearch extends PromptTemplate
     public function rules(): array
     {
         return [
-            [['id', 'project_id', 'created_at', 'updated_at'], 'integer'],
-            [['name', 'template_body'], 'safe'],
+            [['id', 'project_id'], 'integer'],
+            [['name', 'template_body', 'created_at', 'updated_at'], 'safe'],
             ['projectName', 'safe'],
         ];
     }

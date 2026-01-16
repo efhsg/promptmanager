@@ -118,7 +118,7 @@ class ProjectTest extends Unit
     public function testTimestampsAreUpdatedOnSave(): void
     {
         try {
-            Project::setTimestampOverride(1_700_000_000);
+            Project::setTimestampOverride(date('Y-m-d H:i:s', 1_700_000_000));
 
             $project = new Project();
             $project->name = 'Timestamp Test Project';
@@ -129,7 +129,7 @@ class ProjectTest extends Unit
             $originalUpdatedAt = $project->updated_at;
 
             // Update a property and save again using a later synthetic timestamp
-            Project::setTimestampOverride($originalUpdatedAt + 10);
+            Project::setTimestampOverride(date('Y-m-d H:i:s', strtotime($originalUpdatedAt) + 10));
             $project->name = 'Updated Timestamp Test Project';
             verify($project->save())->true();
 
@@ -146,7 +146,7 @@ class ProjectTest extends Unit
         $project = Project::findOne(1);
         verify($project)->notEmpty();
 
-        $project->deleted_at = time();
+        $project->deleted_at = date('Y-m-d H:i:s');
         verify($project->save())->true();
 
         $softDeletedProject = Project::findOne(1);
@@ -177,7 +177,7 @@ class ProjectTest extends Unit
         $softDeletedProject = new Project();
         $softDeletedProject->name = 'Soft Deleted Project';
         $softDeletedProject->user_id = 1;
-        $softDeletedProject->deleted_at = time();
+        $softDeletedProject->deleted_at = date('Y-m-d H:i:s');
         verify($softDeletedProject->save())->true();
 
         $activeProjects = Project::find()->where(['deleted_at' => null])->all();

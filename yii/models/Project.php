@@ -24,9 +24,9 @@ use yii\db\ActiveRecord;
  * @property string|null $blacklisted_directories
  * @property string $prompt_instance_copy_format
  * @property string|null $label
- * @property int $created_at
- * @property int $updated_at
- * @property int|null $deleted_at
+ * @property string $created_at
+ * @property string $updated_at
+ * @property string|null $deleted_at
  *
  * @property User $user
  * @property Project[] $linkedProjects
@@ -83,7 +83,8 @@ class Project extends ActiveRecord
     {
         return [
             [['name', 'user_id'], 'required'],
-            [['user_id', 'created_at', 'updated_at', 'deleted_at'], 'integer'],
+            [['user_id'], 'integer'],
+            [['created_at', 'updated_at', 'deleted_at'], 'string'],
             [['description'], 'string'],
             [['root_directory'], 'string', 'max' => 1024],
             [['prompt_instance_copy_format'], 'default', 'value' => CopyType::MD->value],
@@ -101,7 +102,7 @@ class Project extends ActiveRecord
             [
                 ['root_directory'],
                 'match',
-                'pattern' => '~^(?:(?:[A-Za-z]:\\\\|\\\\\\\\[\w.\- \$]+\\\\|/)(?:[\w.\- \$]+(?:[\/\\\\][\w.\- \$]+)*)?[\/\\\\]?|[\w.\- \$]+(?:[\/\\\\][\w.\- \$]+)*[\/\\\\]?)$~',
+                'pattern' => '~^(?:(?:[A-Za-z]:\\\\|\\\\\\\\[\w.\- $]+\\\\|/)(?:[\w.\- $]+(?:[\/\\\\][\w.\- $]+)*)?[\/\\\\]?|[\w.\- $]+(?:[\/\\\\][\w.\- $]+)*[\/\\\\]?)$~',
                 'message' => 'Root directory must be a valid path.',
             ],
             [['allowed_file_extensions'], 'string', 'max' => 255],
@@ -250,7 +251,7 @@ class Project extends ActiveRecord
             }
 
             if (preg_match('~^(.+?)/?(\[([^]]+)])$~', $trimmed, $matches)) {
-                $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
+                $basePath = trim(str_replace('\\', '/', $matches[1]), " 	\n\r\0\x0B/");
                 $exceptionsStr = $matches[3];
                 $exceptionParts = array_map('trim', explode(',', $exceptionsStr));
                 $filtered = array_filter($exceptionParts, static fn(string $v): bool => $v !== '');
@@ -263,7 +264,7 @@ class Project extends ActiveRecord
                     ];
                 }
             } else {
-                $normalized = trim(str_replace('\\', '/', $trimmed), " \t\n\r\0\x0B/");
+                $normalized = trim(str_replace('\\', '/', $trimmed), " 	\n\r\0\x0B/");
                 if ($normalized !== '') {
                     $result[] = [
                         'path' => $normalized,
@@ -343,7 +344,7 @@ class Project extends ActiveRecord
             }
 
             if (preg_match('~^(.+?)/?(\[([^]]+)])$~', $trimmed, $matches)) {
-                $basePath = trim(str_replace('\\', '/', $matches[1]), " \t\n\r\0\x0B/");
+                $basePath = trim(str_replace('\\', '/', $matches[1]), " 	\n\r\0\x0B/");
                 $exceptionsStr = $matches[3];
 
                 if ($basePath === '') {
@@ -389,7 +390,7 @@ class Project extends ActiveRecord
                     }
                 }
             } else {
-                $normalized = trim(str_replace('\\', '/', $trimmed), " \t\n\r\0\x0B/");
+                $normalized = trim(str_replace('\\', '/', $trimmed), " 	\n\r\0\x0B/");
 
                 if ($normalized === '') {
                     $this->addError($attribute, 'Provide at least one directory or leave this field blank.');

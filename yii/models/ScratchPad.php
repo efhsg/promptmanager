@@ -17,8 +17,8 @@ use yii\db\ActiveRecord;
  * @property int|null $project_id
  * @property string $name
  * @property string|null $content Quill Delta JSON
- * @property int $created_at
- * @property int $updated_at
+ * @property string $created_at
+ * @property string $updated_at
  *
  * @property User $user
  * @property Project|null $project
@@ -41,7 +41,8 @@ class ScratchPad extends ActiveRecord
     {
         return [
             [['name', 'user_id'], 'required'],
-            [['user_id', 'project_id', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'project_id'], 'integer'],
+            [['created_at', 'updated_at'], 'string'],
             [['content'], 'string'],
             [['name'], 'string', 'max' => 255],
             [

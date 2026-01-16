@@ -23,8 +23,8 @@ use yii\db\ActiveRecord;
  * @property bool $share
  * @property string|null $label
  * @property bool $render_label
- * @property int $created_at
- * @property int $updated_at
+ * @property string $created_at
+ * @property string $updated_at
  *
  * @property FieldOption[] $fieldOptions
  * @property Project $project
@@ -54,7 +54,8 @@ class Field extends ActiveRecord
     {
         return [
             [['user_id', 'name', 'type'], 'required'],
-            [['user_id', 'project_id', 'created_at', 'updated_at'], 'integer'],
+            [['user_id', 'project_id'], 'integer'],
+            [['created_at', 'updated_at'], 'string'],
             [['share', 'render_label'], 'boolean'],
             [['type'], 'string'],
             [['type'], 'in', 'range' => FieldConstants::TYPES],

@@ -240,8 +240,8 @@ class ScratchPadControllerTest extends Unit
                 'password_hash' => Yii::$app->security->generatePasswordHash('secret'),
                 'auth_key' => Yii::$app->security->generateRandomString(),
                 'status' => User::STATUS_ACTIVE,
-                'created_at' => time(),
-                'updated_at' => time(),
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ])->execute();
             $user = User::findOne(999);
         }

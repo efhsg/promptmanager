@@ -79,7 +79,7 @@ class ScratchPadTest extends Unit
 
     public function testContentCanStoreQuillDelta(): void
     {
-        $quillDelta = '{"ops":[{"insert":"Hello World\\n"}]}';
+        $quillDelta = '{\"ops\":[{\"insert\":\"Hello World\\\\n\"}]}';
 
         $model = new ScratchPad();
         $model->name = 'Quill Content Pad';
@@ -93,7 +93,7 @@ class ScratchPadTest extends Unit
     public function testTimestampsAreUpdatedOnSave(): void
     {
         try {
-            ScratchPad::setTimestampOverride(1_700_000_000);
+            ScratchPad::setTimestampOverride(date('Y-m-d H:i:s', 1_700_000_000));
 
             $model = new ScratchPad();
             $model->name = 'Timestamp Test Pad';
@@ -103,7 +103,7 @@ class ScratchPadTest extends Unit
             $originalCreatedAt = $model->created_at;
             $originalUpdatedAt = $model->updated_at;
 
-            ScratchPad::setTimestampOverride($originalUpdatedAt + 10);
+            ScratchPad::setTimestampOverride(date('Y-m-d H:i:s', strtotime($originalUpdatedAt) + 10));
             $model->name = 'Updated Timestamp Test Pad';
             verify($model->save())->true();
 
@@ -152,7 +152,7 @@ class ScratchPadTest extends Unit
 
     public function testContentCanStoreEmojiCharacters(): void
     {
-        $contentWithEmoji = '{"ops":[{"insert":"🧠 Brain emoji test\\n"}]}';
+        $contentWithEmoji = '{\"ops\":[{\"insert\":\"🧠 Brain emoji test\\\\n\"}]}';
 
         $model = new ScratchPad();
         $model->name = 'Emoji Content Test';
