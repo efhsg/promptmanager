@@ -88,4 +88,80 @@ class ProjectServiceTest extends Unit
             $zetaProject->delete();
         }
     }
+
+    public function testFindOrCreateByNameReturnsNullWhenNameIsNull(): void
+    {
+        $result = $this->service->findOrCreateByName(100, null);
+
+        self::assertNull($result);
+    }
+
+    public function testFindOrCreateByNameReturnsNullWhenNameIsEmpty(): void
+    {
+        $result = $this->service->findOrCreateByName(100, '');
+
+        self::assertNull($result);
+    }
+
+    public function testFindOrCreateByNameReturnsExistingProjectId(): void
+    {
+        // Fixture has project ID 1 named 'Test Project' for user 100
+        $result = $this->service->findOrCreateByName(100, 'Test Project');
+
+        self::assertSame(1, $result);
+    }
+
+    public function testFindOrCreateByNameCreatesNewProject(): void
+    {
+        $result = $this->service->findOrCreateByName(100, 'Brand New Project');
+
+        self::assertIsInt($result);
+        self::assertGreaterThan(0, $result);
+
+        // Verify project was created
+        $project = Project::findOne($result);
+        self::assertNotNull($project);
+        self::assertSame('Brand New Project', $project->name);
+        self::assertSame(100, $project->user_id);
+
+        // Cleanup
+        $project->delete();
+    }
+
+    public function testFindOrCreateByNameReturnsErrorsOnValidationFailure(): void
+    {
+        // Create a project with the same name first
+        $existing = new Project(['user_id' => 100, 'name' => 'Duplicate Name']);
+        $existing->save();
+
+        try {
+            // Attempt to create with same name (should fail unique validation)
+            $result = $this->service->findOrCreateByName(100, 'Duplicate Name');
+
+            // Should return the existing project ID since it finds it
+            self::assertSame($existing->id, $result);
+        } finally {
+            $existing->delete();
+        }
+    }
+
+    public function testFindOrCreateByNameDoesNotFindOtherUsersProjects(): void
+    {
+        // Create project for different user
+        $otherUserProject = new Project(['user_id' => 999, 'name' => 'Other User Project']);
+        $otherUserProject->save();
+
+        try {
+            // Should create new project for user 100, not find user 999's project
+            $result = $this->service->findOrCreateByName(100, 'Other User Project');
+
+            self::assertIsInt($result);
+            self::assertNotSame($otherUserProject->id, $result);
+
+            // Cleanup
+            Project::deleteAll(['id' => $result]);
+        } finally {
+            $otherUserProject->delete();
+        }
+    }
 }

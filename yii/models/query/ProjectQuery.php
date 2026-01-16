@@ -27,6 +27,11 @@ class ProjectQuery extends ActiveQuery
         return $this->andWhere(['user_id' => $userId]);
     }
 
+    public function withName(string $name): self
+    {
+        return $this->andWhere(['name' => $name]);
+    }
+
     public function orderedByName(): self
     {
         return $this->orderBy(['name' => SORT_ASC]);

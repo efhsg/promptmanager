@@ -71,7 +71,9 @@ $config = [
         'urlManager' => [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
-            'rules' => [],
+            'rules' => [
+                'POST api/scratch-pad' => 'api/scratch-pad/create',
+            ],
         ],
         'assetManager' => [
             'basePath' => __DIR__ . '/../web/assets',

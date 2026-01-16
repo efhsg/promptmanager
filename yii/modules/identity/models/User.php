@@ -19,6 +19,8 @@ use yii\web\IdentityInterface;
  * @property string $auth_key
  * @property string|null $password_reset_token
  * @property string|null $access_token
+ * @property string|null $access_token_hash
+ * @property int|null $access_token_expires_at
  * @property int $status
  * @property int $created_at
  * @property int $updated_at
@@ -48,7 +50,15 @@ class User extends ActiveRecord implements IdentityInterface
 
     public static function findIdentityByAccessToken($token, $type = null): ?self
     {
-        return static::find()->active()->andWhere(['access_token' => $token])->one();
+        $hash = hash('sha256', $token);
+        return static::find()
+            ->active()
+            ->andWhere(['access_token_hash' => $hash])
+            ->andWhere(['or',
+                ['access_token_expires_at' => null],
+                ['>', 'access_token_expires_at', time()],
+            ])
+            ->one();
     }
 
     public static function findByUsername(string $username): ?self
@@ -87,10 +97,11 @@ class User extends ActiveRecord implements IdentityInterface
     {
         return [
             [['username', 'email', 'password_hash'], 'required'],
-            [['status', 'created_at', 'updated_at', 'deleted_at'], 'integer'],
+            [['status', 'created_at', 'updated_at', 'deleted_at', 'access_token_expires_at'], 'integer'],
             [['username', 'email', 'password_hash', 'password_reset_token', 'access_token'], 'string', 'min' => 3, 'max' => 255],
+            [['access_token_hash'], 'string', 'max' => 255],
             [['auth_key'], 'string', 'max' => 32],
-            [['username', 'email', 'password_reset_token', 'access_token'], 'unique'],
+            [['username', 'email', 'password_reset_token', 'access_token', 'access_token_hash'], 'unique'],
             [['status'], 'default', 'value' => self::STATUS_ACTIVE],
             ['status', 'in', 'range' => [self::STATUS_ACTIVE, self::STATUS_INACTIVE]],
             [['username', 'email'], 'trim'],
@@ -109,6 +120,8 @@ class User extends ActiveRecord implements IdentityInterface
             'auth_key' => 'Auth Key',
             'password_reset_token' => 'Password Reset Token',
             'access_token' => 'Access Token',
+            'access_token_hash' => 'Access Token Hash',
+            'access_token_expires_at' => 'Access Token Expires At',
             'status' => 'Status',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',

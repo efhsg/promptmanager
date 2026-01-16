@@ -11,7 +11,5 @@ return [
     'username' => getenv('DB_USER'),
     'password' => getenv('DB_PASSWORD'),
     'charset' => 'utf8mb4',
-    'enableSchemaCache' => true,
-    'schemaCacheDuration' => 60,
-    'schemaCache' => 'cache',
+    'enableSchemaCache' => false,
 ];

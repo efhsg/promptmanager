@@ -11,10 +11,13 @@ use Exception;
 use Throwable;
 use Yii;
 use yii\rbac\ManagerInterface;
+use RuntimeException;
 
 class UserService
 {
     use ValidationErrorFormatterTrait;
+
+    private const TOKEN_EXPIRY_DAYS = 90;
 
     private ?UserDataSeederInterface $userDataSeeder;
 
@@ -169,4 +172,58 @@ class UserService
         return Yii::$app->has('authManager') && Yii::$app->authManager instanceof ManagerInterface;
     }
 
+    /**
+     * Generates a new API access token.
+     * Returns plaintext token (shown once), stores hash in DB.
+     *
+     * @throws \yii\base\Exception
+     * @throws RuntimeException if token save fails
+     */
+    public function generateAccessToken(User $user, ?int $expiryDays = null): string
+    {
+        $token = Yii::$app->security->generateRandomString(64);
+        $hash = hash('sha256', $token);
+        $expiryDays ??= self::TOKEN_EXPIRY_DAYS;
+
+        $user->access_token_hash = $hash;
+        $user->access_token_expires_at = time() + ($expiryDays * 86400);
+
+        if (!$user->save(false, ['access_token_hash', 'access_token_expires_at'])) {
+            throw new RuntimeException('Failed to save access token');
+        }
+
+        return $token;
+    }
+
+    /**
+     * Rotates the access token (generates new, invalidates old).
+     *
+     * @throws \yii\base\Exception
+     * @throws RuntimeException if token save fails
+     */
+    public function rotateAccessToken(User $user, ?int $expiryDays = null): string
+    {
+        return $this->generateAccessToken($user, $expiryDays);
+    }
+
+    /**
+     * @throws RuntimeException if token revoke fails
+     */
+    public function revokeAccessToken(User $user): void
+    {
+        $user->access_token_hash = null;
+        $user->access_token_expires_at = null;
+
+        if (!$user->save(false, ['access_token_hash', 'access_token_expires_at'])) {
+            throw new RuntimeException('Failed to revoke access token');
+        }
+    }
+
+    public function isAccessTokenExpired(User $user): bool
+    {
+        if ($user->access_token_expires_at === null) {
+            return false;
+        }
+        return $user->access_token_expires_at < time();
+    }
 }

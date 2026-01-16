@@ -14,6 +14,7 @@ use yii\console\Application;
 use yii\db\Connection;
 use yii\rbac\ManagerInterface;
 use yii\rbac\Role;
+use RuntimeException;
 
 class UserServiceTest extends Unit
 {
@@ -244,6 +245,175 @@ class UserServiceTest extends Unit
         self::assertSame(false, $result);
     }
 
+    public function testGenerateAccessTokenReturnsTokenAndStoresHash(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        /** @var MockObject&User $user */
+        $user = $this->getMockBuilder(User::class)
+            ->onlyMethods(['save'])
+            ->getMock();
+        $user->id = 70;
+
+        $user->expects($this->once())
+            ->method('save')
+            ->with(false, ['access_token_hash', 'access_token_expires_at'])
+            ->willReturn(true);
+
+        $service = new UserService();
+
+        $token = $service->generateAccessToken($user);
+
+        self::assertSame(64, strlen($token));
+        self::assertNotNull($user->access_token_hash);
+        self::assertSame(64, strlen($user->access_token_hash));
+        self::assertSame(hash('sha256', $token), $user->access_token_hash);
+        self::assertNotNull($user->access_token_expires_at);
+        self::assertGreaterThan(time(), $user->access_token_expires_at);
+    }
+
+    public function testGenerateAccessTokenUsesCustomExpiry(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        /** @var MockObject&User $user */
+        $user = $this->getMockBuilder(User::class)
+            ->onlyMethods(['save'])
+            ->getMock();
+        $user->id = 71;
+
+        $user->expects($this->once())->method('save')->willReturn(true);
+
+        $service = new UserService();
+
+        $service->generateAccessToken($user, 30);
+
+        $expectedExpiry = time() + (30 * 86400);
+        self::assertEqualsWithDelta($expectedExpiry, $user->access_token_expires_at, 5);
+    }
+
+    public function testGenerateAccessTokenThrowsOnSaveFailure(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        /** @var MockObject&User $user */
+        $user = $this->getMockBuilder(User::class)
+            ->onlyMethods(['save'])
+            ->getMock();
+        $user->id = 72;
+
+        $user->expects($this->once())->method('save')->willReturn(false);
+
+        $service = new UserService();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to save access token');
+
+        $service->generateAccessToken($user);
+    }
+
+    public function testRotateAccessTokenGeneratesNewToken(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        /** @var MockObject&User $user */
+        $user = $this->getMockBuilder(User::class)
+            ->onlyMethods(['save'])
+            ->getMock();
+        $user->id = 73;
+        $user->access_token_hash = 'old_hash';
+
+        $user->expects($this->once())->method('save')->willReturn(true);
+
+        $service = new UserService();
+
+        $newToken = $service->rotateAccessToken($user);
+
+        self::assertSame(64, strlen($newToken));
+        self::assertNotSame('old_hash', $user->access_token_hash);
+    }
+
+    public function testRevokeAccessTokenClearsTokenFields(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        /** @var MockObject&User $user */
+        $user = $this->getMockBuilder(User::class)
+            ->onlyMethods(['save'])
+            ->getMock();
+        $user->id = 74;
+        $user->access_token_hash = 'some_hash';
+        $user->access_token_expires_at = time() + 86400;
+
+        $user->expects($this->once())
+            ->method('save')
+            ->with(false, ['access_token_hash', 'access_token_expires_at'])
+            ->willReturn(true);
+
+        $service = new UserService();
+
+        $service->revokeAccessToken($user);
+
+        self::assertNull($user->access_token_hash);
+        self::assertNull($user->access_token_expires_at);
+    }
+
+    public function testRevokeAccessTokenThrowsOnSaveFailure(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        /** @var MockObject&User $user */
+        $user = $this->getMockBuilder(User::class)
+            ->onlyMethods(['save'])
+            ->getMock();
+        $user->id = 75;
+
+        $user->expects($this->once())->method('save')->willReturn(false);
+
+        $service = new UserService();
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to revoke access token');
+
+        $service->revokeAccessToken($user);
+    }
+
+    public function testIsAccessTokenExpiredReturnsFalseWhenNull(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        $user = new User();
+        $user->access_token_expires_at = null;
+
+        $service = new UserService();
+
+        self::assertFalse($service->isAccessTokenExpired($user));
+    }
+
+    public function testIsAccessTokenExpiredReturnsFalseWhenNotExpired(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        $user = new User();
+        $user->access_token_expires_at = time() + 86400;
+
+        $service = new UserService();
+
+        self::assertFalse($service->isAccessTokenExpired($user));
+    }
+
+    public function testIsAccessTokenExpiredReturnsTrueWhenExpired(): void
+    {
+        $this->bootstrapConsoleApp($this->createAuthManagerMockWithoutAssignments());
+
+        $user = new User();
+        $user->access_token_expires_at = time() - 1;
+
+        $service = new UserService();
+
+        self::assertTrue($service->isAccessTokenExpired($user));
+    }
+
     private function bootstrapConsoleApp(ManagerInterface $authManager): void
     {
         $config = [
@@ -282,6 +452,8 @@ class UserServiceTest extends Unit
                     auth_key TEXT,
                     password_reset_token TEXT,
                     access_token TEXT,
+                    access_token_hash TEXT,
+                    access_token_expires_at INTEGER,
                     status INTEGER,
                     created_at INTEGER,
                     updated_at INTEGER,

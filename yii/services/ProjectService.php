@@ -4,10 +4,51 @@ namespace app\services;
 
 use app\models\Project;
 use app\models\ProjectLinkedProject;
+use Yii;
 use yii\helpers\ArrayHelper;
 
 class ProjectService
 {
+    /**
+     * Finds an existing project by name or creates a new one.
+     *
+     * @return int|array|null Project ID, null if no name provided, or array of error messages on failure
+     */
+    public function findOrCreateByName(int $userId, ?string $projectName): int|array|null
+    {
+        if ($projectName === null || $projectName === '') {
+            return null;
+        }
+
+        $project = Project::find()
+            ->forUser($userId)
+            ->withName($projectName)
+            ->one();
+
+        if ($project) {
+            return $project->id;
+        }
+
+        // Auto-create project
+        $project = new Project([
+            'user_id' => $userId,
+            'name' => $projectName,
+        ]);
+
+        if ($project->save()) {
+            return $project->id;
+        }
+
+        // Return validation errors or log DB failure
+        $errors = $project->getFirstErrors();
+        if (empty($errors)) {
+            Yii::error("Failed to auto-create project '$projectName' for user $userId: DB save failed without validation errors", __METHOD__);
+            return ['Failed to create project due to a server error.'];
+        }
+
+        return array_values($errors);
+    }
+
     public function fetchProjectsList(int $userId): array
     {
         return ArrayHelper::map(

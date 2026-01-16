@@ -11,8 +11,11 @@ $config = [
         'db' => $db,
         'request' => [
             'cookieValidationKey' => 'IwE5i3d_0AhHc5a7gnVMSk38YDzgqBYi',
+            'parsers' => [
+                'application/json' => 'yii\web\JsonParser',
+            ],
         ],
-        $config['components']['errorHandler'] = [
+        'errorHandler' => [
             'class' => 'yii\web\ErrorHandler',
             'errorAction' => 'site/error',
         ],
