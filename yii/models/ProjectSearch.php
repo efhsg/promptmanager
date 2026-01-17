@@ -48,6 +48,9 @@ class ProjectSearch extends Project
             'pagination' => [
                 'pageSize' => 10,
             ],
+            'sort' => [
+                'defaultOrder' => ['updated_at' => SORT_DESC],
+            ],
         ]);
 
         $this->load($params);

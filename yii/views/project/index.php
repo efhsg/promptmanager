@@ -76,16 +76,7 @@ echo $this->render('_breadcrumbs', [
                         'value' => static fn(Project $model) => $model->label ?: '—',
                     ],
                     [
-                        'attribute' => 'allowed_file_extensions',
-                        'label' => 'Allowed Extensions',
-                        'value' => static function ($model) {
-                            $extensions = $model->getAllowedFileExtensions();
-                            return $extensions === [] ? 'All' : implode(', ', $extensions);
-                        },
-                    ],
-                    [
                         'attribute' => 'description',
-                        'label' => 'Description',
                         'format' => 'text',
                         'value' => function ($model) {
                             $delta = @json_decode($model->description, true);
@@ -103,10 +94,9 @@ echo $this->render('_breadcrumbs', [
                         },
                     ],
                     [
-                        'attribute' => 'prompt_instance_copy_format',
-                        'label' => 'Copy Format',
-                        'value' => static fn(Project $model) => $model->getPromptInstanceCopyFormatEnum(
-                        )->label(),
+                        'attribute' => 'updated_at',
+                        'label' => 'Updated',
+                        'format' => ['datetime', 'php:Y-m-d H:i:s'],
                     ],
                     [
                         'class' => ActionColumn::class,
