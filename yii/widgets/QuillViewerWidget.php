@@ -14,7 +14,7 @@ use yii\helpers\Json;
 
 class QuillViewerWidget extends Widget
 {
-    public string $content = '';
+    public ?string $content = '';
     public bool $enableCopy = true;
     public array $copyButtonOptions = [];
     public string $copyButtonLabel = '<i class="bi bi-clipboard"> </i>';
@@ -46,6 +46,10 @@ class QuillViewerWidget extends Widget
      */
     public function run(): string
     {
+        if ($this->content === null || trim($this->content) === '') {
+            return Html::tag('div', '<p>No content available.</p>', $this->options);
+        }
+
         $id = $this->getId();
         $viewerId = "$id-viewer";
         $hiddenId = "$id-hidden";
@@ -53,10 +57,6 @@ class QuillViewerWidget extends Widget
         $copyType = CopyType::tryFrom($copyFormat) ?? CopyType::TEXT;
         $converter = new CopyFormatConverter();
         $copyContent = $converter->convertFromQuillDelta($this->content, $copyType);
-
-        if (trim($this->content) === '') {
-            return Html::tag('div', '<p>No content available.</p>', $this->options);
-        }
 
         /* viewer shell with fallback content */
         $style = rtrim(($this->options['style'] ?? ''), ';');
