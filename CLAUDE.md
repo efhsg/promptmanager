@@ -95,7 +95,7 @@ Use slash commands to invoke skills:
 | `/new-tests-staged` | Create tests for staged PHP classes |
 | `/new-branch` | Create feature or fix branch |
 | `/check-standards` | Validate code against standards |
-| `/code-review` | Comprehensive code review |
+| `/review-changes` | Two-phase code review |
 | `/finalize-changes` | Lint, test, prepare commit |
 | `/cp` | Commit staged changes and push to origin |
 | `/analyze-codebase` | Generate documentation |

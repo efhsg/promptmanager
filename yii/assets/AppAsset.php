@@ -14,6 +14,7 @@ class AppAsset extends AssetBundle
     ];
     public $js       = [
         'js/form.js',
+        'js/quick-search.js',
     ];
     public $depends = [
         'yii\web\YiiAsset',

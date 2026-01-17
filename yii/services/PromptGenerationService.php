@@ -14,7 +14,8 @@ readonly class PromptGenerationService
         private PromptTemplateService $templateService,
         private PlaceholderProcessor $placeholderProcessor = new PlaceholderProcessor(),
         private DeltaOpsHelper $deltaHelper = new DeltaOpsHelper()
-    ) {}
+    ) {
+    }
 
     /**
      * @throws NotFoundHttpException If the template is not found.

@@ -41,7 +41,7 @@ For commands, paths, and environment: `.claude/config/project.md`
 
 | Skill | Description | Contract |
 |-------|-------------|----------|
-| Code Review | Comprehensive code review | `skills/code-review.md` |
+| Review Changes | Two-phase code review (defects → design) | `skills/review-changes.md` |
 
 ## Commands Reference
 
@@ -60,7 +60,7 @@ Commands are thin executable wrappers that invoke skills:
 | `/new-tests-staged` | `skills/test.md` | Batch test creation |
 | `/new-branch` | `skills/new-branch.md` | Create feature/fix branch |
 | `/check-standards` | (rules-based) | Validate code standards |
-| `/code-review` | `skills/code-review.md` | Review code changes |
+| `/review-changes` | `skills/review-changes.md` | Review code changes |
 | `/finalize-changes` | (workflow) | Lint, test, commit prep |
 | `/cp` | (workflow) | Commit and push to origin |
 | `/analyze-codebase` | (workflow) | Generate documentation |

@@ -43,4 +43,12 @@ class ScratchPadQuery extends ActiveQuery
     {
         return $this->orderBy([ScratchPad::tableName() . '.name' => SORT_ASC]);
     }
+
+    public function searchByTerm(string $term): self
+    {
+        return $this->andWhere(['or',
+            ['like', ScratchPad::tableName() . '.name', $term],
+            ['like', ScratchPad::tableName() . '.content', $term],
+        ]);
+    }
 }

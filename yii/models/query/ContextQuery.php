@@ -76,4 +76,12 @@ class ContextQuery extends ActiveQuery
             ->where(['project_id' => $projectId])
             ->column();
     }
+
+    public function searchByTerm(string $term): self
+    {
+        return $this->andWhere(['or',
+            ['like', Context::tableName() . '.name', $term],
+            ['like', Context::tableName() . '.content', $term],
+        ]);
+    }
 }

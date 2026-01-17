@@ -82,7 +82,7 @@ if (!Yii::$app->user->isGuest) {
     $projectListWithAll = [ProjectContext::ALL_PROJECTS_ID => 'All Projects'] + $projectList;
 
     echo Html::beginForm(['/project/set-current'], 'post', [
-        'class' => 'd-flex align-items-center ms-4 me-3',
+        'class' => 'd-flex align-items-center ms-3 me-2',
         'id' => 'set-context-project-form',
     ]);
     echo Html::dropDownList('project_id', $currentProjectId, $projectListWithAll, [
@@ -91,6 +91,16 @@ if (!Yii::$app->user->isGuest) {
         'onchange' => 'this.form.submit()',
     ]);
     echo Html::endForm();
+
+    echo '<div class="quick-search-container">';
+    echo Html::textInput('q', '', [
+        'id' => 'quick-search-input',
+        'class' => 'form-control form-control-sm',
+        'placeholder' => 'Search...',
+        'autocomplete' => 'off',
+    ]);
+    echo '<div id="quick-search-results"></div>';
+    echo '</div>';
 }
 
 echo '</div>';

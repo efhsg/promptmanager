@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\query\PromptTemplateQuery;
 use app\models\traits\TimestampTrait;
 use Yii;
 use yii\base\InvalidConfigException;
@@ -32,6 +33,11 @@ class PromptTemplate extends ActiveRecord
     public static function tableName(): string
     {
         return 'prompt_template';
+    }
+
+    public static function find(): PromptTemplateQuery
+    {
+        return new PromptTemplateQuery(static::class);
     }
 
     /**

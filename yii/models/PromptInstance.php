@@ -2,6 +2,7 @@
 
 namespace app\models;
 
+use app\models\query\PromptInstanceQuery;
 use app\models\traits\TimestampTrait;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -28,6 +29,11 @@ class PromptInstance extends ActiveRecord
     public static function tableName(): string
     {
         return 'prompt_instance';
+    }
+
+    public static function find(): PromptInstanceQuery
+    {
+        return new PromptInstanceQuery(static::class);
     }
 
     /**
