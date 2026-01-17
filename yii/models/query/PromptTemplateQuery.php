@@ -27,6 +27,19 @@ class PromptTemplateQuery extends ActiveQuery
         ]);
     }
 
+    public function searchByKeywords(array $keywords): self
+    {
+        $conditions = ['or'];
+        foreach ($keywords as $keyword) {
+            $conditions[] = ['or',
+                ['like', 'prompt_template.name', $keyword],
+                ['like', 'prompt_template.template_body', $keyword],
+            ];
+        }
+
+        return $this->andWhere($conditions);
+    }
+
     public function forProject(int $projectId): self
     {
         return $this->andWhere([PromptTemplate::tableName() . '.project_id' => $projectId]);

@@ -27,6 +27,19 @@ class PromptInstanceQuery extends ActiveQuery
         ]);
     }
 
+    public function searchByKeywords(array $keywords): self
+    {
+        $conditions = ['or'];
+        foreach ($keywords as $keyword) {
+            $conditions[] = ['or',
+                ['like', 'prompt_instance.label', $keyword],
+                ['like', 'prompt_instance.final_prompt', $keyword],
+            ];
+        }
+
+        return $this->andWhere($conditions);
+    }
+
     public function forTemplate(int $templateId): self
     {
         return $this->andWhere([PromptInstance::tableName() . '.template_id' => $templateId]);

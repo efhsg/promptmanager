@@ -96,6 +96,15 @@ Per `.claude/rules/testing.md`:
 - Test naming follows pattern
 - Mocks via constructor injection
 
+#### 7. Frontend/UI
+
+When views, layouts, CSS, or JS files are changed:
+
+- **Responsive design:** Navbar collapses appropriately, no wrapping/overflow at breakpoints
+- **Bootstrap classes:** Correct use of responsive utilities (`d-none`, `d-*-inline`, `navbar-expand-*`)
+- **CSS media queries:** Match Bootstrap breakpoints (sm:576, md:768, lg:992, xl:1200, xxl:1400)
+- **Form elements:** Inputs and buttons usable at all viewport sizes
+
 ### Phase 2: Design Refinement
 
 Run only after Phase 1 has no Critical/High/Medium findings. Apply judiciously — stop when goal is met.

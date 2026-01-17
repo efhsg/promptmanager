@@ -63,13 +63,9 @@ class UserControllerTest extends Unit
 
         /** @var UserController $controller */
         $controller = new class ('user', Yii::$app, $mockUserService) extends UserController {
-            public function stdout($string)
-            {
-            }
+            public function stdout($string) {}
 
-            public function stderr($string)
-            {
-            }
+            public function stderr($string) {}
         };
 
         $exitCode = $controller->actionCreate('testuser', 'test@example.com', 'password123');
@@ -92,13 +88,9 @@ class UserControllerTest extends Unit
         });
 
         $controller = new class ('user', Yii::$app, $mockUserService) extends UserController {
-            public function stdout($string)
-            {
-            }
+            public function stdout($string) {}
 
-            public function stderr($string)
-            {
-            }
+            public function stderr($string) {}
 
             public function prompt($text, $options = []): string
             {
@@ -128,13 +120,9 @@ class UserControllerTest extends Unit
         });
 
         $controller = new class ('user', Yii::$app, $mockUserService) extends UserController {
-            public function stdout($string)
-            {
-            }
+            public function stdout($string) {}
 
-            public function stderr($string)
-            {
-            }
+            public function stderr($string) {}
 
             public function prompt($text, $options = []): string
             {
@@ -158,13 +146,9 @@ class UserControllerTest extends Unit
         $userService = Yii::$container->get(UserService::class);
 
         $this->controller = new class ('user', Yii::$app, $userService) extends UserController {
-            public function stdout($string)
-            {
-            }
+            public function stdout($string) {}
 
-            public function stderr($string)
-            {
-            }
+            public function stderr($string) {}
         };
     }
 

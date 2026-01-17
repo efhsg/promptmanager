@@ -13,12 +13,11 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
     <header id="header">
         <?php
         NavBar::begin([
-            'brandLabel' => Html::img('@web/images/prompt-manager-logo-nav.png', ['alt' => Yii::$app->name, 'height' => 40]) . '&nbsp;&nbsp;&nbsp;' . Yii::$app->name,
+            'brandLabel' => Html::img('@web/images/prompt-manager-logo-nav.png', ['alt' => Yii::$app->name, 'height' => 40])
+                . '<span class="d-none d-xxl-inline">&nbsp;&nbsp;&nbsp;' . Yii::$app->name . '</span>',
             'brandUrl' => Yii::$app->homeUrl,
-            'options' => ['class' => 'navbar-expand-md navbar-dark bg-primary fixed-top'],
+            'options' => ['class' => 'navbar-expand-xl navbar-dark bg-primary fixed-top'],
         ]);
-
-echo '<div class="d-flex align-items-center">';
 
 echo Nav::widget([
     'options' => ['class' => 'navbar-nav me-auto ms-1'],
@@ -91,22 +90,23 @@ if (!Yii::$app->user->isGuest) {
         'onchange' => 'this.form.submit()',
     ]);
     echo Html::endForm();
+}
 
-    echo '<div class="quick-search-container">';
+if (!Yii::$app->user->isGuest) {
+    echo '<div class="quick-search-container ms-auto me-3">';
+    echo '<button type="button" class="btn btn-sm advanced-search-btn" data-bs-toggle="modal" data-bs-target="#advancedSearchModal" title="Advanced Search"><i class="bi bi-search"></i></button>';
     echo Html::textInput('q', '', [
         'id' => 'quick-search-input',
         'class' => 'form-control form-control-sm',
-        'placeholder' => 'Search...',
+        'placeholder' => 'Quick Search',
         'autocomplete' => 'off',
     ]);
     echo '<div id="quick-search-results"></div>';
     echo '</div>';
 }
 
-echo '</div>';
-
 echo Nav::widget([
-    'options' => ['class' => 'navbar-nav ms-auto'],
+    'options' => ['class' => 'navbar-nav'],
     'items' => Yii::$app->user->isGuest ? [
         ['label' => 'Signup', 'url' => ['/identity/auth/signup']],
         ['label' => 'Login', 'url' => ['/identity/auth/login']],
@@ -135,5 +135,9 @@ NavBar::end();
             <?= $content ?>
         </div>
     </main>
+
+<?php if (!Yii::$app->user->isGuest): ?>
+    <?= $this->render('_advanced-search-modal') ?>
+<?php endif; ?>
 
 <?php $this->endContent(); ?>

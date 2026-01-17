@@ -24,6 +24,20 @@ class FieldQuery extends ActiveQuery
         ]);
     }
 
+    public function searchByKeywords(array $keywords): self
+    {
+        $conditions = ['or'];
+        foreach ($keywords as $keyword) {
+            $conditions[] = ['or',
+                ['like', Field::tableName() . '.name', $keyword],
+                ['like', Field::tableName() . '.label', $keyword],
+                ['like', Field::tableName() . '.content', $keyword],
+            ];
+        }
+
+        return $this->andWhere($conditions);
+    }
+
     public function sharedFromProjects(int $userId, array $projectIds): self
     {
         return $this

@@ -84,4 +84,17 @@ class ContextQuery extends ActiveQuery
             ['like', Context::tableName() . '.content', $term],
         ]);
     }
+
+    public function searchByKeywords(array $keywords): self
+    {
+        $conditions = ['or'];
+        foreach ($keywords as $keyword) {
+            $conditions[] = ['or',
+                ['like', Context::tableName() . '.name', $keyword],
+                ['like', Context::tableName() . '.content', $keyword],
+            ];
+        }
+
+        return $this->andWhere($conditions);
+    }
 }

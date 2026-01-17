@@ -51,4 +51,17 @@ class ScratchPadQuery extends ActiveQuery
             ['like', ScratchPad::tableName() . '.content', $term],
         ]);
     }
+
+    public function searchByKeywords(array $keywords): self
+    {
+        $conditions = ['or'];
+        foreach ($keywords as $keyword) {
+            $conditions[] = ['or',
+                ['like', ScratchPad::tableName() . '.name', $keyword],
+                ['like', ScratchPad::tableName() . '.content', $keyword],
+            ];
+        }
+
+        return $this->andWhere($conditions);
+    }
 }

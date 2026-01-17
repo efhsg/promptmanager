@@ -9,8 +9,7 @@ class FileFieldProcessor
     public function __construct(
         private readonly PathService $pathService,
         private readonly PromptTransformationService $promptTransformationService
-    ) {
-    }
+    ) {}
 
     public function processFileFields(PromptTemplate $template, array $fieldValues): array
     {

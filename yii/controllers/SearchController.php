@@ -2,7 +2,9 @@
 
 namespace app\controllers;
 
+use app\services\AdvancedSearchService;
 use app\services\QuickSearchService;
+use common\enums\SearchMode;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -19,6 +21,7 @@ class SearchController extends Controller
         $id,
         $module,
         private readonly QuickSearchService $searchService,
+        private readonly AdvancedSearchService $advancedSearchService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
@@ -31,7 +34,7 @@ class SearchController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['quick'],
+                        'actions' => ['quick', 'advanced'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -41,6 +44,7 @@ class SearchController extends Controller
                 'class' => VerbFilter::class,
                 'actions' => [
                     'quick' => ['get'],
+                    'advanced' => ['get'],
                 ],
             ],
         ];
@@ -62,6 +66,33 @@ class SearchController extends Controller
         $userId = Yii::$app->user->id;
 
         $results = $this->searchService->search($query, $userId);
+
+        return $this->asJson([
+            'success' => true,
+            'data' => $results,
+        ]);
+    }
+
+    /**
+     * Advanced search endpoint with entity type filtering and search modes.
+     * Returns JSON with grouped results from selected entity types.
+     *
+     * @throws BadRequestHttpException
+     */
+    public function actionAdvanced(): Response
+    {
+        if (!Yii::$app->request->isAjax) {
+            throw new BadRequestHttpException('This endpoint only accepts AJAX requests.');
+        }
+
+        $query = Yii::$app->request->get('q', '');
+        $types = Yii::$app->request->get('types', []);
+        $modeValue = Yii::$app->request->get('mode', SearchMode::PHRASE->value);
+        $userId = Yii::$app->user->id;
+
+        $mode = is_string($modeValue) ? (SearchMode::tryFrom($modeValue) ?? SearchMode::PHRASE) : SearchMode::PHRASE;
+
+        $results = $this->advancedSearchService->search($query, $userId, $types, $mode);
 
         return $this->asJson([
             'success' => true,
