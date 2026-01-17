@@ -408,23 +408,20 @@ a.desc:after {
     display: block;
 }
 
-#quick-search-results .quick-search-group {
-    border-bottom: 1px solid #e9ecef;
-}
-
-#quick-search-results .quick-search-group:last-child {
-    border-bottom: none;
-}
-
 #quick-search-results .quick-search-group-title {
-    padding: 10px 14px 6px;
+    padding: 8px 14px;
     font-size: 0.7rem;
     font-weight: 700;
-    color: #6c757d;
+    color: #495057;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
+    background-color: #e9ecef;
+    border-top: 1px solid #ced4da;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#quick-search-results .quick-search-group:first-child .quick-search-group-title {
+    border-top: none;
 }
 
 #quick-search-results .quick-search-item {
