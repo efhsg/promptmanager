@@ -18,7 +18,6 @@ $this->registerCss(<<<'CSS'
     .generated-prompt-form ul { list-style-type: disc; padding-left: 2em; }
     .generated-prompt-form ul ul { list-style-type: circle; }
     .generated-prompt-form ul ul ul { list-style-type: square; }
-    .generated-prompt-form li { list-style-type: inherit; }
     CSS);
 
 $delta = json_decode($templateBody, true);
