@@ -20,9 +20,10 @@ All configuration, rules, and patterns are defined in `CLAUDE.md`. Read and foll
 docker exec pma_yii vendor/bin/codecept run unit
 
 # Migrations
-docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii yii migrate --migrationNamespaces=app\\\\migrations --interactive=0
+docker exec pma_yii yii_test migrate --migrationNamespaces=app\\\\migrations --interactive=0
 
-# Code style
-docker exec pma_yii vendor/bin/php-cs-fixer fix
+# Linter
+./linter.sh fix
+./linter-staged.sh fix
 ```

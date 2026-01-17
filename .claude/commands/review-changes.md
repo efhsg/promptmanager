@@ -5,7 +5,7 @@ description: Perform a comprehensive code review of recent changes
 
 # Code Review
 
-Follow the skill contract in `skills/code-review.md`.
+Follow the skill contract in `skills/review-changes.md`.
 
 ## Context
 

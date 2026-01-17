@@ -61,6 +61,7 @@ Commands are thin executable wrappers that invoke skills:
 | `/new-branch` | `skills/new-branch.md` | Create feature/fix branch |
 | `/check-standards` | (rules-based) | Validate code standards |
 | `/review-changes` | `skills/review-changes.md` | Review code changes |
+| `/audit-config` | (workflow) | Audit config completeness and consistency |
 | `/finalize-changes` | (workflow) | Lint, test, commit prep |
 | `/cp` | (workflow) | Commit and push to origin |
 | `/analyze-codebase` | (workflow) | Generate documentation |

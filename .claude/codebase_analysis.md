@@ -440,6 +440,7 @@ convertFromPlainText(string $content, CopyType $type): string
 | `PathService` | File system path validation |
 | `PromptFieldRenderer` | Render field inputs |
 | `PromptTransformationService` | Transform field content for AI models |
+| `QuickSearchService` | Global search across projects, templates, fields |
 | `UserDataSeeder` | Seed initial user data |
 | `UserPreferenceService` | Manage user preferences |
 
@@ -492,6 +493,7 @@ generateAuthKey(): void
 | `FieldOwnerRule` | Check if user owns the field |
 | `PromptTemplateOwnerRule` | Check if user owns the template (via project) |
 | `PromptInstanceOwnerRule` | Check if user owns the instance (via template->project) |
+| `ScratchPadOwnerRule` | Check if user owns the scratch pad |
 
 ---
 
@@ -637,7 +639,8 @@ try {
 │  └─ User, UserQuery, UserService, AuthController               │
 ├─────────────────────────────────────────────────────────────────┤
 │  RBAC: ProjectOwnerRule, ContextOwnerRule, FieldOwnerRule,      │
-│        PromptTemplateOwnerRule, PromptInstanceOwnerRule         │
+│        PromptTemplateOwnerRule, PromptInstanceOwnerRule,        │
+│        ScratchPadOwnerRule                                      │
 ├─────────────────────────────────────────────────────────────────┤
 │  Infrastructure: Docker (pma_yii, pma_mysql, pma_nginx, pma_npm)│
 └─────────────────────────────────────────────────────────────────┘

@@ -96,6 +96,7 @@ Use slash commands to invoke skills:
 | `/new-branch` | Create feature or fix branch |
 | `/check-standards` | Validate code against standards |
 | `/review-changes` | Two-phase code review |
+| `/audit-config` | Audit config files for completeness and consistency |
 | `/finalize-changes` | Lint, test, prepare commit |
 | `/cp` | Commit staged changes and push to origin |
 | `/analyze-codebase` | Generate documentation |

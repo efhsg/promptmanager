@@ -6,7 +6,6 @@
 - If a service exceeds ~300 lines, consider splitting by responsibility.
 - Prefer typed objects/DTOs over associative arrays for complex data structures.
 - Query logic belongs in Query classes (`models/query/`), not services.
-- External API integrations belong in dedicated client classes (`clients/`).
 
 ## Key Paths
 
