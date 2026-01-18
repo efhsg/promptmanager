@@ -24,7 +24,7 @@ $copyTypes = CopyType::labels();
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h1 class="h4 mb-0"><?= Html::encode($this->title) ?></h1>
                 <div class="d-flex align-items-center gap-2">
-                    <div class="input-group input-group-sm">
+                    <div class="input-group">
                         <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
                             'id' => 'copy-format-select',
                             'class' => 'form-select',
@@ -34,7 +34,7 @@ $copyTypes = CopyType::labels();
                             <i class="bi bi-clipboard"></i> Copy to Clipboard
                         </button>
                     </div>
-                    <button type="button" id="save-content-btn" class="btn btn-sm btn-primary" title="Save to database">
+                    <button type="button" id="save-content-btn" class="btn btn-primary text-nowrap" title="Save to database">
                         <i class="bi bi-save"></i> Save
                     </button>
                 </div>
