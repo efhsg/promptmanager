@@ -32,7 +32,8 @@ services:
     image: nginx:latest
     container_name: pma_nginx
     ports:
-      - "${NGINX_PORT:-8502}:80"
+      - "127.0.0.1:${NGINX_PORT:-8502}:80"
+      - "${TAILSCALE_IP}:${NGINX_PORT:-8502}:80"
     volumes:
       - .:/var/www/html
       - ./docker/nginx.conf.template:/etc/nginx/nginx.conf.template
@@ -57,7 +58,7 @@ services:
       MYSQL_PASSWORD: ${DB_PASSWORD}
       TZ: Europe/Amsterdam
     ports:
-      - "${DB_PORT:-3306}:3306"
+      - "127.0.0.1:${DB_PORT:-3306}:3306"
     volumes:
       - ./data/db/mysql:/var/lib/mysql
       - ./docker/init-scripts:/docker-entrypoint-initdb.d
