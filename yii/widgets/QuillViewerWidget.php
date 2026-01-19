@@ -21,6 +21,7 @@ class QuillViewerWidget extends Widget
     public string $copyFormat = 'text';
     public array $options = [];
     public string $theme = 'snow';
+    public array $cliCopyButtonOptions = [];
 
     public function init(): void
     {
@@ -98,8 +99,27 @@ class QuillViewerWidget extends Widget
             ])
             : '';
 
+        /* CLI copy button */
+        $cliBtnHtml = '';
+        if ($this->enableCopy && !empty($this->cliCopyButtonOptions)) {
+            $defaultCliBtn = [
+                'class' => 'btn btn-sm btn-outline-secondary',
+                'title' => 'Copy as Claude CLI command',
+                'aria-label' => 'Copy as Claude CLI command',
+            ];
+            $cliButtonOptions = array_merge($defaultCliBtn, $this->cliCopyButtonOptions);
+            $cliBtnHtml = CopyToClipboardWidget::widget([
+                'targetSelector' => "#$hiddenId",
+                'copyFormat' => $copyFormat,
+                'copyContent' => $copyContent,
+                'buttonOptions' => $cliButtonOptions,
+                'label' => '<i class="bi bi-terminal"></i>',
+                'cliCommandTemplate' => 'claude --permission-mode plan -p %s',
+            ]);
+        }
+
         /* container */
-        $html = Html::tag('div', $hiddenTextarea . $viewerDiv . $copyBtnHtml, ['class' => 'position-relative']);
+        $html = Html::tag('div', $hiddenTextarea . $viewerDiv . $cliBtnHtml . $copyBtnHtml, ['class' => 'position-relative']);
 
         /* initialise Quill with decoded delta */
         $this->registerInitScript($viewerId, $this->content, $this->theme);

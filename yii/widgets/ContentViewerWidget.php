@@ -15,6 +15,7 @@ class ContentViewerWidget extends Widget
     public array $copyButtonOptions = [];
     public string $copyButtonLabel = '<i class="bi bi-clipboard"> </i>';
     public string $copyFormat = 'text';
+    public array $cliCopyButtonOptions = [];
 
     public array $cssOptions = [
         'min-height' => '100px',
@@ -112,7 +113,26 @@ class ContentViewerWidget extends Widget
             $copyBtnHtml = Html::tag('div', $btn, ['class' => 'copy-button-container']);
         }
 
-        return Html::tag('div', $hidden . $viewerHtml . $copyBtnHtml, [
+        $cliBtnHtml = '';
+        if ($this->enableCopy && !empty($this->cliCopyButtonOptions)) {
+            $defaultCliBtn = [
+                'class' => 'btn btn-sm btn-outline-secondary',
+                'title' => 'Copy as Claude CLI command',
+                'aria-label' => 'Copy as Claude CLI command',
+            ];
+            $cliButtonOptions = array_merge($defaultCliBtn, $this->cliCopyButtonOptions);
+            $cliBtn = CopyToClipboardWidget::widget([
+                'targetSelector' => "#$hiddenId",
+                'copyFormat' => $this->copyFormat,
+                'copyContent' => $copyContent,
+                'buttonOptions' => $cliButtonOptions,
+                'label' => '<i class="bi bi-terminal"></i>',
+                'cliCommandTemplate' => 'claude --permission-mode plan -p %s',
+            ]);
+            $cliBtnHtml = Html::tag('div', $cliBtn, ['class' => 'cli-copy-button-container']);
+        }
+
+        return Html::tag('div', $hidden . $viewerHtml . $cliBtnHtml . $copyBtnHtml, [
             'class' => 'position-relative',
         ]);
     }

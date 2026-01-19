@@ -154,6 +154,10 @@ echo $form->field($model, 'template_id')
                                     'aria-label' => 'Copy content to clipboard',
                                     'copyFormat' => $projectCopyFormat,
                                 ],
+                                'cliCopyButtonOptions' => [
+                                    'class' => 'btn btn-sm position-absolute',
+                                    'style' => 'bottom: 10px; right: 60px;',
+                                ],
                             ]) ?>
                         </div>
                         <div id="final-prompt-container-edit" class="d-none">
@@ -384,6 +388,10 @@ $script = <<<'JS'
                 if (copyButton.length) {
                     copyButton.attr('data-copy-content', copyContent);
                 }
+                var cliButton = container.find('.cli-copy-button-container button');
+                if (cliButton.length) {
+                    cliButton.attr('data-copy-content', copyContent);
+                }
                 
                 // Store the delta object for the edit functionality
                 container.data('deltaObj', deltaObj);
@@ -462,6 +470,10 @@ $script = <<<'JS'
                     const copyBtn = $viewContainer.find('.copy-button-container button');
                     if (copyBtn.length) {
                         copyBtn.attr('data-copy-content', plainText);
+                    }
+                    const cliBtn = $viewContainer.find('.cli-copy-button-container button');
+                    if (cliBtn.length) {
+                        cliBtn.attr('data-copy-content', plainText);
                     }
                     $editContainer.addClass('d-none');
                     $('.ql-toolbar').hide();

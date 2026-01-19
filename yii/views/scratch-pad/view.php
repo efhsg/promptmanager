@@ -61,6 +61,10 @@ $this->params['breadcrumbs'][] = $model->name;
                     'title' => 'Copy to clipboard',
                     'copyFormat' => 'md',
                 ],
+                'cliCopyButtonOptions' => [
+                    'class' => 'btn btn-sm position-absolute',
+                    'style' => 'bottom: 10px; right: 60px;',
+                ],
             ]) ?>
         </div>
     </div>
