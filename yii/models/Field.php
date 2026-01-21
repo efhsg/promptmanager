@@ -70,6 +70,8 @@ class Field extends ActiveRecord
             ],
             [['content'], 'string'],
             [['content'], 'validatePathContent'],
+            [['content'], 'validateStringContent'],
+            [['content'], 'validateNumberContent'],
             [['share', 'render_label'], 'default', 'value' => false],
             [['project_id'],
                 'exist',
@@ -251,6 +253,30 @@ class Field extends ActiveRecord
         }
 
         $this->$attribute = ltrim(str_replace('\\', '/', $relativePath), '/');
+    }
+
+    public function validateStringContent(string $attribute): void
+    {
+        if ($this->type !== 'string') {
+            return;
+        }
+
+        $value = (string) $this->$attribute;
+        if ($value !== '' && mb_strlen($value) > 80) {
+            $this->addError($attribute, 'String content cannot exceed 80 characters.');
+        }
+    }
+
+    public function validateNumberContent(string $attribute): void
+    {
+        if ($this->type !== 'number') {
+            return;
+        }
+
+        $value = trim((string) $this->$attribute);
+        if ($value !== '' && !is_numeric($value)) {
+            $this->addError($attribute, 'Number content must be a valid number.');
+        }
     }
 
 }

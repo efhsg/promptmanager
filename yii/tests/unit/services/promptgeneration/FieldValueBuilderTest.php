@@ -259,6 +259,71 @@ class FieldValueBuilderTest extends Unit
         $this->assertSame('B vs A,C', $plainText);
     }
 
+    // --- Inline field type tests ---
+
+    public function testBuildInlineStringReturnsSimpleInsert(): void
+    {
+        $result = $this->builder->build('Hello World', 'string', null);
+
+        $this->assertSame([['insert' => 'Hello World']], $result);
+    }
+
+    public function testBuildInlineNumberReturnsSimpleInsert(): void
+    {
+        $result = $this->builder->build('42.5', 'number', null);
+
+        $this->assertSame([['insert' => '42.5']], $result);
+    }
+
+    public function testBuildInlineStringTrimsValue(): void
+    {
+        $result = $this->builder->build('  trimmed  ', 'string', null);
+
+        $this->assertSame([['insert' => 'trimmed']], $result);
+    }
+
+    public function testBuildInlineStringReturnsEmptyWhenEmpty(): void
+    {
+        $result = $this->builder->build('', 'string', null);
+
+        $this->assertSame([], $result);
+    }
+
+    public function testBuildInlineStringReturnsEmptyWhenWhitespace(): void
+    {
+        $result = $this->builder->build('   ', 'string', null);
+
+        $this->assertSame([], $result);
+    }
+
+    public function testBuildInlineStringWithLabelAddsHeader(): void
+    {
+        $field = new stdClass();
+        $field->render_label = true;
+        $field->label = 'My String';
+
+        $result = $this->builder->build('Value', 'string', $field);
+
+        $this->assertCount(2, $result);
+        $this->assertSame('My String', rtrim($result[0]['insert'], "\n"));
+        $this->assertSame(['header' => 2], $result[0]['attributes']);
+        $this->assertSame('Value', $result[1]['insert']);
+    }
+
+    public function testBuildInlineNumberWithLabelAddsHeader(): void
+    {
+        $field = new stdClass();
+        $field->render_label = true;
+        $field->label = 'My Number';
+
+        $result = $this->builder->build('123', 'number', $field);
+
+        $this->assertCount(2, $result);
+        $this->assertSame('My Number', rtrim($result[0]['insert'], "\n"));
+        $this->assertSame(['header' => 2], $result[0]['attributes']);
+        $this->assertSame('123', $result[1]['insert']);
+    }
+
     private function extractPlainText(array $ops): string
     {
         $text = '';

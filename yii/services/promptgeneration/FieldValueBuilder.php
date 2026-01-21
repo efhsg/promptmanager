@@ -2,6 +2,7 @@
 
 namespace app\services\promptgeneration;
 
+use common\constants\FieldConstants;
 use JsonException;
 
 class FieldValueBuilder
@@ -16,6 +17,11 @@ class FieldValueBuilder
 
         if ($fieldType === 'select-invert') {
             $ops = $this->buildSelectInvertOperations($fieldValue, $field);
+            return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
+        }
+
+        if (in_array($fieldType, FieldConstants::INLINE_FIELD_TYPES, true)) {
+            $ops = $this->buildInlineValue($fieldValue);
             return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
         }
 
@@ -38,7 +44,7 @@ class FieldValueBuilder
             return [];
         }
 
-        $labelTypes = ['text', 'select', 'multi-select', 'code', 'file', 'directory'];
+        $labelTypes = ['text', 'select', 'multi-select', 'code', 'file', 'directory', 'string', 'number'];
         if (!in_array($fieldType, $labelTypes, true)) {
             return [];
         }
@@ -97,6 +103,15 @@ class FieldValueBuilder
         } catch (JsonException) {
             return [['insert' => (string) $fieldValue]];
         }
+    }
+
+    private function buildInlineValue(mixed $fieldValue): array
+    {
+        $value = trim((string) $fieldValue);
+        if ($value === '') {
+            return [];
+        }
+        return [['insert' => $value]];
     }
 
     private function buildSelectInvertOperations(mixed $selectedValue, ?object $field): array

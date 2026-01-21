@@ -73,6 +73,35 @@ endif; ?>
         </div>
     </div>
 
+    <div id="field-string-wrapper" style="display: none;" class="mb-3">
+        <label class="form-label" for="field-string-input">Default Value</label>
+        <?= Html::textInput(
+            'string-input',
+            $modelField->type === 'string' ? $modelField->content : '',
+            [
+                'id' => 'field-string-input',
+                'class' => 'form-control',
+                'maxlength' => 80,
+                'placeholder' => 'Enter default value (max 80 characters)…',
+            ]
+        ) ?>
+    </div>
+
+    <div id="field-number-wrapper" style="display: none;" class="mb-3">
+        <label class="form-label" for="field-number-input">Default Value</label>
+        <?= Html::input(
+            'number',
+            'number-input',
+            $modelField->type === 'number' ? $modelField->content : '',
+            [
+                'id' => 'field-number-input',
+                'class' => 'form-control',
+                'step' => 'any',
+                'placeholder' => 'Enter default number…',
+            ]
+        ) ?>
+    </div>
+
     <?= PathSelectorWidget::widget([
         'initialValue' => in_array(
             $modelField->type,
@@ -112,6 +141,10 @@ endif; ?>
     ) ?>);
     const contentWrapper = document.getElementById('field-content-wrapper');
     const pathWrapper = document.getElementById('field-path-wrapper');
+    const stringWrapper = document.getElementById('field-string-wrapper');
+    const numberWrapper = document.getElementById('field-number-wrapper');
+    const stringInput = document.getElementById('field-string-input');
+    const numberInput = document.getElementById('field-number-input');
     const projectSelector = document.getElementById('field-project_id');
     const hiddenContentInput = document.querySelector('#field-content');
     let currentFieldType = '<?= $modelField->type ?>';
@@ -137,7 +170,9 @@ endif; ?>
 
         const isContentType = contentTypes.includes(value);
         const isPathType = pathTypes.includes(value);
-        const shouldEnableContent = isContentType || isPathType;
+        const isStringType = value === 'string';
+        const isNumberType = value === 'number';
+        const shouldEnableContent = isContentType || isPathType || isStringType || isNumberType;
 
         if (contentWrapper) {
             contentWrapper.style.display = isContentType ? 'block' : 'none';
@@ -147,15 +182,31 @@ endif; ?>
             pathWrapper.style.display = isPathType ? 'block' : 'none';
         }
 
+        if (stringWrapper) {
+            stringWrapper.style.display = isStringType ? 'block' : 'none';
+        }
+
+        if (numberWrapper) {
+            numberWrapper.style.display = isNumberType ? 'block' : 'none';
+        }
+
         if (hiddenContentInput) {
             hiddenContentInput.disabled = !shouldEnableContent;
-            if (!isContentType && !isPathType) {
+            if (!shouldEnableContent) {
                 hiddenContentInput.value = '';
             }
         }
 
+        if (isStringType && stringInput) {
+            hiddenContentInput.value = stringInput.value;
+        }
+
+        if (isNumberType && numberInput) {
+            hiddenContentInput.value = numberInput.value;
+        }
+
         if (!isPathType) {
-            const shouldClearHiddenContent = wasPathType || !isContentType;
+            const shouldClearHiddenContent = wasPathType || (!isContentType && !isStringType && !isNumberType);
             if (window.pathSelectorWidget) {
                 window.pathSelectorWidget.reset('Select a path', shouldClearHiddenContent);
             }
@@ -180,6 +231,34 @@ endif; ?>
         }
 
         previousFieldType = value;
+    }
+
+    if (stringInput) {
+        stringInput.addEventListener('input', function() {
+            if (currentFieldType === 'string' && hiddenContentInput) {
+                hiddenContentInput.value = this.value;
+            }
+        });
+    }
+
+    if (numberInput) {
+        numberInput.addEventListener('input', function() {
+            if (currentFieldType === 'number' && hiddenContentInput) {
+                hiddenContentInput.value = this.value;
+            }
+        });
+    }
+
+    const fieldForm = document.getElementById('field-form');
+    if (fieldForm) {
+        fieldForm.addEventListener('submit', function() {
+            if (currentFieldType === 'string' && stringInput && hiddenContentInput) {
+                hiddenContentInput.value = stringInput.value;
+            }
+            if (currentFieldType === 'number' && numberInput && hiddenContentInput) {
+                hiddenContentInput.value = numberInput.value;
+            }
+        });
     }
 </script>
 

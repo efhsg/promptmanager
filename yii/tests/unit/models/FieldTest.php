@@ -291,4 +291,48 @@ class FieldTest extends Unit
         }
     }
 
+    public function testStringFieldContentValidation(): void
+    {
+        $field = new Field();
+        $field->name = 'testStringField';
+        $field->type = 'string';
+        $field->user_id = 1;
+        $field->content = 'Valid string';
+        verify($field->validate())->true();
+
+        $field->content = str_repeat('a', 80);
+        verify($field->validate())->true();
+
+        $field->content = str_repeat('a', 81);
+        verify($field->validate())->false();
+        verify($field->getErrors('content'))->notEmpty();
+
+        $field->content = '';
+        verify($field->validate())->true();
+    }
+
+    public function testNumberFieldContentValidation(): void
+    {
+        $field = new Field();
+        $field->name = 'testNumberField';
+        $field->type = 'number';
+        $field->user_id = 1;
+
+        $field->content = '42';
+        verify($field->validate())->true();
+
+        $field->content = '3.14159';
+        verify($field->validate())->true();
+
+        $field->content = '-123.45';
+        verify($field->validate())->true();
+
+        $field->content = 'not a number';
+        verify($field->validate())->false();
+        verify($field->getErrors('content'))->notEmpty();
+
+        $field->content = '';
+        verify($field->validate())->true();
+    }
+
 }
