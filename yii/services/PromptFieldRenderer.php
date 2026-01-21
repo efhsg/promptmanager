@@ -32,6 +32,8 @@ class PromptFieldRenderer
         'minimumResultsForSearch' => 0,
     ];
 
+    private const INLINE_LABEL_MAX_LENGTH = 30;
+
     public function __construct(
         private readonly View $view,
     ) {}
@@ -59,23 +61,43 @@ class PromptFieldRenderer
         $fieldType = (string) ($field['type'] ?? 'text');
         $name = "PromptInstanceForm[fields][$placeholder]";
 
-        $labelHtml = '';
-        if (
-            !empty($field['render_label'])
-            && isset($field['label'])
-            && trim((string) $field['label']) !== ''
-        ) {
-            $labelHtml = Html::tag('h2', Html::encode($field['label']));
+        $label = trim((string) ($field['label'] ?? ''));
+        $shouldRenderLabel = !empty($field['render_label']) && $label !== '';
+        $isInlineType = in_array($fieldType, ['string', 'number'], true);
+        $isShortLabel = mb_strlen($label) <= self::INLINE_LABEL_MAX_LENGTH;
+
+        // For string/number with short labels, render inline (label + input on same row)
+        if ($isInlineType && $shouldRenderLabel && $isShortLabel) {
+            $fieldHtml = match ($fieldType) {
+                'string' => $this->renderStringField($field, $placeholder, $name),
+                'number' => $this->renderNumberField($field, $placeholder, $name),
+            };
+            return $this->wrapInlineField($label, $fieldHtml);
         }
+
+        // Standard rendering: label above field
+        $labelHtml = $shouldRenderLabel ? Html::tag('h2', Html::encode($label)) : '';
 
         $fieldHtml = match ($fieldType) {
             'text', 'code' => $this->renderTextCodeField($field, $placeholder, $name),
             'select', 'multi-select', 'select-invert' => $this->renderSelectField($field, $placeholder, $name, $fieldType),
             'file' => $this->renderFileField($field, $placeholder, $name),
+            'string' => $this->renderStringField($field, $placeholder, $name),
+            'number' => $this->renderNumberField($field, $placeholder, $name),
             default => $this->renderTextareaField($field, $placeholder, $name),
         };
 
         return $labelHtml . $fieldHtml;
+    }
+
+    private function wrapInlineField(string $label, string $fieldHtml): string
+    {
+        return Html::tag(
+            'div',
+            Html::tag('label', Html::encode($label) . ':', ['class' => 'col-form-label text-nowrap'])
+            . Html::tag('div', $fieldHtml, ['class' => 'flex-grow-1']),
+            ['class' => 'd-flex align-items-center gap-3 mb-3']
+        );
     }
 
     private function buildEditorPlaceholder(string $fieldType, string $label, string $customPlaceholder): string
@@ -232,6 +254,60 @@ class PromptFieldRenderer
                 'rows' => 5,
                 'cols' => 50,
                 'style' => 'resize: vertical; height: 150px; overflow-y: auto;',
+            ]
+        );
+    }
+
+    private function renderStringField(array $field, string $placeholder, string $name): string
+    {
+        $label = trim((string) ($field['label'] ?? ''));
+        $defaultValue = (string) ($field['default'] ?? '');
+        $placeholderText = $label !== '' ? "Enter {$label}…" : 'Enter text…';
+
+        // Short values: inline compact; Long values: full width
+        $isLongValue = mb_strlen($defaultValue) > 25 || mb_strlen($placeholderText) > 30;
+
+        if ($isLongValue) {
+            return Html::textInput(
+                $name,
+                $defaultValue,
+                [
+                    'id' => "field-$placeholder",
+                    'class' => 'form-control',
+                    'maxlength' => 255,
+                    'placeholder' => $placeholderText,
+                ]
+            );
+        }
+
+        return Html::textInput(
+            $name,
+            $defaultValue,
+            [
+                'id' => "field-$placeholder",
+                'class' => 'form-control d-inline-block w-auto',
+                'maxlength' => 80,
+                'placeholder' => $placeholderText,
+                'style' => 'min-width: 150px;',
+            ]
+        );
+    }
+
+    private function renderNumberField(array $field, string $placeholder, string $name): string
+    {
+        $label = trim((string) ($field['label'] ?? ''));
+        $placeholderText = $label !== '' ? "Enter {$label}…" : 'Enter number…';
+
+        return Html::input(
+            'number',
+            $name,
+            (string) ($field['default'] ?? ''),
+            [
+                'id' => "field-$placeholder",
+                'class' => 'form-control d-inline-block w-auto',
+                'step' => 'any',
+                'placeholder' => $placeholderText,
+                'style' => 'min-width: 120px;',
             ]
         );
     }
