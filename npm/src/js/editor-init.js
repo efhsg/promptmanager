@@ -206,10 +206,78 @@ window.QuillToolbar = (function() {
         });
     };
 
+    const DEFAULT_CONVERT_FORMAT_URL = '/scratch-pad/convert-format';
+
+    /**
+     * Copy content with format conversion
+     * @param {string} deltaContent - The Quill delta JSON string
+     * @param {string} format - The target format (e.g., 'md', 'text')
+     * @param {HTMLElement} button - The button element to show feedback on
+     * @param {string} convertUrl - Optional custom convert URL
+     */
+    const copyWithFormat = async (deltaContent, format, button, convertUrl) => {
+        const url = convertUrl || DEFAULT_CONVERT_FORMAT_URL;
+        const originalHtml = button.innerHTML;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    content: deltaContent,
+                    format: format
+                })
+            });
+
+            const data = await response.json();
+            if (data.success && data.content !== undefined) {
+                await navigator.clipboard.writeText(data.content);
+                button.innerHTML = '<i class="bi bi-check"></i> Copied';
+                setTimeout(() => {
+                    button.innerHTML = originalHtml;
+                }, 1000);
+            } else {
+                console.error('Failed to convert format:', data.message);
+                showToast('Failed to copy', 'danger');
+            }
+        } catch (err) {
+            console.error('Failed to copy:', err);
+            showToast('Failed to copy', 'danger');
+        }
+    };
+
+    /**
+     * Setup a copy button with format selector
+     * @param {string} buttonId - The copy button element ID
+     * @param {string} formatSelectId - The format dropdown element ID
+     * @param {Function|string} contentProvider - Function returning delta JSON, or static delta JSON string
+     * @param {string} convertUrl - Optional custom convert URL
+     */
+    const setupCopyButton = (buttonId, formatSelectId, contentProvider, convertUrl) => {
+        const button = document.getElementById(buttonId);
+        const formatSelect = document.getElementById(formatSelectId);
+
+        if (!button || !formatSelect) return;
+
+        button.addEventListener('click', () => {
+            const format = formatSelect.value;
+            const deltaContent = typeof contentProvider === 'function'
+                ? contentProvider()
+                : contentProvider;
+            copyWithFormat(deltaContent, format, button, convertUrl);
+        });
+    };
+
     return {
         setupSmartPaste: setupSmartPaste,
         setupLoadMd: setupLoadMd,
-        showToast: showToast
+        showToast: showToast,
+        copyWithFormat: copyWithFormat,
+        setupCopyButton: setupCopyButton
     };
 })();
 

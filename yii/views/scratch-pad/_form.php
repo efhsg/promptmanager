@@ -27,25 +27,66 @@ $isUpdate = !$model->isNewRecord;
     )->label('Project') ?>
 
     <?= $form->field($model, 'content')->hiddenInput(['id' => 'scratch-pad-content'])->label(false) ?>
+    <?= $form->field($model, 'summation')->hiddenInput(['id' => 'scratch-pad-summation'])->label(false) ?>
 
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <label class="form-label mb-0">Content</label>
-        <div class="d-flex align-items-center gap-2">
-            <div class="input-group input-group-sm" style="width: auto;">
-                <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
-                    'id' => 'copy-format-select',
-                    'class' => 'form-select',
-                    'style' => 'width: auto;',
-                ]) ?>
-                <button type="button" id="copy-content-btn" class="btn btn-primary text-nowrap" title="Copy to clipboard">
-                    <i class="bi bi-clipboard"></i> Copy to Clipboard
+    <div class="accordion mb-3" id="scratchPadAccordion">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingContent">
+                <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseContent" aria-expanded="true" aria-controls="collapseContent">
+                    Content
                 </button>
+            </h2>
+            <div id="collapseContent" class="accordion-collapse collapse show" aria-labelledby="headingContent"
+                 data-bs-parent="#scratchPadAccordion">
+                <div class="accordion-body p-0">
+                    <div class="d-flex justify-content-end p-2 border-bottom">
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
+                                'id' => 'copy-format-select',
+                                'class' => 'form-select',
+                                'style' => 'width: auto;',
+                            ]) ?>
+                            <button type="button" id="copy-content-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="resizable-editor-container">
+                        <div id="scratch-pad-editor" class="resizable-editor" style="min-height: 300px;"></div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="resizable-editor-container mb-3">
-        <div id="scratch-pad-editor" class="resizable-editor" style="min-height: 300px;"></div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingSummation">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapseSummation" aria-expanded="false" aria-controls="collapseSummation">
+                    Summation
+                </button>
+            </h2>
+            <div id="collapseSummation" class="accordion-collapse collapse" aria-labelledby="headingSummation"
+                 data-bs-parent="#scratchPadAccordion">
+                <div class="accordion-body p-0">
+                    <div class="d-flex justify-content-end p-2 border-bottom">
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <?= Html::dropDownList('summationCopyFormat', CopyType::MD->value, $copyTypes, [
+                                'id' => 'summation-copy-format-select',
+                                'class' => 'form-select',
+                                'style' => 'width: auto;',
+                            ]) ?>
+                            <button type="button" id="copy-summation-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
+                                <i class="bi bi-clipboard"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="resizable-editor-container">
+                        <div id="scratch-pad-summation-editor" class="resizable-editor" style="min-height: 200px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="form-group mt-4 text-end">
@@ -96,6 +137,7 @@ $isUpdate = !$model->isNewRecord;
 
 <?php
 $content = json_encode($model->content);
+$summation = json_encode($model->summation);
 $saveUrl = Url::to(['/scratch-pad/save']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
@@ -135,55 +177,41 @@ $script = <<<JS
         hidden.value = JSON.stringify(quill.getContents());
     });
 
-    // Toast helper (used by copy functionality)
-    function showToast(message) {
-        const toastEl = document.getElementById('paste-toast');
-        toastEl.querySelector('.toast-body').textContent = message;
-        const toast = new bootstrap.Toast(toastEl, {delay: 2000});
-        toast.show();
+    // Summation Quill editor
+    var summationQuill = new Quill('#scratch-pad-summation-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike', 'code'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'align': [] }],
+                ['clean'],
+                [{ 'smartPaste': [] }],
+                [{ 'loadMd': [] }]
+            ]
+        }
+    });
+
+    var summationHidden = document.getElementById('scratch-pad-summation');
+    window.QuillToolbar.setupSmartPaste(summationQuill, summationHidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(summationQuill, summationHidden, urlConfig);
+
+    try {
+        summationQuill.setContents(JSON.parse($summation))
+    } catch (error) {
+        console.error('Error loading summation content:', error);
     }
 
-    // Copy functionality with format conversion
-    document.getElementById('copy-content-btn').addEventListener('click', function() {
-        const formatSelect = document.getElementById('copy-format-select');
-        const selectedFormat = formatSelect.value;
-        const deltaContent = JSON.stringify(quill.getContents());
-
-        fetch('/scratch-pad/convert-format', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                content: deltaContent,
-                format: selectedFormat
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.content !== undefined) {
-                navigator.clipboard.writeText(data.content).then(function() {
-                    const btn = document.getElementById('copy-content-btn');
-                    const originalText = btn.innerHTML;
-                    btn.innerHTML = '<i class="bi bi-check"></i> Copied';
-                    setTimeout(function() {
-                        btn.innerHTML = originalText;
-                    }, 1000);
-                });
-            } else {
-                console.error('Failed to convert format:', data.message);
-                const text = quill.getText();
-                navigator.clipboard.writeText(text);
-            }
-        })
-        .catch(function(err) {
-            console.error('Failed to copy:', err);
-            const text = quill.getText();
-            navigator.clipboard.writeText(text);
-        });
+    summationQuill.on('text-change', function() {
+        summationHidden.value = JSON.stringify(summationQuill.getContents());
     });
+
+    // Setup copy buttons
+    window.QuillToolbar.setupCopyButton('copy-content-btn', 'copy-format-select', () => JSON.stringify(quill.getContents()));
+    window.QuillToolbar.setupCopyButton('copy-summation-btn', 'summation-copy-format-select', () => JSON.stringify(summationQuill.getContents()));
 
     // Save As functionality
     const saveAsBtn = document.getElementById('save-as-btn');
@@ -210,6 +238,7 @@ $script = <<<JS
             }
 
             const deltaContent = JSON.stringify(quill.getContents());
+            const summationContent = JSON.stringify(summationQuill.getContents());
 
             fetch('$saveUrl', {
                 method: 'POST',
@@ -221,6 +250,7 @@ $script = <<<JS
                 body: JSON.stringify({
                     name: name,
                     content: deltaContent,
+                    summation: summationContent,
                     project_id: document.getElementById('scratchpad-project_id')?.value || null
                 })
             })
