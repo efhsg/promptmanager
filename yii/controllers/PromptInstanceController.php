@@ -10,7 +10,6 @@ use app\components\ProjectContext;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
-use app\models\PromptTemplate;
 use app\services\ContextService;
 use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
@@ -304,11 +303,13 @@ class PromptInstanceController extends Controller
             $default = [];
             $converter = new CopyFormatConverter();
             foreach ($field->fieldOptions as $option) {
-                $plainValue = $this->convertDeltaStringToText($option->value, $converter);
-                $plainLabel = $option->label ? $this->convertDeltaStringToText($option->label, $converter) : '';
-                $options[$plainValue] = $plainLabel !== '' ? $plainLabel : $plainValue;
+                $deltaValue = $option->value;
+                $plainLabel = $option->label
+                    ? $this->convertDeltaStringToText($option->label, $converter)
+                    : $this->convertDeltaStringToText($option->value, $converter);
+                $options[$deltaValue] = $plainLabel;
                 if ($option->selected_by_default) {
-                    $default[] = $plainValue;
+                    $default[] = $deltaValue;
                 }
             }
             $fieldData['options'] = $options;
@@ -369,11 +370,6 @@ class PromptInstanceController extends Controller
 
         $template = $this->promptTemplateService->getTemplateById($templateId, $userId);
 
-        $copyConverter = new CopyFormatConverter();
-        if ($template) {
-            $fieldValues = $this->convertOptionFieldValuesToText($template, $fieldValues, $copyConverter);
-        }
-
         $fieldValues = $this->fileFieldProcessor->processFileFields($template, $fieldValues);
 
         $deltaJson = $this->promptGenerationService->generateFinalPrompt(
@@ -387,6 +383,7 @@ class PromptInstanceController extends Controller
         $copyContent = '';
         if ($template && $template->project) {
             $copyFormat = $template->project->getPromptInstanceCopyFormatEnum();
+            $copyConverter = new CopyFormatConverter();
             $copyContent = $copyConverter->convertFromQuillDelta($deltaJson, $copyFormat);
         }
 
@@ -395,45 +392,6 @@ class PromptInstanceController extends Controller
             'copyContent' => $copyContent,
             'copyFormat' => $copyFormat->value,
         ];
-    }
-
-    private function convertOptionFieldValuesToText(
-        PromptTemplate $template,
-        array $fieldValues,
-        CopyFormatConverter $converter
-    ): array {
-        foreach ($template->fields as $field) {
-            if (!in_array($field->type, FieldConstants::OPTION_FIELD_TYPES, true)) {
-                continue;
-            }
-
-            foreach ($field->fieldOptions as $option) {
-                $option->value = $this->convertDeltaStringToText($option->value, $converter);
-            }
-
-            $stringId = (string) $field->id;
-            $intId = $field->id;
-
-            if (array_key_exists($stringId, $fieldValues)) {
-                $fieldValues[$stringId] = $this->convertOptionValue($fieldValues[$stringId], $converter);
-            } elseif (array_key_exists($intId, $fieldValues)) {
-                $fieldValues[$intId] = $this->convertOptionValue($fieldValues[$intId], $converter);
-            }
-        }
-
-        return $fieldValues;
-    }
-
-    private function convertOptionValue(mixed $value, CopyFormatConverter $converter): mixed
-    {
-        if (is_array($value)) {
-            foreach ($value as $index => $item) {
-                $value[$index] = $this->convertDeltaStringToText($item, $converter);
-            }
-            return $value;
-        }
-
-        return $this->convertDeltaStringToText($value, $converter);
     }
 
     /**

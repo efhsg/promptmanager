@@ -165,7 +165,7 @@ class PromptFieldRenderer
         $template = new JsExpression(
             "function(state) {
                 if (!state.id) return state.text;
-                return $('<span></span>').text(state.text).attr('title', state.id);
+                return $('<span></span>').text(state.text).attr('title', state.text);
             }"
         );
 

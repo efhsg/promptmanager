@@ -111,6 +111,81 @@ class FieldValueBuilderTest extends Unit
         $this->assertSame("Trimmed\n", $result[0]['insert']);
     }
 
+    public function testBuildMultiSelectHandlesDeltaJsonValues(): void
+    {
+        $deltaValue = json_encode(['ops' => [
+            ['insert' => 'Badge Text', 'attributes' => ['badge' => true]],
+            ['insert' => "\n"],
+        ]]);
+
+        $result = $this->builder->build([$deltaValue], 'multi-select', null);
+
+        // Should extract ops and apply list bullet
+        $this->assertGreaterThanOrEqual(1, count($result));
+
+        // Find the insert with "Badge Text"
+        $foundBadge = false;
+        $foundListBullet = false;
+        foreach ($result as $op) {
+            if (isset($op['insert']) && str_contains($op['insert'], 'Badge Text')) {
+                $foundBadge = true;
+                if (isset($op['attributes']['badge'])) {
+                    $this->assertTrue($op['attributes']['badge']);
+                }
+            }
+            if (isset($op['attributes']['list']) && $op['attributes']['list'] === 'bullet') {
+                $foundListBullet = true;
+            }
+        }
+        $this->assertTrue($foundBadge, 'Should contain Badge Text');
+        $this->assertTrue($foundListBullet, 'Should have list bullet attribute');
+    }
+
+    public function testBuildMultiSelectMixedPlainAndDeltaValues(): void
+    {
+        $deltaValue = json_encode(['ops' => [
+            ['insert' => 'Formatted', 'attributes' => ['bold' => true]],
+            ['insert' => "\n"],
+        ]]);
+
+        $result = $this->builder->build(['Plain text', $deltaValue], 'multi-select', null);
+
+        // Should have both items as bullet list
+        $listBulletCount = 0;
+        foreach ($result as $op) {
+            if (isset($op['attributes']['list']) && $op['attributes']['list'] === 'bullet') {
+                $listBulletCount++;
+            }
+        }
+        $this->assertSame(2, $listBulletCount, 'Should have 2 bullet list items');
+    }
+
+    public function testBuildMultiSelectPreservesFormattingFromDelta(): void
+    {
+        $deltaValue = json_encode(['ops' => [
+            ['insert' => 'Bold ', 'attributes' => ['bold' => true]],
+            ['insert' => 'Normal'],
+            ['insert' => "\n"],
+        ]]);
+
+        $result = $this->builder->build([$deltaValue], 'multi-select', null);
+
+        // Find bold insert
+        $foundBold = false;
+        foreach ($result as $op) {
+            if (
+                isset($op['insert'])
+                && str_contains($op['insert'], 'Bold')
+                && isset($op['attributes']['bold'])
+                && $op['attributes']['bold'] === true
+            ) {
+                $foundBold = true;
+                break;
+            }
+        }
+        $this->assertTrue($foundBold, 'Should preserve bold formatting from Delta JSON');
+    }
+
     // --- Sequential array (non-multi-select) tests ---
 
     public function testBuildSequentialArrayAddsPeriodSuffix(): void
@@ -257,6 +332,26 @@ class FieldValueBuilderTest extends Unit
 
         $plainText = $this->extractPlainText($result);
         $this->assertSame('B vs A,C', $plainText);
+    }
+
+    public function testBuildSelectInvertWithDeltaJsonSelectedValue(): void
+    {
+        $option1 = new stdClass();
+        $option1->value = '{"ops":[{"insert":"A\n"}]}';
+        $option1->label = '';
+
+        $option2 = new stdClass();
+        $option2->value = '{"ops":[{"insert":"B\n"}]}';
+        $option2->label = '';
+
+        $field = new stdClass();
+        $field->content = '{"ops":[{"insert":" vs "}]}';
+        $field->fieldOptions = [$option1, $option2];
+
+        $result = $this->builder->build('{"ops":[{"insert":"A\n"}]}', 'select-invert', $field);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertSame('A vs B', $plainText);
     }
 
     // --- Inline field type tests ---

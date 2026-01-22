@@ -106,8 +106,13 @@ class PlaceholderProcessor
         if ($text !== '') {
             $leftover = ltrim($text, ' ');
             if ($leftover !== '') {
-                // Check if the leftover is just a newline and we have original block attributes to preserve
-                if ($leftover === "\n" && !empty($originalBlockAttrs) && !$this->fieldContentHasBlockAttributes($lastFieldOps)) {
+                // If we have block attributes and leftover ends with newline,
+                // split to preserve the attributes on the trailing newline (Quill format)
+                if (!empty($originalBlockAttrs) && !$this->fieldContentHasBlockAttributes($lastFieldOps) && str_ends_with($leftover, "\n")) {
+                    $textWithoutTrailingNewline = substr($leftover, 0, -1);
+                    if ($textWithoutTrailingNewline !== '') {
+                        $finalOps[] = ['insert' => $textWithoutTrailingNewline];
+                    }
                     $finalOps[] = ['insert' => "\n", 'attributes' => $originalBlockAttrs];
                 } else {
                     $finalOps[] = ['insert' => $leftover];

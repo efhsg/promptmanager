@@ -73,10 +73,8 @@ class FieldValueBuilder
                     if ($trimmed === '') {
                         continue;
                     }
-                    $ops[] = [
-                        'insert' => $trimmed . "\n",
-                        'attributes' => ['list' => 'bullet'],
-                    ];
+                    $itemOps = $this->extractOpsFromDeltaOrPlainText($trimmed);
+                    $ops = array_merge($ops, $itemOps);
                 }
                 return $ops;
             }
@@ -93,6 +91,77 @@ class FieldValueBuilder
         }
 
         return $ops;
+    }
+
+    private function extractOpsFromDeltaOrPlainText(string $value): array
+    {
+        try {
+            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
+            if (isset($decoded['ops']) && is_array($decoded['ops'])) {
+                return $this->applyListBulletToOps($decoded['ops']);
+            }
+        } catch (JsonException) {
+        }
+
+        return [['insert' => $value . "\n", 'attributes' => ['list' => 'bullet']]];
+    }
+
+    private function applyListBulletToOps(array $ops): array
+    {
+        if ($ops === []) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($ops as $op) {
+            if (!isset($op['insert']) || !is_string($op['insert'])) {
+                $result[] = $op;
+                continue;
+            }
+
+            $insert = $op['insert'];
+            $attributes = $op['attributes'] ?? [];
+
+            if (str_contains($insert, "\n")) {
+                $parts = explode("\n", $insert);
+                $lastIndex = count($parts) - 1;
+
+                foreach ($parts as $i => $part) {
+                    if ($i < $lastIndex) {
+                        if ($part !== '') {
+                            $result[] = $attributes !== []
+                                ? ['insert' => $part, 'attributes' => $attributes]
+                                : ['insert' => $part];
+                        }
+                        $result[] = ['insert' => "\n", 'attributes' => ['list' => 'bullet']];
+                    } elseif ($part !== '') {
+                        $result[] = $attributes !== []
+                            ? ['insert' => $part, 'attributes' => $attributes]
+                            : ['insert' => $part];
+                    }
+                }
+            } else {
+                $result[] = $op;
+            }
+        }
+
+        $hasTrailingNewline = false;
+        if ($result !== []) {
+            $lastOp = $result[array_key_last($result)];
+            if (
+                isset($lastOp['insert'])
+                && is_string($lastOp['insert'])
+                && str_ends_with($lastOp['insert'], "\n")
+            ) {
+                $hasTrailingNewline = true;
+            }
+        }
+
+        if (!$hasTrailingNewline) {
+            $result[] = ['insert' => "\n", 'attributes' => ['list' => 'bullet']];
+        }
+
+        return $result;
     }
 
     private function buildFromJson(mixed $fieldValue): array
@@ -120,7 +189,7 @@ class FieldValueBuilder
             return [['insert' => (string) $selectedValue]];
         }
 
-        $selectedValueStr = (string) $selectedValue;
+        $selectedValueStr = $this->deltaHelper->extractPlainTextFromDelta((string) $selectedValue);
         $selectedLabel = null;
         $unselectedLabels = [];
 

@@ -400,6 +400,33 @@ class PlaceholderProcessorTest extends Unit
         $this->assertSame(1, $newlineCount, 'Should have exactly one newline');
     }
 
+    // --- Header attribute handling tests ---
+
+    public function testProcessPreservesHeaderAttributeWhenTextFollowsPlaceholder(): void
+    {
+        $ops = [
+            ['insert' => 'Code:GEN:{{1}}' . "\n" . 'Constraints'],
+            ['insert' => "\n", 'attributes' => ['header' => 2]],
+        ];
+        $fieldValues = [1 => '{"ops":[{"insert":"sample code\n"}]}'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $hasHeaderAttr = false;
+        foreach ($result as $op) {
+            if (
+                isset($op['insert'])
+                && $op['insert'] === "\n"
+                && isset($op['attributes']['header'])
+                && $op['attributes']['header'] === 2
+            ) {
+                $hasHeaderAttr = true;
+                break;
+            }
+        }
+        $this->assertTrue($hasHeaderAttr, 'Header attribute should be preserved on trailing newline');
+    }
+
     // --- Code block handling tests ---
 
     public function testProcessInjectsNewlineBeforeCodeBlock(): void
