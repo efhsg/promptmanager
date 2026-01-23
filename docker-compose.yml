@@ -1,6 +1,6 @@
 services:
   pma_yii:
-    restart: unless-stopped
+    restart: always
     build:
       context: .
       dockerfile: ./docker/yii/Dockerfile
@@ -30,7 +30,7 @@ services:
       - promptmanager_network
 
   pma_nginx:
-    restart: unless-stopped
+    restart: always
     image: nginx:latest
     container_name: pma_nginx
     ports:
@@ -50,7 +50,7 @@ services:
       - promptmanager_network
 
   pma_mysql:
-    restart: unless-stopped
+    restart: always
     image: mysql:8.0
     container_name: pma_mysql
     environment:
