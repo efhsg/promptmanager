@@ -28,10 +28,6 @@ $this->params['breadcrumbs'][] = $this->title;
         <div class="alert alert-info">
             Showing scratch pads from all projects.
         </div>
-    <?php elseif ($currentProject): ?>
-        <div class="alert alert-info">
-            Showing scratch pads for project: <strong><?= Html::encode($currentProject->name) ?></strong> and global pads.
-        </div>
     <?php endif; ?>
 
     <div class="card">

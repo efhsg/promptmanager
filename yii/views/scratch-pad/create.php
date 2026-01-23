@@ -87,9 +87,6 @@ $copyTypes = CopyType::labels();
                 </div>
             </div>
 
-            <div class="mt-3 text-muted small">
-                Quick edit imported markdown content. Use Copy to copy to clipboard or Save to store in the database.
-            </div>
         </div>
     </div>
 </div>
