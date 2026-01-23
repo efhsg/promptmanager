@@ -6,3 +6,4 @@ trash/
 .env
 /wip/
 .php-cs-fixer.cache
+scripts/backup.log
