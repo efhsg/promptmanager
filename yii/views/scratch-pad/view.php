@@ -15,9 +15,9 @@ $this->params['breadcrumbs'][] = $model->name;
 ?>
 
 <div class="scratch-pad-view container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0"><?= Html::encode($model->name) ?></h1>
-        <div>
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <h1 class="h3 mb-0 me-3"><?= Html::encode($model->name) ?></h1>
+        <div class="d-flex flex-shrink-0">
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
                 'class' => 'btn btn-danger',
