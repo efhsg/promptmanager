@@ -132,6 +132,11 @@ Source files map to test files by mirroring the directory structure:
 | Project | `PRJ:{{name}}` | Single project |
 | External | `EXT:{{label:name}}` | Linked from another project |
 
+## Content Storage
+
+- **Rich text**: All content stored as Quill Delta JSON
+- **File fields**: Path validated at selection, content read at prompt generation
+
 ## RBAC Owner Rules
 
 | Rule | Validates |

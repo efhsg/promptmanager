@@ -73,10 +73,10 @@ docker exec pma_yii vendor/bin/codecept run unit          # Run tests
 
 ## Domain Essentials
 
-- **Entities**: Project → { Context, Field, PromptTemplate, ScratchPad } → PromptInstance
-- **Placeholders**: `GEN:{{name}}` (global), `PRJ:{{name}}` (project), `EXT:{{label:name}}` (linked)
-- **Rich text**: All content stored as Quill Delta JSON
-- **File fields**: Path validated at selection, content read at prompt generation
+See `.claude/config/project.md` for complete domain knowledge:
+- Entity relationships (Project → Context, Field, PromptTemplate, ScratchPad → PromptInstance)
+- Placeholder syntax (GEN/PRJ/EXT)
+- RBAC owner rules
 
 ## Slash Commands
 
@@ -103,6 +103,23 @@ Use slash commands to invoke skills:
 | `/refactor-plan` | Create refactoring plan |
 
 See `.claude/skills/index.md` for full skill documentation.
+
+## Agents
+
+Agents are focused personas with limited context scope. Use `@agent` to activate:
+
+| Trigger | Agent | Purpose |
+|---------|-------|---------|
+| `@refactor` | Refactor | Improve code structure without changing behavior |
+| `@test` | Test Writer | Write Codeception unit tests |
+| `@review` | Reviewer | Two-phase code review (defects → design) |
+| `@migration` | Migration | Create database migrations |
+| `@bugfix` | Bugfix | Isolate root cause and fix bugs |
+| `@docs` | Documentation | Write PHPDoc and documentation |
+| `@feature` | Feature Builder | Implement complete features end-to-end |
+| `@perf` | Performance | Identify and fix performance bottlenecks |
+
+Agents are defined in `.claude/agents/`. Each agent reads only relevant rules/skills.
 
 ## Commits
 

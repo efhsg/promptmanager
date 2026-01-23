@@ -3,8 +3,7 @@
 ## Stack
 
 - **Codeception** for all tests
-- Run all: `docker exec pma_yii vendor/bin/codecept run unit`
-- Run single: `docker exec pma_yii vendor/bin/codecept run unit tests/unit/path/ToTest.php`
+- See `.claude/config/project.md` for test commands
 
 ## Requirements
 

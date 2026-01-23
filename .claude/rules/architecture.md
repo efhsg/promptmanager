@@ -9,24 +9,7 @@
 
 ## Key Paths
 
-| Path | Contents |
-|------|----------|
-| `yii/controllers/` | Application controllers |
-| `yii/services/` | Business logic services |
-| `yii/models/` | ActiveRecord models |
-| `yii/models/query/` | Query classes |
-| `yii/views/` | View templates |
-| `yii/migrations/` | Database migrations |
-| `yii/tests/` | Codeception tests |
-| `yii/modules/identity/` | Auth module |
-| `yii/common/enums/` | Enums (CopyType) |
-| `yii/common/constants/` | Constants (FieldConstants) |
-| `yii/rbac/` | RBAC rules |
-| `yii/widgets/` | Custom widgets |
-| `yii/presenters/` | Presenter classes |
-| `yii/components/` | Application components |
-| `yii/helpers/` | Helper classes |
-| `npm/` | Frontend build scripts |
+See `.claude/config/project.md` for complete file structure mapping.
 
 ## Controller Patterns
 

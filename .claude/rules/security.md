@@ -22,13 +22,7 @@
 ## Authentication & Authorization
 
 - Access control via `behaviors()` with RBAC owner rules
-- Owner rules defined in `yii/rbac/`:
-  - `ProjectOwnerRule`
-  - `ContextOwnerRule`
-  - `FieldOwnerRule`
-  - `PromptTemplateOwnerRule`
-  - `PromptInstanceOwnerRule`
-  - `ScratchPadOwnerRule`
+- See `.claude/config/project.md` for complete RBAC rules list
 
 ## File System Access
 
