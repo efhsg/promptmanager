@@ -14,7 +14,8 @@ source "$PROJECT_DIR/.env"
 
 # Configuration
 BACKUP_DIR="/tmp/promptmanager_backups"
-RETENTION_DAYS=30
+RETENTION_DAILY=30    # Daily backups: keep 30 days
+RETENTION_MONTHLY=365 # Monthly backups (1st of month): keep 1 year
 
 # Google Drive folder ID (find via: right-click folder in Drive > Get link > extract ID from URL)
 GDRIVE_FOLDER_ID="1OKY3B49FWW16dBMOUsDyKVnPuLkXmXOC"
@@ -22,9 +23,15 @@ GDRIVE_FOLDER_ID="1OKY3B49FWW16dBMOUsDyKVnPuLkXmXOC"
 # Map .env variable names
 DB_NAME="$DB_DATABASE"
 
-# Timestamp for backup file
+# Timestamp and backup type (monthly on 1st of month, daily otherwise)
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-BACKUP_FILE="promptmanager_${TIMESTAMP}.sql.gz"
+DAY_OF_MONTH=$(date +%d)
+if [ "$DAY_OF_MONTH" = "01" ]; then
+    BACKUP_TYPE="monthly"
+else
+    BACKUP_TYPE="daily"
+fi
+BACKUP_FILE="promptmanager_${BACKUP_TYPE}_${TIMESTAMP}.sql.gz"
 
 # Create backup directory if needed
 mkdir -p "$BACKUP_DIR"
@@ -51,12 +58,22 @@ echo "[$(date)] Uploaded to Google Drive"
 # Clean up local backup
 rm -f "$BACKUP_DIR/$BACKUP_FILE"
 
-# Remove old backups from Google Drive (keep last RETENTION_DAYS days)
+# Remove old daily backups (older than 30 days)
 if ! rclone delete "gdrive:" \
     --drive-root-folder-id="$GDRIVE_FOLDER_ID" \
-    --min-age "${RETENTION_DAYS}d" \
+    --include "promptmanager_daily_*.sql.gz" \
+    --min-age "${RETENTION_DAILY}d" \
     --log-level INFO 2>&1; then
-    echo "[$(date)] Warning: Failed to clean up old backups"
+    echo "[$(date)] Warning: Failed to clean up old daily backups"
+fi
+
+# Remove old monthly backups (older than 1 year)
+if ! rclone delete "gdrive:" \
+    --drive-root-folder-id="$GDRIVE_FOLDER_ID" \
+    --include "promptmanager_monthly_*.sql.gz" \
+    --min-age "${RETENTION_MONTHLY}d" \
+    --log-level INFO 2>&1; then
+    echo "[$(date)] Warning: Failed to clean up old monthly backups"
 fi
 
 echo "[$(date)] Backup completed successfully"
