@@ -55,7 +55,7 @@ class QuickSearchService extends Component
             'type' => 'context',
             'name' => $context->name,
             'subtitle' => $context->project->name ?? '',
-            'url' => Url::to(['/context/view', 'id' => $context->id]),
+            'url' => Url::to(['/context/view', 'id' => $context->id, 'p' => $context->project_id]),
         ], $contexts);
     }
 
@@ -75,7 +75,7 @@ class QuickSearchService extends Component
             'type' => 'field',
             'name' => $field->label ?: $field->name,
             'subtitle' => $field->project->name ?? 'Global',
-            'url' => Url::to(['/field/view', 'id' => $field->id]),
+            'url' => Url::to(['/field/view', 'id' => $field->id, 'p' => $field->project_id]),
         ], $fields);
     }
 
@@ -95,7 +95,7 @@ class QuickSearchService extends Component
             'type' => 'template',
             'name' => $template->name,
             'subtitle' => $template->project->name ?? '',
-            'url' => Url::to(['/prompt-template/view', 'id' => $template->id]),
+            'url' => Url::to(['/prompt-template/view', 'id' => $template->id, 'p' => $template->project_id]),
         ], $templates);
     }
 
@@ -115,7 +115,7 @@ class QuickSearchService extends Component
             'type' => 'instance',
             'name' => $instance->label ?: 'Generated #' . $instance->id,
             'subtitle' => $instance->template->project->name ?? '',
-            'url' => Url::to(['/prompt-instance/view', 'id' => $instance->id]),
+            'url' => Url::to(['/prompt-instance/view', 'id' => $instance->id, 'p' => $instance->template->project_id]),
         ], $instances);
     }
 
@@ -135,7 +135,7 @@ class QuickSearchService extends Component
             'type' => 'scratchPad',
             'name' => $pad->name,
             'subtitle' => $pad->project->name ?? 'No project',
-            'url' => Url::to(['/scratch-pad/view', 'id' => $pad->id]),
+            'url' => Url::to(['/scratch-pad/view', 'id' => $pad->id, 'p' => $pad->project_id]),
         ], $scratchPads);
     }
 

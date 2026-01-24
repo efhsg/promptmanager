@@ -91,10 +91,11 @@ Per `.claude/rules/security.md`:
 
 Per `.claude/rules/testing.md`:
 
-- **Execution:** Relevant tests (or full suite) passed
 - New behavior has tests
 - Test naming follows pattern
 - Mocks via constructor injection
+
+**Note:** Test execution happens in `/finalize-changes`, not here. This phase only checks test coverage and structure.
 
 #### 7. Frontend/UI
 
@@ -142,10 +143,11 @@ Run only after Phase 1 has no Critical/High/Medium findings. Apply judiciously �
 2. Run `git diff` (or `git diff --staged`) to see specific changes
 3. Read each changed file to understand full context
 4. Load project rules from `.claude/rules/`
-5. **Run Tests:** Determine relevant tests and run them (or full suite if broad changes)
-6. Evaluate each file against Phase 1 checklist
-7. Categorize findings by severity (Critical/High/Medium/Low)
-8. Report findings — stop here if Critical/High/Medium issues exist
+5. Evaluate each file against Phase 1 checklist
+6. Categorize findings by severity (Critical/High/Medium/Low)
+7. Report findings — stop here if Critical/High/Medium issues exist
+
+**Note:** Test execution happens in `/finalize-changes`, not during review.
 
 ### Phase 2 Algorithm
 
@@ -161,7 +163,7 @@ Only run after Phase 1 issues are resolved:
 
 | Level | Criteria | Action |
 |-------|----------|--------|
-| **Critical** | Security vulnerabilities, data corruption risks, breaking changes without migration, **Test Failures** | Must fix before merge |
+| **Critical** | Security vulnerabilities, data corruption risks, breaking changes without migration | Must fix before merge |
 | **High** | Bugs, incorrect logic, missing error handling, violated architecture rules | Should fix before merge |
 | **Medium** | Missing tests, code style violations, suboptimal patterns | Recommended to fix |
 | **Low** | Minor improvements, documentation gaps, naming suggestions | Consider fixing |
@@ -172,7 +174,6 @@ Only run after Phase 1 issues are resolved:
 ## Review Summary
 
 **Files reviewed:** N files
-**Tests ran:** [List of suites/files ran]
 **Phase:** 1 (Defect Detection) | 2 (Design Refinement)
 **Status:** PASS | PASS WITH COMMENTS | NEEDS CHANGES
 
@@ -208,7 +209,6 @@ Only run after Phase 1 issues are resolved:
 - All changed files reviewed against Phase 1 checklist
 - Findings reference specific file and line numbers
 - Each finding has clear, actionable description
-- **Tests executed and results incorporated into review**
 - Overall status reflects severity of findings
 - Phase 2 only runs when Phase 1 has no Critical/High/Medium issues
 - Output follows the required format
