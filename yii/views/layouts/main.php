@@ -139,30 +139,31 @@ NavBar::end();
 <?php endif; ?>
 
 <script>
-function updateProjectInUrl(projectId) {
-    const url = new URL(window.location.href);
-    if (projectId && parseInt(projectId) > 0) {
-        url.searchParams.set('<?= ProjectContext::URL_PARAM ?>', projectId);
-    } else if (projectId === '<?= ProjectContext::ALL_PROJECTS_ID ?>') {
-        url.searchParams.set('<?= ProjectContext::URL_PARAM ?>', projectId);
-    } else {
-        url.searchParams.delete('<?= ProjectContext::URL_PARAM ?>');
-    }
+(function() {
+    window.updateProjectInUrl = function(projectId) {
+        const url = new URL(window.location.href);
+        if (projectId && parseInt(projectId) > 0) {
+            url.searchParams.set('<?= ProjectContext::URL_PARAM ?>', projectId);
+        } else if (projectId === '<?= ProjectContext::ALL_PROJECTS_ID ?>') {
+            url.searchParams.set('<?= ProjectContext::URL_PARAM ?>', projectId);
+        } else {
+            url.searchParams.delete('<?= ProjectContext::URL_PARAM ?>');
+        }
 
-    // Save preference via AJAX (fire-and-forget), then redirect
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    fetch('<?= \yii\helpers\Url::to(['/project/set-current']) ?>', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRF-Token': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: 'project_id=' + encodeURIComponent(projectId)
-    }).finally(() => {
-        window.location.href = url.toString();
-    });
-}
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        fetch('<?= \yii\helpers\Url::to(['/project/set-current']) ?>', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-Token': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: 'project_id=' + encodeURIComponent(projectId)
+        })
+        .catch(function(err) { console.error('Failed to save project preference:', err); })
+        .finally(function() { window.location.href = url.toString(); });
+    };
+})();
 </script>
 
 <?php $this->endContent(); ?>
