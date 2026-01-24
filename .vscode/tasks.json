@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Open in Chrome",
+            "type": "process",
+            "command": "google-chrome",
+            "windows": {
+                "command": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+            },
+            "args": [
+                "${file}"
+            ],
+            "problemMatcher": [],
+            "group": "none"
+        }
+    ]
+}
