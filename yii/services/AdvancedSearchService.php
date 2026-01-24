@@ -104,6 +104,7 @@ class AdvancedSearchService extends Component
         } else {
             $query->searchByTerm($term);
         }
+        $query->prioritizeNameMatch($term);
 
         return array_map(fn(Context $context) => [
             'id' => $context->id,
@@ -129,6 +130,7 @@ class AdvancedSearchService extends Component
         } else {
             $query->searchByTerm($term);
         }
+        $query->prioritizeNameMatch($term);
 
         return array_map(fn(Field $field) => [
             'id' => $field->id,
@@ -154,6 +156,7 @@ class AdvancedSearchService extends Component
         } else {
             $query->searchByTerm($term);
         }
+        $query->prioritizeNameMatch($term);
 
         return array_map(fn(PromptTemplate $template) => [
             'id' => $template->id,
@@ -179,6 +182,7 @@ class AdvancedSearchService extends Component
         } else {
             $query->searchByTerm($term);
         }
+        $query->prioritizeNameMatch($term);
 
         return array_map(fn(PromptInstance $instance) => [
             'id' => $instance->id,
@@ -204,6 +208,7 @@ class AdvancedSearchService extends Component
         } else {
             $query->searchByTerm($term);
         }
+        $query->prioritizeNameMatch($term);
 
         return array_map(fn(ScratchPad $pad) => [
             'id' => $pad->id,

@@ -4,6 +4,7 @@ namespace app\models\query;
 
 use app\models\Field;
 use yii\db\ActiveQuery;
+use yii\db\Expression;
 
 /**
  * @extends ActiveQuery<Field>
@@ -22,6 +23,20 @@ class FieldQuery extends ActiveQuery
             ['like', Field::tableName() . '.label', $term],
             ['like', Field::tableName() . '.content', $term],
         ]);
+    }
+
+    /**
+     * Orders results so name/label matches appear before content-only matches.
+     */
+    public function prioritizeNameMatch(string $term): self
+    {
+        $tableName = Field::tableName();
+        $escapedTerm = '%' . addcslashes($term, '%_\\') . '%';
+
+        return $this->orderBy(new Expression(
+            "CASE WHEN {$tableName}.name LIKE :nameTerm OR {$tableName}.label LIKE :nameTerm THEN 0 ELSE 1 END ASC, {$tableName}.updated_at DESC",
+            [':nameTerm' => $escapedTerm]
+        ));
     }
 
     public function searchByKeywords(array $keywords): self

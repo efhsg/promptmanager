@@ -4,6 +4,7 @@ namespace app\models\query;
 
 use app\models\PromptTemplate;
 use yii\db\ActiveQuery;
+use yii\db\Expression;
 
 /**
  * Query class for PromptTemplate model, encapsulating reusable query conditions.
@@ -25,6 +26,19 @@ class PromptTemplateQuery extends ActiveQuery
             ['like', 'prompt_template.name', $term],
             ['like', 'prompt_template.template_body', $term],
         ]);
+    }
+
+    /**
+     * Orders results so name matches appear before body-only matches.
+     */
+    public function prioritizeNameMatch(string $term): self
+    {
+        $escapedTerm = '%' . addcslashes($term, '%_\\') . '%';
+
+        return $this->orderBy(new Expression(
+            "CASE WHEN prompt_template.name LIKE :nameTerm THEN 0 ELSE 1 END ASC, prompt_template.updated_at DESC",
+            [':nameTerm' => $escapedTerm]
+        ));
     }
 
     public function searchByKeywords(array $keywords): self

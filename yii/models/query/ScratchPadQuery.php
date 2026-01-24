@@ -4,6 +4,7 @@ namespace app\models\query;
 
 use app\models\ScratchPad;
 use yii\db\ActiveQuery;
+use yii\db\Expression;
 
 /**
  * @extends ActiveQuery<ScratchPad>
@@ -50,6 +51,20 @@ class ScratchPadQuery extends ActiveQuery
             ['like', ScratchPad::tableName() . '.name', $term],
             ['like', ScratchPad::tableName() . '.content', $term],
         ]);
+    }
+
+    /**
+     * Orders results so name matches appear before content-only matches.
+     */
+    public function prioritizeNameMatch(string $term): self
+    {
+        $tableName = ScratchPad::tableName();
+        $escapedTerm = '%' . addcslashes($term, '%_\\') . '%';
+
+        return $this->orderBy(new Expression(
+            "CASE WHEN {$tableName}.name LIKE :nameTerm THEN 0 ELSE 1 END ASC, {$tableName}.updated_at DESC",
+            [':nameTerm' => $escapedTerm]
+        ));
     }
 
     public function searchByKeywords(array $keywords): self

@@ -4,6 +4,7 @@ namespace app\models\query;
 
 use app\models\PromptInstance;
 use yii\db\ActiveQuery;
+use yii\db\Expression;
 
 /**
  * Query class for PromptInstance model, encapsulating reusable query conditions.
@@ -25,6 +26,19 @@ class PromptInstanceQuery extends ActiveQuery
             ['like', 'prompt_instance.label', $term],
             ['like', 'prompt_instance.final_prompt', $term],
         ]);
+    }
+
+    /**
+     * Orders results so label matches appear before content-only matches.
+     */
+    public function prioritizeNameMatch(string $term): self
+    {
+        $escapedTerm = '%' . addcslashes($term, '%_\\') . '%';
+
+        return $this->orderBy(new Expression(
+            "CASE WHEN prompt_instance.label LIKE :nameTerm THEN 0 ELSE 1 END ASC, prompt_instance.created_at DESC",
+            [':nameTerm' => $escapedTerm]
+        ));
     }
 
     public function searchByKeywords(array $keywords): self

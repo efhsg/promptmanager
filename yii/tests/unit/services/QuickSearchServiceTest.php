@@ -229,4 +229,28 @@ class QuickSearchServiceTest extends Unit
         $this->assertNotEmpty($result['fields']);
         $this->assertSame('External Field', $result['fields'][0]['name']);
     }
+
+    public function testSearchPrioritizesNameMatchesOverContentMatches(): void
+    {
+        $contentMatchPad = new ScratchPad();
+        $contentMatchPad->user_id = 100;
+        $contentMatchPad->name = 'First Pad';
+        $contentMatchPad->content = 'Contains PRIORITY keyword in content';
+        $contentMatchPad->save(false);
+
+        $nameMatchPad = new ScratchPad();
+        $nameMatchPad->user_id = 100;
+        $nameMatchPad->name = 'PRIORITY Match in Name';
+        $nameMatchPad->content = 'No keyword here';
+        $nameMatchPad->save(false);
+
+        $result = $this->service->search('PRIORITY', 100, 5);
+
+        $this->assertCount(2, $result['scratchPads']);
+        $this->assertSame('PRIORITY Match in Name', $result['scratchPads'][0]['name']);
+        $this->assertSame('First Pad', $result['scratchPads'][1]['name']);
+
+        $contentMatchPad->delete();
+        $nameMatchPad->delete();
+    }
 }

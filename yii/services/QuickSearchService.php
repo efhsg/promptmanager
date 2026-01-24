@@ -47,6 +47,7 @@ class QuickSearchService extends Component
         $contexts = Context::find()
             ->forUser($userId)
             ->searchByTerm($term)
+            ->prioritizeNameMatch($term)
             ->limit($limit)
             ->all();
 
@@ -67,6 +68,7 @@ class QuickSearchService extends Component
         $fields = Field::find()
             ->forUser($userId)
             ->searchByTerm($term)
+            ->prioritizeNameMatch($term)
             ->limit($limit)
             ->all();
 
@@ -87,6 +89,7 @@ class QuickSearchService extends Component
         $templates = PromptTemplate::find()
             ->forUser($userId)
             ->searchByTerm($term)
+            ->prioritizeNameMatch($term)
             ->limit($limit)
             ->all();
 
@@ -107,6 +110,7 @@ class QuickSearchService extends Component
         $instances = PromptInstance::find()
             ->forUser($userId)
             ->searchByTerm($term)
+            ->prioritizeNameMatch($term)
             ->limit($limit)
             ->all();
 
@@ -127,6 +131,7 @@ class QuickSearchService extends Component
         $scratchPads = ScratchPad::find()
             ->forUser($userId)
             ->searchByTerm($term)
+            ->prioritizeNameMatch($term)
             ->limit($limit)
             ->all();
 

@@ -5,6 +5,7 @@ namespace app\models\query;
 use app\models\Context;
 use yii\db\ActiveQuery;
 use yii\db\Query;
+use yii\db\Expression;
 
 /**
  * @extends ActiveQuery<Context>
@@ -83,6 +84,20 @@ class ContextQuery extends ActiveQuery
             ['like', Context::tableName() . '.name', $term],
             ['like', Context::tableName() . '.content', $term],
         ]);
+    }
+
+    /**
+     * Orders results so name matches appear before content-only matches.
+     */
+    public function prioritizeNameMatch(string $term): self
+    {
+        $tableName = Context::tableName();
+        $escapedTerm = '%' . addcslashes($term, '%_\\') . '%';
+
+        return $this->orderBy(new Expression(
+            "CASE WHEN {$tableName}.name LIKE :nameTerm THEN 0 ELSE 1 END ASC, {$tableName}.updated_at DESC",
+            [':nameTerm' => $escapedTerm]
+        ));
     }
 
     public function searchByKeywords(array $keywords): self
