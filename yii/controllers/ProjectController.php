@@ -194,6 +194,9 @@ class ProjectController extends Controller
     /**
      * Sets the current project in the user's context.
      *
+     * For AJAX requests, returns JSON and does not redirect.
+     * For regular POST, redirects to referrer (backwards compatibility).
+     *
      * @return Response
      * @throws StaleObjectException
      * @throws Throwable
@@ -202,6 +205,10 @@ class ProjectController extends Controller
     {
         $projectId = Yii::$app->request->post('project_id');
         $this->projectContext->setCurrentProject((int) $projectId);
+
+        if (Yii::$app->request->isAjax) {
+            return $this->asJson(['success' => true]);
+        }
 
         return $this->redirect(Yii::$app->request->referrer ?: ['index']);
     }

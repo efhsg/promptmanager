@@ -14,6 +14,7 @@ use app\services\PromptTemplateService;
 use app\services\UserPreferenceService;
 use yii\symfonymailer\Mailer;
 use yii\console\Application;
+use app\components\ProjectUrlManager;
 
 $params = require __DIR__ . '/params.php';
 
@@ -69,6 +70,7 @@ $config = [
             'defaultTimeZone' => 'Europe/Amsterdam',
         ],
         'urlManager' => [
+            'class' => ProjectUrlManager::class,
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [

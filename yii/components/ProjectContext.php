@@ -16,11 +16,17 @@ use yii\web\User as WebUser;
 
 /**
  * Manages the "current project" context in session and user preferences.
+ *
+ * Priority order for determining current project:
+ * 1. URL parameter (?p=X) - enables multi-tab support
+ * 2. Session value
+ * 3. User preference (persisted default)
  */
 class ProjectContext extends BaseObject
 {
     public const ALL_PROJECTS_ID = -1;
     public const NO_PROJECT_ID = 0;
+    public const URL_PARAM = 'p';
     private const PREF_KEY = 'default_project_id';
     private const SESSION_KEY = 'currentProjectId';
 
@@ -45,13 +51,33 @@ class ProjectContext extends BaseObject
     }
 
     /**
-     * Retrieve the current project from session or user preferences and cache it in session.
+     * Get project ID from URL parameter.
+     */
+    public function getCurrentProjectIdFromUrl(): ?int
+    {
+        if (Yii::$app->request->isConsoleRequest) {
+            return null;
+        }
+        $projectId = Yii::$app->request->get(self::URL_PARAM);
+        return $projectId !== null ? (int) $projectId : null;
+    }
+
+    /**
+     * Get the effective project ID, prioritizing URL over session.
+     */
+    public function getEffectiveProjectId(): ?int
+    {
+        return $this->getCurrentProjectIdFromUrl() ?? $this->getSessionProjectId();
+    }
+
+    /**
+     * Retrieve the current project from URL, session or user preferences.
      *
      * @return array|ActiveRecord|null
      */
     public function getCurrentProject(): array|ActiveRecord|null
     {
-        $projectId = $this->getSessionProjectId();
+        $projectId = $this->getEffectiveProjectId();
 
         if ($projectId === self::ALL_PROJECTS_ID || $projectId === self::NO_PROJECT_ID) {
             return null;
@@ -134,7 +160,7 @@ class ProjectContext extends BaseObject
      */
     public function isAllProjectsContext(): bool
     {
-        return $this->getSessionProjectId() === self::ALL_PROJECTS_ID;
+        return $this->getEffectiveProjectId() === self::ALL_PROJECTS_ID;
     }
 
     /**
@@ -142,7 +168,7 @@ class ProjectContext extends BaseObject
      */
     public function isNoProjectContext(): bool
     {
-        return $this->getSessionProjectId() === self::NO_PROJECT_ID;
+        return $this->getEffectiveProjectId() === self::NO_PROJECT_ID;
     }
 
     /**
