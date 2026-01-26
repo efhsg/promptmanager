@@ -599,3 +599,18 @@ a.desc:after {
     background-color: #fff;
 }
 
+/* Project context selector - always visible in navbar */
+.project-context-wrapper {
+    position: fixed;
+    top: 14px;
+    z-index: 1031;
+}
+
+/* Mobile: centered horizontally */
+@media (max-width: 1199.98px) {
+    .project-context-wrapper {
+        left: 50%;
+        transform: translateX(-50%);
+    }
+}
+

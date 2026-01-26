@@ -57,29 +57,10 @@ echo Nav::widget([
         [
             'label' => 'Scratch Pads',
             'url' => ['/scratch-pad/index'],
+            'options' => ['id' => 'nav-scratch-pads'],
         ],
     ],
 ]);
-
-if (!Yii::$app->user->isGuest) {
-    $projectList = Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id);
-    $projectContext = Yii::$app->projectContext;
-    $currentProject = $projectContext->getCurrentProject();
-    $currentProjectId = $projectContext->isAllProjectsContext()
-        ? ProjectContext::ALL_PROJECTS_ID
-        : $currentProject?->id;
-
-    $projectListWithAll = [ProjectContext::ALL_PROJECTS_ID => 'All Projects'] + $projectList;
-
-    echo '<div class="d-flex align-items-center ms-3 me-2">';
-    echo Html::dropDownList('project_id', $currentProjectId, $projectListWithAll, [
-        'class' => 'form-select me-2',
-        'prompt' => 'No Project',
-        'id' => 'project-context-selector',
-        'onchange' => 'updateProjectInUrl(this.value)',
-    ]);
-    echo '</div>';
-}
 
 if (!Yii::$app->user->isGuest) {
     echo '<div class="quick-search-container ms-auto me-3">';
@@ -112,6 +93,26 @@ echo Nav::widget([
 ]);
 
 NavBar::end();
+
+if (!Yii::$app->user->isGuest) {
+    $projectList = Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id);
+    $projectContext = Yii::$app->projectContext;
+    $currentProject = $projectContext->getCurrentProject();
+    $currentProjectId = $projectContext->isAllProjectsContext()
+        ? ProjectContext::ALL_PROJECTS_ID
+        : $currentProject?->id;
+
+    $projectListWithAll = [ProjectContext::ALL_PROJECTS_ID => 'All Projects'] + $projectList;
+
+    echo '<div class="project-context-wrapper">';
+    echo Html::dropDownList('project_id', $currentProjectId, $projectListWithAll, [
+        'class' => 'form-select',
+        'prompt' => 'No Project',
+        'id' => 'project-context-selector',
+        'onchange' => 'updateProjectInUrl(this.value)',
+    ]);
+    echo '</div>';
+}
 ?>
     </header>
 
@@ -154,6 +155,32 @@ NavBar::end();
         .catch(function(err) { console.error('Failed to save project preference:', err); })
         .finally(function() { window.location.href = url.toString(); });
     };
+
+    function positionProjectDropdown() {
+        const wrapper = document.querySelector('.project-context-wrapper');
+        if (!wrapper) return;
+
+        const isDesktop = window.innerWidth >= 1200; // Bootstrap xl breakpoint
+        if (isDesktop) {
+            const scratchPadsLink = document.querySelector('#nav-scratch-pads a');
+            if (scratchPadsLink) {
+                const linkRect = scratchPadsLink.getBoundingClientRect();
+                const wrapperHeight = wrapper.offsetHeight;
+                const linkCenterY = linkRect.top + (linkRect.height / 2);
+                wrapper.style.left = (linkRect.right + 20) + 'px';
+                wrapper.style.top = (linkCenterY - (wrapperHeight / 2)) + 'px';
+                wrapper.style.transform = 'none';
+            }
+        } else {
+            wrapper.style.left = '';
+            wrapper.style.top = '';
+            wrapper.style.transform = '';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', positionProjectDropdown);
+    window.addEventListener('load', positionProjectDropdown);
+    window.addEventListener('resize', positionProjectDropdown);
 })();
 </script>
 
