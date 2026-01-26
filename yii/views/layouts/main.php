@@ -55,17 +55,8 @@ echo Nav::widget([
             'url' => ['/prompt-instance/create'],
         ],
         [
-            'label' => 'Scratch Pad',
-            'items' => [
-                [
-                    'label' => 'Create',
-                    'url' => ['/scratch-pad/create'],
-                ],
-                [
-                    'label' => 'Saved',
-                    'url' => ['/scratch-pad/index'],
-                ],
-            ],
+            'label' => 'Scratch Pads',
+            'url' => ['/scratch-pad/index'],
         ],
     ],
 ]);

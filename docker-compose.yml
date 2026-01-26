@@ -24,6 +24,7 @@ services:
     volumes:
       - .:/var/www/html
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
+      - ${YTX_PATH:-./ytx}:/opt/ytx:ro
     depends_on:
       - pma_mysql
     networks:

@@ -12,6 +12,7 @@ use yii\helpers\Url;
 /** @var yii\data\ActiveDataProvider $dataProvider */
 /** @var app\models\Project|null $currentProject */
 /** @var bool $isAllProjects */
+/** @var array $projectList */
 
 $this->title = 'Saved Scratch Pads';
 $this->params['breadcrumbs'][] = $this->title;
@@ -21,7 +22,24 @@ $this->params['breadcrumbs'][] = $this->title;
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
-        <?= Html::a('New Scratch Pad', ['create'], ['class' => 'btn btn-primary']) ?>
+        <div class="btn-group">
+            <?= Html::a('New Scratch Pad', ['create'], ['class' => 'btn btn-primary']) ?>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#youtubeImportModal">
+                        <i class="bi bi-youtube me-2"></i>From YouTube
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#scratchPadImportModal">
+                        <i class="bi bi-file-earmark-text me-2"></i>From Markdown
+                    </a>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <?php if ($isAllProjects): ?>
@@ -84,3 +102,10 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
     </div>
 </div>
+
+<?= $this->render('_youtube-import-modal', [
+    'currentProject' => $currentProject,
+    'projectList' => $projectList,
+]) ?>
+
+<?= $this->render('_import-modal') ?>

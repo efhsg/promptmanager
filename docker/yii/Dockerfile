@@ -30,7 +30,11 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update \
  && apt-get install -y iputils-ping \
  && apt-get install -y netcat-openbsd \
+ && apt-get install -y python3 python3-pip python3-venv \
  && rm -rf /var/lib/apt/lists/*
+
+# Install youtube-transcript-api for YouTube transcript import
+RUN pip3 install --break-system-packages youtube-transcript-api
 
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \

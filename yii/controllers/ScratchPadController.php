@@ -6,12 +6,15 @@ namespace app\controllers;
 
 use app\components\ProjectContext;
 use app\helpers\MarkdownDetector;
+use app\models\Project;
 use app\models\ScratchPad;
 use app\models\ScratchPadSearch;
+use app\models\YouTubeImportForm;
 use app\services\CopyFormatConverter;
 use app\services\copyformat\MarkdownParser;
 use app\services\copyformat\QuillDeltaWriter;
 use app\services\EntityPermissionService;
+use app\services\YouTubeTranscriptService;
 use common\enums\CopyType;
 use Throwable;
 use Yii;
@@ -22,21 +25,25 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use yii\web\UploadedFile;
+use RuntimeException;
 
 class ScratchPadController extends Controller
 {
     private ProjectContext $projectContext;
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
+    private readonly YouTubeTranscriptService $youtubeService;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
+        YouTubeTranscriptService $youtubeService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
+        $this->youtubeService = $youtubeService;
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('scratchPad');
     }
 
@@ -53,7 +60,7 @@ class ScratchPadController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index', 'create', 'import-markdown', 'import-text', 'convert-format', 'save'],
+                        'actions' => ['index', 'create', 'import-markdown', 'import-text', 'import-youtube', 'convert-format', 'save'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -90,6 +97,7 @@ class ScratchPadController extends Controller
             'dataProvider' => $dataProvider,
             'currentProject' => $currentProject,
             'isAllProjects' => $isAllProjects,
+            'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
         ]);
     }
 
@@ -335,6 +343,59 @@ class ScratchPadController extends Controller
             'success' => true,
             'content' => $convertedContent,
         ];
+    }
+
+    public function actionImportYoutube(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'message' => 'Invalid request method.'];
+        }
+
+        $rawBody = Yii::$app->request->rawBody;
+        $data = json_decode($rawBody, true);
+
+        if ($data === null) {
+            return ['success' => false, 'message' => 'Invalid JSON data.'];
+        }
+
+        $form = new YouTubeImportForm();
+        if (!$form->load($data, '') || !$form->validate()) {
+            return ['success' => false, 'errors' => $form->getErrors()];
+        }
+
+        if ($form->project_id !== null) {
+            $project = Project::find()->findUserProject($form->project_id, Yii::$app->user->id);
+            if ($project === null) {
+                return ['success' => false, 'errors' => ['project_id' => ['Invalid project selected.']]];
+            }
+        }
+
+        try {
+            $transcriptData = $this->youtubeService->fetchTranscript($form->videoId);
+            $deltaJson = $this->youtubeService->convertToQuillDelta($transcriptData);
+            $title = $this->youtubeService->getTitle($transcriptData);
+
+            $model = new ScratchPad([
+                'user_id' => Yii::$app->user->id,
+                'project_id' => $form->project_id,
+                'name' => $title,
+                'content' => $deltaJson,
+            ]);
+
+            if ($model->save()) {
+                return [
+                    'success' => true,
+                    'id' => $model->id,
+                    'message' => 'YouTube transcript imported successfully.',
+                ];
+            }
+
+            return ['success' => false, 'errors' => $model->getErrors()];
+        } catch (RuntimeException $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
     }
 
     /**
