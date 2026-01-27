@@ -9,100 +9,19 @@
 
 ## Key Paths
 
-| Path | Contents |
-|------|----------|
-| `yii/controllers/` | Application controllers |
-| `yii/services/` | Business logic services |
-| `yii/models/` | ActiveRecord models |
-| `yii/models/query/` | Query classes |
-| `yii/views/` | View templates |
-| `yii/migrations/` | Database migrations |
-| `yii/tests/` | Codeception tests |
-| `yii/modules/identity/` | Auth module |
-| `yii/common/enums/` | Enums (CopyType) |
-| `yii/common/constants/` | Constants (FieldConstants) |
-| `yii/rbac/` | RBAC rules |
-| `yii/widgets/` | Custom widgets |
-| `yii/presenters/` | Presenter classes |
-| `yii/components/` | Application components |
-| `yii/helpers/` | Helper classes |
-| `npm/` | Frontend build scripts |
+See `.claude/config/project.md` → File Structure for the complete path reference.
 
-## Controller Patterns
+## Controllers & AJAX
 
-- Return type: `Response|string` for standard actions.
-- Use `$this->redirect()` after successful POST; render form on validation failure.
-- Access control via `behaviors()` with RBAC owner rules.
-- Flash messages: `Yii::$app->session->setFlash('success', '...')` after successful operations.
-
-## AJAX Responses
-
-- Success: `$this->asJson(['success' => true, 'data' => ...])`.
-- Error: `$this->asJson(['success' => false, 'message' => '...'])`.
-- Use `Yii::$app->request->isAjax` to detect AJAX requests.
+See `skills/controller-action.md` for:
+- Controller templates and patterns
+- AJAX response format
+- RBAC configuration
+- Action templates (create, update, delete, AJAX)
 
 ## Query Classes
 
-Use query class methods instead of inline `->andWhere()`. Add new methods to Query classes when needed.
-
-### Location
-
-Query classes live in `models/query/` and extend `ActiveQuery`.
-
-### Naming Conventions
-
-| Pattern | Use When | Example |
-|---------|----------|---------|
-| `active()` | Filter by status | `->active()` |
-| `withX($x)` | Filter by relation/value | `->withProject($projectId)` |
-| `hasX()` | Filter for non-null | `->hasContent()` |
-| `inX($values)` | Filter by set membership | `->inStatus(['draft', 'active'])` |
-| `byX($x)` | Filter by ownership/key | `->byUser($userId)` |
-| `alphabetical()` | Sort by name A-Z | `->alphabetical()` |
-| `orderedByX()` | Custom sort order | `->orderedByCreatedAt()` |
-| `latest()` | Most recent first | `->latest()` |
-
-### Structure
-
-```php
-class ProjectQuery extends ActiveQuery
-{
-    public function byUser(int $userId): static
-    {
-        return $this->andWhere(['user_id' => $userId]);
-    }
-
-    public function active(): static
-    {
-        return $this->andWhere(['status' => Project::STATUS_ACTIVE]);
-    }
-
-    public function withLabel(string $label): static
-    {
-        return $this->andWhere(['label' => $label]);
-    }
-
-    public function alphabetical(): static
-    {
-        return $this->orderBy(['name' => SORT_ASC]);
-    }
-}
-```
-
-### Usage
-
-```php
-// Good: chainable, readable
-$projects = Project::find()
-    ->byUser($userId)
-    ->active()
-    ->alphabetical()
-    ->all();
-
-// Bad: inline conditions (avoid)
-$projects = Project::find()
-    ->andWhere(['user_id' => $userId])
-    ->andWhere(['status' => 'active'])
-    ->orderBy(['name' => SORT_ASC])
-    ->all();
-```
+See `skills/model.md` → Query Method Naming Conventions for:
+- Query class templates
+- Method naming patterns (`forUser`, `forProject`, `active`, etc.)
+- Usage examples

@@ -336,7 +336,7 @@ class ScratchPadController extends Controller
         }
 
         $project = Project::find()
-            ->byUser($userId)
+            ->forUser($userId)
             ->andWhere(['name' => $projectName])
             ->one();
 

@@ -277,15 +277,57 @@ forUser(int $userId): static
 forProject(?int $projectId): static
 ```
 
+#### PromptTemplateQuery (`yii/models/query/PromptTemplateQuery.php`)
+```php
+forUser(int $userId): self
+forProject(int $projectId): self
+searchByTerm(string $term): self
+searchByKeywords(array $keywords): self
+prioritizeNameMatch(string $term): self
+orderedByName(): self
+```
+
+#### PromptInstanceQuery (`yii/models/query/PromptInstanceQuery.php`)
+```php
+forUser(int $userId): self
+forTemplate(int $templateId): self
+searchByTerm(string $term): self
+searchByKeywords(array $keywords): self
+prioritizeNameMatch(string $term): self
+orderedByCreated(): self
+```
+
 ### Search Models
 
-Search models handle GridView/ListView filtering using `SearchModelTrait`:
+Search models handle GridView/ListView filtering by extending base models:
 - `ProjectSearch` - Filter projects by name, description
 - `ContextSearch` - Filter contexts by project, name
 - `FieldSearch` - Filter fields by project, name, type
 - `PromptTemplateSearch` - Filter templates by project, name
 - `PromptInstanceSearch` - Filter instances by template, label
 - `ScratchPadSearch` - Filter scratch pads by project, name
+
+### Form Models
+
+Form models handle input validation and processing for specific use cases:
+- `PromptInstanceForm` - Form for creating prompt instances with context selection
+- `MarkdownImportForm` - Form for importing markdown files as templates
+- `YouTubeImportForm` - Form for importing YouTube transcripts
+
+### UserPreference (`yii/models/UserPreference.php`)
+Key-value store for user settings.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `id` | int | Primary key |
+| `user_id` | int | Owner reference |
+| `pref_key` | string | Preference key |
+| `pref_value` | string\|null | Preference value |
+| `created_at` | string | Timestamp |
+| `updated_at` | string | Timestamp |
+
+**Relationships:**
+- `belongsTo User`
 
 ### Traits
 
@@ -430,6 +472,60 @@ convertFromPlainText(string $content, CopyType $type): string
 
 ---
 
+### Enums
+
+#### CopyType (`yii/common/enums/CopyType.php`)
+Output format options for copying generated prompts (see CopyFormatConverter above).
+
+#### SearchMode (`yii/common/enums/SearchMode.php`)
+Search mode options for AdvancedSearchService.
+
+| Mode | Value | Description |
+|------|-------|-------------|
+| Phrase | `phrase` | Exact phrase matching |
+| Keywords | `keywords` | Any keyword matching |
+
+---
+
+### AdvancedSearchService (`yii/services/AdvancedSearchService.php`)
+Advanced search with entity type filtering and multiple search modes.
+
+**Responsibilities:**
+- Search across contexts, fields, templates, instances, and scratch pads
+- Support phrase and keyword search modes
+- Filter by entity type
+- Prioritize name matches over content matches
+
+**Key Method:**
+```php
+search(
+    string $term,
+    int $userId,
+    array $types = [],
+    SearchMode $mode = SearchMode::PHRASE,
+    int $limit = 10
+): array
+```
+
+---
+
+### YouTubeTranscriptService (`yii/services/YouTubeTranscriptService.php`)
+Fetches YouTube transcripts using the external ytx.py tool.
+
+**Responsibilities:**
+- Extract video ID from URLs
+- Fetch transcripts via Python script
+- Convert transcript data to Quill Delta format
+
+**Key Methods:**
+```php
+extractVideoId(string $urlOrId): string
+fetchTranscript(string $videoIdOrUrl): array
+convertToQuillDelta(array $transcriptData): string
+```
+
+---
+
 ### Other Services
 
 | Service | Purpose |
@@ -510,6 +606,7 @@ generateAuthKey(): void
 | `PromptTemplateController` | Template CRUD |
 | `PromptInstanceController` | Instance generation and management |
 | `ScratchPadController` | Scratch pad CRUD and content management |
+| `SearchController` | AJAX search endpoints (quick and advanced) |
 
 ### PromptInstanceController Actions
 
@@ -650,24 +747,7 @@ try {
 
 ## 9. Key Paths
 
-| Path | Contents |
-|------|----------|
-| `yii/controllers/` | Application controllers |
-| `yii/services/` | Business logic services |
-| `yii/models/` | ActiveRecord models |
-| `yii/models/query/` | Query classes |
-| `yii/views/` | View templates |
-| `yii/migrations/` | Database migrations |
-| `yii/tests/` | Codeception tests |
-| `yii/modules/identity/` | Auth module |
-| `yii/common/enums/` | Enums (CopyType) |
-| `yii/common/constants/` | Constants (FieldConstants) |
-| `yii/rbac/` | RBAC rules |
-| `yii/widgets/` | Custom widgets |
-| `yii/presenters/` | Presenter classes |
-| `yii/components/` | Application components |
-| `yii/helpers/` | Helper classes |
-| `npm/` | Frontend build scripts |
+See `.claude/config/project.md` → File Structure for the complete path reference.
 
 ---
 

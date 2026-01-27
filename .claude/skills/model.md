@@ -115,16 +115,60 @@ use yii\db\ActiveQuery;
 
 class <ModelName>Query extends ActiveQuery
 {
-    public function byUser(int $userId): static
+    public function forUser(int $userId): static
     {
         return $this->andWhere(['user_id' => $userId]);
+    }
+
+    public function forProject(int $projectId): static
+    {
+        return $this->andWhere(['project_id' => $projectId]);
     }
 
     public function active(): static
     {
         return $this->andWhere(['deleted_at' => null]);
     }
+
+    public function alphabetical(): static
+    {
+        return $this->orderBy(['name' => SORT_ASC]);
+    }
 }
+```
+
+## Query Method Naming Conventions
+
+Use query class methods instead of inline `->andWhere()`. Add new methods to Query classes when needed.
+
+| Pattern | Use When | Example |
+|---------|----------|---------|
+| `forUser($id)` | Filter by user ownership | `->forUser($userId)` |
+| `forProject($id)` | Filter by project | `->forProject($projectId)` |
+| `active()` | Filter by status | `->active()` |
+| `withX($x)` | Filter by relation/value | `->withLabel($label)` |
+| `hasX()` | Filter for non-null | `->hasContent()` |
+| `inX($values)` | Filter by set membership | `->inStatus(['draft', 'active'])` |
+| `alphabetical()` | Sort by name A-Z | `->alphabetical()` |
+| `orderedByX()` | Custom sort order | `->orderedByCreatedAt()` |
+| `latest()` | Most recent first | `->latest()` |
+
+### Usage
+
+```php
+// Good: chainable, readable
+$projects = Project::find()
+    ->forUser($userId)
+    ->active()
+    ->alphabetical()
+    ->all();
+
+// Bad: inline conditions (avoid)
+$projects = Project::find()
+    ->andWhere(['user_id' => $userId])
+    ->andWhere(['status' => 'active'])
+    ->orderBy(['name' => SORT_ASC])
+    ->all();
 ```
 
 ## Key Patterns
