@@ -18,6 +18,30 @@ For every task:
 3. Understand existing patterns in codebase
 4. Plan changes before implementing
 
+## Design Directory per Feature
+
+For complex features, create a design directory:
+
+```
+.claude/design/[feature-name]/
+├── spec.md         # Functional specification
+├── plan.md         # Technical plan
+└── insights.md     # Decisions, edge cases
+```
+
+### Implementation Memory
+
+During longer implementations, track progress:
+
+```
+.claude/design/[feature-name]/impl/
+├── context.md      # Goal, scope, key references
+├── todos.md        # Steps checklist
+└── insights.md     # Findings, deviations
+```
+
+This preserves context across session resets.
+
 ## Migrations
 
 - Use `{{%table_name}}` syntax for table prefix support.
@@ -40,6 +64,7 @@ For every task:
 - Services throw domain-specific exceptions; controllers catch and show user-friendly messages.
 - Never silently swallow exceptions; log or re-throw.
 - Use `Yii::error()` for unexpected failures, `Yii::warning()` for recoverable issues.
+- See `skills/error-handling.md` for detailed patterns.
 
 ## Dependencies
 

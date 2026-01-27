@@ -21,21 +21,24 @@ For commands, paths, and environment: `.claude/config/project.md`
 
 | Skill | Description | Contract |
 |-------|-------------|----------|
-| Model | ActiveRecord model with query class | `skills/model.md` |
+| Model | ActiveRecord model with query class + naming conventions | `skills/model.md` |
 | Service | Business logic service class | `skills/service.md` |
 | Form | Form model with validation | `skills/form.md` |
 | Enum | String-backed enum | `skills/enum.md` |
 | Frontend Design | UI components with Bootstrap/Quill | `skills/frontend-design.md` |
 | Migration | Database migration | `skills/migration.md` |
 | Search | Search model for filtering/listing | `skills/search.md` |
-| Controller Action | Controller action patterns | `skills/controller-action.md` |
+| Controller Action | Controller + AJAX patterns, RBAC config | `skills/controller-action.md` |
 | Test | Unit test with Codeception | `skills/test.md` |
+| Error Handling | Exception types, logging, error patterns | `skills/error-handling.md` |
 
 ### Workflow Skills
 
 | Skill | Description | Contract |
 |-------|-------------|----------|
+| Onboarding | Quick start guide for new sessions | `skills/onboarding.md` |
 | New Branch | Create feature/fix branch | `skills/new-branch.md` |
+| Refactor | Structural improvements without behavior change | `skills/refactor.md` |
 
 ### Validation Skills
 
@@ -59,6 +62,8 @@ Commands are thin executable wrappers that invoke skills:
 | `/new-test` | `skills/test.md` | Create unit test |
 | `/new-tests-staged` | `skills/test.md` | Batch test creation |
 | `/new-branch` | `skills/new-branch.md` | Create feature/fix branch |
+| `/onboarding` | `skills/onboarding.md` | Quick start for new sessions |
+| `/refactor` | `skills/refactor.md` | Refactor code without behavior change |
 | `/check-standards` | (rules-based) | Validate code standards |
 | `/review-changes` | `skills/review-changes.md` | Review code changes |
 | `/audit-config` | (workflow) | Audit config completeness and consistency |

@@ -27,3 +27,9 @@ docker exec pma_yii yii_test migrate --migrationNamespaces=app\\\\migrations --i
 ./linter.sh fix
 ./linter-staged.sh fix
 ```
+
+## Before Any Code Change
+
+1. Read `CLAUDE.md`
+2. Load relevant rules from `.claude/rules/`
+3. Check `.claude/skills/index.md` for applicable skills

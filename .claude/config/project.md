@@ -92,6 +92,7 @@ docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
 | Identity Module | `yii/modules/identity/` |
 | Enums | `yii/common/enums/` |
 | Constants | `yii/common/constants/` |
+| Exceptions | `yii/exceptions/` |
 | RBAC Rules | `yii/rbac/` |
 | Widgets | `yii/widgets/` |
 | Presenters | `yii/presenters/` |

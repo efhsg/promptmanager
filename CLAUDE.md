@@ -53,6 +53,7 @@ Read and follow these files:
 - `.claude/rules/testing.md` — Codeception, coverage requirements
 - `.claude/rules/commits.md` — Commit message format
 - `.claude/rules/workflow.md` — Development process
+- `.claude/rules/skill-routing.md` — Auto-load skills by file/topic
 
 For architecture details, see `.claude/codebase_analysis.md`.
 
@@ -80,38 +81,13 @@ docker exec pma_yii vendor/bin/codecept run unit          # Run tests
 
 ## Slash Commands
 
-Use slash commands to invoke skills:
-
-| Command | Purpose |
-|---------|---------|
-| `/new-model` | Create ActiveRecord model + query class |
-| `/new-service` | Create service class |
-| `/new-form` | Create form model |
-| `/new-enum` | Create string-backed enum |
-| `/new-migration` | Create database migration |
-| `/new-search` | Create search model for filtering |
-| `/new-controller-action` | Add controller action |
-| `/new-test` | Create unit test |
-| `/new-tests-staged` | Create tests for staged PHP classes |
-| `/new-branch` | Create feature or fix branch |
-| `/check-standards` | Validate code against standards |
-| `/review-changes` | Two-phase code review |
-| `/audit-config` | Audit config files for completeness and consistency |
-| `/finalize-changes` | Lint, test, prepare commit |
-| `/cp` | Commit staged changes and push to origin |
-| `/analyze-codebase` | Generate documentation |
-| `/refactor-plan` | Create refactoring plan |
-
-See `.claude/skills/index.md` for full skill documentation.
+See `.claude/skills/index.md` for available commands (`/new-model`, `/new-service`, `/review-changes`, etc.) and their skill contracts.
 
 ## Commits
 
-Commit format: `PREFIX: description` (see `.claude/rules/commits.md`)
+Format: `PREFIX: description` — see `.claude/rules/commits.md` for all prefixes.
 
-**Note:** Claude Code adds `Co-Authored-By` automatically. To follow project rules (no AI attribution):
-- Let Claude Code stage changes (`git add`)
-- Make the commit manually: `git commit -m "PREFIX: description"`
-- Or use `/finalize-changes` which suggests a commit message without committing
+**Note:** Claude Code adds `Co-Authored-By` automatically. Use `/finalize-changes` to get a suggested commit message without auto-committing, then commit manually.
 
 ## Definition of Done
 
