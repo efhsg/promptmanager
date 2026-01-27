@@ -71,6 +71,9 @@ $this->params['breadcrumbs'][] = $model->name;
                                 'class' => 'form-select',
                                 'style' => 'width: auto;',
                             ]) ?>
+                            <button type="button" id="cli-copy-content-btn" class="btn btn-outline-secondary btn-sm" title="Copy as Claude CLI command">
+                                <i class="bi bi-terminal"></i>
+                            </button>
                             <button type="button" id="copy-content-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
                                 <i class="bi bi-clipboard"></i> Copy
                             </button>
@@ -103,6 +106,9 @@ $this->params['breadcrumbs'][] = $model->name;
                                 'class' => 'form-select',
                                 'style' => 'width: auto;',
                             ]) ?>
+                            <button type="button" id="cli-copy-summation-btn" class="btn btn-outline-secondary btn-sm" title="Copy as Claude CLI command">
+                                <i class="bi bi-terminal"></i>
+                            </button>
                             <button type="button" id="copy-summation-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
                                 <i class="bi bi-clipboard"></i> Copy
                             </button>
@@ -128,6 +134,9 @@ $this->params['breadcrumbs'][] = $model->name;
                     'class' => 'form-select',
                     'style' => 'width: auto;',
                 ]) ?>
+                <button type="button" id="cli-copy-content-btn" class="btn btn-outline-secondary btn-sm" title="Copy as Claude CLI command">
+                    <i class="bi bi-terminal"></i>
+                </button>
                 <button type="button" id="copy-content-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
                     <i class="bi bi-clipboard"></i> Copy
                 </button>
@@ -148,7 +157,9 @@ $contentDelta = json_encode($model->content);
 $summationDelta = json_encode($model->summation);
 $script = <<<JS
         window.QuillToolbar.setupCopyButton('copy-content-btn', 'content-copy-format-select', $contentDelta);
+        window.QuillToolbar.setupCliCopyButton('cli-copy-content-btn', 'content-copy-format-select', $contentDelta);
         window.QuillToolbar.setupCopyButton('copy-summation-btn', 'summation-copy-format-select', $summationDelta);
+        window.QuillToolbar.setupCliCopyButton('cli-copy-summation-btn', 'summation-copy-format-select', $summationDelta);
     JS;
 $this->registerJs($script);
 ?>

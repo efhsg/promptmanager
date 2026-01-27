@@ -76,6 +76,10 @@ echo $this->render('_breadcrumbs', [
                                     'aria-label' => 'Copy template content to clipboard',
                                     'copyFormat' => $projectCopyFormat,
                                 ],
+                                'cliCopyButtonOptions' => [
+                                    'class' => 'btn btn-sm position-absolute',
+                                    'style' => 'bottom: 10px; right: 60px;',
+                                ],
                             ]);
                         },
                     ],
