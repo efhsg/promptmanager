@@ -14,11 +14,11 @@ class EntityPermissionService extends Component
     private const CACHE_TAG = 'user_permissions';
     private const RBAC_VERSION_KEY = 'rbac_version';
 
-    private const MODEL_BASED_ACTIONS = ['view', 'update', 'delete', 'renumber'];
+    private const MODEL_BASED_ACTIONS = ['view', 'update', 'delete', 'renumber', 'run-claude'];
 
     /**
      * Returns the permission mapping for the given entity.
-     * The map is cached with a tag dependency.
+     * The map is cached with a tag dependency, but only if complete.
      *
      * @param string $entityName
      * @return array
@@ -26,12 +26,26 @@ class EntityPermissionService extends Component
     public function getActionPermissionMap(string $entityName): array
     {
         $cacheKey = "action_permission_map_$entityName";
-        return Yii::$app->cache->getOrSet(
-            $cacheKey,
-            fn() => $this->buildActionPermissionMap($entityName),
-            self::CACHE_DURATION,
-            new TagDependency(['tags' => [self::CACHE_TAG]])
-        );
+
+        $cached = Yii::$app->cache->get($cacheKey);
+        if ($cached !== false) {
+            return $cached;
+        }
+
+        $map = $this->buildActionPermissionMap($entityName);
+
+        // Only cache if map is non-empty to prevent caching incomplete maps
+        // caused by timing issues with authManager initialization
+        if (!empty($map)) {
+            Yii::$app->cache->set(
+                $cacheKey,
+                $map,
+                self::CACHE_DURATION,
+                new TagDependency(['tags' => [self::CACHE_TAG]])
+            );
+        }
+
+        return $map;
     }
 
     public function isModelBasedAction(string $actionName): bool
@@ -112,10 +126,10 @@ class EntityPermissionService extends Component
      * @param string $entityName
      * @return array
      */
-
     private function buildActionPermissionMap(string $entityName): array
     {
         $map = [];
+        $missingPermissions = [];
 
         $entityConfig = Yii::$app->params['rbac']['entities'][$entityName] ?? [];
         $actionsConfig = $entityConfig['actionPermissionMap'] ?? [];
@@ -123,7 +137,17 @@ class EntityPermissionService extends Component
         foreach ($actionsConfig as $actionKey => $permissionName) {
             if ($this->permissionExists($permissionName)) {
                 $map[$this->camelCaseToHyphen($actionKey)] = $permissionName;
+            } else {
+                $missingPermissions[] = $permissionName;
             }
+        }
+
+        // Log missing permissions for debugging intermittent 403 issues
+        if (!empty($missingPermissions)) {
+            Yii::warning(
+                "Missing RBAC permissions for entity '$entityName': " . implode(', ', $missingPermissions),
+                __METHOD__
+            );
         }
 
         return $map;
