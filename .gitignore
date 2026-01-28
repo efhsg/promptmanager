@@ -7,3 +7,6 @@ trash/
 /wip/
 .php-cs-fixer.cache
 scripts/backup.log
+
+# Managed Claude workspaces (generated at runtime)
+yii/storage/projects/

@@ -6,8 +6,10 @@ use app\models\query\ProjectQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use common\enums\CopyType;
+use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
+use Throwable;
 
 /**
  * Class Project
@@ -23,6 +25,8 @@ use yii\db\ActiveRecord;
  * @property string|null $allowed_file_extensions
  * @property string|null $blacklisted_directories
  * @property string $prompt_instance_copy_format
+ * @property string|null $claude_options
+ * @property string|null $claude_context
  * @property string|null $label
  * @property string $created_at
  * @property string $updated_at
@@ -91,6 +95,8 @@ class Project extends ActiveRecord
             [['prompt_instance_copy_format'], 'required'],
             [['prompt_instance_copy_format'], 'string', 'max' => 32],
             [['prompt_instance_copy_format'], 'in', 'range' => CopyType::values()],
+            [['claude_options'], 'safe'],
+            [['claude_context'], 'string'],
             [['label'], 'string', 'max' => 64],
             [
                 ['label'],
@@ -130,6 +136,8 @@ class Project extends ActiveRecord
             'allowed_file_extensions' => 'Allowed File Extensions',
             'blacklisted_directories' => 'Blacklisted Directories',
             'prompt_instance_copy_format' => 'Prompt Instance Copy Format',
+            'claude_options' => 'Claude CLI Options',
+            'claude_context' => 'Claude Project Context',
             'label' => 'Label',
             'linkedProjectIds' => 'Linked Projects',
             'created_at' => 'Created At',
@@ -297,6 +305,47 @@ class Project extends ActiveRecord
         return CopyType::labels();
     }
 
+    public function getClaudeOptions(): array
+    {
+        if (empty($this->claude_options)) {
+            return [];
+        }
+        if (is_string($this->claude_options)) {
+            return json_decode($this->claude_options, true) ?? [];
+        }
+        return $this->claude_options;
+    }
+
+    public function setClaudeOptions(array|string|null $value): void
+    {
+        if (is_array($value)) {
+            $value = array_filter($value, fn($v) => $v !== null && $v !== '');
+            $this->claude_options = empty($value) ? null : json_encode($value);
+        } else {
+            $this->claude_options = $value;
+        }
+    }
+
+    public function getClaudeOption(string $key, mixed $default = null): mixed
+    {
+        return $this->getClaudeOptions()[$key] ?? $default;
+    }
+
+    public function getClaudeContext(): ?string
+    {
+        return $this->claude_context;
+    }
+
+    public function setClaudeContext(?string $value): void
+    {
+        $this->claude_context = $value === '' ? null : $value;
+    }
+
+    public function hasClaudeContext(): bool
+    {
+        return $this->claude_context !== null && trim($this->claude_context) !== '';
+    }
+
     public function getPromptInstanceCopyFormatEnum(): CopyType
     {
         return CopyType::tryFrom((string) $this->prompt_instance_copy_format) ?? CopyType::MD;
@@ -444,5 +493,40 @@ class Project extends ActiveRecord
         $this->handleTimestamps($insert);
 
         return true;
+    }
+
+    public function afterSave($insert, $changedAttributes): void
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        // Fields that affect Claude workspace configuration
+        $relevantFields = [
+            'claude_context',
+            'claude_options',
+            'name',
+            'allowed_file_extensions',
+            'blacklisted_directories',
+        ];
+
+        $shouldSync = $insert || array_intersect_key($changedAttributes, array_flip($relevantFields)) !== [];
+
+        if ($shouldSync) {
+            try {
+                Yii::$app->claudeWorkspaceService->syncConfig($this);
+            } catch (Throwable $e) {
+                Yii::error("Failed to sync Claude workspace for project {$this->id}: {$e->getMessage()}", 'application');
+            }
+        }
+    }
+
+    public function afterDelete(): void
+    {
+        parent::afterDelete();
+
+        try {
+            Yii::$app->claudeWorkspaceService->deleteWorkspace($this);
+        } catch (Throwable $e) {
+            Yii::error("Failed to delete Claude workspace for project {$this->id}: {$e->getMessage()}", 'application');
+        }
     }
 }

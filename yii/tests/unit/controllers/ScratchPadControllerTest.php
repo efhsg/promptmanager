@@ -6,12 +6,13 @@ use app\controllers\ScratchPadController;
 use app\models\Project;
 use app\models\ScratchPad;
 use app\modules\identity\models\User;
+use app\services\ClaudeCliService;
 use app\services\EntityPermissionService;
 use app\services\YouTubeTranscriptService;
 use Codeception\Test\Unit;
 use RuntimeException;
 use Yii;
-use yii\web\Request;
+use ReflectionClass;
 
 class ScratchPadControllerTest extends Unit
 {
@@ -167,12 +168,14 @@ class ScratchPadControllerTest extends Unit
     private function createController(YouTubeTranscriptService $youtubeService): ScratchPadController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
+        $claudeCliService = new ClaudeCliService();
 
         return new ScratchPadController(
             'scratch-pad',
             Yii::$app,
             $permissionService,
-            $youtubeService
+            $youtubeService,
+            $claudeCliService
         );
     }
 
@@ -205,7 +208,7 @@ class ScratchPadControllerTest extends Unit
     private function mockJsonRequest(array $data): void
     {
         $request = Yii::$app->request;
-        $reflection = new \ReflectionClass($request);
+        $reflection = new ReflectionClass($request);
 
         $rawBodyProperty = $reflection->getProperty('_rawBody');
         $rawBodyProperty->setAccessible(true);
@@ -213,5 +216,134 @@ class ScratchPadControllerTest extends Unit
 
         // Mock isPost
         $_SERVER['REQUEST_METHOD'] = 'POST';
+    }
+
+    public function testRunClaudeSucceedsWithValidScratchPad(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello Claude\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest(['permissionMode' => 'plan']);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')->willReturn('Hello Claude');
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => true,
+            'output' => 'Claude response here',
+            'error' => '',
+            'exitCode' => 0,
+            'cost_usd' => 0.01,
+            'duration_ms' => 5000,
+            'configSource' => 'managed_workspace',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('Claude response here', $result['output']);
+        $this->assertSame(0.01, $result['cost_usd']);
+    }
+
+    public function testRunClaudeReturnsErrorForEmptyContent(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Empty Scratch Pad',
+            'content' => '{"ops":[{"insert":"\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([]);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')->willReturn('');
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Scratch pad content is empty.', $result['error']);
+    }
+
+    public function testRunClaudeMergesProjectDefaultsWithRequestOptions(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->setClaudeOptions(['permissionMode' => 'plan', 'model' => 'sonnet']);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Test\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        // Request overrides model but keeps permissionMode from project
+        $this->mockJsonRequest(['model' => 'opus']);
+
+        $capturedOptions = null;
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')->willReturn('Test');
+        $mockClaudeService->method('execute')
+            ->willReturnCallback(function ($prompt, $dir, $timeout, $options) use (&$capturedOptions) {
+                $capturedOptions = $options;
+                return [
+                    'success' => true,
+                    'output' => 'Response',
+                    'error' => '',
+                    'exitCode' => 0,
+                ];
+            });
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertSame('plan', $capturedOptions['permissionMode']);
+        $this->assertSame('opus', $capturedOptions['model']);
+    }
+
+    private function createControllerWithClaudeService(ClaudeCliService $claudeService): ScratchPadController
+    {
+        $permissionService = Yii::$container->get(EntityPermissionService::class);
+        $youtubeService = $this->createMock(YouTubeTranscriptService::class);
+
+        return new ScratchPadController(
+            'scratch-pad',
+            Yii::$app,
+            $permissionService,
+            $youtubeService,
+            $claudeService
+        );
     }
 }

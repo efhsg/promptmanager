@@ -19,6 +19,7 @@ $params = [
         'remoteDbName' => getenv('SYNC_REMOTE_DB_NAME') ?: 'yii',
         'sshKeyPath' => getenv('SYNC_SSH_KEY_PATH') ?: null,
     ],
+    'pathMappings' => getenv('PATH_MAPPINGS') ? json_decode(getenv('PATH_MAPPINGS'), true) : [],
 ];
 
 return ArrayHelper::merge($params, ['rbac' => $rbac]);

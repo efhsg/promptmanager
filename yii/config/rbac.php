@@ -36,6 +36,7 @@ return [
                 'update' => 'updateProject',
                 'delete' => 'deleteProject',
                 'setCurrent' => 'setCurrentProject',
+                'checkClaudeConfig' => 'viewProject',
             ],
             'permissions' => [
                 'createProject' => [
@@ -151,6 +152,7 @@ return [
                 'view' => 'viewScratchPad',
                 'update' => 'updateScratchPad',
                 'delete' => 'deleteScratchPad',
+                'runClaude' => 'viewScratchPad',
             ],
             'permissions' => [
                 'createScratchPad' => [

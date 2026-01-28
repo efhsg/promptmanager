@@ -6,6 +6,7 @@
  */
 
 use app\components\ProjectContext;
+use app\services\ClaudeWorkspaceService;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ModelService;
@@ -136,6 +137,9 @@ $config = [
                 $app->user
             );
         },
+        'claudeWorkspaceService' => [
+            'class' => ClaudeWorkspaceService::class,
+        ],
 
     ],
 

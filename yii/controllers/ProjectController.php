@@ -5,6 +5,7 @@ namespace app\controllers;
 use app\components\ProjectContext;
 use app\models\Project;
 use app\models\ProjectSearch;
+use app\services\ClaudeCliService;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
 use Throwable;
@@ -28,17 +29,20 @@ class ProjectController extends Controller
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
     private readonly ProjectService $projectService;
+    private readonly ClaudeCliService $claudeCliService;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
         ProjectService $projectService,
+        ClaudeCliService $claudeCliService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->projectService = $projectService;
+        $this->claudeCliService = $claudeCliService;
         // Load the permission mapping for "project" actions
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('project');
     }
@@ -120,9 +124,12 @@ class ProjectController extends Controller
     {
         $model = new Project(['user_id' => Yii::$app->user->id]);
 
-        if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
-            $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
-            return $this->redirect(['view', 'id' => $model->id]);
+        if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post())) {
+            $this->loadClaudeOptions($model);
+            if ($model->save()) {
+                $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
+                return $this->redirect(['view', 'id' => $model->id]);
+            }
         }
 
         $availableProjects = $this->projectService->fetchAvailableProjectsForLinking(null, Yii::$app->user->id);
@@ -145,9 +152,12 @@ class ProjectController extends Controller
         /** @var Project $model */
         $model = $this->findModel($id);
 
-        if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
-            $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
-            return $this->redirect(['view', 'id' => $model->id]);
+        if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post())) {
+            $this->loadClaudeOptions($model);
+            if ($model->save()) {
+                $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
+                return $this->redirect(['view', 'id' => $model->id]);
+            }
         }
 
         $model->linkedProjectIds = array_map(
@@ -214,6 +224,36 @@ class ProjectController extends Controller
     }
 
     /**
+     * Checks Claude config status for a project's root directory.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionCheckClaudeConfig(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        /** @var Project $model */
+        $model = $this->findModel($id);
+
+        if (empty($model->root_directory)) {
+            return [
+                'success' => false,
+                'error' => 'Project has no root directory configured.',
+            ];
+        }
+
+        $configStatus = $this->claudeCliService->checkClaudeConfigForPath($model->root_directory);
+
+        return [
+            'success' => true,
+            'hasCLAUDE_MD' => $configStatus['hasCLAUDE_MD'],
+            'hasClaudeDir' => $configStatus['hasClaudeDir'],
+            'hasAnyConfig' => $configStatus['hasAnyConfig'],
+            'hasPromptManagerContext' => $model->hasClaudeContext(),
+        ];
+    }
+
+    /**
      * @throws NotFoundHttpException
      */
     protected function findModel(int $id): ActiveRecord
@@ -222,5 +262,11 @@ class ProjectController extends Controller
             'id' => $id,
             'user_id' => Yii::$app->user->id,
         ])->one() ?? throw new NotFoundHttpException('The requested Project does not exist or is not yours.');
+    }
+
+    private function loadClaudeOptions(Project $model): void
+    {
+        $claudeOptions = Yii::$app->request->post('claude_options', []);
+        $model->setClaudeOptions($claudeOptions);
     }
 }

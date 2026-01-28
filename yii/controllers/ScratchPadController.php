@@ -10,6 +10,7 @@ use app\models\Project;
 use app\models\ScratchPad;
 use app\models\ScratchPadSearch;
 use app\models\YouTubeImportForm;
+use app\services\ClaudeCliService;
 use app\services\CopyFormatConverter;
 use app\services\copyformat\MarkdownParser;
 use app\services\copyformat\QuillDeltaWriter;
@@ -21,6 +22,7 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\db\Exception;
 use yii\filters\AccessControl;
+use yii\filters\VerbFilter;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -33,17 +35,20 @@ class ScratchPadController extends Controller
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
     private readonly YouTubeTranscriptService $youtubeService;
+    private readonly ClaudeCliService $claudeCliService;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
         YouTubeTranscriptService $youtubeService,
+        ClaudeCliService $claudeCliService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->youtubeService = $youtubeService;
+        $this->claudeCliService = $claudeCliService;
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('scratchPad');
     }
 
@@ -56,6 +61,13 @@ class ScratchPadController extends Controller
     public function behaviors(): array
     {
         return [
+            'verbs' => [
+                'class' => VerbFilter::class,
+                'actions' => [
+                    'delete' => ['POST'],
+                    'run-claude' => ['POST'],
+                ],
+            ],
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
@@ -396,6 +408,61 @@ class ScratchPadController extends Controller
         } catch (RuntimeException $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionRunClaude(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        /** @var ScratchPad $model */
+        $model = $this->findModel($id);
+
+        $markdown = $this->claudeCliService->convertToMarkdown($model->content ?? '');
+        if (trim($markdown) === '') {
+            return [
+                'success' => false,
+                'error' => 'Scratch pad content is empty.',
+            ];
+        }
+
+        // Get project if available
+        $project = $model->project;
+
+        // Parse request options and merge with project defaults
+        $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        $projectDefaults = $project !== null ? $project->getClaudeOptions() : [];
+
+        // Request options override project defaults (filter out empty values)
+        $options = array_merge(
+            $projectDefaults,
+            array_filter($requestOptions, fn($v) => $v !== null && $v !== '')
+        );
+
+        // Determine working directory (will be resolved by ClaudeCliService)
+        $workingDirectory = $project !== null && !empty($project->root_directory)
+            ? $project->root_directory
+            : '';
+
+        $result = $this->claudeCliService->execute(
+            $markdown,
+            $workingDirectory,
+            300,
+            $options,
+            $project
+        );
+
+        return [
+            'success' => $result['success'],
+            'output' => $result['output'],
+            'error' => $result['error'],
+            'exitCode' => $result['exitCode'],
+            'cost_usd' => $result['cost_usd'] ?? null,
+            'duration_ms' => $result['duration_ms'] ?? null,
+            'configSource' => $result['configSource'] ?? null,
+        ];
     }
 
     /**

@@ -36,6 +36,11 @@ RUN apt-get update \
 # Install youtube-transcript-api for YouTube transcript import
 RUN pip3 install --break-system-packages youtube-transcript-api
 
+# Install Node.js for Claude CLI
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg && \
     docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath gd intl pdo_pgsql
@@ -75,8 +80,8 @@ ARG USER_NAME
 # Create a user, add /data directory for persisting files, and change ownership
 RUN adduser --uid $USER_ID --disabled-password --gecos "" $USER_NAME \
     && mkdir -p /data \
-    && chown -R $USER_NAME:$USER_NAME /var/www/html /data
-
+    && mkdir -p /home/$USER_NAME/.local/bin \
+    && chown -R $USER_NAME:$USER_NAME /var/www/html /data /home/$USER_NAME/.local
 
 # Define the work directory as a build argument
 ARG WORKDIR=/var/www/html/yii
