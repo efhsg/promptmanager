@@ -10,3 +10,4 @@ scripts/backup.log
 
 # Managed Claude workspaces (generated at runtime)
 yii/storage/projects/
+yii/web/quill/1.3.7/editor-init.js
