@@ -1,5 +1,6 @@
 <?php
 
+use app\assets\HighlightAsset;
 use app\assets\QuillAsset;
 use yii\helpers\Html;
 use yii\helpers\Json;
@@ -10,6 +11,7 @@ use yii\web\View;
 /** @var app\models\ScratchPad $model */
 
 QuillAsset::register($this);
+HighlightAsset::register($this);
 $this->registerJsFile('@web/js/marked.min.js', ['position' => View::POS_HEAD]);
 $this->registerJsFile('@web/js/purify.min.js', ['position' => View::POS_HEAD]);
 $this->registerCssFile('@web/css/claude-chat.css');
@@ -125,8 +127,8 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     <div class="card mb-4">
         <div class="card-body claude-prompt-section">
             <!-- Quill editor (initial mode) -->
-            <div id="claude-quill-wrapper">
-                <div id="claude-quill-editor"></div>
+            <div id="claude-quill-wrapper" class="resizable-editor-container">
+                <div id="claude-quill-editor" class="resizable-editor"></div>
             </div>
 
             <!-- Textarea (follow-up mode, hidden initially) -->
@@ -149,7 +151,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                     <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
                         <i class="bi bi-arrow-counterclockwise"></i> Last prompt
                     </button>
-                    <button type="button" id="claude-send-btn" class="btn btn-primary">
+                    <button type="button" id="claude-send-btn" class="btn btn-primary" title="Send (Ctrl+Enter)">
                         <i class="bi bi-send-fill"></i> Send
                     </button>
                 </div>
@@ -216,12 +218,16 @@ $js = <<<JS
                 var code = token.text;
                 var lang = token.lang || '';
                 var highlighted;
-                if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang))
-                    highlighted = hljs.highlight(code, { language: lang }).value;
-                else if (typeof hljs !== 'undefined')
-                    highlighted = hljs.highlightAuto(code).value;
-                else
+                try {
+                    if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang))
+                        highlighted = hljs.highlight(code, { language: lang }).value;
+                    else if (typeof hljs !== 'undefined')
+                        highlighted = hljs.highlightAuto(code).value;
+                    else
+                        highlighted = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                } catch (e) {
                     highlighted = code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                }
                 var langClass = lang ? ' language-' + lang : '';
                 return '<pre><code class="hljs' + langClass + '">' + highlighted + '</code></pre>';
             },
@@ -314,6 +320,13 @@ $js = <<<JS
                 });
 
                 document.getElementById('claude-followup-textarea').addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        self.send();
+                    }
+                });
+
+                quill.root.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         e.preventDefault();
                         self.send();
@@ -414,11 +427,13 @@ $js = <<<JS
                     } else {
                         self.addErrorMessage(data.error || data.output || 'An unknown error occurred');
                     }
+                    self.focusEditor();
                 })
                 .catch(function(error) {
                     sendBtn.disabled = false;
                     self.removeLoadingPlaceholder(placeholder);
                     self.addErrorMessage('Failed to execute Claude CLI: ' + error.message);
+                    self.focusEditor();
                 });
             },
 
@@ -646,6 +661,13 @@ $js = <<<JS
                 summary.classList.remove('d-none');
             },
 
+            focusEditor: function() {
+                if (this.inputMode === 'quill')
+                    quill.focus();
+                else
+                    document.getElementById('claude-followup-textarea').focus();
+            },
+
             copyConversation: function() {
                 var text = this.messages.map(function(m) {
                     var prefix = m.role === 'user' ? '## You' : '## Claude';
@@ -668,6 +690,8 @@ $js = <<<JS
         };
 
         window.ClaudeChat.init();
+        quill.focus();
+        quill.setSelection(quill.getLength(), 0);
     })();
     JS;
 $this->registerJs($js);

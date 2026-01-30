@@ -17,16 +17,8 @@
     width: 100%;
 }
 
-.claude-chat-page #claude-quill-editor {
-    min-height: 300px;
-}
-
-.claude-chat-page .claude-prompt-section .ql-container {
-    min-height: 300px;
-}
-
-.claude-chat-page .claude-prompt-section .ql-editor {
-    min-height: 300px;
+.claude-chat-page .resizable-editor-container {
+    max-height: 500px;
 }
 
 .claude-chat-page .claude-followup-textarea {
