@@ -245,8 +245,10 @@ class ScratchPadControllerTest extends Unit
             'output' => 'Claude response here',
             'error' => '',
             'exitCode' => 0,
-            'cost_usd' => 0.01,
             'duration_ms' => 5000,
+            'model' => 'opus-4.5',
+            'input_tokens' => 24500,
+            'output_tokens' => 150,
             'configSource' => 'managed_workspace',
         ]);
 
@@ -256,7 +258,9 @@ class ScratchPadControllerTest extends Unit
 
         $this->assertTrue($result['success']);
         $this->assertSame('Claude response here', $result['output']);
-        $this->assertSame(0.01, $result['cost_usd']);
+        $this->assertSame('opus-4.5', $result['model']);
+        $this->assertSame(24500, $result['input_tokens']);
+        $this->assertSame(150, $result['output_tokens']);
     }
 
     public function testRunClaudeReturnsErrorForEmptyContent(): void

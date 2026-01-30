@@ -479,8 +479,10 @@ class ScratchPadController extends Controller
             'output' => $result['output'],
             'error' => $result['error'],
             'exitCode' => $result['exitCode'],
-            'cost_usd' => $result['cost_usd'] ?? null,
             'duration_ms' => $result['duration_ms'] ?? null,
+            'model' => $result['model'] ?? null,
+            'input_tokens' => $result['input_tokens'] ?? null,
+            'output_tokens' => $result['output_tokens'] ?? null,
             'configSource' => $result['configSource'] ?? null,
             'sessionId' => $result['session_id'] ?? null,
         ];

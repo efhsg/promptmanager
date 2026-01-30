@@ -309,14 +309,20 @@ $js = <<<JS
 
                     // Show metadata if available
                     const metaEl = document.getElementById('claude-cli-meta');
-                    if (metaEl && (data.cost_usd || data.duration_ms || data.configSource)) {
+                    if (metaEl && (data.duration_ms || data.model || data.input_tokens || data.configSource)) {
                         const parts = [];
                         if (data.duration_ms) {
                             const seconds = (data.duration_ms / 1000).toFixed(1);
                             parts.push('Duration: ' + seconds + 's');
                         }
-                        if (data.cost_usd) {
-                            parts.push('Cost: \$' + data.cost_usd.toFixed(4));
+                        if (data.input_tokens != null || data.output_tokens != null) {
+                            const fmt = (n) => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
+                            const inTok = fmt(data.input_tokens || 0);
+                            const outTok = fmt(data.output_tokens || 0);
+                            parts.push('Tokens: ' + inTok + ' in \u00b7 ' + outTok + ' out');
+                        }
+                        if (data.model) {
+                            parts.push('Model: ' + data.model);
                         }
                         if (data.configSource) {
                             let sourceLabel = data.configSource;

@@ -68,6 +68,53 @@ class ClaudeCliServiceTest extends Unit
         $this->assertSame('Claude response', $result['result']);
     }
 
+    public function testParseJsonOutputExtractsModelUsage(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseJsonOutput');
+        $method->setAccessible(true);
+
+        $jsonOutput = json_encode([
+            'result' => 'Response',
+            'modelUsage' => [
+                'claude-opus-4-5-20251101' => [
+                    'inputTokens' => 100,
+                    'outputTokens' => 50,
+                    'cacheReadInputTokens' => 18000,
+                    'cacheCreationInputTokens' => 6000,
+                ],
+            ],
+        ]);
+
+        $result = $method->invoke($service, $jsonOutput);
+
+        $this->assertSame('opus-4.5', $result['model']);
+        $this->assertSame(24100, $result['input_tokens']);
+        $this->assertSame(50, $result['output_tokens']);
+    }
+
+    public function testFormatModelNameShortensStandardIds(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('formatModelName');
+        $method->setAccessible(true);
+
+        $this->assertSame('opus-4.5', $method->invoke($service, 'claude-opus-4-5-20251101'));
+        $this->assertSame('sonnet-4.0', $method->invoke($service, 'claude-sonnet-4-0-20250514'));
+    }
+
+    public function testFormatModelNameReturnsUnknownIdVerbatim(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('formatModelName');
+        $method->setAccessible(true);
+
+        $this->assertSame('custom-model', $method->invoke($service, 'custom-model'));
+    }
+
     public function testParseJsonOutputHandlesMissingSessionId(): void
     {
         $service = new ClaudeCliService();

@@ -53,7 +53,7 @@ class ClaudeCliService
      * @param array $options Claude CLI options (permissionMode, model, appendSystemPrompt, allowedTools, disallowedTools)
      * @param Project|null $project Optional project for workspace resolution
      * @param string|null $sessionId Optional session ID to continue a previous conversation
-     * @return array{success: bool, output: string, error: string, exitCode: int, configSource?: string, session_id?: string}
+     * @return array{success: bool, output: string, error: string, exitCode: int, model?: string, input_tokens?: int, output_tokens?: int, configSource?: string, session_id?: string}
      */
     public function execute(
         string $prompt,
@@ -151,8 +151,10 @@ class ClaudeCliService
             'output' => $parsedOutput['result'] ?? trim($output),
             'error' => trim($error),
             'exitCode' => $exitCode,
-            'cost_usd' => $parsedOutput['total_cost_usd'] ?? null,
             'duration_ms' => $parsedOutput['duration_ms'] ?? null,
+            'model' => $parsedOutput['model'] ?? null,
+            'input_tokens' => $parsedOutput['input_tokens'] ?? null,
+            'output_tokens' => $parsedOutput['output_tokens'] ?? null,
             'configSource' => $configSource,
             'session_id' => $parsedOutput['session_id'] ?? null,
         ];
@@ -232,7 +234,7 @@ class ClaudeCliService
     /**
      * Parses the JSON output from Claude CLI --output-format json.
      *
-     * @return array{result?: string, is_error?: bool, total_cost_usd?: float, duration_ms?: int}
+     * @return array{result?: string, is_error?: bool, duration_ms?: int, model?: string, input_tokens?: int, output_tokens?: int, session_id?: string}
      */
     private function parseJsonOutput(string $output): array
     {
@@ -245,7 +247,43 @@ class ClaudeCliService
             return [];
         }
 
+        $this->extractModelUsage($decoded);
+
         return $decoded;
+    }
+
+    /**
+     * Extracts model name and token counts from modelUsage into flat keys.
+     */
+    private function extractModelUsage(array &$decoded): void
+    {
+        $modelUsage = $decoded['modelUsage'] ?? [];
+        if ($modelUsage === []) {
+            return;
+        }
+
+        $modelId = array_key_first($modelUsage);
+        $usage = $modelUsage[$modelId];
+
+        $decoded['model'] = $this->formatModelName($modelId);
+        $decoded['input_tokens'] = ($usage['inputTokens'] ?? 0)
+            + ($usage['cacheReadInputTokens'] ?? 0)
+            + ($usage['cacheCreationInputTokens'] ?? 0);
+        $decoded['output_tokens'] = $usage['outputTokens'] ?? 0;
+    }
+
+    /**
+     * Converts a full model ID to a short display name.
+     *
+     * E.g. "claude-opus-4-5-20251101" → "opus-4.5"
+     */
+    private function formatModelName(string $modelId): string
+    {
+        if (preg_match('/claude-(\w+)-(\d+)-(\d+)/', $modelId, $m)) {
+            return $m[1] . '-' . $m[2] . '.' . $m[3];
+        }
+
+        return $modelId;
     }
 
     /**
