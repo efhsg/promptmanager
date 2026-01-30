@@ -7,6 +7,7 @@ trash/
 /wip/
 .php-cs-fixer.cache
 scripts/backup.log
+.claude/settings.local.json
 
 # Runtime storage (managed Claude workspaces, etc.)
 yii/storage/

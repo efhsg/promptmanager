@@ -46,6 +46,7 @@ For commands, paths, and environment: `.claude/config/project.md`
 |-------|-------------|----------|
 | Review Changes | Two-phase code review (defects → design) | `skills/review-changes.md` |
 | Triage Review | Critically assess external reviews against codebase | `skills/triage-review.md` |
+| Improve Prompt | Analyze and improve agent prompt files | `skills/improve-prompt.md` |
 
 ## Commands Reference
 
@@ -68,6 +69,7 @@ Commands are thin executable wrappers that invoke skills:
 | `/check-standards` | (rules-based) | Validate code standards |
 | `/review-changes` | `skills/review-changes.md` | Review code changes |
 | `/triage-review` | `skills/triage-review.md` | Triage external code review |
+| `/improve-prompt` | `skills/improve-prompt.md` | Improve agent prompt file |
 | `/audit-config` | (workflow) | Audit config completeness and consistency |
 | `/finalize-changes` | (workflow) | Lint, test, commit prep |
 | `/cp` | (workflow) | Commit and push to origin |

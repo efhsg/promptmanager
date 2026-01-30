@@ -13,6 +13,7 @@ use Codeception\Test\Unit;
 use RuntimeException;
 use Yii;
 use ReflectionClass;
+use yii\web\NotFoundHttpException;
 
 class ScratchPadControllerTest extends Unit
 {
@@ -456,6 +457,155 @@ class ScratchPadControllerTest extends Unit
 
         $this->assertFalse($result['success']);
         $this->assertSame('Prompt is empty.', $result['error']);
+    }
+
+    public function testClaudeActionRejectsNullProject(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => null,
+            'name' => 'Global Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $this->expectException(NotFoundHttpException::class);
+        $this->expectExceptionMessage('Claude CLI requires a project.');
+
+        $controller->actionClaude($scratchPad->id);
+    }
+
+    public function testRunClaudeConvertsContentDeltaToMarkdown(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Original content\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $editedDelta = '{"ops":[{"insert":"Edited content\n"}]}';
+
+        $this->mockJsonRequest([
+            'contentDelta' => $editedDelta,
+        ]);
+
+        $capturedPrompt = null;
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')
+            ->willReturnCallback(function (string $input) use (&$capturedPrompt) {
+                $capturedPrompt = $input;
+                return 'Edited content';
+            });
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => true,
+            'output' => 'Response',
+            'error' => '',
+            'exitCode' => 0,
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame($editedDelta, $capturedPrompt);
+    }
+
+    public function testRunClaudeReturnsPromptMarkdownInResponse(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([]);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')->willReturn('Hello');
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => true,
+            'output' => 'Response',
+            'error' => '',
+            'exitCode' => 0,
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertArrayHasKey('promptMarkdown', $result);
+        $this->assertSame('Hello', $result['promptMarkdown']);
+    }
+
+    public function testRunClaudeContentDeltaPriorityOverStoredContent(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Original\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([
+            'contentDelta' => '{"ops":[{"insert":"Edited\n"}]}',
+        ]);
+
+        $convertCallCount = 0;
+        $lastConvertInput = null;
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')
+            ->willReturnCallback(function (string $input) use (&$convertCallCount, &$lastConvertInput) {
+                $convertCallCount++;
+                $lastConvertInput = $input;
+                return 'Edited';
+            });
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => true,
+            'output' => 'Response',
+            'error' => '',
+            'exitCode' => 0,
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller->actionRunClaude($scratchPad->id);
+
+        // contentDelta should be used, not stored content
+        $this->assertSame(1, $convertCallCount);
+        $this->assertSame('{"ops":[{"insert":"Edited\n"}]}', $lastConvertInput);
     }
 
     private function createControllerWithClaudeService(ClaudeCliService $claudeService): ScratchPadController

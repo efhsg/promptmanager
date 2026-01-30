@@ -413,6 +413,22 @@ class ScratchPadController extends Controller
     /**
      * @throws NotFoundHttpException
      */
+    public function actionClaude(int $id): string
+    {
+        $model = $this->findModel($id);
+
+        if ($model->project_id === null) {
+            throw new NotFoundHttpException('Claude CLI requires a project.');
+        }
+
+        return $this->render('claude', [
+            'model' => $model,
+        ]);
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
     public function actionRunClaude(int $id): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -429,12 +445,19 @@ class ScratchPadController extends Controller
             ];
         }
 
-        // Check for custom prompt (follow-up) vs scratch pad content
+        // Check for custom prompt (follow-up) vs contentDelta vs scratch pad content
         $customPrompt = $requestOptions['prompt'] ?? null;
+        $contentDelta = $requestOptions['contentDelta'] ?? null;
         $sessionId = $requestOptions['sessionId'] ?? null;
+
+        if (is_array($contentDelta)) {
+            $contentDelta = json_encode($contentDelta);
+        }
 
         if ($customPrompt !== null) {
             $markdown = $customPrompt;
+        } elseif ($contentDelta !== null) {
+            $markdown = $this->claudeCliService->convertToMarkdown($contentDelta);
         } else {
             $markdown = $this->claudeCliService->convertToMarkdown($model->content ?? '');
         }
@@ -485,6 +508,7 @@ class ScratchPadController extends Controller
             'output_tokens' => $result['output_tokens'] ?? null,
             'configSource' => $result['configSource'] ?? null,
             'sessionId' => $result['session_id'] ?? null,
+            'promptMarkdown' => $markdown,
         ];
     }
 

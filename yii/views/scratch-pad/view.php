@@ -67,13 +67,13 @@ $this->params['breadcrumbs'][] = $model->name;
                  data-bs-parent="#scratchPadViewAccordion">
                 <div class="accordion-body p-0">
                     <div class="d-flex justify-content-end p-2 border-bottom gap-2">
-                        <button type="button"
-                                class="btn btn-primary btn-sm text-nowrap<?= !$canRunClaude ? ' disabled' : '' ?>"
-                                <?= !$canRunClaude ? 'disabled' : '' ?>
-                                <?= $claudeTooltip ? 'title="' . Html::encode($claudeTooltip) . '" data-bs-toggle="tooltip"' : '' ?>
-                                onclick="window.ClaudeCliModal.show()">
-                            <i class="bi bi-terminal-fill"></i> Claude
-                        </button>
+                        <?= Html::a('<i class="bi bi-terminal-fill"></i> Claude',
+                            $canRunClaude ? ['claude', 'id' => $model->id] : '#',
+                            [
+                                'class' => 'btn btn-primary btn-sm text-nowrap' . (!$canRunClaude ? ' disabled' : ''),
+                                'title' => $claudeTooltip ?: null,
+                                'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                            ]) ?>
                         <div class="input-group input-group-sm" style="width: auto;">
                             <?= Html::dropDownList('contentCopyFormat', CopyType::MD->value, $copyTypes, [
                                 'id' => 'content-copy-format-select',
@@ -106,13 +106,13 @@ $this->params['breadcrumbs'][] = $model->name;
                  data-bs-parent="#scratchPadViewAccordion">
                 <div class="accordion-body p-0">
                     <div class="d-flex justify-content-end p-2 border-bottom gap-2">
-                        <button type="button"
-                                class="btn btn-primary btn-sm text-nowrap<?= !$canRunClaude ? ' disabled' : '' ?>"
-                                <?= !$canRunClaude ? 'disabled' : '' ?>
-                                <?= $claudeTooltip ? 'title="' . Html::encode($claudeTooltip) . '" data-bs-toggle="tooltip"' : '' ?>
-                                onclick="window.ClaudeCliModal.show()">
-                            <i class="bi bi-terminal-fill"></i> Claude
-                        </button>
+                        <?= Html::a('<i class="bi bi-terminal-fill"></i> Claude',
+                            $canRunClaude ? ['claude', 'id' => $model->id] : '#',
+                            [
+                                'class' => 'btn btn-primary btn-sm text-nowrap' . (!$canRunClaude ? ' disabled' : ''),
+                                'title' => $claudeTooltip ?: null,
+                                'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                            ]) ?>
                         <div class="input-group input-group-sm" style="width: auto;">
                             <?= Html::dropDownList('responseCopyFormat', CopyType::MD->value, $copyTypes, [
                                 'id' => 'response-copy-format-select',
@@ -139,13 +139,13 @@ $this->params['breadcrumbs'][] = $model->name;
         <div class="card-header d-flex justify-content-between align-items-center">
             <strong>Content</strong>
             <div class="d-flex gap-2">
-                <button type="button"
-                        class="btn btn-primary btn-sm text-nowrap<?= !$canRunClaude ? ' disabled' : '' ?>"
-                        <?= !$canRunClaude ? 'disabled' : '' ?>
-                        <?= $claudeTooltip ? 'title="' . Html::encode($claudeTooltip) . '" data-bs-toggle="tooltip"' : '' ?>
-                        onclick="window.ClaudeCliModal.show()">
-                    <i class="bi bi-terminal-fill"></i> Claude
-                </button>
+                <?= Html::a('<i class="bi bi-terminal-fill"></i> Claude',
+                    $canRunClaude ? ['claude', 'id' => $model->id] : '#',
+                    [
+                        'class' => 'btn btn-primary btn-sm text-nowrap' . (!$canRunClaude ? ' disabled' : ''),
+                        'title' => $claudeTooltip ?: null,
+                        'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                    ]) ?>
                 <div class="input-group input-group-sm" style="width: auto;">
                     <?= Html::dropDownList('contentCopyFormat', CopyType::MD->value, $copyTypes, [
                         'id' => 'content-copy-format-select',
@@ -167,8 +167,6 @@ $this->params['breadcrumbs'][] = $model->name;
     </div>
     <?php endif; ?>
 </div>
-
-<?= $this->render('_claude-cli-modal', ['model' => $model]) ?>
 
 <?php
 $contentDelta = json_encode($model->content);

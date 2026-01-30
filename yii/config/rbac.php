@@ -153,6 +153,7 @@ return [
                 'update' => 'updateScratchPad',
                 'delete' => 'deleteScratchPad',
                 'runClaude' => 'viewScratchPad',
+                'claude' => 'viewScratchPad',
             ],
             'permissions' => [
                 'createScratchPad' => [
