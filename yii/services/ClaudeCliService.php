@@ -258,12 +258,15 @@ class ClaudeCliService
     private function extractModelUsage(array &$decoded): void
     {
         $modelUsage = $decoded['modelUsage'] ?? [];
-        if ($modelUsage === []) {
+        if (!is_array($modelUsage) || $modelUsage === []) {
             return;
         }
 
         $modelId = array_key_first($modelUsage);
         $usage = $modelUsage[$modelId];
+        if (!is_array($usage)) {
+            return;
+        }
 
         $decoded['model'] = $this->formatModelName($modelId);
         $decoded['input_tokens'] = ($usage['inputTokens'] ?? 0)
