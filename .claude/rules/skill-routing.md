@@ -23,3 +23,4 @@ When working on specific file types or topics, proactively load the relevant ski
 | Validation, form rules | `skills/form.md` |
 | Search, filtering, listing | `skills/search.md` |
 | Error handling, exceptions | `skills/error-handling.md` |
+| External review, triage, review feedback | `skills/triage-review.md` |
