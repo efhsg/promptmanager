@@ -52,14 +52,16 @@ class ClaudeCliService
      * @param int $timeout Maximum execution time in seconds
      * @param array $options Claude CLI options (permissionMode, model, appendSystemPrompt, allowedTools, disallowedTools)
      * @param Project|null $project Optional project for workspace resolution
-     * @return array{success: bool, output: string, error: string, exitCode: int, configSource?: string}
+     * @param string|null $sessionId Optional session ID to continue a previous conversation
+     * @return array{success: bool, output: string, error: string, exitCode: int, configSource?: string, session_id?: string}
      */
     public function execute(
         string $prompt,
         string $workingDirectory,
         int $timeout = 300,
         array $options = [],
-        ?Project $project = null
+        ?Project $project = null,
+        ?string $sessionId = null
     ): array {
         // Determine effective working directory (managed workspace vs project's own)
         $effectiveWorkDir = $this->determineWorkingDirectory($workingDirectory, $project);
@@ -77,7 +79,7 @@ class ClaudeCliService
         // Determine config source for reporting
         $configSource = $this->determineConfigSource($effectiveWorkDir, $workingDirectory, $project);
 
-        $command = $this->buildCommand($options);
+        $command = $this->buildCommand($options, $sessionId);
 
         $descriptorSpec = [
             0 => ['pipe', 'r'],  // stdin
@@ -152,6 +154,7 @@ class ClaudeCliService
             'cost_usd' => $parsedOutput['total_cost_usd'] ?? null,
             'duration_ms' => $parsedOutput['duration_ms'] ?? null,
             'configSource' => $configSource,
+            'session_id' => $parsedOutput['session_id'] ?? null,
         ];
     }
 
@@ -193,9 +196,13 @@ class ClaudeCliService
      *
      * Prompt is passed via stdin to avoid command-line argument length limits.
      */
-    private function buildCommand(array $options): string
+    private function buildCommand(array $options, ?string $sessionId = null): string
     {
         $cmd = 'claude --output-format json';
+
+        if ($sessionId !== null) {
+            $cmd .= ' --continue ' . escapeshellarg($sessionId);
+        }
 
         $mode = $options['permissionMode'] ?? 'plan';
         $cmd .= ' --permission-mode ' . escapeshellarg($mode);

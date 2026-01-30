@@ -6,7 +6,8 @@ class LlmXmlWriter extends AbstractFormatWriter
 {
     public function __construct(
         private readonly MarkdownWriter $markdownWriter = new MarkdownWriter()
-    ) {}
+    ) {
+    }
 
     public function writeFromBlocks(array $blocks): string
     {

@@ -420,25 +420,44 @@ class ScratchPadController extends Controller
         /** @var ScratchPad $model */
         $model = $this->findModel($id);
 
-        $markdown = $this->claudeCliService->convertToMarkdown($model->content ?? '');
+        // Parse request options
+        $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestOptions)) {
+            return [
+                'success' => false,
+                'error' => 'Invalid request format.',
+            ];
+        }
+
+        // Check for custom prompt (follow-up) vs scratch pad content
+        $customPrompt = $requestOptions['prompt'] ?? null;
+        $sessionId = $requestOptions['sessionId'] ?? null;
+
+        if ($customPrompt !== null) {
+            $markdown = $customPrompt;
+        } else {
+            $markdown = $this->claudeCliService->convertToMarkdown($model->content ?? '');
+        }
+
         if (trim($markdown) === '') {
             return [
                 'success' => false,
-                'error' => 'Scratch pad content is empty.',
+                'error' => $customPrompt !== null ? 'Prompt is empty.' : 'Scratch pad content is empty.',
             ];
         }
 
         // Get project if available
         $project = $model->project;
-
-        // Parse request options and merge with project defaults
-        $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
         $projectDefaults = $project !== null ? $project->getClaudeOptions() : [];
 
-        // Request options override project defaults (filter out empty values)
+        // Request options override project defaults (whitelist known keys, filter out empty values)
+        $allowedKeys = ['model', 'permissionMode', 'appendSystemPrompt', 'allowedTools', 'disallowedTools'];
         $options = array_merge(
             $projectDefaults,
-            array_filter($requestOptions, fn($v) => $v !== null && $v !== '')
+            array_filter(
+                array_intersect_key($requestOptions, array_flip($allowedKeys)),
+                fn($v) => $v !== null && $v !== ''
+            )
         );
 
         // Determine working directory (will be resolved by ClaudeCliService)
@@ -451,7 +470,8 @@ class ScratchPadController extends Controller
             $workingDirectory,
             300,
             $options,
-            $project
+            $project,
+            $sessionId
         );
 
         return [
@@ -462,6 +482,7 @@ class ScratchPadController extends Controller
             'cost_usd' => $result['cost_usd'] ?? null,
             'duration_ms' => $result['duration_ms'] ?? null,
             'configSource' => $result['configSource'] ?? null,
+            'sessionId' => $result['session_id'] ?? null,
         ];
     }
 

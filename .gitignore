@@ -8,6 +8,6 @@ trash/
 .php-cs-fixer.cache
 scripts/backup.log
 
-# Managed Claude workspaces (generated at runtime)
-yii/storage/projects/
+# Runtime storage (managed Claude workspaces, etc.)
+yii/storage/
 yii/web/quill/1.3.7/editor-init.js

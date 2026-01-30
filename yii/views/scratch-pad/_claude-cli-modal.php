@@ -1,16 +1,19 @@
 <?php
 
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\Url;
+use app\models\ScratchPad;
+use yii\web\View;
 
-/** @var yii\web\View $this */
-/** @var app\models\ScratchPad $model */
+/** @var View $this */
+/** @var ScratchPad $model */
 
 $runClaudeUrl = Url::to(['/scratch-pad/run-claude', 'id' => $model->id]);
 $checkConfigUrl = $model->project ? Url::to(['/project/check-claude-config', 'id' => $model->project->id]) : null;
 $projectDefaults = $model->project ? $model->project->getClaudeOptions() : [];
-$projectDefaultsJson = json_encode($projectDefaults);
-$checkConfigUrlJson = json_encode($checkConfigUrl);
+$projectDefaultsJson = Json::htmlEncode($projectDefaults);
+$checkConfigUrlJson = Json::htmlEncode($checkConfigUrl);
 
 $permissionModes = [
     '' => '(Use default)',
@@ -111,11 +114,24 @@ $models = [
                         <pre id="claude-cli-output" class="p-3 rounded" style="background-color: #1e1e1e; color: #d4d4d4; max-height: 60vh; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; font-size: 0.875rem;"></pre>
                         <small id="claude-cli-meta" class="text-muted d-none mt-2 d-block"></small>
                     </div>
+                    <!-- Continue Conversation -->
+                    <div id="claude-continue-section" class="d-none mt-3">
+                        <div class="input-group">
+                            <input type="text" id="claude-continue-input" class="form-control"
+                                   placeholder="Ask a follow-up question...">
+                            <button type="button" id="claude-continue-btn" class="btn btn-primary">
+                                <i class="bi bi-send-fill"></i> Send
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" id="claude-cli-back-btn" class="btn btn-outline-secondary d-none">
                     <i class="bi bi-arrow-left"></i> Back
+                </button>
+                <button type="button" id="claude-cli-new-btn" class="btn btn-outline-secondary d-none">
+                    <i class="bi bi-plus-circle"></i> New Conversation
                 </button>
                 <button type="button" id="claude-cli-copy-btn" class="btn btn-outline-secondary d-none">
                     <i class="bi bi-clipboard"></i> Copy Output
@@ -136,10 +152,16 @@ $js = <<<JS
         modal: null,
         projectDefaults: $projectDefaultsJson,
         checkConfigUrl: $checkConfigUrlJson,
+        sessionId: null,
+        conversationOutput: '',
 
         show: function() {
             const modalEl = document.getElementById('claudeCliModal');
             this.modal = new bootstrap.Modal(modalEl);
+
+            // Reset session state
+            this.sessionId = null;
+            this.conversationOutput = '';
 
             // Reset to config step
             this.showConfigStep();
@@ -208,20 +230,25 @@ $js = <<<JS
             document.getElementById('claude-cli-run-btn').classList.remove('d-none');
             document.getElementById('claude-cli-back-btn').classList.add('d-none');
             document.getElementById('claude-cli-copy-btn').classList.add('d-none');
+            document.getElementById('claude-cli-new-btn').classList.add('d-none');
+            document.getElementById('claude-continue-section').classList.add('d-none');
         },
 
-        showOutputStep: function() {
+        showOutputStep: function(keepOutput) {
             document.getElementById('claude-cli-config-step').classList.add('d-none');
             document.getElementById('claude-cli-output-step').classList.remove('d-none');
             document.getElementById('claude-cli-run-btn').classList.add('d-none');
             document.getElementById('claude-cli-back-btn').classList.remove('d-none');
+            document.getElementById('claude-continue-section').classList.add('d-none');
 
-            // Reset output state
+            // Reset output state (preserve output for follow-ups)
             document.getElementById('claude-cli-loading').classList.remove('d-none');
             document.getElementById('claude-cli-error').classList.add('d-none');
-            document.getElementById('claude-cli-output-container').classList.add('d-none');
-            document.getElementById('claude-cli-copy-btn').classList.add('d-none');
-            document.getElementById('claude-cli-output').textContent = '';
+            if (!keepOutput) {
+                document.getElementById('claude-cli-output-container').classList.add('d-none');
+                document.getElementById('claude-cli-copy-btn').classList.add('d-none');
+                document.getElementById('claude-cli-output').textContent = '';
+            }
             document.getElementById('claude-cli-meta').classList.add('d-none');
         },
 
@@ -236,12 +263,19 @@ $js = <<<JS
         },
 
         run: function() {
+            this.conversationOutput = '';
             this.showOutputStep();
             this.execute();
         },
 
-        execute: function() {
+        execute: function(followUpPrompt) {
             const options = this.getOptions();
+            if (this.sessionId)
+                options.sessionId = this.sessionId;
+            if (followUpPrompt)
+                options.prompt = followUpPrompt;
+
+            var self = this;
 
             fetch('$runClaudeUrl', {
                 method: 'POST',
@@ -258,7 +292,18 @@ $js = <<<JS
 
                 if (data.success) {
                     const output = data.output || '(No output)';
-                    document.getElementById('claude-cli-output').textContent = output;
+
+                    // Store session ID for follow-ups
+                    if (data.sessionId)
+                        self.sessionId = data.sessionId;
+
+                    // Accumulate conversation output
+                    if (followUpPrompt) {
+                        self.conversationOutput += '\\n\\n--- Follow-up ---\\n\\n> ' + followUpPrompt + '\\n\\n' + output;
+                    } else {
+                        self.conversationOutput = output;
+                    }
+                    document.getElementById('claude-cli-output').textContent = self.conversationOutput;
                     document.getElementById('claude-cli-output-container').classList.remove('d-none');
                     document.getElementById('claude-cli-copy-btn').classList.remove('d-none');
 
@@ -276,7 +321,7 @@ $js = <<<JS
                         if (data.configSource) {
                             let sourceLabel = data.configSource;
                             if (data.configSource.startsWith('project_own:')) {
-                                sourceLabel = 'Config: Project\'s own ' + data.configSource.replace('project_own:', '');
+                                sourceLabel = 'Config: Project\\'s own ' + data.configSource.replace('project_own:', '');
                             } else if (data.configSource === 'managed_workspace') {
                                 sourceLabel = 'Config: Managed workspace';
                             } else if (data.configSource === 'default_workspace') {
@@ -287,6 +332,10 @@ $js = <<<JS
                         metaEl.textContent = parts.join(' | ');
                         metaEl.classList.remove('d-none');
                     }
+
+                    // Show continue UI if we have a session
+                    if (self.sessionId)
+                        self.showContinueUI();
                 } else {
                     const errorMsg = data.error || data.output || 'An unknown error occurred';
                     document.getElementById('claude-cli-error').textContent = errorMsg;
@@ -304,6 +353,32 @@ $js = <<<JS
                 document.getElementById('claude-cli-error').textContent = 'Failed to execute Claude CLI: ' + error.message;
                 document.getElementById('claude-cli-error').classList.remove('d-none');
             });
+        },
+
+        showContinueUI: function() {
+            document.getElementById('claude-continue-section').classList.remove('d-none');
+            document.getElementById('claude-cli-new-btn').classList.remove('d-none');
+            document.getElementById('claude-continue-input').value = '';
+            document.getElementById('claude-continue-input').focus();
+            // Scroll output to bottom
+            const outputEl = document.getElementById('claude-cli-output');
+            outputEl.scrollTop = outputEl.scrollHeight;
+        },
+
+        continueConversation: function() {
+            const input = document.getElementById('claude-continue-input');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            input.value = '';
+            this.showOutputStep(true);
+            this.execute(prompt);
+        },
+
+        newConversation: function() {
+            this.sessionId = null;
+            this.conversationOutput = '';
+            this.showConfigStep();
         }
     };
 
@@ -331,7 +406,24 @@ $js = <<<JS
         });
     });
 
+    document.getElementById('claude-continue-btn').addEventListener('click', function() {
+        window.ClaudeCliModal.continueConversation();
+    });
+
+    document.getElementById('claude-continue-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            window.ClaudeCliModal.continueConversation();
+        }
+    });
+
+    document.getElementById('claude-cli-new-btn').addEventListener('click', function() {
+        window.ClaudeCliModal.newConversation();
+    });
+
     document.getElementById('claudeCliModal').addEventListener('hidden.bs.modal', function() {
+        window.ClaudeCliModal.sessionId = null;
+        window.ClaudeCliModal.conversationOutput = '';
         window.ClaudeCliModal.showConfigStep();
     });
     JS;

@@ -333,6 +333,127 @@ class ScratchPadControllerTest extends Unit
         $this->assertSame('opus', $capturedOptions['model']);
     }
 
+    public function testRunClaudeReturnsSessionId(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([]);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')->willReturn('Hello');
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => true,
+            'output' => 'Response',
+            'error' => '',
+            'exitCode' => 0,
+            'session_id' => 'test-session-123',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('test-session-123', $result['sessionId']);
+    }
+
+    public function testRunClaudeWithFollowUpPrompt(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Original content\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([
+            'sessionId' => 'existing-session-456',
+            'prompt' => 'Follow-up question here',
+        ]);
+
+        $capturedPrompt = null;
+        $capturedSessionId = null;
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('convertToMarkdown')->willReturn('Original content');
+        $mockClaudeService->method('execute')
+            ->willReturnCallback(function ($prompt, $dir, $timeout, $options, $project, $sessionId) use (&$capturedPrompt, &$capturedSessionId) {
+                $capturedPrompt = $prompt;
+                $capturedSessionId = $sessionId;
+                return [
+                    'success' => true,
+                    'output' => 'Follow-up response',
+                    'error' => '',
+                    'exitCode' => 0,
+                    'session_id' => 'existing-session-456',
+                ];
+            });
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('Follow-up question here', $capturedPrompt);
+        $this->assertSame('existing-session-456', $capturedSessionId);
+    }
+
+    public function testRunClaudeReturnsErrorForEmptyFollowUpPrompt(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Content\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([
+            'sessionId' => 'existing-session',
+            'prompt' => '   ',
+        ]);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionRunClaude($scratchPad->id);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Prompt is empty.', $result['error']);
+    }
+
     private function createControllerWithClaudeService(ClaudeCliService $claudeService): ScratchPadController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);

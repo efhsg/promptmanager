@@ -9,7 +9,8 @@ class FieldValueBuilder
 {
     public function __construct(
         private readonly DeltaOpsHelper $deltaHelper = new DeltaOpsHelper()
-    ) {}
+    ) {
+    }
 
     public function build(mixed $fieldValue, ?string $fieldType, ?object $field): array
     {
