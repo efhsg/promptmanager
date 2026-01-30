@@ -10,18 +10,21 @@ All configuration, rules, and patterns are defined in `CLAUDE.md`. Read and foll
 - `CLAUDE.md` — Main configuration, role, domain essentials, behavioral guidelines
 - `.claude/config/project.md` — Commands, file structure, test paths, domain concepts
 - `.claude/rules/` — Coding standards, architecture, security, testing, commits, workflow
+- `.claude/rules/skill-routing.md` — Auto-load skills by file pattern or topic
 - `.claude/skills/` — Skill contracts for common tasks
 - `.claude/codebase_analysis.md` — Architecture documentation
 
 ## Quick Reference
 
+See `.claude/config/project.md` for the complete command reference. Most common:
+
 ```bash
 # Tests
 docker exec pma_yii vendor/bin/codecept run unit
 
-# Migrations
-docker exec pma_yii yii migrate --migrationNamespaces=app\\\\migrations --interactive=0
-docker exec pma_yii yii_test migrate --migrationNamespaces=app\\\\migrations --interactive=0
+# Migrations (both schemas required)
+docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
 
 # Linter
 ./linter.sh fix

@@ -87,7 +87,7 @@ See `.claude/skills/index.md` for available commands (`/new-model`, `/new-servic
 
 Format: `PREFIX: description` — see `.claude/rules/commits.md` for all prefixes.
 
-**Note:** Claude Code adds `Co-Authored-By` automatically. Use `/finalize-changes` to get a suggested commit message without auto-committing, then commit manually.
+**Note:** Do not add `Co-Authored-By` or AI attribution in commits. Use `/finalize-changes` to get a suggested commit message without auto-committing, then commit manually.
 
 ## Definition of Done
 

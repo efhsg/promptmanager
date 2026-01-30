@@ -13,6 +13,10 @@ When working on specific file types or topics, proactively load the relevant ski
 | `yii/services/*` | `skills/service.md` |
 | `yii/common/enums/*` | `skills/enum.md` |
 | `yii/exceptions/*` | `skills/error-handling.md` |
+| `yii/widgets/*` | `skills/frontend-design.md` |
+| `yii/presenters/*` | `skills/service.md` |
+| `yii/helpers/*` | `skills/service.md` |
+| `yii/components/*` | `skills/service.md` |
 
 ## Topic Routing
 

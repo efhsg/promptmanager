@@ -115,22 +115,22 @@ use yii\db\ActiveQuery;
 
 class <ModelName>Query extends ActiveQuery
 {
-    public function forUser(int $userId): static
+    public function forUser(int $userId): self
     {
         return $this->andWhere(['user_id' => $userId]);
     }
 
-    public function forProject(int $projectId): static
+    public function forProject(int $projectId): self
     {
         return $this->andWhere(['project_id' => $projectId]);
     }
 
-    public function active(): static
+    public function active(): self
     {
         return $this->andWhere(['deleted_at' => null]);
     }
 
-    public function alphabetical(): static
+    public function alphabetical(): self
     {
         return $this->orderBy(['name' => SORT_ASC]);
     }
@@ -176,7 +176,7 @@ $projects = Project::find()
 - No typed public properties for DB columns (magic attributes)
 - Use `TimestampTrait` for created_at/updated_at
 - Override `find()` to return custom Query class
-- Chainable query scopes return `static`
+- Chainable query scopes return `self`
 - PHPDoc for @property annotations
 
 ## Definition of Done

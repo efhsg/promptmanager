@@ -20,7 +20,7 @@ This document is informational (architecture/domain overview). If anything here 
 The application allows users to:
 - Create **Projects** as organizational containers for prompt-related resources
 - Define reusable **Contexts** (boilerplate content prepended to prompts)
-- Configure **Fields** with various types (text, select, multi-select, code, file, directory)
+- Configure **Fields** with various types (text, select, multi-select, code, select-invert, file, directory, string, number)
 - Build **Prompt Templates** using placeholders that reference fields
 - Generate **Prompt Instances** by filling in template fields with actual values
 
@@ -73,8 +73,10 @@ The top-level organizational unit that groups related prompts, contexts, and fie
 | `blacklisted_directories` | string\|null | Blacklisted paths with optional exceptions |
 | `prompt_instance_copy_format` | string | Output format (md, text, html, quilldelta, llm-xml) |
 | `label` | string\|null | Unique label per user for cross-project referencing |
+| `deleted_at` | string\|null | Soft-delete timestamp (null = active) |
 
 **Key Features:**
+- Soft-delete via `deleted_at` timestamp
 - File extension validation and whitelist
 - Directory blacklisting with exception syntax: `path/[exception1,exception2]`
 - Linked projects via many-to-many relationship
@@ -127,6 +129,8 @@ Template placeholders that get replaced with user-provided values during prompt 
 - `select-invert` - Select with inverted output (shows selected + unselected labels)
 - `file` - File path selector
 - `directory` - Directory path selector
+- `string` - Inline text input (single line)
+- `number` - Numeric input
 
 **Relationships:**
 - `belongsTo User`
@@ -243,38 +247,53 @@ Query classes provide chainable scopes for common filtering patterns.
 
 #### ProjectQuery (`yii/models/query/ProjectQuery.php`)
 ```php
-forUser(int $userId): static
-orderedByName(): static
-availableForLinking(?int $excludeProjectId, int $userId): static
+forUser(int $userId): self
+withName(string $name): self
+orderedByName(): self
+availableForLinking(?int $excludeProjectId, int $userId): self
 findUserProject(int $projectId, int $userId): ?Project
 ```
 
 #### ContextQuery (`yii/models/query/ContextQuery.php`)
 ```php
-forUser(int $userId): static
-forProject(int $projectId): static
-forProjectWithLinkedSharing(int $projectId, array $linkedProjectIds): static
-orderedByName(): static
-orderedByOrder(): static
-defaultOrdering(): static
-withIds(array $contextIds): static
-onlyDefault(): static
+forUser(int $userId): self
+forProject(int $projectId): self
+forProjectWithLinkedSharing(int $projectId, array $linkedProjectIds): self
+orderedByName(): self
+orderedByOrder(): self
+defaultOrdering(): self
+withIds(array $contextIds): self
+onlyDefault(): self
+static linkedProjectIds(int $projectId): array
+searchByTerm(string $term): self
+searchByKeywords(array $keywords): self
+prioritizeNameMatch(string $term): self
 ```
 
 #### FieldQuery (`yii/models/query/FieldQuery.php`)
 ```php
-sharedFromProjects(int $userId, array $projectIds): static
+forUser(int $userId): self
+sharedFromProjects(int $userId, array $projectIds): self
+searchByTerm(string $term): self
+searchByKeywords(array $keywords): self
+prioritizeNameMatch(string $term): self
 ```
 
 #### ProjectLinkedProjectQuery (`yii/models/query/ProjectLinkedProjectQuery.php`)
 ```php
-linkedProjectIdsFor(int $projectId, int $userId): static
+linkedProjectIdsFor(int $projectId, int $userId): self
 ```
 
 #### ScratchPadQuery (`yii/models/query/ScratchPadQuery.php`)
 ```php
-forUser(int $userId): static
-forProject(?int $projectId): static
+forUser(int $userId): self
+forProject(?int $projectId): self
+forUserWithProject(int $userId, ?int $projectId): self
+orderedByUpdated(): self
+orderedByName(): self
+searchByTerm(string $term): self
+searchByKeywords(array $keywords): self
+prioritizeNameMatch(string $term): self
 ```
 
 #### PromptTemplateQuery (`yii/models/query/PromptTemplateQuery.php`)
@@ -477,6 +496,17 @@ convertFromPlainText(string $content, CopyType $type): string
 #### CopyType (`yii/common/enums/CopyType.php`)
 Output format options for copying generated prompts (see CopyFormatConverter above).
 
+#### ClaudePermissionMode (`yii/common/enums/ClaudePermissionMode.php`)
+Permission mode options for Claude CLI execution.
+
+| Mode | Value | Description |
+|------|-------|-------------|
+| Plan | `plan` | Restricted to planning |
+| Don't Ask | `dontAsk` | Fail on permission needed |
+| Bypass Permissions | `bypassPermissions` | Auto-approve all |
+| Accept Edits | `acceptEdits` | Auto-accept edits only |
+| Default | `default` | Interactive |
+
 #### SearchMode (`yii/common/enums/SearchMode.php`)
 Search mode options for AdvancedSearchService.
 
@@ -530,6 +560,8 @@ convertToQuillDelta(array $transcriptData): string
 
 | Service | Purpose |
 |---------|---------|
+| `ClaudeCliService` | Execute Claude CLI commands with workspace and format conversion |
+| `ClaudeWorkspaceService` | Manage persistent Claude workspace directories per project |
 | `EntityPermissionService` | RBAC permission checking for controller actions |
 | `FileFieldProcessor` | Process file/directory field values |
 | `ModelService` | Generic model CRUD operations |
@@ -539,6 +571,62 @@ convertToQuillDelta(array $transcriptData): string
 | `QuickSearchService` | Global search across projects, templates, fields |
 | `UserDataSeeder` | Seed initial user data |
 | `UserPreferenceService` | Manage user preferences |
+
+---
+
+### Constants
+
+#### FieldConstants (`yii/common/constants/FieldConstants.php`)
+Central definitions for field type categories:
+
+| Constant | Values |
+|----------|--------|
+| `TYPES` | text, select, multi-select, code, select-invert, file, directory, string, number |
+| `OPTION_FIELD_TYPES` | select, multi-select, select-invert |
+| `CONTENT_FIELD_TYPES` | text, code, select-invert |
+| `PATH_FIELD_TYPES` | file, directory |
+| `PATH_PREVIEWABLE_FIELD_TYPES` | file |
+| `INLINE_FIELD_TYPES` | string, number |
+| `NO_OPTION_FIELD_TYPES` | input, textarea, select, code |
+
+### Exceptions
+
+| Exception | Location | Description |
+|-----------|----------|-------------|
+| `InvalidDeltaFormatException` | `yii/exceptions/` | Runtime exception for malformed Quill Delta JSON |
+| `UserCreationException` | `yii/modules/identity/exceptions/` | Exception during user creation |
+
+### Widgets (`yii/widgets/`)
+
+| Widget | Purpose |
+|--------|---------|
+| `Alert` | Flash message display in Bootstrap alert boxes |
+| `PathSelectorWidget` | Autocomplete path selector with AJAX for browsing project files |
+| `PathPreviewWidget` | Filesystem path display with modal preview and syntax highlighting |
+| `CopyToClipboardWidget` | Copy button with format conversion support |
+| `QuillViewerWidget` | Read-only Quill editor viewer for Delta JSON content |
+| `ContentViewerWidget` | Styled content display with copy-to-clipboard |
+
+### Helpers (`yii/helpers/`)
+
+| Helper | Purpose |
+|--------|---------|
+| `MarkdownDetector` | Detect if text is markdown-formatted via regex patterns |
+| `TooltipHelper` | Strip HTML and truncate Delta JSON or plain text for tooltips |
+| `BreadcrumbHelper` | Generate model-based breadcrumb arrays with labels and URLs |
+
+### Presenters (`yii/presenters/`)
+
+| Presenter | Purpose |
+|-----------|---------|
+| `PromptInstancePresenter` | Convert Quill Delta JSON to plain text for display |
+
+### Components (`yii/components/`)
+
+| Component | Purpose |
+|-----------|---------|
+| `ProjectContext` | Manage current project context via session, URL params, and user preferences |
+| `ProjectUrlManager` | Custom URL manager injecting project ID into project-scoped routes |
 
 ---
 
@@ -711,7 +799,8 @@ try {
 │  │                    Controllers                            │  │
 │  │  SiteController, ProjectController, ContextController,    │  │
 │  │  FieldController, PromptTemplateController,               │  │
-│  │  PromptInstanceController                                 │  │
+│  │  PromptInstanceController, ScratchPadController,          │  │
+│  │  SearchController                                         │  │
 │  └───────────────────────────┬──────────────────────────────┘  │
 │                              │                                  │
 │  ┌───────────────────────────┴──────────────────────────────┐  │

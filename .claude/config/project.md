@@ -75,6 +75,9 @@ docker exec pma_yii yii migrate/history --migrationNamespaces=app\\migrations
 ```bash
 # Build frontend assets (after Quill/JS changes)
 docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
+
+# Watch mode (auto-rebuild editor-init.js on changes)
+cd npm && npm run watch
 ```
 
 ## File Structure
@@ -124,6 +127,10 @@ Source files map to test files by mirroring the directory structure:
 | PromptTemplate | Template with placeholders for generating prompts |
 | PromptInstance | Generated prompt from a template |
 | ScratchPad | Workspace for prompt composition and editing |
+
+## Field Types
+
+Defined in `FieldConstants::TYPES` (`yii/common/constants/FieldConstants.php`).
 
 ## Placeholder Types
 
