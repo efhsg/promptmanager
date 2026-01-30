@@ -54,7 +54,7 @@ $this->params['breadcrumbs'][] = $model->name;
         </div>
     </div>
 
-    <?php if (!empty($model->summation)): ?>
+    <?php if (!empty($model->response)): ?>
     <div class="accordion" id="scratchPadViewAccordion">
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingContent">
@@ -96,13 +96,13 @@ $this->params['breadcrumbs'][] = $model->name;
         </div>
 
         <div class="accordion-item">
-            <h2 class="accordion-header" id="headingSummation">
+            <h2 class="accordion-header" id="headingResponse">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapseSummation" aria-expanded="false" aria-controls="collapseSummation">
-                    Summation
+                        data-bs-target="#collapseResponse" aria-expanded="false" aria-controls="collapseResponse">
+                    Response
                 </button>
             </h2>
-            <div id="collapseSummation" class="accordion-collapse collapse" aria-labelledby="headingSummation"
+            <div id="collapseResponse" class="accordion-collapse collapse" aria-labelledby="headingResponse"
                  data-bs-parent="#scratchPadViewAccordion">
                 <div class="accordion-body p-0">
                     <div class="d-flex justify-content-end p-2 border-bottom gap-2">
@@ -114,19 +114,19 @@ $this->params['breadcrumbs'][] = $model->name;
                             <i class="bi bi-terminal-fill"></i> Claude
                         </button>
                         <div class="input-group input-group-sm" style="width: auto;">
-                            <?= Html::dropDownList('summationCopyFormat', CopyType::MD->value, $copyTypes, [
-                                'id' => 'summation-copy-format-select',
+                            <?= Html::dropDownList('responseCopyFormat', CopyType::MD->value, $copyTypes, [
+                                'id' => 'response-copy-format-select',
                                 'class' => 'form-select',
                                 'style' => 'width: auto;',
                             ]) ?>
-                            <button type="button" id="copy-summation-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
+                            <button type="button" id="copy-response-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
                                 <i class="bi bi-clipboard"></i> Copy
                             </button>
                         </div>
                     </div>
                     <div class="p-3">
                         <?= QuillViewerWidget::widget([
-                            'content' => $model->summation,
+                            'content' => $model->response,
                             'enableCopy' => false,
                         ]) ?>
                     </div>
@@ -172,10 +172,10 @@ $this->params['breadcrumbs'][] = $model->name;
 
 <?php
 $contentDelta = json_encode($model->content);
-$summationDelta = json_encode($model->summation);
+$responseDelta = json_encode($model->response);
 $script = <<<JS
         window.QuillToolbar.setupCopyButton('copy-content-btn', 'content-copy-format-select', $contentDelta);
-        window.QuillToolbar.setupCopyButton('copy-summation-btn', 'summation-copy-format-select', $summationDelta);
+        window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', $responseDelta);
     JS;
 $this->registerJs($script);
 ?>

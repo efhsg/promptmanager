@@ -58,29 +58,29 @@ $copyTypes = CopyType::labels();
                 </div>
 
                 <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingSummation">
+                    <h2 class="accordion-header" id="headingResponse">
                         <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#collapseSummation" aria-expanded="false" aria-controls="collapseSummation">
-                            Summation
+                                data-bs-target="#collapseResponse" aria-expanded="false" aria-controls="collapseResponse">
+                            Response
                         </button>
                     </h2>
-                    <div id="collapseSummation" class="accordion-collapse collapse" aria-labelledby="headingSummation"
+                    <div id="collapseResponse" class="accordion-collapse collapse" aria-labelledby="headingResponse"
                          data-bs-parent="#scratchPadAccordion">
                         <div class="accordion-body p-0">
                             <div class="d-flex justify-content-end p-2 border-bottom">
                                 <div class="input-group input-group-sm" style="width: auto;">
-                                    <?= Html::dropDownList('summationCopyFormat', CopyType::MD->value, $copyTypes, [
-                                        'id' => 'summation-copy-format-select',
+                                    <?= Html::dropDownList('responseCopyFormat', CopyType::MD->value, $copyTypes, [
+                                        'id' => 'response-copy-format-select',
                                         'class' => 'form-select',
                                         'style' => 'width: auto;',
                                     ]) ?>
-                                    <button type="button" id="copy-summation-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
+                                    <button type="button" id="copy-response-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
                                         <i class="bi bi-clipboard"></i> Copy
                                     </button>
                                 </div>
                             </div>
                             <div class="resizable-editor-container">
-                                <div id="summation-editor" class="resizable-editor" style="min-height: 200px;"></div>
+                                <div id="response-editor" class="resizable-editor" style="min-height: 200px;"></div>
                             </div>
                         </div>
                     </div>
@@ -165,8 +165,8 @@ $script = <<<JS
     window.QuillToolbar.setupSmartPaste(window.quill, null, urlConfig);
     window.QuillToolbar.setupLoadMd(window.quill, null, urlConfig);
 
-    // Summation Quill editor
-    window.summationQuill = new Quill('#summation-editor', {
+    // Response Quill editor
+    window.responseQuill = new Quill('#response-editor', {
         theme: 'snow',
         modules: {
             toolbar: [
@@ -183,8 +183,8 @@ $script = <<<JS
         }
     });
 
-    window.QuillToolbar.setupSmartPaste(window.summationQuill, null, urlConfig);
-    window.QuillToolbar.setupLoadMd(window.summationQuill, null, urlConfig);
+    window.QuillToolbar.setupSmartPaste(window.responseQuill, null, urlConfig);
+    window.QuillToolbar.setupLoadMd(window.responseQuill, null, urlConfig);
 
     // Check for imported data in localStorage
     const importedData = localStorage.getItem('scratchPadContent');
@@ -203,7 +203,7 @@ $script = <<<JS
 
     // Setup copy buttons
     window.QuillToolbar.setupCopyButton('copy-content-btn', 'copy-format-select', () => JSON.stringify(window.quill.getContents()));
-    window.QuillToolbar.setupCopyButton('copy-summation-btn', 'summation-copy-format-select', () => JSON.stringify(window.summationQuill.getContents()));
+    window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', () => JSON.stringify(window.responseQuill.getContents()));
 
     // Save functionality
     document.getElementById('save-content-btn').addEventListener('click', function() {
@@ -231,7 +231,7 @@ $script = <<<JS
         const projectSelect = document.getElementById('scratch-pad-project');
         const projectId = projectSelect.value || null;
         const deltaContent = JSON.stringify(window.quill.getContents());
-        const summationContent = JSON.stringify(window.summationQuill.getContents());
+        const responseContent = JSON.stringify(window.responseQuill.getContents());
 
         fetch('$saveUrl', {
             method: 'POST',
@@ -243,7 +243,7 @@ $script = <<<JS
             body: JSON.stringify({
                 name: name,
                 content: deltaContent,
-                summation: summationContent,
+                response: responseContent,
                 project_id: projectId
             })
         })

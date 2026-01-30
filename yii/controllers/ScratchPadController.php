@@ -197,7 +197,7 @@ class ScratchPadController extends Controller
         $id = $data['id'] ?? null;
         $name = trim($data['name'] ?? '');
         $content = $data['content'] ?? '';
-        $summation = $data['summation'] ?? '';
+        $response = $data['response'] ?? '';
         $projectId = $data['project_id'] ?? null;
 
         if ($name === '') {
@@ -221,7 +221,7 @@ class ScratchPadController extends Controller
 
         $model->name = $name;
         $model->content = $content;
-        $model->summation = $summation;
+        $model->response = $response;
 
         if ($model->save()) {
             return [

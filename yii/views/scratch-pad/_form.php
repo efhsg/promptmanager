@@ -27,7 +27,7 @@ $isUpdate = !$model->isNewRecord;
     )->label('Project') ?>
 
     <?= $form->field($model, 'content')->hiddenInput(['id' => 'scratch-pad-content'])->label(false) ?>
-    <?= $form->field($model, 'summation')->hiddenInput(['id' => 'scratch-pad-summation'])->label(false) ?>
+    <?= $form->field($model, 'response')->hiddenInput(['id' => 'scratch-pad-response'])->label(false) ?>
 
     <div class="accordion mb-3" id="scratchPadAccordion">
         <div class="accordion-item">
@@ -60,29 +60,29 @@ $isUpdate = !$model->isNewRecord;
         </div>
 
         <div class="accordion-item">
-            <h2 class="accordion-header" id="headingSummation">
+            <h2 class="accordion-header" id="headingResponse">
                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapseSummation" aria-expanded="false" aria-controls="collapseSummation">
-                    Summation
+                        data-bs-target="#collapseResponse" aria-expanded="false" aria-controls="collapseResponse">
+                    Response
                 </button>
             </h2>
-            <div id="collapseSummation" class="accordion-collapse collapse" aria-labelledby="headingSummation"
+            <div id="collapseResponse" class="accordion-collapse collapse" aria-labelledby="headingResponse"
                  data-bs-parent="#scratchPadAccordion">
                 <div class="accordion-body p-0">
                     <div class="d-flex justify-content-end p-2 border-bottom">
                         <div class="input-group input-group-sm" style="width: auto;">
-                            <?= Html::dropDownList('summationCopyFormat', CopyType::MD->value, $copyTypes, [
-                                'id' => 'summation-copy-format-select',
+                            <?= Html::dropDownList('responseCopyFormat', CopyType::MD->value, $copyTypes, [
+                                'id' => 'response-copy-format-select',
                                 'class' => 'form-select',
                                 'style' => 'width: auto;',
                             ]) ?>
-                            <button type="button" id="copy-summation-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
+                            <button type="button" id="copy-response-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
                                 <i class="bi bi-clipboard"></i> Copy
                             </button>
                         </div>
                     </div>
                     <div class="resizable-editor-container">
-                        <div id="scratch-pad-summation-editor" class="resizable-editor" style="min-height: 200px;"></div>
+                        <div id="scratch-pad-response-editor" class="resizable-editor" style="min-height: 200px;"></div>
                     </div>
                 </div>
             </div>
@@ -137,7 +137,7 @@ $isUpdate = !$model->isNewRecord;
 
 <?php
 $content = json_encode($model->content);
-$summation = json_encode($model->summation);
+$response = json_encode($model->response);
 $saveUrl = Url::to(['/scratch-pad/save']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
@@ -177,8 +177,8 @@ $script = <<<JS
         hidden.value = JSON.stringify(quill.getContents());
     });
 
-    // Summation Quill editor
-    var summationQuill = new Quill('#scratch-pad-summation-editor', {
+    // Response Quill editor
+    var responseQuill = new Quill('#scratch-pad-response-editor', {
         theme: 'snow',
         modules: {
             toolbar: [
@@ -195,23 +195,23 @@ $script = <<<JS
         }
     });
 
-    var summationHidden = document.getElementById('scratch-pad-summation');
-    window.QuillToolbar.setupSmartPaste(summationQuill, summationHidden, urlConfig);
-    window.QuillToolbar.setupLoadMd(summationQuill, summationHidden, urlConfig);
+    var responseHidden = document.getElementById('scratch-pad-response');
+    window.QuillToolbar.setupSmartPaste(responseQuill, responseHidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(responseQuill, responseHidden, urlConfig);
 
     try {
-        summationQuill.setContents(JSON.parse($summation))
+        responseQuill.setContents(JSON.parse($response))
     } catch (error) {
-        console.error('Error loading summation content:', error);
+        console.error('Error loading response content:', error);
     }
 
-    summationQuill.on('text-change', function() {
-        summationHidden.value = JSON.stringify(summationQuill.getContents());
+    responseQuill.on('text-change', function() {
+        responseHidden.value = JSON.stringify(responseQuill.getContents());
     });
 
     // Setup copy buttons
     window.QuillToolbar.setupCopyButton('copy-content-btn', 'copy-format-select', () => JSON.stringify(quill.getContents()));
-    window.QuillToolbar.setupCopyButton('copy-summation-btn', 'summation-copy-format-select', () => JSON.stringify(summationQuill.getContents()));
+    window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', () => JSON.stringify(responseQuill.getContents()));
 
     // Save As functionality
     const saveAsBtn = document.getElementById('save-as-btn');
@@ -238,7 +238,7 @@ $script = <<<JS
             }
 
             const deltaContent = JSON.stringify(quill.getContents());
-            const summationContent = JSON.stringify(summationQuill.getContents());
+            const responseContent = JSON.stringify(responseQuill.getContents());
 
             fetch('$saveUrl', {
                 method: 'POST',
@@ -250,7 +250,7 @@ $script = <<<JS
                 body: JSON.stringify({
                     name: name,
                     content: deltaContent,
-                    summation: summationContent,
+                    response: responseContent,
                     project_id: document.getElementById('scratchpad-project_id')?.value || null
                 })
             })
