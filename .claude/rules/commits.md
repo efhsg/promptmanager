@@ -1,9 +1,5 @@
 # Commit Message Format
 
-## Protected Branches
-
-**NEVER commit directly to `main`.** Always create a feature or fix branch first.
-
 ## Prefixes
 
 | Prefix | When |
