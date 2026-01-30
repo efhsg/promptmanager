@@ -135,24 +135,24 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                           rows="3" placeholder="Ask a follow-up question..."></textarea>
             </div>
 
-            <!-- Editor mode toggle -->
-            <div class="claude-editor-toggle text-end mt-1">
-                <a href="#" id="claude-editor-toggle" class="small text-muted">
-                    Switch to plain text
-                </a>
-            </div>
-
-            <!-- Action buttons -->
-            <div class="mt-3 d-flex gap-2 align-items-center">
-                <button type="button" id="claude-send-btn" class="btn btn-primary">
-                    <i class="bi bi-send-fill"></i> Send
-                </button>
-                <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
-                    <i class="bi bi-arrow-counterclockwise"></i> Reuse last prompt
-                </button>
-                <button type="button" id="claude-new-session-btn" class="btn btn-outline-secondary d-none">
-                    <i class="bi bi-arrow-repeat"></i> New Session
-                </button>
+            <!-- Action buttons + editor toggle -->
+            <div class="mt-3 d-flex justify-content-between align-items-center">
+                <div class="claude-editor-toggle">
+                    <a href="#" id="claude-editor-toggle" class="small text-muted">
+                        Switch to plain text
+                    </a>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <button type="button" id="claude-new-session-btn" class="btn btn-outline-secondary d-none">
+                        <i class="bi bi-arrow-repeat"></i> New Session
+                    </button>
+                    <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
+                        <i class="bi bi-arrow-counterclockwise"></i> Last prompt
+                    </button>
+                    <button type="button" id="claude-send-btn" class="btn btn-primary">
+                        <i class="bi bi-send-fill"></i> Send
+                    </button>
+                </div>
             </div>
         </div>
     </div>
