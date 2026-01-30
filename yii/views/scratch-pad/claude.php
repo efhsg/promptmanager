@@ -19,8 +19,8 @@ $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $checkConfigUrl = $model->project ? Url::to(['/project/check-claude-config', 'id' => $model->project->id]) : null;
 $projectDefaults = $model->project ? $model->project->getClaudeOptions() : [];
-$projectDefaultsJson = Json::htmlEncode($projectDefaults);
-$checkConfigUrlJson = Json::htmlEncode($checkConfigUrl);
+$projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 $permissionModes = [
     '' => '(Use default)',
@@ -176,7 +176,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 </div>
 
 <?php
-$contentJson = Json::htmlEncode($model->content ?? '{"ops":[]}');
+$contentJson = Json::encode($model->content ?? '{"ops":[]}', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $csrfToken = Yii::$app->request->csrfToken;
 $js = <<<JS
     (function() {
@@ -202,8 +202,10 @@ $js = <<<JS
             importTextUrl: '$importTextUrl',
             importMarkdownUrl: '$importMarkdownUrl'
         };
-        window.QuillToolbar.setupSmartPaste(quill, null, urlConfig);
-        window.QuillToolbar.setupLoadMd(quill, null, urlConfig);
+        if (window.QuillToolbar) {
+            window.QuillToolbar.setupSmartPaste(quill, null, urlConfig);
+            window.QuillToolbar.setupLoadMd(quill, null, urlConfig);
+        }
 
         var initialDelta = JSON.parse($contentJson);
         quill.setContents(initialDelta);
@@ -356,6 +358,7 @@ $js = <<<JS
                     var delta = quill.getContents();
                     this.lastSentDelta = delta;
                     options.contentDelta = JSON.stringify(delta);
+                    quill.setText('');
                 } else {
                     var textarea = document.getElementById('claude-followup-textarea');
                     var text = textarea.value.trim();
@@ -400,10 +403,9 @@ $js = <<<JS
                             { role: 'claude', content: data.output || '' }
                         );
 
-                        // First successful run: collapse settings, switch to textarea, show buttons
+                        // First successful run: collapse settings, show follow-up buttons
                         if (self.messages.length === 2) {
                             self.collapseSettings();
-                            self.switchToTextarea();
                             document.getElementById('claude-reuse-btn').classList.remove('d-none');
                             document.getElementById('claude-new-session-btn').classList.remove('d-none');
                         }
@@ -535,12 +537,31 @@ $js = <<<JS
                 panel.scrollTop = panel.scrollHeight;
             },
 
+            hasFormatting: function() {
+                var ops = quill.getContents().ops || [];
+                for (var i = 0; i < ops.length; i++) {
+                    var op = ops[i];
+                    if (op.attributes && Object.keys(op.attributes).length > 0)
+                        return true;
+                    if (typeof op.insert !== 'string')
+                        return true;
+                }
+                return false;
+            },
+
             switchToTextarea: function() {
+                if (this.hasFormatting()) {
+                    if (!confirm('Switching to plain text will discard all formatting (bold, headers, lists, etc.). Continue?'))
+                        return;
+                }
+                var text = quill.getText().replace(/\\n$/, '');
                 document.getElementById('claude-quill-wrapper').classList.add('d-none');
                 document.getElementById('claude-textarea-wrapper').classList.remove('d-none');
                 document.getElementById('claude-editor-toggle').textContent = 'Switch to rich editor';
                 this.inputMode = 'textarea';
-                document.getElementById('claude-followup-textarea').focus();
+                var textarea = document.getElementById('claude-followup-textarea');
+                textarea.value = text;
+                textarea.focus();
             },
 
             switchToQuill: function(delta) {
@@ -550,7 +571,7 @@ $js = <<<JS
                 if (delta)
                     quill.setContents(delta);
                 else
-                    quill.setText('');
+                    quill.setText(document.getElementById('claude-followup-textarea').value || '');
                 this.inputMode = 'quill';
                 quill.focus();
             },

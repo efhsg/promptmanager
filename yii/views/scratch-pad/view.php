@@ -10,7 +10,7 @@ use yii\widgets\DetailView;
 
 $copyTypes = CopyType::labels();
 $canRunClaude = $model->project_id !== null;
-$claudeTooltip = !$canRunClaude ? 'Project required' : '';
+$claudeTooltip = $canRunClaude ? 'Talk to Claude' : 'Project required';
 $this->title = $model->name;
 $this->params['breadcrumbs'][] = ['label' => 'Saved Scratch Pads', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $model->name;
@@ -169,8 +169,8 @@ $this->params['breadcrumbs'][] = $model->name;
 </div>
 
 <?php
-$contentDelta = json_encode($model->content);
-$responseDelta = json_encode($model->response);
+$contentDelta = json_encode($model->content, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$responseDelta = json_encode($model->response, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $script = <<<JS
         window.QuillToolbar.setupCopyButton('copy-content-btn', 'content-copy-format-select', $contentDelta);
         window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', $responseDelta);
