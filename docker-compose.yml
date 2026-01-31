@@ -23,6 +23,8 @@ services:
       - 'host.docker.internal:host-gateway'
     env_file:
       - .env
+      - path: .env.db
+        required: false
     volumes:
       - .:/var/www/html
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
@@ -32,8 +34,6 @@ services:
       - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
       - ${HOME}/.local/bin:/home/${USER_NAME}/.local/bin
       - ${HOME}/.local/share:/home/${USER_NAME}/.local/share
-    depends_on:
-      - pma_mysql
     networks:
       - promptmanager_network
 
@@ -58,6 +58,7 @@ services:
       - promptmanager_network
 
   pma_mysql:
+    profiles: ["local"]
     restart: always
     image: mysql:8.0
     container_name: pma_mysql

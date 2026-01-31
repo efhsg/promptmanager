@@ -5,7 +5,7 @@ return [
     'dsn' => sprintf(
         'mysql:host=%s;port=%s;dbname=%s',
         getenv('DB_HOST'),
-        3306,
+        getenv('DB_APP_PORT') ?: 3306,
         getenv('DB_DATABASE_TEST')
     ),
     'username' => getenv('DB_USER'),

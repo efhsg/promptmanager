@@ -4,6 +4,7 @@
 /data/
 trash/
 .env
+.env.db
 /wip/
 .php-cs-fixer.cache
 scripts/backup.log

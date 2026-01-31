@@ -75,6 +75,7 @@ Commands are thin executable wrappers that invoke skills:
 | `/cp` | (workflow) | Commit and push to origin |
 | `/analyze-codebase` | (workflow) | Generate documentation |
 | `/refactor-plan` | (workflow) | Create refactoring plan |
+| `/switch-db` | (workflow) | Switch database profile (local/remote/status) |
 
 ## Naming Conventions
 
