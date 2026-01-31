@@ -167,9 +167,15 @@ class ProjectController extends Controller
 
         $availableProjects = $this->projectService->fetchAvailableProjectsForLinking($model->id, Yii::$app->user->id);
 
+        $projectConfigStatus = [];
+        if (!empty($model->root_directory)) {
+            $projectConfigStatus = $this->claudeCliService->checkClaudeConfigForPath($model->root_directory);
+        }
+
         return $this->render('update', [
             'model' => $model,
             'availableProjects' => $availableProjects,
+            'projectConfigStatus' => $projectConfigStatus,
         ]);
     }
 
@@ -249,7 +255,10 @@ class ProjectController extends Controller
             'hasCLAUDE_MD' => $configStatus['hasCLAUDE_MD'],
             'hasClaudeDir' => $configStatus['hasClaudeDir'],
             'hasAnyConfig' => $configStatus['hasAnyConfig'],
+            'pathStatus' => $configStatus['pathStatus'],
+            'pathMapped' => $configStatus['pathMapped'],
             'hasPromptManagerContext' => $model->hasClaudeContext(),
+            'claudeContext' => $model->getClaudeContextAsMarkdown(),
         ];
     }
 

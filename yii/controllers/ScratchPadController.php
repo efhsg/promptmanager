@@ -505,9 +505,13 @@ class ScratchPadController extends Controller
             'duration_ms' => $result['duration_ms'] ?? null,
             'model' => $result['model'] ?? null,
             'input_tokens' => $result['input_tokens'] ?? null,
+            'cache_tokens' => $result['cache_tokens'] ?? null,
             'output_tokens' => $result['output_tokens'] ?? null,
             'configSource' => $result['configSource'] ?? null,
             'sessionId' => $result['session_id'] ?? null,
+            'requestedPath' => $result['requestedPath'] ?? null,
+            'effectivePath' => $result['effectivePath'] ?? null,
+            'usedFallback' => $result['usedFallback'] ?? null,
             'promptMarkdown' => $markdown,
         ];
     }

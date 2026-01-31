@@ -5,6 +5,7 @@ namespace tests\unit\services;
 use app\services\ClaudeCliService;
 use Codeception\Test\Unit;
 use ReflectionClass;
+use Yii;
 
 class ClaudeCliServiceTest extends Unit
 {
@@ -90,7 +91,8 @@ class ClaudeCliServiceTest extends Unit
         $result = $method->invoke($service, $jsonOutput);
 
         $this->assertSame('opus-4.5', $result['model']);
-        $this->assertSame(24100, $result['input_tokens']);
+        $this->assertSame(100, $result['input_tokens']);
+        $this->assertSame(24000, $result['cache_tokens']);
         $this->assertSame(50, $result['output_tokens']);
     }
 
@@ -154,5 +156,75 @@ class ClaudeCliServiceTest extends Unit
         $result = $method->invoke($service, 'not valid json');
 
         $this->assertEmpty($result);
+    }
+
+    public function testCheckConfigReturnsNotMappedWhenNoMappings(): void
+    {
+        $service = new ClaudeCliService();
+
+        $result = $service->checkClaudeConfigForPath('/nonexistent/host/path/project');
+
+        $this->assertSame('not_mapped', $result['pathStatus']);
+        $this->assertFalse($result['pathMapped']);
+        $this->assertFalse($result['hasAnyConfig']);
+        $this->assertSame('/nonexistent/host/path/project', $result['requestedPath']);
+        $this->assertSame('/nonexistent/host/path/project', $result['effectivePath']);
+    }
+
+    public function testCheckConfigReturnsNotAccessibleWhenMappedButMissing(): void
+    {
+        // Configure a mapping that translates to a nonexistent container path
+        $originalMappings = Yii::$app->params['pathMappings'] ?? [];
+        Yii::$app->params['pathMappings'] = ['/host/projects' => '/nonexistent/container/path'];
+
+        try {
+            $service = new ClaudeCliService();
+            $result = $service->checkClaudeConfigForPath('/host/projects/myapp');
+
+            $this->assertSame('not_accessible', $result['pathStatus']);
+            $this->assertTrue($result['pathMapped']);
+            $this->assertFalse($result['hasAnyConfig']);
+            $this->assertSame('/host/projects/myapp', $result['requestedPath']);
+            $this->assertSame('/nonexistent/container/path/myapp', $result['effectivePath']);
+        } finally {
+            Yii::$app->params['pathMappings'] = $originalMappings;
+        }
+    }
+
+    public function testCheckConfigReturnsHasConfigWhenConfigExists(): void
+    {
+        // Use a temp directory with a CLAUDE.md file
+        $tmpDir = sys_get_temp_dir() . '/claude_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+        file_put_contents($tmpDir . '/CLAUDE.md', '# Test');
+
+        // Map directly so translatePath is identity (path equals container path)
+        try {
+            $service = new ClaudeCliService();
+            $result = $service->checkClaudeConfigForPath($tmpDir);
+
+            $this->assertSame('has_config', $result['pathStatus']);
+            $this->assertTrue($result['hasCLAUDE_MD']);
+            $this->assertTrue($result['hasAnyConfig']);
+        } finally {
+            @unlink($tmpDir . '/CLAUDE.md');
+            @rmdir($tmpDir);
+        }
+    }
+
+    public function testCheckConfigReturnsNoConfigWhenDirExistsButEmpty(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/claude_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+
+        try {
+            $service = new ClaudeCliService();
+            $result = $service->checkClaudeConfigForPath($tmpDir);
+
+            $this->assertSame('no_config', $result['pathStatus']);
+            $this->assertFalse($result['hasAnyConfig']);
+        } finally {
+            @rmdir($tmpDir);
+        }
     }
 }

@@ -5,6 +5,7 @@ namespace app\models;
 use app\models\query\ProjectQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
+use app\services\CopyFormatConverter;
 use common\enums\CopyType;
 use Yii;
 use yii\db\ActiveQuery;
@@ -344,6 +345,30 @@ class Project extends ActiveRecord
     public function hasClaudeContext(): bool
     {
         return $this->claude_context !== null && trim($this->claude_context) !== '';
+    }
+
+    /**
+     * Returns claude_context converted to markdown.
+     *
+     * Handles both Delta JSON (new format) and plain text (legacy).
+     */
+    public function getClaudeContextAsMarkdown(): string
+    {
+        if (!$this->hasClaudeContext()) {
+            return '';
+        }
+
+        $raw = $this->claude_context;
+        $decoded = json_decode($raw, true);
+
+        if (json_last_error() === JSON_ERROR_NONE && isset($decoded['ops'])) {
+            /** @var CopyFormatConverter $converter */
+            $converter = Yii::createObject(CopyFormatConverter::class);
+            return $converter->convertFromQuillDelta($raw, CopyType::MD);
+        }
+
+        // Legacy plain-text content
+        return $raw;
     }
 
     public function getPromptInstanceCopyFormatEnum(): CopyType

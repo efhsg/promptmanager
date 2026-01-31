@@ -5,6 +5,7 @@ use yii\helpers\Html;
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 /** @var array $availableProjects */
+/** @var array $projectConfigStatus */
 
 $this->title = 'Update ' . $model->name;
 echo $this->render('_breadcrumbs', [
@@ -23,6 +24,7 @@ echo $this->render('_breadcrumbs', [
                 <?= $this->render('_form', [
                     'model' => $model,
                     'availableProjects' => $availableProjects,
+                    'projectConfigStatus' => $projectConfigStatus ?? [],
                 ]) ?>
             </div>
         </div>

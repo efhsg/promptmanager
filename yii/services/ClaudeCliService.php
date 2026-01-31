@@ -53,7 +53,7 @@ class ClaudeCliService
      * @param array $options Claude CLI options (permissionMode, model, appendSystemPrompt, allowedTools, disallowedTools)
      * @param Project|null $project Optional project for workspace resolution
      * @param string|null $sessionId Optional session ID to continue a previous conversation
-     * @return array{success: bool, output: string, error: string, exitCode: int, model?: string, input_tokens?: int, output_tokens?: int, configSource?: string, session_id?: string}
+     * @return array{success: bool, output: string, error: string, exitCode: int, duration_ms?: int, model?: string, input_tokens?: int, cache_tokens?: int, output_tokens?: int, configSource?: string, session_id?: string, requestedPath: string, effectivePath: string, usedFallback: bool}
      */
     public function execute(
         string $prompt,
@@ -65,6 +65,7 @@ class ClaudeCliService
     ): array {
         // Determine effective working directory (managed workspace vs project's own)
         $effectiveWorkDir = $this->determineWorkingDirectory($workingDirectory, $project);
+        $usedFallback = ($effectiveWorkDir !== $workingDirectory);
         $containerPath = $this->translatePath($effectiveWorkDir);
 
         if (!is_dir($containerPath)) {
@@ -154,9 +155,13 @@ class ClaudeCliService
             'duration_ms' => $parsedOutput['duration_ms'] ?? null,
             'model' => $parsedOutput['model'] ?? null,
             'input_tokens' => $parsedOutput['input_tokens'] ?? null,
+            'cache_tokens' => $parsedOutput['cache_tokens'] ?? null,
             'output_tokens' => $parsedOutput['output_tokens'] ?? null,
             'configSource' => $configSource,
             'session_id' => $parsedOutput['session_id'] ?? null,
+            'requestedPath' => $workingDirectory,
+            'effectivePath' => $effectiveWorkDir,
+            'usedFallback' => $usedFallback,
         ];
     }
 
@@ -172,11 +177,25 @@ class ClaudeCliService
     {
         // Check if requested directory exists and has Claude config
         $containerPath = $this->translatePath($requestedDir);
+        $pathMapped = ($containerPath !== $requestedDir);
+
         if (is_dir($containerPath)) {
             $configStatus = $this->hasClaudeConfig($containerPath);
             if ($configStatus['hasAnyConfig']) {
                 return $requestedDir;
             }
+            Yii::warning(
+                "Directory '{$containerPath}' exists but has no Claude config, falling through to managed workspace",
+                'claude'
+            );
+        } else {
+            $mappingNote = $pathMapped
+                ? "mapped from '{$requestedDir}' to '{$containerPath}'"
+                : "no path mapping applied for '{$requestedDir}'";
+            Yii::warning(
+                "Directory not accessible in container ({$mappingNote}), falling through to managed workspace",
+                'claude'
+            );
         }
 
         // If project exists, use its managed workspace
@@ -269,8 +288,8 @@ class ClaudeCliService
         }
 
         $decoded['model'] = $this->formatModelName($modelId);
-        $decoded['input_tokens'] = ($usage['inputTokens'] ?? 0)
-            + ($usage['cacheReadInputTokens'] ?? 0)
+        $decoded['input_tokens'] = $usage['inputTokens'] ?? 0;
+        $decoded['cache_tokens'] = ($usage['cacheReadInputTokens'] ?? 0)
             + ($usage['cacheCreationInputTokens'] ?? 0);
         $decoded['output_tokens'] = $usage['outputTokens'] ?? 0;
     }
@@ -307,22 +326,34 @@ class ClaudeCliService
     }
 
     /**
-     * Checks Claude config status for a given host path.
+     * Checks Claude config status for a given host path with diagnostics.
      *
-     * @return array{hasCLAUDE_MD: bool, hasClaudeDir: bool, hasAnyConfig: bool}
+     * @return array{hasCLAUDE_MD: bool, hasClaudeDir: bool, hasAnyConfig: bool, pathStatus: string, pathMapped: bool, requestedPath: string, effectivePath: string}
      */
     public function checkClaudeConfigForPath(string $hostPath): array
     {
         $containerPath = $this->translatePath($hostPath);
+        $pathMapped = ($containerPath !== $hostPath);
+
+        $base = [
+            'hasCLAUDE_MD' => false,
+            'hasClaudeDir' => false,
+            'hasAnyConfig' => false,
+            'pathMapped' => $pathMapped,
+            'requestedPath' => $hostPath,
+            'effectivePath' => $containerPath,
+        ];
+
         if (!is_dir($containerPath)) {
-            return [
-                'hasCLAUDE_MD' => false,
-                'hasClaudeDir' => false,
-                'hasAnyConfig' => false,
-            ];
+            $base['pathStatus'] = $pathMapped ? 'not_accessible' : 'not_mapped';
+            return $base;
         }
 
-        return $this->hasClaudeConfig($containerPath);
+        $config = $this->hasClaudeConfig($containerPath);
+
+        return array_merge($base, $config, [
+            'pathStatus' => $config['hasAnyConfig'] ? 'has_config' : 'no_config',
+        ]);
     }
 
     /**

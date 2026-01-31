@@ -103,11 +103,11 @@ class ClaudeWorkspaceService
         $lines[] = "Project: **{$project->name}**";
         $lines[] = '';
 
-        // Include custom context if set
+        // Include custom context if set (stored as Delta JSON, converted to markdown)
         if ($project->hasClaudeContext()) {
             $lines[] = '## Project Context';
             $lines[] = '';
-            $lines[] = $project->claude_context;
+            $lines[] = $project->getClaudeContextAsMarkdown();
             $lines[] = '';
         }
 

@@ -27,6 +27,7 @@ services:
       - .:/var/www/html
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
       - ${YTX_PATH:-./ytx}:/opt/ytx:ro
+      - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
       - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
       - ${HOME}/.local/bin:/home/${USER_NAME}/.local/bin

@@ -66,7 +66,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <div class="collapse show" id="claudeSettingsCard">
             <div class="card-body">
                 <div id="claude-config-status" class="alert alert-secondary mb-3 d-none">
-                    <small><i class="bi bi-info-circle me-1"></i><span id="claude-config-status-text">Checking config...</span></small>
+                    <small><span id="claude-config-status-text">Checking config...</span></small>
                 </div>
 
                 <div class="row g-3">
@@ -159,21 +159,33 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         </div>
     </div>
 
-    <!-- Section 3: Conversation Panel -->
-    <div class="card">
-        <div class="card-body p-0">
-            <div id="claude-conversation" class="claude-conversation">
-                <div id="claude-conversation-empty" class="claude-conversation__empty">
-                    <i class="bi bi-terminal"></i>
-                    <span class="text-muted">Send a prompt to start a conversation</span>
-                </div>
+    <!-- Section 3a: Current Exchange -->
+    <div id="claude-current-exchange" class="mb-4">
+        <div>
+            <div id="claude-current-empty" class="claude-conversation__empty">
+                <i class="bi bi-terminal"></i>
+                <span class="text-muted">Send a prompt to start a conversation</span>
             </div>
-            <div id="claude-copy-all-wrapper" class="d-none p-2 border-top text-end">
-                <button type="button" id="claude-copy-all-btn" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-clipboard"></i> Copy All
-                </button>
-            </div>
+            <div id="claude-current-response" class="d-none"></div>
+            <div id="claude-current-prompt" class="d-none"></div>
         </div>
+    </div>
+
+    <!-- Section 3b: History Accordion -->
+    <div id="claude-history-wrapper" class="d-none mb-4">
+        <div class="d-flex justify-content-end mb-2">
+            <button type="button" id="claude-toggle-history-btn" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrows-expand"></i> Expand All
+            </button>
+        </div>
+        <div class="accordion" id="claude-history-accordion"></div>
+    </div>
+
+    <!-- Copy All (below both) -->
+    <div id="claude-copy-all-wrapper" class="d-none text-end mb-4">
+        <button type="button" id="claude-copy-all-btn" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-clipboard"></i> Copy All
+        </button>
     </div>
 </div>
 
@@ -245,7 +257,7 @@ $js = <<<JS
             messages: [],
             lastSentDelta: null,
             inputMode: 'quill',
-            isUserScrolledUp: false,
+            historyCounter: 0,
             projectDefaults: $projectDefaultsJson,
             checkConfigUrl: $checkConfigUrlJson,
 
@@ -253,7 +265,6 @@ $js = <<<JS
                 this.prefillFromDefaults();
                 this.checkConfigStatus();
                 this.setupEventListeners();
-                this.setupScrollTracking();
             },
 
             prefillFromDefaults: function() {
@@ -287,19 +298,36 @@ $js = <<<JS
                         statusEl.classList.add('d-none');
                         return;
                     }
-                    statusEl.classList.remove('alert-secondary', 'alert-success', 'alert-info', 'alert-warning');
-                    if (data.hasAnyConfig) {
+                    statusEl.classList.remove('alert-secondary', 'alert-success', 'alert-info', 'alert-warning', 'alert-danger');
+                    var ps = data.pathStatus;
+                    if (ps === 'not_mapped') {
+                        statusEl.classList.add('alert-danger');
+                        var msg = '<i class="bi bi-x-circle me-1"></i>Project directory not mapped. Check PATH_MAPPINGS in .env and PROJECTS_ROOT volume mount.';
+                        if (data.hasPromptManagerContext)
+                            msg += '<br><small class="text-muted">Falling back to managed workspace with PromptManager context.</small>';
+                        statusTextEl.innerHTML = msg;
+                    } else if (ps === 'not_accessible') {
+                        statusEl.classList.add('alert-danger');
+                        var msg2 = '<i class="bi bi-x-circle me-1"></i>Project directory not accessible in container. Check that PROJECTS_ROOT volume is mounted correctly.';
+                        if (data.hasPromptManagerContext)
+                            msg2 += '<br><small class="text-muted">Falling back to managed workspace with PromptManager context.</small>';
+                        statusTextEl.innerHTML = msg2;
+                    } else if (ps === 'has_config') {
                         statusEl.classList.add('alert-success');
                         var parts = [];
                         if (data.hasCLAUDE_MD) parts.push('CLAUDE.md');
                         if (data.hasClaudeDir) parts.push('.claude/');
                         statusTextEl.innerHTML = '<i class="bi bi-check-circle me-1"></i>Using project\\'s own config: ' + parts.join(' + ');
-                    } else if (data.hasPromptManagerContext) {
+                    } else if (ps === 'no_config' && data.hasPromptManagerContext) {
                         statusEl.classList.add('alert-info');
-                        statusTextEl.innerHTML = '<i class="bi bi-cloud me-1"></i>Using PromptManager context (injected at runtime)';
+                        statusTextEl.innerHTML = '<i class="bi bi-info-circle me-1"></i>No project config found. Using managed workspace with PromptManager context.';
+                        if (data.claudeContext) {
+                            statusEl.title = data.claudeContext;
+                            statusEl.style.cursor = 'help';
+                        }
                     } else {
                         statusEl.classList.add('alert-warning');
-                        statusTextEl.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>No config - Claude will use defaults. Consider adding context in Project settings.';
+                        statusTextEl.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>No config found. Claude will use defaults. Consider adding context in Project settings.';
                     }
                 })
                 .catch(function() { statusEl.classList.add('d-none'); });
@@ -311,6 +339,7 @@ $js = <<<JS
                 document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
                 document.getElementById('claude-new-session-btn').addEventListener('click', function() { self.newSession(); });
                 document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
+                document.getElementById('claude-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
                 document.getElementById('claude-editor-toggle').addEventListener('click', function(e) {
                     e.preventDefault();
                     if (self.inputMode === 'quill')
@@ -340,15 +369,6 @@ $js = <<<JS
                 });
             },
 
-            setupScrollTracking: function() {
-                var self = this;
-                var panel = document.getElementById('claude-conversation');
-                panel.addEventListener('scroll', function() {
-                    var threshold = 50;
-                    self.isUserScrolledUp = (panel.scrollTop + panel.clientHeight) < (panel.scrollHeight - threshold);
-                });
-            },
-
             getOptions: function() {
                 return {
                     model: document.getElementById('claude-model').value,
@@ -367,22 +387,39 @@ $js = <<<JS
                 if (this.sessionId)
                     options.sessionId = this.sessionId;
 
+                var pendingPrompt = null;
                 if (this.inputMode === 'quill') {
                     var delta = quill.getContents();
                     this.lastSentDelta = delta;
+                    pendingPrompt = quill.getText().replace(/\\n$/, '');
+                    if (!pendingPrompt.trim()) return;
                     options.contentDelta = JSON.stringify(delta);
                     quill.setText('');
                 } else {
                     var textarea = document.getElementById('claude-followup-textarea');
                     var text = textarea.value.trim();
                     if (!text) return;
+                    pendingPrompt = text;
                     options.prompt = text;
                     textarea.value = '';
                 }
 
+                // First send: collapse settings and compact editor
+                var isFirstSend = this.messages.length === 0;
+                if (isFirstSend) {
+                    this.collapseSettings();
+                    this.compactEditor();
+                }
+
                 sendBtn.disabled = true;
-                this.hideEmptyState();
-                var placeholder = this.showLoadingPlaceholder();
+
+                // Archive current exchange before new content overwrites the DOM
+                if (this.messages.length >= 2)
+                    this.moveCurrentToHistory();
+
+                // Show user prompt immediately (before fetch)
+                this.showUserPrompt(pendingPrompt);
+                this.showLoadingPlaceholder();
 
                 fetch('$runClaudeUrl', {
                     method: 'POST',
@@ -396,29 +433,32 @@ $js = <<<JS
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     sendBtn.disabled = false;
-                    self.removeLoadingPlaceholder(placeholder);
+                    self.removeLoadingPlaceholder();
 
                     if (data.success) {
-                        self.addMessage('user', data.promptMarkdown || options.prompt || '(prompt)');
-                        self.addMessage('claude', data.output || '(No output)', {
+                        var userContent = data.promptMarkdown || options.prompt || '(prompt)';
+                        var claudeContent = data.output || '(No output)';
+                        var meta = {
                             duration_ms: data.duration_ms,
                             model: data.model,
                             input_tokens: data.input_tokens,
+                            cache_tokens: data.cache_tokens,
                             output_tokens: data.output_tokens,
                             configSource: data.configSource
-                        });
+                        };
+
+                        self.renderCurrentExchange(userContent, claudeContent, meta);
 
                         if (data.sessionId)
                             self.sessionId = data.sessionId;
 
                         self.messages.push(
-                            { role: 'user', content: data.promptMarkdown || options.prompt || '' },
-                            { role: 'claude', content: data.output || '' }
+                            { role: 'user', content: userContent },
+                            { role: 'claude', content: claudeContent }
                         );
 
-                        // First successful run: collapse settings, show follow-up buttons
+                        // First successful run: show follow-up buttons
                         if (self.messages.length === 2) {
-                            self.collapseSettings();
                             document.getElementById('claude-reuse-btn').classList.remove('d-none');
                             document.getElementById('claude-new-session-btn').classList.remove('d-none');
                         }
@@ -431,63 +471,132 @@ $js = <<<JS
                 })
                 .catch(function(error) {
                     sendBtn.disabled = false;
-                    self.removeLoadingPlaceholder(placeholder);
+                    self.removeLoadingPlaceholder();
                     self.addErrorMessage('Failed to execute Claude CLI: ' + error.message);
                     self.focusEditor();
                 });
             },
 
-            addMessage: function(role, content, meta) {
-                var panel = document.getElementById('claude-conversation');
-                var div = document.createElement('div');
-                div.className = 'claude-message claude-message--' + role;
+            renderCurrentExchange: function(userContent, claudeContent, meta) {
+                this.hideEmptyState();
+                var responseEl = document.getElementById('claude-current-response');
 
-                var header = document.createElement('div');
-                header.className = 'claude-message__header';
-                if (role === 'user') {
-                    header.innerHTML = '<i class="bi bi-person-fill"></i> You';
-                } else {
-                    header.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
-                }
-                div.appendChild(header);
+                // Render Claude response (top)
+                responseEl.innerHTML = '';
+                var claudeDiv = document.createElement('div');
+                claudeDiv.className = 'claude-message claude-message--claude';
 
-                var body = document.createElement('div');
-                body.className = 'claude-message__body';
-                body.innerHTML = this.renderMarkdown(content);
-                div.appendChild(body);
+                var claudeHeader = document.createElement('div');
+                claudeHeader.className = 'claude-message__header';
+                claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
+                claudeDiv.appendChild(claudeHeader);
+
+                var claudeBody = document.createElement('div');
+                claudeBody.className = 'claude-message__body';
+                claudeBody.innerHTML = this.renderMarkdown(claudeContent);
+                claudeDiv.appendChild(claudeBody);
 
                 if (meta) {
                     var metaDiv = document.createElement('div');
                     metaDiv.className = 'claude-message__meta';
-                    var parts = [];
-                    if (meta.duration_ms) {
-                        parts.push((meta.duration_ms / 1000).toFixed(1) + 's');
-                    }
-                    if (meta.input_tokens != null || meta.output_tokens != null) {
-                        var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
-                        parts.push(fmt(meta.input_tokens) + '/' + fmt(meta.output_tokens));
-                    }
-                    if (meta.model) parts.push(meta.model);
-                    if (meta.configSource) {
-                        var src = meta.configSource;
-                        if (src.startsWith('project_own:'))
-                            src = 'project config';
-                        else if (src === 'managed_workspace')
-                            src = 'managed workspace';
-                        else if (src === 'default_workspace')
-                            src = 'default workspace';
-                        parts.push(src);
-                    }
-                    metaDiv.textContent = parts.join(' \u00b7 ');
-                    div.appendChild(metaDiv);
+                    metaDiv.textContent = this.formatMeta(meta);
+                    claudeDiv.appendChild(metaDiv);
                 }
+                responseEl.appendChild(claudeDiv);
+                responseEl.classList.remove('d-none');
 
-                panel.appendChild(div);
-                this.scrollToBottom();
+                // Update user prompt with server-converted markdown
+                this.showUserPrompt(userContent);
+
+                // Store meta for when this exchange moves to history
+                this.currentMeta = meta;
+                this.currentPromptText = userContent;
+            },
+
+            moveCurrentToHistory: function() {
+                if (!this.currentPromptText) return;
+
+                var responseEl = document.getElementById('claude-current-response');
+                var promptEl = document.getElementById('claude-current-prompt');
+
+                var accordion = document.getElementById('claude-history-accordion');
+                var idx = this.historyCounter++;
+                var itemId = 'claude-history-item-' + idx;
+
+                // Build header text: truncated prompt + meta
+                var headerText = (this.currentPromptText || '').replace(/[#*_`>\\[\\]]/g, '').trim();
+                if (headerText.length > 80) headerText = headerText.substring(0, 80) + '\u2026';
+                var metaSummary = this.currentMeta ? this.formatMeta(this.currentMeta) : '';
+
+                var item = document.createElement('div');
+                item.className = 'accordion-item';
+                item.innerHTML =
+                    '<h2 class="accordion-header" id="heading-' + itemId + '">' +
+                        '<button class="accordion-button collapsed claude-history-item__header" type="button" ' +
+                            'data-bs-toggle="collapse" data-bs-target="#collapse-' + itemId + '" ' +
+                            'aria-expanded="false" aria-controls="collapse-' + itemId + '">' +
+                            '<span class="claude-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
+                            (metaSummary ? '<span class="claude-history-item__meta">' + this.escapeHtml(metaSummary) + '</span>' : '') +
+                        '</button>' +
+                    '</h2>' +
+                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
+                        'aria-labelledby="heading-' + itemId + '">' +
+                        '<div class="accordion-body p-0"></div>' +
+                    '</div>';
+
+                // Move current content into accordion body
+                var body = item.querySelector('.accordion-body');
+                body.innerHTML = responseEl.innerHTML + promptEl.innerHTML;
+
+                // Prepend (newest first)
+                accordion.insertBefore(item, accordion.firstChild);
+                document.getElementById('claude-history-wrapper').classList.remove('d-none');
+
+                // Clear current zones
+                responseEl.innerHTML = '';
+                responseEl.classList.add('d-none');
+                promptEl.innerHTML = '';
+                promptEl.classList.add('d-none');
+            },
+
+            formatMeta: function(meta) {
+                var parts = [];
+                if (meta.duration_ms)
+                    parts.push((meta.duration_ms / 1000).toFixed(1) + 's');
+                if (meta.input_tokens != null || meta.output_tokens != null) {
+                    var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
+                    var totalInput = (meta.input_tokens || 0) + (meta.cache_tokens || 0);
+                    parts.push(fmt(totalInput) + '/' + fmt(meta.output_tokens));
+                    var allTokens = totalInput + (meta.output_tokens || 0);
+                    var maxContext = 200000;
+                    var pctUsed = Math.min(100, Math.round(allTokens / maxContext * 100));
+                    parts.push(pctUsed + '% ctx');
+                }
+                if (meta.model) parts.push(meta.model);
+                if (meta.configSource) {
+                    var src = meta.configSource;
+                    if (src.startsWith('project_own:'))
+                        src = 'project config';
+                    else if (src === 'managed_workspace')
+                        src = 'managed workspace';
+                    else if (src === 'default_workspace')
+                        src = 'default workspace';
+                    parts.push(src);
+                }
+                return parts.join(' \u00b7 ');
+            },
+
+            escapeHtml: function(text) {
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(text));
+                return div.innerHTML;
             },
 
             addErrorMessage: function(errorText) {
-                var panel = document.getElementById('claude-conversation');
+                this.hideEmptyState();
+                var responseEl = document.getElementById('claude-current-response');
+                responseEl.innerHTML = '';
+
                 var div = document.createElement('div');
                 div.className = 'claude-message claude-message--error';
 
@@ -504,15 +613,17 @@ $js = <<<JS
                 body.appendChild(alert);
                 div.appendChild(body);
 
-                panel.appendChild(div);
-                this.scrollToBottom();
+                responseEl.appendChild(div);
+                responseEl.classList.remove('d-none');
             },
 
             showLoadingPlaceholder: function() {
-                var panel = document.getElementById('claude-conversation');
+                this.hideEmptyState();
+                var responseEl = document.getElementById('claude-current-response');
+                responseEl.innerHTML = '';
+
                 var div = document.createElement('div');
                 div.className = 'claude-message claude-message--loading';
-                div.id = 'claude-loading-placeholder';
 
                 var header = document.createElement('div');
                 header.className = 'claude-message__header';
@@ -525,14 +636,39 @@ $js = <<<JS
                     '<div class="text-muted small">Running Claude CLI...</div>';
                 div.appendChild(body);
 
-                panel.appendChild(div);
-                this.scrollToBottom();
-                return div;
+                responseEl.appendChild(div);
+                responseEl.classList.remove('d-none');
             },
 
-            removeLoadingPlaceholder: function(el) {
-                if (el && el.parentNode)
-                    el.parentNode.removeChild(el);
+            removeLoadingPlaceholder: function() {
+                var responseEl = document.getElementById('claude-current-response');
+                responseEl.innerHTML = '';
+                responseEl.classList.add('d-none');
+            },
+
+            showUserPrompt: function(plainText) {
+                this.hideEmptyState();
+                var promptEl = document.getElementById('claude-current-prompt');
+                promptEl.innerHTML = '';
+
+                var userDiv = document.createElement('div');
+                userDiv.className = 'claude-message claude-message--user';
+
+                var userHeader = document.createElement('div');
+                userHeader.className = 'claude-message__header';
+                userHeader.innerHTML = '<i class="bi bi-person-fill"></i> You';
+                userDiv.appendChild(userHeader);
+
+                var userBody = document.createElement('div');
+                userBody.className = 'claude-message__body';
+                if (plainText)
+                    userBody.innerHTML = this.renderMarkdown(plainText);
+                else
+                    userBody.innerHTML = '<span class="text-muted fst-italic">Sending prompt\u2026</span>';
+                userDiv.appendChild(userBody);
+
+                promptEl.appendChild(userDiv);
+                promptEl.classList.remove('d-none');
             },
 
             renderMarkdown: function(text) {
@@ -542,14 +678,8 @@ $js = <<<JS
             },
 
             hideEmptyState: function() {
-                var empty = document.getElementById('claude-conversation-empty');
+                var empty = document.getElementById('claude-current-empty');
                 if (empty) empty.classList.add('d-none');
-            },
-
-            scrollToBottom: function() {
-                if (this.isUserScrolledUp) return;
-                var panel = document.getElementById('claude-conversation');
-                panel.scrollTop = panel.scrollHeight;
             },
 
             hasFormatting: function() {
@@ -600,21 +730,31 @@ $js = <<<JS
                 this.sessionId = null;
                 this.messages = [];
                 this.lastSentDelta = null;
+                this.historyCounter = 0;
+                this.currentMeta = null;
+                this.currentPromptText = null;
 
-                // Clear conversation panel
-                var panel = document.getElementById('claude-conversation');
-                panel.innerHTML = '';
-                var empty = document.createElement('div');
-                empty.id = 'claude-conversation-empty';
-                empty.className = 'claude-conversation__empty';
-                empty.innerHTML = '<i class="bi bi-terminal"></i><span class="text-muted">Send a prompt to start a conversation</span>';
-                panel.appendChild(empty);
+                // Clear current exchange
+                var responseEl = document.getElementById('claude-current-response');
+                var promptEl = document.getElementById('claude-current-prompt');
+                responseEl.innerHTML = '';
+                responseEl.classList.add('d-none');
+                promptEl.innerHTML = '';
+                promptEl.classList.add('d-none');
+
+                // Show empty state
+                document.getElementById('claude-current-empty').classList.remove('d-none');
+
+                // Clear history
+                document.getElementById('claude-history-accordion').innerHTML = '';
+                document.getElementById('claude-history-wrapper').classList.add('d-none');
 
                 document.getElementById('claude-copy-all-wrapper').classList.add('d-none');
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
                 document.getElementById('claude-new-session-btn').classList.add('d-none');
 
                 this.expandSettings();
+                this.expandEditor();
                 this.switchToQuill(initialDelta);
             },
 
@@ -623,6 +763,16 @@ $js = <<<JS
                 var bsCollapse = bootstrap.Collapse.getInstance(card);
                 if (bsCollapse) bsCollapse.hide();
                 else new bootstrap.Collapse(card, { toggle: true });
+            },
+
+            compactEditor: function() {
+                document.getElementById('claude-quill-wrapper').classList.add('claude-editor-compact');
+                document.getElementById('claude-textarea-wrapper').classList.add('claude-editor-compact');
+            },
+
+            expandEditor: function() {
+                document.getElementById('claude-quill-wrapper').classList.remove('claude-editor-compact');
+                document.getElementById('claude-textarea-wrapper').classList.remove('claude-editor-compact');
             },
 
             expandSettings: function() {
@@ -652,7 +802,8 @@ $js = <<<JS
 
                 var statusEl = document.getElementById('claude-config-status');
                 if (!statusEl.classList.contains('d-none')) {
-                    if (statusEl.classList.contains('alert-success')) parts.push('Project config');
+                    if (statusEl.classList.contains('alert-danger')) parts.push('Setup issue');
+                    else if (statusEl.classList.contains('alert-success')) parts.push('Project config');
                     else if (statusEl.classList.contains('alert-info')) parts.push('PM context');
                     else parts.push('No config');
                 }
@@ -686,6 +837,29 @@ $js = <<<JS
                         btn.classList.add('btn-outline-secondary');
                     }, 2000);
                 });
+            },
+
+            toggleHistory: function() {
+                var accordion = document.getElementById('claude-history-accordion');
+                var panels = accordion.querySelectorAll('.accordion-collapse');
+                var btn = document.getElementById('claude-toggle-history-btn');
+                var allExpanded = Array.prototype.every.call(panels, function(p) {
+                    return p.classList.contains('show');
+                });
+
+                panels.forEach(function(panel) {
+                    var instance = bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false });
+                    if (allExpanded)
+                        instance.hide();
+                    else
+                        instance.show();
+                });
+
+                if (allExpanded) {
+                    btn.innerHTML = '<i class="bi bi-arrows-expand"></i> Expand All';
+                } else {
+                    btn.innerHTML = '<i class="bi bi-arrows-collapse"></i> Collapse All';
+                }
             }
         };
 

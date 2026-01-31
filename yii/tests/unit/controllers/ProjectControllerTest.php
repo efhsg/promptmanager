@@ -60,6 +60,10 @@ class ProjectControllerTest extends Unit
             'hasCLAUDE_MD' => true,
             'hasClaudeDir' => false,
             'hasAnyConfig' => true,
+            'pathStatus' => 'has_config',
+            'pathMapped' => false,
+            'requestedPath' => '/some/path',
+            'effectivePath' => '/some/path',
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
@@ -70,6 +74,7 @@ class ProjectControllerTest extends Unit
         $this->assertTrue($result['hasCLAUDE_MD']);
         $this->assertFalse($result['hasClaudeDir']);
         $this->assertTrue($result['hasAnyConfig']);
+        $this->assertSame('has_config', $result['pathStatus']);
     }
 
     public function testCheckClaudeConfigIncludesPromptManagerContextStatus(): void
@@ -89,6 +94,10 @@ class ProjectControllerTest extends Unit
             'hasCLAUDE_MD' => false,
             'hasClaudeDir' => false,
             'hasAnyConfig' => false,
+            'pathStatus' => 'no_config',
+            'pathMapped' => false,
+            'requestedPath' => '/some/path',
+            'effectivePath' => '/some/path',
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
@@ -97,6 +106,7 @@ class ProjectControllerTest extends Unit
 
         $this->assertTrue($result['success']);
         $this->assertFalse($result['hasAnyConfig']);
+        $this->assertSame('no_config', $result['pathStatus']);
         $this->assertTrue($result['hasPromptManagerContext']);
     }
 

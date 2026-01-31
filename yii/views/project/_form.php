@@ -2,12 +2,15 @@
 use app\assets\QuillAsset;
 use conquer\select2\Select2Widget;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
 /** @var app\models\Project $model */
 /** @var yii\widgets\ActiveForm $form */
 /** @var array $availableProjects */
+/** @var array $projectConfigStatus */
+$projectConfigStatus ??= [];
 
 QuillAsset::register($this);
 
@@ -128,15 +131,42 @@ $modelOptions = [
                     This serves as a "database CLAUDE.md" that gets injected at runtime.
                 </p>
 
+                <?php if (!empty($projectConfigStatus['pathStatus'])): ?>
+                    <?php $ps = $projectConfigStatus['pathStatus']; ?>
+                    <?php if ($ps === 'not_mapped'): ?>
+                        <div class="alert alert-danger small mb-3">
+                            <i class="bi bi-x-circle me-1"></i>
+                            Project directory not mapped into container. Check <code>PATH_MAPPINGS</code> in <code>.env</code>
+                            and ensure <code>PROJECTS_ROOT</code> volume is configured in <code>docker-compose.yml</code>.
+                            Claude will use a managed workspace as fallback.
+                        </div>
+                    <?php elseif ($ps === 'not_accessible'): ?>
+                        <div class="alert alert-danger small mb-3">
+                            <i class="bi bi-x-circle me-1"></i>
+                            Project directory not accessible in container (mapped to <code><?= Html::encode($projectConfigStatus['effectivePath'] ?? '') ?></code>).
+                            Check that <code>PROJECTS_ROOT</code> volume is mounted correctly.
+                        </div>
+                    <?php elseif ($ps === 'has_config'): ?>
+                        <div class="alert alert-info small mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            This project's directory already has its own Claude config
+                            (<?= implode(' + ', array_filter([
+                                !empty($projectConfigStatus['hasCLAUDE_MD']) ? '<code>CLAUDE.md</code>' : null,
+                                !empty($projectConfigStatus['hasClaudeDir']) ? '<code>.claude/</code>' : null,
+                            ])) ?>).
+                            The context below is only used when the project directory lacks native config.
+                        </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+
                 <?= $form->field($model, 'claude_context')
-                    ->textarea([
-                        'id' => 'claude-context-textarea',
-                        'rows' => 8,
-                        'class' => 'form-control font-monospace',
-                        'placeholder' => "## Role\n\nYou are working on a Laravel application...\n\n## Guidelines\n\n- Follow PSR-12 coding standards\n- Use dependency injection",
-                    ])
-                    ->hint('Markdown-formatted context describing the project, coding standards, and any specific instructions for Claude.')
+                    ->hiddenInput(['id' => 'claude-context-hidden'])
                     ->label(false) ?>
+
+                <div class="resizable-editor-container" style="min-height: 150px; max-height: 600px;">
+                    <div id="claude-context-editor" class="resizable-editor" style="min-height: 150px;"></div>
+                </div>
+                <div class="hint-block">Rich-text context describing the project, coding standards, and any specific instructions for Claude.</div>
 
                 <div class="mt-2">
                     <button type="button" id="generate-context-btn" class="btn btn-sm btn-outline-secondary">
@@ -183,6 +213,9 @@ $modelOptions = [
 
 <?php
 $templateBody = json_encode($model->description);
+$claudeContextBody = json_encode($model->claude_context);
+$importTextUrl = Url::to(['/scratch-pad/import-text']);
+$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $script = <<<JS
     var quill = new Quill('#project-editor', {
         theme: 'snow',
@@ -211,33 +244,98 @@ $script = <<<JS
         document.querySelector('#project-description').value = JSON.stringify(quill.getContents());
     });
 
+    // Claude context Quill editor (same toolbar as scratch-pad)
+    var contextQuill = new Quill('#claude-context-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike', 'code'],
+                ['blockquote', 'code-block'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                [{ 'indent': '-1' }, { 'indent': '+1' }],
+                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                [{ 'align': [] }],
+                ['clean'],
+                [{ 'smartPaste': [] }],
+                [{ 'loadMd': [] }]
+            ]
+        }
+    });
+
+    var contextUrlConfig = {
+        importTextUrl: '$importTextUrl',
+        importMarkdownUrl: '$importMarkdownUrl'
+    };
+    if (window.QuillToolbar) {
+        window.QuillToolbar.setupSmartPaste(contextQuill, null, contextUrlConfig);
+        window.QuillToolbar.setupLoadMd(contextQuill, null, contextUrlConfig);
+    }
+
+    try {
+        var contextData = JSON.parse($claudeContextBody);
+        if (contextData && contextData.ops) {
+            contextQuill.setContents(contextData);
+        } else if ($claudeContextBody && $claudeContextBody.trim() !== '' && $claudeContextBody !== 'null') {
+            // Backward compat: plain text that isn't Delta JSON
+            contextQuill.setText($claudeContextBody);
+        }
+    } catch (error) {
+        // Backward compat: existing plain-text content that isn't valid JSON
+        var plainText = $claudeContextBody;
+        if (plainText && plainText !== 'null') {
+            contextQuill.setText(plainText);
+        }
+    }
+
+    contextQuill.on('text-change', function() {
+        document.querySelector('#claude-context-hidden').value = JSON.stringify(contextQuill.getContents());
+    });
+
+    // Sync initial Delta to hidden field (in case loaded from backward-compat plain text)
+    if (contextQuill.getLength() > 1) {
+        document.querySelector('#claude-context-hidden').value = JSON.stringify(contextQuill.getContents());
+    }
+
     // Generate context from project description
     document.getElementById('generate-context-btn')?.addEventListener('click', function() {
-        const descText = quill.getText().trim();
-        const projectName = document.querySelector('input[name="Project[name]"]')?.value || 'this project';
-        const extensions = document.querySelector('input[name="Project[allowed_file_extensions]"]')?.value || '';
-        const blacklist = document.querySelector('input[name="Project[blacklisted_directories]"]')?.value || '';
+        var descText = quill.getText().trim();
+        var projectName = document.querySelector('input[name="Project[name]"]')?.value || 'this project';
+        var extensions = document.querySelector('input[name="Project[allowed_file_extensions]"]')?.value || '';
+        var blacklist = document.querySelector('input[name="Project[blacklisted_directories]"]')?.value || '';
 
-        let context = '## Role\\n\\nYou are working on **' + projectName + '**.\\n\\n';
+        var delta = { ops: [] };
+
+        delta.ops.push({ insert: 'Role', attributes: { header: 2 } });
+        delta.ops.push({ insert: '\\n' });
+        delta.ops.push({ insert: 'You are working on ' });
+        delta.ops.push({ insert: projectName, attributes: { bold: true } });
+        delta.ops.push({ insert: '.\\n\\n' });
 
         if (descText) {
-            context += '## About\\n\\n' + descText + '\\n\\n';
+            delta.ops.push({ insert: 'About', attributes: { header: 2 } });
+            delta.ops.push({ insert: '\\n' });
+            delta.ops.push({ insert: descText + '\\n\\n' });
         }
 
-        context += '## Guidelines\\n\\n';
+        delta.ops.push({ insert: 'Guidelines', attributes: { header: 2 } });
+        delta.ops.push({ insert: '\\n' });
 
         if (extensions) {
-            context += '- Focus on files with extensions: ' + extensions + '\\n';
+            delta.ops.push({ insert: 'Focus on files with extensions: ' + extensions });
+            delta.ops.push({ insert: '\\n', attributes: { list: 'bullet' } });
         }
 
         if (blacklist) {
-            context += '- Avoid directories: ' + blacklist + '\\n';
+            delta.ops.push({ insert: 'Avoid directories: ' + blacklist });
+            delta.ops.push({ insert: '\\n', attributes: { list: 'bullet' } });
         }
 
-        context += '- Follow existing code patterns and conventions\\n';
-        context += '- Write clean, tested code\\n';
+        delta.ops.push({ insert: 'Follow existing code patterns and conventions' });
+        delta.ops.push({ insert: '\\n', attributes: { list: 'bullet' } });
+        delta.ops.push({ insert: 'Write clean, tested code' });
+        delta.ops.push({ insert: '\\n', attributes: { list: 'bullet' } });
 
-        document.getElementById('claude-context-textarea').value = context.replace(/\\\\n/g, '\\n');
+        contextQuill.setContents(delta);
     });
     JS;
 
