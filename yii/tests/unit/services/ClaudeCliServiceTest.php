@@ -69,7 +69,7 @@ class ClaudeCliServiceTest extends Unit
         $this->assertSame('Claude response', $result['result']);
     }
 
-    public function testParseJsonOutputExtractsModelUsage(): void
+    public function testParseJsonOutputExtractsTokensFromUsage(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
@@ -78,6 +78,12 @@ class ClaudeCliServiceTest extends Unit
 
         $jsonOutput = json_encode([
             'result' => 'Response',
+            'usage' => [
+                'input_tokens' => 100,
+                'output_tokens' => 50,
+                'cache_read_input_tokens' => 18000,
+                'cache_creation_input_tokens' => 6000,
+            ],
             'modelUsage' => [
                 'claude-opus-4-5-20251101' => [
                     'inputTokens' => 100,
@@ -94,6 +100,89 @@ class ClaudeCliServiceTest extends Unit
         $this->assertSame(100, $result['input_tokens']);
         $this->assertSame(24000, $result['cache_tokens']);
         $this->assertSame(50, $result['output_tokens']);
+    }
+
+    public function testParseJsonOutputUsesTopLevelUsageNotCumulativeModelUsage(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseJsonOutput');
+        $method->setAccessible(true);
+
+        // usage = per-turn (last assistant message), modelUsage = cumulative session
+        $jsonOutput = json_encode([
+            'result' => 'Response',
+            'usage' => [
+                'input_tokens' => 67,
+                'output_tokens' => 200,
+                'cache_read_input_tokens' => 42000,
+                'cache_creation_input_tokens' => 500,
+            ],
+            'modelUsage' => [
+                'claude-sonnet-4-5-20250929' => [
+                    'inputTokens' => 5000,
+                    'outputTokens' => 3000,
+                    'cacheReadInputTokens' => 120000,
+                    'cacheCreationInputTokens' => 2000,
+                    'contextWindow' => 200000,
+                ],
+            ],
+        ]);
+
+        $result = $method->invoke($service, $jsonOutput);
+
+        // Token counts from top-level usage, NOT modelUsage
+        $this->assertSame(67, $result['input_tokens']);
+        $this->assertSame(42500, $result['cache_tokens']);
+        $this->assertSame(200, $result['output_tokens']);
+        // Model and contextWindow still from modelUsage
+        $this->assertSame('sonnet-4.5', $result['model']);
+        $this->assertSame(200000, $result['context_window']);
+    }
+
+    public function testParseJsonOutputExtractsContextWindow(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseJsonOutput');
+        $method->setAccessible(true);
+
+        $jsonOutput = json_encode([
+            'result' => 'Response',
+            'modelUsage' => [
+                'claude-opus-4-5-20251101' => [
+                    'inputTokens' => 500,
+                    'outputTokens' => 100,
+                    'contextWindow' => 200000,
+                ],
+            ],
+        ]);
+
+        $result = $method->invoke($service, $jsonOutput);
+
+        $this->assertSame(200000, $result['context_window']);
+    }
+
+    public function testParseJsonOutputOmitsContextWindowWhenAbsent(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseJsonOutput');
+        $method->setAccessible(true);
+
+        $jsonOutput = json_encode([
+            'result' => 'Response',
+            'modelUsage' => [
+                'claude-opus-4-5-20251101' => [
+                    'inputTokens' => 500,
+                    'outputTokens' => 100,
+                ],
+            ],
+        ]);
+
+        $result = $method->invoke($service, $jsonOutput);
+
+        $this->assertArrayNotHasKey('context_window', $result);
     }
 
     public function testFormatModelNameShortensStandardIds(): void

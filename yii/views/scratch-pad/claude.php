@@ -159,6 +159,24 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         </div>
     </div>
 
+    <!-- Context Usage Meter -->
+    <div id="claude-context-meter-wrapper" class="claude-context-meter d-none mb-3">
+        <div class="claude-context-meter__bar-container">
+            <div id="claude-context-meter-fill" class="claude-context-meter__fill" style="width: 0%"></div>
+        </div>
+        <div class="claude-context-meter__label">
+            <span id="claude-context-meter-text">0% context used</span>
+        </div>
+    </div>
+
+    <!-- Context Warning -->
+    <div id="claude-context-warning" class="alert alert-warning alert-dismissible d-none mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        <span id="claude-context-warning-text"></span>
+        <small class="ms-1">Consider starting a new session to avoid degraded performance.</small>
+        <button type="button" class="btn-close" id="claude-context-warning-close" aria-label="Close"></button>
+    </div>
+
     <!-- Section 3a: Current Exchange -->
     <div id="claude-current-exchange" class="mb-4">
         <div>
@@ -260,6 +278,8 @@ $js = <<<JS
             historyCounter: 0,
             projectDefaults: $projectDefaultsJson,
             checkConfigUrl: $checkConfigUrlJson,
+            maxContext: 200000,
+            warningDismissed: false,
 
             init: function() {
                 this.prefillFromDefaults();
@@ -372,6 +392,11 @@ $js = <<<JS
                 settingsCard.addEventListener('shown.bs.collapse', function() {
                     document.getElementById('claude-settings-summary').classList.add('d-none');
                 });
+
+                document.getElementById('claude-context-warning-close').addEventListener('click', function() {
+                    document.getElementById('claude-context-warning').classList.add('d-none');
+                    self.warningDismissed = true;
+                });
             },
 
             getOptions: function() {
@@ -443,11 +468,17 @@ $js = <<<JS
                     if (data.success) {
                         var userContent = data.promptMarkdown || options.prompt || '(prompt)';
                         var claudeContent = data.output || '(No output)';
+
+                        // Context = input + cache tokens from this invocation.
+                        // Output tokens have a separate limit and don't consume the context window.
+                        if (data.context_window)
+                            self.maxContext = data.context_window;
+                        var contextUsed = (data.input_tokens || 0) + (data.cache_tokens || 0);
+
                         var meta = {
                             duration_ms: data.duration_ms,
                             model: data.model,
-                            input_tokens: data.input_tokens,
-                            cache_tokens: data.cache_tokens,
+                            context_used: contextUsed,
                             output_tokens: data.output_tokens,
                             configSource: data.configSource
                         };
@@ -461,6 +492,11 @@ $js = <<<JS
                             { role: 'user', content: userContent },
                             { role: 'claude', content: claudeContent }
                         );
+
+                        var pctUsed = Math.min(100, Math.round(contextUsed / self.maxContext * 100));
+                        self.updateContextMeter(pctUsed, contextUsed);
+                        if (pctUsed >= 80 && !self.warningDismissed)
+                            self.showContextWarning(pctUsed);
 
                         // First successful run: show follow-up buttons
                         if (self.messages.length === 2) {
@@ -572,17 +608,46 @@ $js = <<<JS
                 var parts = [];
                 if (meta.duration_ms)
                     parts.push((meta.duration_ms / 1000).toFixed(1) + 's');
-                if (meta.input_tokens != null || meta.output_tokens != null) {
+                if (meta.context_used != null || meta.output_tokens != null) {
                     var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
-                    var totalInput = (meta.input_tokens || 0) + (meta.cache_tokens || 0);
-                    parts.push(fmt(totalInput) + '/' + fmt(meta.output_tokens));
-                    var allTokens = totalInput + (meta.output_tokens || 0);
-                    var maxContext = 200000;
-                    var pctUsed = Math.min(100, Math.round(allTokens / maxContext * 100));
+                    parts.push(fmt(meta.context_used) + '/' + fmt(meta.output_tokens));
+                    var maxContext = this.maxContext || 200000;
+                    var pctUsed = Math.min(100, Math.round((meta.context_used || 0) / maxContext * 100));
                     parts.push(pctUsed + '% context used');
                 }
                 if (meta.model) parts.push(meta.model);
                 return parts.join(' \u00b7 ');
+            },
+
+            updateContextMeter: function(pctUsed, totalUsed) {
+                var wrapper = document.getElementById('claude-context-meter-wrapper');
+                var fill = document.getElementById('claude-context-meter-fill');
+                var textEl = document.getElementById('claude-context-meter-text');
+
+                wrapper.classList.remove('d-none');
+                fill.style.width = pctUsed + '%';
+
+                fill.classList.remove(
+                    'claude-context-meter__fill--green',
+                    'claude-context-meter__fill--orange',
+                    'claude-context-meter__fill--red'
+                );
+                if (pctUsed < 60)
+                    fill.classList.add('claude-context-meter__fill--green');
+                else if (pctUsed < 80)
+                    fill.classList.add('claude-context-meter__fill--orange');
+                else
+                    fill.classList.add('claude-context-meter__fill--red');
+
+                var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
+                textEl.textContent = pctUsed + '% context used (' + fmt(totalUsed) + ' / ' + fmt(this.maxContext) + ' tokens)';
+            },
+
+            showContextWarning: function(pctUsed) {
+                var warning = document.getElementById('claude-context-warning');
+                var warningText = document.getElementById('claude-context-warning-text');
+                warningText.textContent = 'Context usage is at ' + pctUsed + '%.';
+                warning.classList.remove('d-none');
             },
 
             escapeHtml: function(text) {
@@ -737,6 +802,11 @@ $js = <<<JS
                 this.historyCounter = 0;
                 this.currentMeta = null;
                 this.currentPromptText = null;
+                this.maxContext = 200000;
+                this.warningDismissed = false;
+                document.getElementById('claude-context-meter-wrapper').classList.add('d-none');
+                document.getElementById('claude-context-meter-fill').style.width = '0%';
+                document.getElementById('claude-context-warning').classList.add('d-none');
 
                 // Clear current exchange
                 var responseEl = document.getElementById('claude-current-response');

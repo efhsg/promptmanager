@@ -157,6 +157,7 @@ class ClaudeCliService
             'input_tokens' => $parsedOutput['input_tokens'] ?? null,
             'cache_tokens' => $parsedOutput['cache_tokens'] ?? null,
             'output_tokens' => $parsedOutput['output_tokens'] ?? null,
+            'context_window' => $parsedOutput['context_window'] ?? null,
             'configSource' => $configSource,
             'session_id' => $parsedOutput['session_id'] ?? null,
             'requestedPath' => $workingDirectory,
@@ -272,26 +273,37 @@ class ClaudeCliService
     }
 
     /**
-     * Extracts model name and token counts from modelUsage into flat keys.
+     * Extracts model name, context window, and token counts into flat keys.
+     *
+     * Token counts for context tracking come from the top-level `usage` object
+     * (per-turn values from the last assistant message), NOT from `modelUsage`
+     * which is cumulative across the session.
+     *
+     * Model name and context window size come from `modelUsage` (primary model).
      */
     private function extractModelUsage(array &$decoded): void
     {
+        // Model name and context window from modelUsage (primary model)
         $modelUsage = $decoded['modelUsage'] ?? [];
-        if (!is_array($modelUsage) || $modelUsage === []) {
-            return;
+        if (is_array($modelUsage) && $modelUsage !== []) {
+            $primaryModelId = array_key_first($modelUsage);
+            $primary = $modelUsage[$primaryModelId];
+            if (is_array($primary)) {
+                $decoded['model'] = $this->formatModelName($primaryModelId);
+                if (isset($primary['contextWindow'])) {
+                    $decoded['context_window'] = (int) $primary['contextWindow'];
+                }
+            }
         }
 
-        $modelId = array_key_first($modelUsage);
-        $usage = $modelUsage[$modelId];
-        if (!is_array($usage)) {
-            return;
+        // Token counts from top-level usage (per-turn, not cumulative)
+        $usage = $decoded['usage'] ?? [];
+        if (is_array($usage) && $usage !== []) {
+            $decoded['input_tokens'] = $usage['input_tokens'] ?? 0;
+            $decoded['cache_tokens'] = ($usage['cache_read_input_tokens'] ?? 0)
+                + ($usage['cache_creation_input_tokens'] ?? 0);
+            $decoded['output_tokens'] = $usage['output_tokens'] ?? 0;
         }
-
-        $decoded['model'] = $this->formatModelName($modelId);
-        $decoded['input_tokens'] = $usage['inputTokens'] ?? 0;
-        $decoded['cache_tokens'] = ($usage['cacheReadInputTokens'] ?? 0)
-            + ($usage['cacheCreationInputTokens'] ?? 0);
-        $decoded['output_tokens'] = $usage['outputTokens'] ?? 0;
     }
 
     /**
