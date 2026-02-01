@@ -53,7 +53,7 @@ class ClaudeCliService
      * @param array $options Claude CLI options (permissionMode, model, appendSystemPrompt, allowedTools, disallowedTools)
      * @param Project|null $project Optional project for workspace resolution
      * @param string|null $sessionId Optional session ID to continue a previous conversation
-     * @return array{success: bool, output: string, error: string, exitCode: int, duration_ms?: int, model?: string, input_tokens?: int, cache_tokens?: int, output_tokens?: int, configSource?: string, session_id?: string, requestedPath: string, effectivePath: string, usedFallback: bool}
+     * @return array{success: bool, output: string, error: string, exitCode: int, duration_ms?: int, model?: string, input_tokens?: int, cache_tokens?: int, output_tokens?: int, context_window?: int, num_turns?: int, tool_uses?: string[], configSource?: string, session_id?: string, requestedPath: string, effectivePath: string, usedFallback: bool}
      */
     public function execute(
         string $prompt,
@@ -145,7 +145,7 @@ class ClaudeCliService
         fclose($pipes[2]);
         proc_close($process);
 
-        $parsedOutput = $this->parseJsonOutput(trim($output));
+        $parsedOutput = $this->parseStreamJsonOutput(trim($output));
 
         return [
             'success' => $exitCode === 0 && !($parsedOutput['is_error'] ?? false),
@@ -158,6 +158,8 @@ class ClaudeCliService
             'cache_tokens' => $parsedOutput['cache_tokens'] ?? null,
             'output_tokens' => $parsedOutput['output_tokens'] ?? null,
             'context_window' => $parsedOutput['context_window'] ?? null,
+            'num_turns' => $parsedOutput['num_turns'] ?? null,
+            'tool_uses' => $parsedOutput['tool_uses'] ?? [],
             'configSource' => $configSource,
             'session_id' => $parsedOutput['session_id'] ?? null,
             'requestedPath' => $workingDirectory,
@@ -220,7 +222,7 @@ class ClaudeCliService
      */
     private function buildCommand(array $options, ?string $sessionId = null): string
     {
-        $cmd = 'claude --output-format json';
+        $cmd = 'claude --output-format stream-json --verbose';
 
         if ($sessionId !== null) {
             $cmd .= ' --continue ' . escapeshellarg($sessionId);
@@ -252,58 +254,122 @@ class ClaudeCliService
     }
 
     /**
-     * Parses the JSON output from Claude CLI --output-format json.
+     * Parses NDJSON output from Claude CLI --output-format stream-json.
      *
-     * @return array{result?: string, is_error?: bool, duration_ms?: int, model?: string, input_tokens?: int, output_tokens?: int, session_id?: string}
+     * Uses the last non-sidechain assistant message's per-call usage for accurate
+     * context fill, and the result message for session metadata.
+     *
+     * @return array{result?: string, is_error?: bool, duration_ms?: int, model?: string, input_tokens?: int, cache_tokens?: int, output_tokens?: int, context_window?: int, session_id?: string}
      */
-    private function parseJsonOutput(string $output): array
+    private function parseStreamJsonOutput(string $output): array
     {
         if ($output === '') {
             return [];
         }
 
-        $decoded = json_decode($output, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return [];
-        }
+        $lines = explode("\n", $output);
+        $lastAssistantUsage = null;
+        $resultMessage = null;
+        $mainTurnCount = 0;
+        $toolUses = [];
 
-        $this->extractModelUsage($decoded);
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
 
-        return $decoded;
-    }
+            $decoded = json_decode($line, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                continue;
+            }
 
-    /**
-     * Extracts model name, context window, and token counts into flat keys.
-     *
-     * Token counts for context tracking come from the top-level `usage` object
-     * (per-turn values from the last assistant message), NOT from `modelUsage`
-     * which is cumulative across the session.
-     *
-     * Model name and context window size come from `modelUsage` (primary model).
-     */
-    private function extractModelUsage(array &$decoded): void
-    {
-        // Model name and context window from modelUsage (primary model)
-        $modelUsage = $decoded['modelUsage'] ?? [];
-        if (is_array($modelUsage) && $modelUsage !== []) {
-            $primaryModelId = array_key_first($modelUsage);
-            $primary = $modelUsage[$primaryModelId];
-            if (is_array($primary)) {
-                $decoded['model'] = $this->formatModelName($primaryModelId);
-                if (isset($primary['contextWindow'])) {
-                    $decoded['context_window'] = (int) $primary['contextWindow'];
-                }
+            $type = $decoded['type'] ?? null;
+
+            if ($type === 'assistant' && empty($decoded['isSidechain'])) {
+                $lastAssistantUsage = $decoded['message']['usage'] ?? null;
+                $mainTurnCount++;
+                $toolUses = array_merge($toolUses, $this->extractToolUses($decoded['message']['content'] ?? []));
+            } elseif ($type === 'result') {
+                $resultMessage = $decoded;
             }
         }
 
-        // Token counts from top-level usage (per-turn, not cumulative)
-        $usage = $decoded['usage'] ?? [];
-        if (is_array($usage) && $usage !== []) {
-            $decoded['input_tokens'] = $usage['input_tokens'] ?? 0;
-            $decoded['cache_tokens'] = ($usage['cache_read_input_tokens'] ?? 0)
-                + ($usage['cache_creation_input_tokens'] ?? 0);
-            $decoded['output_tokens'] = $usage['output_tokens'] ?? 0;
+        if ($resultMessage === null) {
+            return [];
         }
+
+        $parsed = [
+            'result' => $resultMessage['result'] ?? null,
+            'is_error' => $resultMessage['is_error'] ?? false,
+            'duration_ms' => $resultMessage['duration_ms'] ?? null,
+            'session_id' => $resultMessage['session_id'] ?? null,
+            'num_turns' => $resultMessage['num_turns'] ?? $mainTurnCount,
+            'tool_uses' => $toolUses,
+        ];
+
+        $this->extractModelInfo($parsed, $resultMessage['modelUsage'] ?? []);
+
+        // Context fill from last assistant message (per-call input tokens)
+        if ($lastAssistantUsage !== null) {
+            $parsed['input_tokens'] = $lastAssistantUsage['input_tokens'] ?? 0;
+            $parsed['cache_tokens'] = ($lastAssistantUsage['cache_read_input_tokens'] ?? 0)
+                + ($lastAssistantUsage['cache_creation_input_tokens'] ?? 0);
+        }
+
+        // Total output tokens from result message (cumulative across all turns)
+        $resultUsage = $resultMessage['usage'] ?? [];
+        if ($resultUsage !== []) {
+            $parsed['output_tokens'] = $resultUsage['output_tokens'] ?? 0;
+        }
+
+        return $parsed;
+    }
+
+    /**
+     * Extracts model name and context window from modelUsage data.
+     */
+    private function extractModelInfo(array &$parsed, array $modelUsage): void
+    {
+        if ($modelUsage === []) {
+            return;
+        }
+
+        $primaryModelId = array_key_first($modelUsage);
+        $primary = $modelUsage[$primaryModelId];
+        if (!is_array($primary)) {
+            return;
+        }
+
+        $parsed['model'] = $this->formatModelName($primaryModelId);
+        if (isset($primary['contextWindow'])) {
+            $parsed['context_window'] = (int) $primary['contextWindow'];
+        }
+    }
+
+    /**
+     * @return string[] e.g. ["Read: /path/to/file", "Grep: pattern"]
+     */
+    private function extractToolUses(array $content): array
+    {
+        $uses = [];
+        foreach ($content as $block) {
+            if (($block['type'] ?? null) !== 'tool_use') {
+                continue;
+            }
+
+            $name = $block['name'] ?? 'unknown';
+            $input = $block['input'] ?? [];
+            $target = match ($name) {
+                'Read', 'Edit', 'Write' => $input['file_path'] ?? null,
+                'Glob', 'Grep' => $input['pattern'] ?? null,
+                'Bash' => isset($input['command']) ? mb_substr($input['command'], 0, 80) : null,
+                'Task' => $input['description'] ?? null,
+                default => null,
+            };
+            $uses[] = $target !== null ? "{$name}: {$target}" : $name;
+        }
+        return $uses;
     }
 
     /**

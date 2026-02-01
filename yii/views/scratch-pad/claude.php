@@ -480,6 +480,8 @@ $js = <<<JS
                             model: data.model,
                             context_used: contextUsed,
                             output_tokens: data.output_tokens,
+                            num_turns: data.num_turns,
+                            tool_uses: data.tool_uses || [],
                             configSource: data.configSource
                         };
 
@@ -494,6 +496,8 @@ $js = <<<JS
                         );
 
                         var pctUsed = Math.min(100, Math.round(contextUsed / self.maxContext * 100));
+                        self.lastNumTurns = data.num_turns || null;
+                        self.lastToolUses = data.tool_uses || [];
                         self.updateContextMeter(pctUsed, contextUsed);
                         if (pctUsed >= 80 && !self.warningDismissed)
                             self.showContextWarning(pctUsed);
@@ -541,6 +545,8 @@ $js = <<<JS
                     var metaDiv = document.createElement('div');
                     metaDiv.className = 'claude-message__meta';
                     metaDiv.textContent = this.formatMeta(meta);
+                    if (meta.tool_uses && meta.tool_uses.length)
+                        metaDiv.title = meta.tool_uses.join('\\n');
                     claudeDiv.appendChild(metaDiv);
                 }
 
@@ -589,6 +595,12 @@ $js = <<<JS
                         '<div class="accordion-body p-0"></div>' +
                     '</div>';
 
+                // Set tool_uses title via DOM to avoid attribute injection
+                var metaSpan = item.querySelector('.claude-history-item__meta');
+                if (metaSpan && this.currentMeta && this.currentMeta.tool_uses && this.currentMeta.tool_uses.length) {
+                    metaSpan.title = this.currentMeta.tool_uses.join('\\n');
+                }
+
                 // Move current content into accordion body
                 var body = item.querySelector('.accordion-body');
                 body.innerHTML = responseEl.innerHTML + promptEl.innerHTML;
@@ -615,6 +627,8 @@ $js = <<<JS
                     var pctUsed = Math.min(100, Math.round((meta.context_used || 0) / maxContext * 100));
                     parts.push(pctUsed + '% context used');
                 }
+                if (meta.num_turns)
+                    parts.push(meta.num_turns + (meta.num_turns === 1 ? ' turn' : ' turns'));
                 if (meta.model) parts.push(meta.model);
                 return parts.join(' \u00b7 ');
             },
@@ -640,7 +654,11 @@ $js = <<<JS
                     fill.classList.add('claude-context-meter__fill--red');
 
                 var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
-                textEl.textContent = pctUsed + '% context used (' + fmt(totalUsed) + ' / ' + fmt(this.maxContext) + ' tokens)';
+                var label = pctUsed + '% context used (' + fmt(totalUsed) + ' / ' + fmt(this.maxContext) + ' tokens)';
+                if (this.lastNumTurns)
+                    label += ' \u00b7 ' + this.lastNumTurns + (this.lastNumTurns === 1 ? ' turn' : ' turns');
+                textEl.textContent = label;
+                textEl.title = this.lastToolUses.length ? this.lastToolUses.join('\\n') : '';
             },
 
             showContextWarning: function(pctUsed) {

@@ -18,7 +18,7 @@ class ClaudeCliServiceTest extends Unit
 
         $command = $method->invoke($service, ['permissionMode' => 'plan'], null);
 
-        $this->assertStringContainsString('claude --output-format json', $command);
+        $this->assertStringContainsString('claude --output-format stream-json --verbose', $command);
         $this->assertStringContainsString('--permission-mode', $command);
         $this->assertStringNotContainsString('--continue', $command);
     }
@@ -48,141 +48,241 @@ class ClaudeCliServiceTest extends Unit
         $this->assertStringContainsString("--continue 'session; rm -rf /'", $command);
     }
 
-    public function testParseJsonOutputExtractsSessionId(): void
+    public function testParseStreamJsonOutputExtractsSessionId(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
-        $jsonOutput = json_encode([
-            'result' => 'Claude response',
-            'is_error' => false,
-            'total_cost_usd' => 0.05,
-            'duration_ms' => 3000,
-            'session_id' => 'extracted-session-123',
-        ]);
+        $ndjson = $this->buildAssistantLine(['input_tokens' => 1000, 'output_tokens' => 200])
+            . "\n" . $this->buildResultLine([
+                'session_id' => 'extracted-session-123',
+                'result' => 'Claude response',
+            ]);
 
-        $result = $method->invoke($service, $jsonOutput);
+        $result = $method->invoke($service, $ndjson);
 
         $this->assertSame('extracted-session-123', $result['session_id']);
         $this->assertSame('Claude response', $result['result']);
+        $this->assertSame(3, $result['num_turns']);
     }
 
-    public function testParseJsonOutputExtractsTokensFromUsage(): void
+    public function testParseStreamJsonOutputExtractsTokensFromLastAssistant(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
-        $jsonOutput = json_encode([
-            'result' => 'Response',
-            'usage' => [
-                'input_tokens' => 100,
-                'output_tokens' => 50,
-                'cache_read_input_tokens' => 18000,
-                'cache_creation_input_tokens' => 6000,
-            ],
+        $ndjson = $this->buildAssistantLine([
+            'input_tokens' => 100,
+            'cache_read_input_tokens' => 18000,
+            'cache_creation_input_tokens' => 6000,
+            'output_tokens' => 3,
+        ]) . "\n" . $this->buildResultLine([
+            'usage' => ['output_tokens' => 50],
             'modelUsage' => [
                 'claude-opus-4-5-20251101' => [
                     'inputTokens' => 100,
                     'outputTokens' => 50,
-                    'cacheReadInputTokens' => 18000,
-                    'cacheCreationInputTokens' => 6000,
+                    'contextWindow' => 200000,
                 ],
             ],
         ]);
 
-        $result = $method->invoke($service, $jsonOutput);
+        $result = $method->invoke($service, $ndjson);
 
         $this->assertSame('opus-4.5', $result['model']);
+        // Context fill from assistant message
         $this->assertSame(100, $result['input_tokens']);
         $this->assertSame(24000, $result['cache_tokens']);
+        // Output tokens from result message (cumulative), not assistant (per-call)
         $this->assertSame(50, $result['output_tokens']);
     }
 
-    public function testParseJsonOutputUsesTopLevelUsageNotCumulativeModelUsage(): void
+    public function testParseStreamJsonOutputUsesLastAssistantNotCumulative(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
-        // usage = per-turn (last assistant message), modelUsage = cumulative session
-        $jsonOutput = json_encode([
-            'result' => 'Response',
-            'usage' => [
-                'input_tokens' => 67,
-                'output_tokens' => 200,
-                'cache_read_input_tokens' => 42000,
-                'cache_creation_input_tokens' => 500,
-            ],
+        // First assistant (tool-use cycle) — smaller context
+        $ndjson = $this->buildAssistantLine([
+            'input_tokens' => 20000,
+            'output_tokens' => 500,
+            'cache_read_input_tokens' => 15000,
+            'cache_creation_input_tokens' => 1000,
+        ]);
+        // Second assistant (final response) — larger context
+        $ndjson .= "\n" . $this->buildAssistantLine([
+            'input_tokens' => 67,
+            'output_tokens' => 200,
+            'cache_read_input_tokens' => 42000,
+            'cache_creation_input_tokens' => 500,
+        ]);
+        // Result with cumulative usage
+        $ndjson .= "\n" . $this->buildResultLine([
+            'num_turns' => 5,
+            'usage' => ['input_tokens' => 87000, 'output_tokens' => 700],
             'modelUsage' => [
                 'claude-sonnet-4-5-20250929' => [
                     'inputTokens' => 5000,
                     'outputTokens' => 3000,
-                    'cacheReadInputTokens' => 120000,
-                    'cacheCreationInputTokens' => 2000,
                     'contextWindow' => 200000,
                 ],
             ],
         ]);
 
-        $result = $method->invoke($service, $jsonOutput);
+        $result = $method->invoke($service, $ndjson);
 
-        // Token counts from top-level usage, NOT modelUsage
+        // Context fill from last assistant message, NOT cumulative
         $this->assertSame(67, $result['input_tokens']);
         $this->assertSame(42500, $result['cache_tokens']);
-        $this->assertSame(200, $result['output_tokens']);
-        // Model and contextWindow still from modelUsage
+        // Output tokens from result message (cumulative total)
+        $this->assertSame(700, $result['output_tokens']);
+        // Model, contextWindow, and num_turns from result message
         $this->assertSame('sonnet-4.5', $result['model']);
         $this->assertSame(200000, $result['context_window']);
+        $this->assertSame(5, $result['num_turns']);
     }
 
-    public function testParseJsonOutputExtractsContextWindow(): void
+    public function testParseStreamJsonOutputExtractsContextWindow(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
-        $jsonOutput = json_encode([
-            'result' => 'Response',
-            'modelUsage' => [
-                'claude-opus-4-5-20251101' => [
-                    'inputTokens' => 500,
-                    'outputTokens' => 100,
-                    'contextWindow' => 200000,
+        $ndjson = $this->buildAssistantLine(['input_tokens' => 500, 'output_tokens' => 100])
+            . "\n" . $this->buildResultLine([
+                'modelUsage' => [
+                    'claude-opus-4-5-20251101' => [
+                        'inputTokens' => 500,
+                        'outputTokens' => 100,
+                        'contextWindow' => 200000,
+                    ],
                 ],
-            ],
-        ]);
+            ]);
 
-        $result = $method->invoke($service, $jsonOutput);
+        $result = $method->invoke($service, $ndjson);
 
         $this->assertSame(200000, $result['context_window']);
     }
 
-    public function testParseJsonOutputOmitsContextWindowWhenAbsent(): void
+    public function testParseStreamJsonOutputOmitsContextWindowWhenAbsent(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
-        $jsonOutput = json_encode([
-            'result' => 'Response',
-            'modelUsage' => [
-                'claude-opus-4-5-20251101' => [
-                    'inputTokens' => 500,
-                    'outputTokens' => 100,
+        $ndjson = $this->buildAssistantLine(['input_tokens' => 500, 'output_tokens' => 100])
+            . "\n" . $this->buildResultLine([
+                'modelUsage' => [
+                    'claude-opus-4-5-20251101' => [
+                        'inputTokens' => 500,
+                        'outputTokens' => 100,
+                    ],
                 ],
-            ],
-        ]);
+            ]);
 
-        $result = $method->invoke($service, $jsonOutput);
+        $result = $method->invoke($service, $ndjson);
 
         $this->assertArrayNotHasKey('context_window', $result);
+    }
+
+    public function testParseStreamJsonOutputSkipsSidechainMessages(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseStreamJsonOutput');
+        $method->setAccessible(true);
+
+        // Main assistant with real context usage
+        $ndjson = $this->buildAssistantLine([
+            'input_tokens' => 40000,
+            'output_tokens' => 800,
+            'cache_read_input_tokens' => 35000,
+            'cache_creation_input_tokens' => 0,
+        ]);
+        // Sidechain assistant (parallel agent) — should be ignored
+        $ndjson .= "\n" . $this->buildAssistantLine([
+            'input_tokens' => 90000,
+            'output_tokens' => 2000,
+            'cache_read_input_tokens' => 80000,
+            'cache_creation_input_tokens' => 5000,
+        ], true);
+        $ndjson .= "\n" . $this->buildResultLine([
+            'usage' => ['output_tokens' => 800],
+        ]);
+
+        $result = $method->invoke($service, $ndjson);
+
+        // Should use main assistant, not sidechain
+        $this->assertSame(40000, $result['input_tokens']);
+        $this->assertSame(35000, $result['cache_tokens']);
+        $this->assertSame(800, $result['output_tokens']);
+    }
+
+    public function testParseStreamJsonOutputExtractsToolUses(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseStreamJsonOutput');
+        $method->setAccessible(true);
+
+        // Assistant with tool_use content blocks
+        $assistant = json_encode([
+            'type' => 'assistant',
+            'message' => [
+                'role' => 'assistant',
+                'content' => [
+                    ['type' => 'text', 'text' => 'Let me read that file.'],
+                    ['type' => 'tool_use', 'id' => 'tu_1', 'name' => 'Read', 'input' => ['file_path' => '/app/services/MyService.php']],
+                    ['type' => 'tool_use', 'id' => 'tu_2', 'name' => 'Grep', 'input' => ['pattern' => 'class MyService']],
+                ],
+                'usage' => ['input_tokens' => 5000, 'output_tokens' => 100],
+            ],
+        ]);
+        // Second assistant with another tool call
+        $assistant2 = json_encode([
+            'type' => 'assistant',
+            'message' => [
+                'role' => 'assistant',
+                'content' => [
+                    ['type' => 'tool_use', 'id' => 'tu_3', 'name' => 'Edit', 'input' => ['file_path' => '/app/models/User.php']],
+                ],
+                'usage' => ['input_tokens' => 15000, 'output_tokens' => 200],
+            ],
+        ]);
+        $ndjson = $assistant . "\n" . $assistant2 . "\n" . $this->buildResultLine();
+
+        $result = $method->invoke($service, $ndjson);
+
+        $this->assertCount(3, $result['tool_uses']);
+        $this->assertSame('Read: /app/services/MyService.php', $result['tool_uses'][0]);
+        $this->assertSame('Grep: class MyService', $result['tool_uses'][1]);
+        $this->assertSame('Edit: /app/models/User.php', $result['tool_uses'][2]);
+    }
+
+    public function testParseStreamJsonOutputCountsTurnsWhenFieldMissing(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseStreamJsonOutput');
+        $method->setAccessible(true);
+
+        $ndjson = $this->buildAssistantLine(['input_tokens' => 10000, 'output_tokens' => 100])
+            . "\n" . $this->buildAssistantLine(['input_tokens' => 20000, 'output_tokens' => 200])
+            . "\n" . $this->buildAssistantLine(['input_tokens' => 30000, 'output_tokens' => 300])
+            . "\n" . $this->buildResultLine(['num_turns' => null]);
+
+        $result = $method->invoke($service, $ndjson);
+
+        // Falls back to counting non-sidechain assistant messages
+        $this->assertSame(3, $result['num_turns']);
     }
 
     public function testFormatModelNameShortensStandardIds(): void
@@ -206,28 +306,26 @@ class ClaudeCliServiceTest extends Unit
         $this->assertSame('custom-model', $method->invoke($service, 'custom-model'));
     }
 
-    public function testParseJsonOutputHandlesMissingSessionId(): void
+    public function testParseStreamJsonOutputHandlesMissingSessionId(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
-        $jsonOutput = json_encode([
-            'result' => 'Response',
-            'is_error' => false,
-        ]);
+        $ndjson = $this->buildAssistantLine(['input_tokens' => 100, 'output_tokens' => 50])
+            . "\n" . $this->buildResultLine(['session_id' => null]);
 
-        $result = $method->invoke($service, $jsonOutput);
+        $result = $method->invoke($service, $ndjson);
 
-        $this->assertArrayNotHasKey('session_id', $result);
+        $this->assertNull($result['session_id']);
     }
 
-    public function testParseJsonOutputHandlesEmptyOutput(): void
+    public function testParseStreamJsonOutputHandlesEmptyOutput(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
         $result = $method->invoke($service, '');
@@ -235,14 +333,28 @@ class ClaudeCliServiceTest extends Unit
         $this->assertEmpty($result);
     }
 
-    public function testParseJsonOutputHandlesInvalidJson(): void
+    public function testParseStreamJsonOutputHandlesNoResultMessage(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
-        $method = $reflection->getMethod('parseJsonOutput');
+        $method = $reflection->getMethod('parseStreamJsonOutput');
         $method->setAccessible(true);
 
         $result = $method->invoke($service, 'not valid json');
+
+        $this->assertEmpty($result);
+    }
+
+    public function testParseStreamJsonOutputHandlesOnlyAssistantNoResult(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseStreamJsonOutput');
+        $method->setAccessible(true);
+
+        $ndjson = $this->buildAssistantLine(['input_tokens' => 1000, 'output_tokens' => 200]);
+
+        $result = $method->invoke($service, $ndjson);
 
         $this->assertEmpty($result);
     }
@@ -315,5 +427,37 @@ class ClaudeCliServiceTest extends Unit
         } finally {
             @rmdir($tmpDir);
         }
+    }
+
+    private function buildAssistantLine(array $usage, bool $isSidechain = false): string
+    {
+        $line = [
+            'type' => 'assistant',
+            'message' => [
+                'role' => 'assistant',
+                'content' => [['type' => 'text', 'text' => 'Response']],
+                'usage' => $usage,
+            ],
+        ];
+        if ($isSidechain) {
+            $line['isSidechain'] = true;
+        }
+        return json_encode($line);
+    }
+
+    private function buildResultLine(array $overrides = []): string
+    {
+        return json_encode(array_merge([
+            'type' => 'result',
+            'subtype' => 'success',
+            'is_error' => false,
+            'result' => 'Claude response',
+            'duration_ms' => 3000,
+            'session_id' => 'test-session-123',
+            'num_turns' => 3,
+            'total_cost_usd' => 0.05,
+            'usage' => [],
+            'modelUsage' => [],
+        ], $overrides));
     }
 }

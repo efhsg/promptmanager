@@ -508,6 +508,8 @@ class ScratchPadController extends Controller
             'cache_tokens' => $result['cache_tokens'] ?? null,
             'output_tokens' => $result['output_tokens'] ?? null,
             'context_window' => $result['context_window'] ?? null,
+            'num_turns' => $result['num_turns'] ?? null,
+            'tool_uses' => $result['tool_uses'] ?? [],
             'configSource' => $result['configSource'] ?? null,
             'sessionId' => $result['session_id'] ?? null,
             'requestedPath' => $result['requestedPath'] ?? null,

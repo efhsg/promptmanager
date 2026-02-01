@@ -40,9 +40,13 @@ class Yii
  * @property mixed|object|null $permissionService
  *
  */
-class __Application {}
+class __Application
+{
+}
 
 /**
  * @property User $identity
  */
-class __WebUser {}
+class __WebUser
+{
+}
