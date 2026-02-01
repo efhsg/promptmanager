@@ -332,3 +332,7 @@
     color: #6c757d;
     text-align: right;
 }
+
+.claude-chat-page #claude-summarize-warning-btn {
+    vertical-align: baseline;
+}

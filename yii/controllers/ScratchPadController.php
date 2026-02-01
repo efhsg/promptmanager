@@ -66,6 +66,7 @@ class ScratchPadController extends Controller
                 'actions' => [
                     'delete' => ['POST'],
                     'run-claude' => ['POST'],
+                    'summarize-session' => ['POST'],
                 ],
             ],
             'access' => [
@@ -517,6 +518,97 @@ class ScratchPadController extends Controller
             'usedFallback' => $result['usedFallback'] ?? null,
             'promptMarkdown' => $markdown,
         ];
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionSummarizeSession(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        /** @var ScratchPad $model */
+        $model = $this->findModel($id);
+
+        $requestData = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestData)) {
+            return ['success' => false, 'error' => 'Invalid request format.'];
+        }
+        $conversation = $requestData['conversation'] ?? '';
+
+        if (!is_string($conversation) || trim($conversation) === '') {
+            return ['success' => false, 'error' => 'Conversation text is empty.'];
+        }
+
+        $project = $model->project;
+        $workingDirectory = $project !== null && !empty($project->root_directory)
+            ? $project->root_directory
+            : '';
+
+        $options = [
+            'model' => 'sonnet',
+            'permissionMode' => 'plan',
+            'appendSystemPrompt' => $this->buildSummarizerSystemPrompt(),
+        ];
+
+        $result = $this->claudeCliService->execute(
+            $conversation,
+            $workingDirectory,
+            120,
+            $options,
+            $project,
+            null
+        );
+
+        $output = $result['output'] ?? '';
+        if (!$result['success'] || !is_string($output) || trim($output) === '') {
+            Yii::warning('Summarize session failed: ' . ($result['error'] ?? 'empty output'), __METHOD__);
+            return [
+                'success' => false,
+                'error' => $result['error'] ?: 'Summarization returned empty output.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'summary' => $output,
+            'duration_ms' => $result['duration_ms'] ?? null,
+            'model' => $result['model'] ?? null,
+        ];
+    }
+
+    private function buildSummarizerSystemPrompt(): string
+    {
+        return <<<'PROMPT'
+You are a conversation summarizer. Your task is to produce a structured summary
+of the conversation provided. The summary will be used to seed a new chat session,
+so it must contain enough context for the assistant to continue the work seamlessly.
+
+Produce the summary in the following markdown format:
+
+## Context & Goal
+[What the user is trying to accomplish]
+
+## Decisions Made
+[Key decisions, conclusions, and agreements reached]
+
+## Code Changes & Artifacts
+[File paths modified/created, key code snippets, architectural choices.
+Include actual filenames and brief descriptions.]
+
+## Current State
+[What has been completed. What is working. Test results.]
+
+## Open Items & Next Steps
+[Unresolved questions, pending tasks, known issues, what to do next]
+
+Rules:
+- Be concise but semantically rich — preserve all actionable information
+- Include specific file paths, function names, and technical details
+- Do not include pleasantries or conversational filler
+- Do not include full code — only key snippets essential for context
+- The summary must be self-contained for a reader with no prior context
+PROMPT;
     }
 
     /**

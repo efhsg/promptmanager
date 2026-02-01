@@ -154,6 +154,7 @@ return [
                 'delete' => 'deleteScratchPad',
                 'runClaude' => 'viewScratchPad',
                 'claude' => 'viewScratchPad',
+                'summarizeSession' => 'viewScratchPad',
             ],
             'permissions' => [
                 'createScratchPad' => [

@@ -608,6 +608,229 @@ class ScratchPadControllerTest extends Unit
         $this->assertSame('{"ops":[{"insert":"Edited\n"}]}', $lastConvertInput);
     }
 
+    public function testSummarizeSessionReturnsSuccessWithValidConversation(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([
+            'conversation' => "## You\n\nHello\n\n---\n\n## Claude\n\nHi there",
+        ]);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => true,
+            'output' => '## Context & Goal\nTest summary',
+            'error' => '',
+            'exitCode' => 0,
+            'duration_ms' => 8000,
+            'model' => 'sonnet',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionSummarizeSession($scratchPad->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('## Context & Goal\nTest summary', $result['summary']);
+        $this->assertSame(8000, $result['duration_ms']);
+        $this->assertSame('sonnet', $result['model']);
+    }
+
+    public function testSummarizeSessionReturnsErrorForEmptyConversation(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest(['conversation' => '   ']);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionSummarizeSession($scratchPad->id);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Conversation text is empty.', $result['error']);
+    }
+
+    public function testSummarizeSessionReturnsErrorWhenClaudeFails(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([
+            'conversation' => "## You\n\nHello\n\n---\n\n## Claude\n\nHi",
+        ]);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => false,
+            'output' => '',
+            'error' => 'CLI process timed out after 120s',
+            'exitCode' => 1,
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionSummarizeSession($scratchPad->id);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('CLI process timed out after 120s', $result['error']);
+    }
+
+    public function testSummarizeSessionReturnsErrorWhenOutputIsEmpty(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([
+            'conversation' => "## You\n\nHello\n\n---\n\n## Claude\n\nHi",
+        ]);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('execute')->willReturn([
+            'success' => true,
+            'output' => '',
+            'error' => '',
+            'exitCode' => 0,
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionSummarizeSession($scratchPad->id);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Summarization returned empty output.', $result['error']);
+    }
+
+    public function testSummarizeSessionPassesSonnetModelAndPlanMode(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockJsonRequest([
+            'conversation' => "## You\n\nHello\n\n---\n\n## Claude\n\nHi",
+        ]);
+
+        $capturedOptions = null;
+        $capturedSessionId = null;
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('execute')
+            ->willReturnCallback(function ($prompt, $dir, $timeout, $options, $project, $sessionId) use (&$capturedOptions, &$capturedSessionId) {
+                $capturedOptions = $options;
+                $capturedSessionId = $sessionId;
+                return [
+                    'success' => true,
+                    'output' => 'Summary text',
+                    'error' => '',
+                    'exitCode' => 0,
+                ];
+            });
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller->actionSummarizeSession($scratchPad->id);
+
+        $this->assertSame('sonnet', $capturedOptions['model']);
+        $this->assertSame('plan', $capturedOptions['permissionMode']);
+        $this->assertArrayHasKey('appendSystemPrompt', $capturedOptions);
+        $this->assertStringContainsString('conversation summarizer', $capturedOptions['appendSystemPrompt']);
+        $this->assertNull($capturedSessionId);
+    }
+
+    public function testSummarizeSessionReturnsErrorForNonArrayRequest(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $scratchPad = new ScratchPad([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'name' => 'Test Scratch Pad',
+            'content' => '{"ops":[{"insert":"Hello\n"}]}',
+        ]);
+        $scratchPad->save(false);
+
+        $this->mockRawBody('"just a string"');
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionSummarizeSession($scratchPad->id);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Invalid request format.', $result['error']);
+    }
+
     private function createControllerWithClaudeService(ClaudeCliService $claudeService): ScratchPadController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
@@ -620,5 +843,17 @@ class ScratchPadControllerTest extends Unit
             $youtubeService,
             $claudeService
         );
+    }
+
+    private function mockRawBody(string $rawBody): void
+    {
+        $request = Yii::$app->request;
+        $reflection = new ReflectionClass($request);
+
+        $rawBodyProperty = $reflection->getProperty('_rawBody');
+        $rawBodyProperty->setAccessible(true);
+        $rawBodyProperty->setValue($request, $rawBody);
+
+        $_SERVER['REQUEST_METHOD'] = 'POST';
     }
 }

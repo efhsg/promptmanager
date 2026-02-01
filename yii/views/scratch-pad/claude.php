@@ -17,6 +17,7 @@ $this->registerJsFile('@web/js/purify.min.js', ['position' => View::POS_HEAD]);
 $this->registerCssFile('@web/css/claude-chat.css');
 
 $runClaudeUrl = Url::to(['/scratch-pad/run-claude', 'id' => $model->id]);
+$summarizeUrl = Url::to(['/scratch-pad/summarize-session', 'id' => $model->id]);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $checkConfigUrl = $model->project ? Url::to(['/project/check-claude-config', 'id' => $model->project->id]) : null;
@@ -145,9 +146,32 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                     </a>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
-                    <button type="button" id="claude-new-session-btn" class="btn btn-outline-secondary d-none">
-                        <i class="bi bi-arrow-repeat"></i> New Session
-                    </button>
+                    <div id="claude-summarize-group" class="btn-group d-none">
+                        <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary"
+                                title="Summarize conversation and start a new session with the summary">
+                            <i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session
+                        </button>
+                        <button type="button" id="claude-summarize-split-toggle"
+                                class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="#" id="claude-summarize-btn">
+                                    <i class="bi bi-pencil-square me-1"></i> Summarize
+                                    <small class="d-block text-muted">Review summary before sending</small>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="#" id="claude-new-session-btn">
+                                    <i class="bi bi-x-circle me-1"></i> New Session
+                                    <small class="d-block text-muted">Discard context and start fresh</small>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                     <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
                         <i class="bi bi-arrow-counterclockwise"></i> Last prompt
                     </button>
@@ -174,6 +198,9 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <i class="bi bi-exclamation-triangle-fill me-1"></i>
         <span id="claude-context-warning-text"></span>
         <small class="ms-1">Consider starting a new session to avoid degraded performance.</small>
+        <button type="button" id="claude-summarize-warning-btn" class="btn btn-warning btn-sm ms-2">
+            <i class="bi bi-arrow-repeat"></i> Summarize &amp; Continue
+        </button>
         <button type="button" class="btn-close" id="claude-context-warning-close" aria-label="Close"></button>
     </div>
 
@@ -280,6 +307,7 @@ $js = <<<JS
             checkConfigUrl: $checkConfigUrlJson,
             maxContext: 200000,
             warningDismissed: false,
+            summarizing: false,
 
             init: function() {
                 this.prefillFromDefaults();
@@ -357,7 +385,7 @@ $js = <<<JS
                 var self = this;
                 document.getElementById('claude-send-btn').addEventListener('click', function() { self.send(); });
                 document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
-                document.getElementById('claude-new-session-btn').addEventListener('click', function() { self.newSession(); });
+                document.getElementById('claude-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
                 document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
                 document.getElementById('claude-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
                 document.getElementById('claude-editor-toggle').addEventListener('click', function(e) {
@@ -396,6 +424,17 @@ $js = <<<JS
                 document.getElementById('claude-context-warning-close').addEventListener('click', function() {
                     document.getElementById('claude-context-warning').classList.add('d-none');
                     self.warningDismissed = true;
+                });
+
+                document.getElementById('claude-summarize-btn').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    self.summarizeAndContinue(false);
+                });
+                document.getElementById('claude-summarize-auto-btn').addEventListener('click', function() {
+                    self.summarizeAndContinue(true);
+                });
+                document.getElementById('claude-summarize-warning-btn').addEventListener('click', function() {
+                    self.summarizeAndContinue(false);
                 });
             },
 
@@ -505,7 +544,7 @@ $js = <<<JS
                         // First successful run: show follow-up buttons
                         if (self.messages.length === 2) {
                             document.getElementById('claude-reuse-btn').classList.remove('d-none');
-                            document.getElementById('claude-new-session-btn').classList.remove('d-none');
+                            document.getElementById('claude-summarize-group').classList.remove('d-none');
                         }
 
                         document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
@@ -659,6 +698,23 @@ $js = <<<JS
                     label += ' \u00b7 ' + this.lastNumTurns + (this.lastNumTurns === 1 ? ' turn' : ' turns');
                 textEl.textContent = label;
                 textEl.title = this.lastToolUses.length ? this.lastToolUses.join('\\n') : '';
+
+                this.updateSummarizeButtonColor(pctUsed);
+            },
+
+            updateSummarizeButtonColor: function(pctUsed) {
+                var btns = [
+                    document.getElementById('claude-summarize-auto-btn'),
+                    document.getElementById('claude-summarize-split-toggle')
+                ];
+                var remove = ['btn-outline-secondary', 'btn-outline-warning', 'btn-outline-danger'];
+                var add = pctUsed < 60 ? 'btn-outline-secondary'
+                        : pctUsed < 80 ? 'btn-outline-warning'
+                        : 'btn-outline-danger';
+                btns.forEach(function(btn) {
+                    remove.forEach(function(cls) { btn.classList.remove(cls); });
+                    btn.classList.add(add);
+                });
             },
 
             showContextWarning: function(pctUsed) {
@@ -843,7 +899,9 @@ $js = <<<JS
 
                 document.getElementById('claude-copy-all-wrapper').classList.add('d-none');
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
-                document.getElementById('claude-new-session-btn').classList.add('d-none');
+                document.getElementById('claude-summarize-group').classList.add('d-none');
+                this.updateSummarizeButtonColor(0);
+                this.summarizing = false;
 
                 this.expandSettings();
                 this.expandEditor();
@@ -956,6 +1014,82 @@ $js = <<<JS
                         btn.classList.add('btn-outline-secondary');
                     }, 2000);
                 });
+            },
+
+            summarizeAndContinue: function(autoSend) {
+                if (this.summarizing || this.messages.length < 2) return;
+
+                var confirmMsg = autoSend
+                    ? 'This will summarize the conversation and immediately start a new session with the summary. Continue?'
+                    : 'This will summarize the conversation and place it in the editor for review before starting a new session. Continue?';
+                if (!confirm(confirmMsg)) return;
+
+                this.summarizing = true;
+                var self = this;
+
+                // Build conversation markdown (same format as copyConversation)
+                var conversationText = this.messages.map(function(m) {
+                    var prefix = m.role === 'user' ? '## You' : '## Claude';
+                    return prefix + '\\n\\n' + m.content;
+                }).join('\\n\\n---\\n\\n');
+
+                // Disable buttons and show spinner on primary button
+                var summarizeAutoBtn = document.getElementById('claude-summarize-auto-btn');
+                var summarizeWarningBtn = document.getElementById('claude-summarize-warning-btn');
+                var sendBtn = document.getElementById('claude-send-btn');
+                summarizeAutoBtn.disabled = true;
+                summarizeWarningBtn.disabled = true;
+                sendBtn.disabled = true;
+                summarizeAutoBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Summarizing…';
+
+                fetch('$summarizeUrl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '$csrfToken',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ conversation: conversationText })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.summary) {
+                        var summary = data.summary;
+                        self.restoreSummarizeButtons();
+                        self.newSession();
+
+                        if (autoSend) {
+                            self.switchToTextarea();
+                            var textarea = document.getElementById('claude-followup-textarea');
+                            textarea.value = summary;
+                            self.send();
+                        } else {
+                            self.switchToTextarea();
+                            var textarea = document.getElementById('claude-followup-textarea');
+                            textarea.value = 'Here is the summary of our previous session. Please read it carefully and continue from where we left off.\\n\\n' + summary;
+                            textarea.focus();
+                            textarea.setSelectionRange(0, 0);
+                        }
+                    } else {
+                        alert('Summarization failed: ' + (data.error || 'Unknown error'));
+                        self.restoreSummarizeButtons();
+                    }
+                })
+                .catch(function(error) {
+                    alert('Summarization request failed: ' + error.message);
+                    self.restoreSummarizeButtons();
+                });
+            },
+
+            restoreSummarizeButtons: function() {
+                this.summarizing = false;
+                var summarizeAutoBtn = document.getElementById('claude-summarize-auto-btn');
+                var summarizeWarningBtn = document.getElementById('claude-summarize-warning-btn');
+                var sendBtn = document.getElementById('claude-send-btn');
+                summarizeAutoBtn.disabled = false;
+                summarizeWarningBtn.disabled = false;
+                sendBtn.disabled = false;
+                summarizeAutoBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session';
             },
 
             toggleHistory: function() {
