@@ -9,6 +9,7 @@ use yii\web\View;
 
 /** @var View $this */
 /** @var app\models\ScratchPad $model */
+/** @var array $projectList */
 
 QuillAsset::register($this);
 HighlightAsset::register($this);
@@ -18,8 +19,10 @@ $this->registerCssFile('@web/css/claude-chat.css');
 
 $runClaudeUrl = Url::to(['/scratch-pad/run-claude', 'id' => $model->id]);
 $summarizeUrl = Url::to(['/scratch-pad/summarize-session', 'id' => $model->id]);
+$saveUrl = Url::to(['/scratch-pad/save']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$viewUrlTemplate = Url::to(['/scratch-pad/view', 'id' => '__ID__']);
 $checkConfigUrl = $model->project ? Url::to(['/project/check-claude-config', 'id' => $model->project->id]) : null;
 $projectDefaults = $model->project ? $model->project->getClaudeOptions() : [];
 $projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
@@ -207,10 +210,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     <!-- Section 3a: Current Exchange -->
     <div id="claude-current-exchange" class="mb-4">
         <div>
-            <div id="claude-current-empty" class="claude-conversation__empty">
-                <i class="bi bi-terminal"></i>
-                <span class="text-muted">Send a prompt to start a conversation</span>
-            </div>
             <div id="claude-current-response" class="d-none"></div>
             <div id="claude-current-prompt" class="d-none"></div>
         </div>
@@ -226,11 +225,76 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <div class="accordion" id="claude-history-accordion"></div>
     </div>
 
-    <!-- Copy All (below both) -->
+    <!-- Copy All + Save Dialog (below both) -->
     <div id="claude-copy-all-wrapper" class="d-none text-end mb-4">
+        <button type="button" id="claude-save-dialog-btn" class="btn btn-outline-primary btn-sm me-1">
+            <i class="bi bi-save"></i> Save Dialog
+        </button>
         <button type="button" id="claude-copy-all-btn" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-clipboard"></i> Copy All
         </button>
+    </div>
+
+    <!-- Save Dialog: Step 1 — Select messages -->
+    <div class="modal fade" id="saveDialogSelectModal" tabindex="-1" aria-labelledby="saveDialogSelectLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="saveDialogSelectLabel">Save Dialog — Select Messages</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="save-dialog-toggle-all" checked>
+                        <label class="form-check-label fw-semibold" for="save-dialog-toggle-all">Select all</label>
+                    </div>
+                    <hr class="mt-0">
+                    <div id="save-dialog-message-list"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-dialog-continue-btn">
+                        Continue <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Dialog: Step 2 — Name and save -->
+    <div class="modal fade" id="saveDialogSaveModal" tabindex="-1" aria-labelledby="saveDialogSaveLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="saveDialogSaveLabel">Save Scratch Pad</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger d-none" id="save-dialog-error-alert"></div>
+                    <div class="mb-3">
+                        <label for="save-dialog-name" class="form-label">Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="save-dialog-name" placeholder="Enter a name...">
+                        <div class="invalid-feedback" id="save-dialog-name-error"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="save-dialog-project" class="form-label">Project</label>
+                        <?= Html::dropDownList('project_id', $model->project_id, $projectList, [
+                            'id' => 'save-dialog-project',
+                            'class' => 'form-select',
+                            'prompt' => 'No project',
+                        ]) ?>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" id="save-dialog-back-btn">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </button>
+                    <button type="button" class="btn btn-primary" id="save-dialog-save-btn">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -387,6 +451,11 @@ $js = <<<JS
                 document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
                 document.getElementById('claude-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
                 document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
+                document.getElementById('claude-save-dialog-btn').addEventListener('click', function() { self.openSaveDialogSelect(); });
+                document.getElementById('save-dialog-toggle-all').addEventListener('change', function() { self.toggleAllMessages(this.checked); });
+                document.getElementById('save-dialog-continue-btn').addEventListener('click', function() { self.saveDialogContinue(); });
+                document.getElementById('save-dialog-back-btn').addEventListener('click', function() { self.saveDialogBack(); });
+                document.getElementById('save-dialog-save-btn').addEventListener('click', function() { self.saveDialogSave(); });
                 document.getElementById('claude-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
                 document.getElementById('claude-editor-toggle').addEventListener('click', function(e) {
                     e.preventDefault();
@@ -562,7 +631,7 @@ $js = <<<JS
             },
 
             renderCurrentExchange: function(userContent, claudeContent, meta) {
-                this.hideEmptyState();
+
                 var responseEl = document.getElementById('claude-current-response');
 
                 // Render Claude response (top)
@@ -731,7 +800,7 @@ $js = <<<JS
             },
 
             addErrorMessage: function(errorText) {
-                this.hideEmptyState();
+
                 var responseEl = document.getElementById('claude-current-response');
                 responseEl.innerHTML = '';
 
@@ -756,7 +825,7 @@ $js = <<<JS
             },
 
             showLoadingPlaceholder: function() {
-                this.hideEmptyState();
+
                 var responseEl = document.getElementById('claude-current-response');
                 responseEl.innerHTML = '';
 
@@ -785,7 +854,7 @@ $js = <<<JS
             },
 
             showUserPrompt: function(plainText) {
-                this.hideEmptyState();
+
                 var promptEl = document.getElementById('claude-current-prompt');
                 promptEl.innerHTML = '';
 
@@ -820,9 +889,10 @@ $js = <<<JS
                 return DOMPurify.sanitize(html, { ADD_ATTR: ['class', 'target', 'rel'] });
             },
 
-            hideEmptyState: function() {
-                var empty = document.getElementById('claude-current-empty');
-                if (empty) empty.classList.add('d-none');
+            markdownToDelta: function(text) {
+                var html = this.renderMarkdown(text);
+                var delta = quill.clipboard.convert({ html: html });
+                return JSON.stringify(delta);
             },
 
             hasFormatting: function() {
@@ -889,9 +959,6 @@ $js = <<<JS
                 responseEl.classList.add('d-none');
                 promptEl.innerHTML = '';
                 promptEl.classList.add('d-none');
-
-                // Show empty state
-                document.getElementById('claude-current-empty').classList.remove('d-none');
 
                 // Clear history
                 document.getElementById('claude-history-accordion').innerHTML = '';
@@ -1090,6 +1157,291 @@ $js = <<<JS
                 summarizeWarningBtn.disabled = false;
                 sendBtn.disabled = false;
                 summarizeAutoBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session';
+            },
+
+            openSaveDialogSelect: function() {
+                var self = this;
+                var list = document.getElementById('save-dialog-message-list');
+                list.innerHTML = '';
+
+                // Group messages into exchanges (pairs of user + claude)
+                for (var i = 0; i < this.messages.length; i += 2) {
+                    var userMsg = this.messages[i];
+                    var claudeMsg = this.messages[i + 1];
+                    var idx = i / 2;
+
+                    var wrapper = document.createElement('div');
+                    wrapper.className = 'save-dialog-item mb-2';
+
+                    // Exchange-level (parent) checkbox
+                    var exchangeRow = document.createElement('div');
+                    exchangeRow.className = 'form-check save-dialog-item__exchange';
+
+                    var exchangeInput = document.createElement('input');
+                    exchangeInput.className = 'form-check-input save-dialog-exchange-cb';
+                    exchangeInput.type = 'checkbox';
+                    exchangeInput.checked = true;
+                    exchangeInput.id = 'save-dialog-exchange-' + idx;
+                    exchangeInput.setAttribute('data-exchange-index', String(idx));
+
+                    var exchangeLabel = document.createElement('label');
+                    exchangeLabel.className = 'form-check-label fw-semibold save-dialog-item__exchange-label';
+                    exchangeLabel.setAttribute('for', 'save-dialog-exchange-' + idx);
+                    exchangeLabel.textContent = 'Exchange ' + (idx + 1);
+
+                    exchangeRow.appendChild(exchangeInput);
+                    exchangeRow.appendChild(exchangeLabel);
+                    wrapper.appendChild(exchangeRow);
+
+                    // Individual message checkboxes
+                    var messagesDiv = document.createElement('div');
+                    messagesDiv.className = 'save-dialog-item__messages';
+
+                    // User message checkbox
+                    if (userMsg) {
+                        var userPreview = userMsg.content.replace(/[#*_`>\[\]]/g, '').trim();
+                        if (userPreview.length > 100) userPreview = userPreview.substring(0, 100) + '\u2026';
+
+                        var userRow = document.createElement('div');
+                        userRow.className = 'form-check save-dialog-item__msg-row';
+
+                        var userInput = document.createElement('input');
+                        userInput.className = 'form-check-input save-dialog-msg-cb';
+                        userInput.type = 'checkbox';
+                        userInput.checked = true;
+                        userInput.id = 'save-dialog-msg-' + i;
+                        userInput.setAttribute('data-msg-index', String(i));
+                        userInput.setAttribute('data-exchange-index', String(idx));
+
+                        var userLabel = document.createElement('label');
+                        userLabel.className = 'form-check-label save-dialog-item__label';
+                        userLabel.setAttribute('for', 'save-dialog-msg-' + i);
+                        userLabel.innerHTML =
+                            '<span class="save-dialog-item__role save-dialog-item__role--user"><i class="bi bi-person-fill"></i> You</span>' +
+                            '<span class="save-dialog-item__preview">' + this.escapeHtml(userPreview) + '</span>';
+
+                        userRow.appendChild(userInput);
+                        userRow.appendChild(userLabel);
+                        messagesDiv.appendChild(userRow);
+                    }
+
+                    // Claude message checkbox
+                    if (claudeMsg) {
+                        var claudePreview = claudeMsg.content.replace(/[#*_`>\[\]]/g, '').trim();
+                        if (claudePreview.length > 120) claudePreview = claudePreview.substring(0, 120) + '\u2026';
+
+                        var claudeRow = document.createElement('div');
+                        claudeRow.className = 'form-check save-dialog-item__msg-row';
+
+                        var claudeInput = document.createElement('input');
+                        claudeInput.className = 'form-check-input save-dialog-msg-cb';
+                        claudeInput.type = 'checkbox';
+                        claudeInput.checked = true;
+                        claudeInput.id = 'save-dialog-msg-' + (i + 1);
+                        claudeInput.setAttribute('data-msg-index', String(i + 1));
+                        claudeInput.setAttribute('data-exchange-index', String(idx));
+
+                        var claudeLabel = document.createElement('label');
+                        claudeLabel.className = 'form-check-label save-dialog-item__label';
+                        claudeLabel.setAttribute('for', 'save-dialog-msg-' + (i + 1));
+                        claudeLabel.innerHTML =
+                            '<span class="save-dialog-item__role save-dialog-item__role--claude"><i class="bi bi-terminal-fill"></i> Claude</span>' +
+                            '<span class="save-dialog-item__preview">' + this.escapeHtml(claudePreview) + '</span>';
+
+                        claudeRow.appendChild(claudeInput);
+                        claudeRow.appendChild(claudeLabel);
+                        messagesDiv.appendChild(claudeRow);
+                    }
+
+                    wrapper.appendChild(messagesDiv);
+                    list.appendChild(wrapper);
+
+                    // Exchange checkbox toggles its children
+                    (function(exchangeCb, wrapperEl) {
+                        exchangeCb.addEventListener('change', function() {
+                            var children = wrapperEl.querySelectorAll('.save-dialog-msg-cb');
+                            children.forEach(function(cb) { cb.checked = exchangeCb.checked; });
+                            self.syncToggleAll();
+                        });
+                    })(exchangeInput, wrapper);
+                }
+
+                // Individual message checkboxes sync their parent exchange checkbox
+                list.querySelectorAll('.save-dialog-msg-cb').forEach(function(cb) {
+                    cb.addEventListener('change', function() {
+                        var exchangeIdx = cb.getAttribute('data-exchange-index');
+                        self.syncExchangeCheckbox(exchangeIdx);
+                        self.syncToggleAll();
+                    });
+                });
+
+                // Reset toggle-all
+                document.getElementById('save-dialog-toggle-all').checked = true;
+
+                var modal = new bootstrap.Modal(document.getElementById('saveDialogSelectModal'));
+                modal.show();
+            },
+
+            toggleAllMessages: function(checked) {
+                var checkboxes = document.querySelectorAll('#save-dialog-message-list input[type="checkbox"]');
+                checkboxes.forEach(function(cb) {
+                    cb.checked = checked;
+                    cb.indeterminate = false;
+                });
+            },
+
+            syncExchangeCheckbox: function(exchangeIdx) {
+                var children = document.querySelectorAll('.save-dialog-msg-cb[data-exchange-index="' + exchangeIdx + '"]');
+                var exchangeCb = document.getElementById('save-dialog-exchange-' + exchangeIdx);
+                var allChecked = true;
+                children.forEach(function(cb) {
+                    if (!cb.checked) allChecked = false;
+                });
+                exchangeCb.checked = allChecked;
+                exchangeCb.indeterminate = !allChecked && Array.from(children).some(function(cb) { return cb.checked; });
+            },
+
+            syncToggleAll: function() {
+                var allCbs = document.querySelectorAll('#save-dialog-message-list .save-dialog-msg-cb');
+                var toggleAll = document.getElementById('save-dialog-toggle-all');
+                var allChecked = true;
+                var someChecked = false;
+                allCbs.forEach(function(cb) {
+                    if (!cb.checked) allChecked = false;
+                    if (cb.checked) someChecked = true;
+                });
+                toggleAll.checked = allChecked;
+                toggleAll.indeterminate = !allChecked && someChecked;
+            },
+
+            saveDialogContinue: function() {
+                // Check at least one individual message is selected
+                var checkboxes = document.querySelectorAll('#save-dialog-message-list .save-dialog-msg-cb:checked');
+                if (checkboxes.length === 0) {
+                    alert('Please select at least one message.');
+                    return;
+                }
+
+                // Hide select modal, show save modal
+                bootstrap.Modal.getInstance(document.getElementById('saveDialogSelectModal')).hide();
+
+                // Suggest a name from the first user message
+                var suggestedName = '';
+                if (this.messages.length > 0 && this.messages[0].role === 'user') {
+                    suggestedName = this.messages[0].content
+                        .replace(/[#*_`>\[\]]/g, '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    if (suggestedName.length > 80) {
+                        suggestedName = suggestedName.substring(0, 80).replace(/\s\S*$/, '') + '\u2026';
+                    }
+                }
+
+                // Reset save form
+                document.getElementById('save-dialog-name').value = suggestedName;
+                document.getElementById('save-dialog-name').classList.remove('is-invalid');
+                document.getElementById('save-dialog-name-error').textContent = '';
+                document.getElementById('save-dialog-error-alert').classList.add('d-none');
+
+                var saveModal = new bootstrap.Modal(document.getElementById('saveDialogSaveModal'));
+                saveModal.show();
+                setTimeout(function() { document.getElementById('save-dialog-name').focus(); }, 300);
+            },
+
+            saveDialogBack: function() {
+                bootstrap.Modal.getInstance(document.getElementById('saveDialogSaveModal')).hide();
+                var selectModal = new bootstrap.Modal(document.getElementById('saveDialogSelectModal'));
+                selectModal.show();
+            },
+
+            saveDialogSave: function() {
+                var self = this;
+                var nameInput = document.getElementById('save-dialog-name');
+                var name = nameInput.value.trim();
+                var errorAlert = document.getElementById('save-dialog-error-alert');
+                var nameError = document.getElementById('save-dialog-name-error');
+
+                // Validate name
+                if (!name) {
+                    nameInput.classList.add('is-invalid');
+                    nameError.textContent = 'Name is required.';
+                    return;
+                }
+                nameInput.classList.remove('is-invalid');
+                nameError.textContent = '';
+
+                var projectId = document.getElementById('save-dialog-project').value || null;
+
+                // Build markdown from individually selected messages
+                var checkboxes = document.querySelectorAll('#save-dialog-message-list .save-dialog-msg-cb:checked');
+                var selectedParts = [];
+                checkboxes.forEach(function(cb) {
+                    var idx = parseInt(cb.getAttribute('data-msg-index'), 10);
+                    var msg = self.messages[idx];
+                    if (!msg) return;
+                    var role = (idx % 2 === 0) ? 'You' : 'Claude';
+                    selectedParts.push('## ' + role + '\\n\\n' + msg.content);
+                });
+                var markdown = selectedParts.join('\\n\\n---\\n\\n');
+
+                // Convert markdown to Quill Delta client-side
+                var deltaJson = self.markdownToDelta(markdown);
+
+                // Disable save button
+                var saveBtn = document.getElementById('save-dialog-save-btn');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving\u2026';
+
+                // Save as new scratch pad
+                fetch('$saveUrl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '$csrfToken',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        content: deltaJson,
+                        response: '',
+                        project_id: projectId
+                    })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(saveData) {
+                    if (!saveData.success) {
+                        var msg = saveData.message || '';
+                        if (saveData.errors) {
+                            var errs = saveData.errors;
+                            if (errs.name) {
+                                nameInput.classList.add('is-invalid');
+                                nameError.textContent = errs.name[0];
+                            }
+                            if (!errs.name) msg = Object.values(errs).flat().join(' ');
+                        }
+                        if (msg) {
+                            errorAlert.textContent = msg;
+                            errorAlert.classList.remove('d-none');
+                        }
+                        self.restoreSaveDialogButton();
+                        return;
+                    }
+
+                    // Success — redirect to view
+                    var viewUrl = '$viewUrlTemplate'.replace('__ID__', saveData.id);
+                    window.location.href = viewUrl;
+                })
+                .catch(function(error) {
+                    errorAlert.textContent = error.message || 'An unexpected error occurred.';
+                    errorAlert.classList.remove('d-none');
+                    self.restoreSaveDialogButton();
+                });
+            },
+
+            restoreSaveDialogButton: function() {
+                var saveBtn = document.getElementById('save-dialog-save-btn');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="bi bi-save"></i> Save';
             },
 
             toggleHistory: function() {

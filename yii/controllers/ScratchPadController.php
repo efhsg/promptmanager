@@ -66,6 +66,7 @@ class ScratchPadController extends Controller
                 'actions' => [
                     'delete' => ['POST'],
                     'run-claude' => ['POST'],
+                    'save' => ['POST'],
                     'summarize-session' => ['POST'],
                 ],
             ],
@@ -184,14 +185,8 @@ class ScratchPadController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        if (!Yii::$app->request->isPost) {
-            return ['success' => false, 'message' => 'Invalid request method.'];
-        }
-
-        $rawBody = Yii::$app->request->rawBody;
-        $data = json_decode($rawBody, true);
-
-        if ($data === null) {
+        $data = json_decode(Yii::$app->request->rawBody, true);
+        if (!is_array($data)) {
             return ['success' => false, 'message' => 'Invalid JSON data.'];
         }
 
@@ -203,6 +198,16 @@ class ScratchPadController extends Controller
 
         if ($name === '') {
             return ['success' => false, 'errors' => ['name' => ['Name is required.']]];
+        }
+
+        if ($projectId !== null) {
+            $projectExists = Project::find()
+                ->forUser(Yii::$app->user->id)
+                ->andWhere(['id' => $projectId])
+                ->exists();
+            if (!$projectExists) {
+                return ['success' => false, 'message' => 'Project not found.'];
+            }
         }
 
         if ($id !== null) {
@@ -424,6 +429,7 @@ class ScratchPadController extends Controller
 
         return $this->render('claude', [
             'model' => $model,
+            'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
         ]);
     }
 
