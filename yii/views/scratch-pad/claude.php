@@ -362,6 +362,11 @@ $js = <<<JS
                     }
                 });
 
+                document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
+                    var btn = e.target.closest('.claude-message__copy');
+                    if (btn) self.handleCopyClick(btn);
+                });
+
                 var settingsCard = document.getElementById('claudeSettingsCard');
                 settingsCard.addEventListener('hidden.bs.collapse', function() { self.updateSettingsSummary(); });
                 settingsCard.addEventListener('shown.bs.collapse', function() {
@@ -502,6 +507,10 @@ $js = <<<JS
                     metaDiv.textContent = this.formatMeta(meta);
                     claudeDiv.appendChild(metaDiv);
                 }
+
+                var copyBtn = this.createCopyButton(claudeContent);
+                claudeDiv.appendChild(copyBtn);
+
                 responseEl.appendChild(claudeDiv);
                 responseEl.classList.remove('d-none');
 
@@ -570,19 +579,9 @@ $js = <<<JS
                     var allTokens = totalInput + (meta.output_tokens || 0);
                     var maxContext = 200000;
                     var pctUsed = Math.min(100, Math.round(allTokens / maxContext * 100));
-                    parts.push(pctUsed + '% ctx');
+                    parts.push(pctUsed + '% context used');
                 }
                 if (meta.model) parts.push(meta.model);
-                if (meta.configSource) {
-                    var src = meta.configSource;
-                    if (src.startsWith('project_own:'))
-                        src = 'project config';
-                    else if (src === 'managed_workspace')
-                        src = 'managed workspace';
-                    else if (src === 'default_workspace')
-                        src = 'default workspace';
-                    parts.push(src);
-                }
                 return parts.join(' \u00b7 ');
             },
 
@@ -666,6 +665,11 @@ $js = <<<JS
                 else
                     userBody.innerHTML = '<span class="text-muted fst-italic">Sending prompt\u2026</span>';
                 userDiv.appendChild(userBody);
+
+                if (plainText) {
+                    var copyBtn = this.createCopyButton(plainText);
+                    userDiv.appendChild(copyBtn);
+                }
 
                 promptEl.appendChild(userDiv);
                 promptEl.classList.remove('d-none');
@@ -817,6 +821,33 @@ $js = <<<JS
                     quill.focus();
                 else
                     document.getElementById('claude-followup-textarea').focus();
+            },
+
+            createCopyButton: function(markdownText) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'claude-message__copy';
+                btn.title = 'Copy to clipboard';
+                btn.setAttribute('aria-label', 'Copy to clipboard');
+                btn.setAttribute('data-copy-markdown', markdownText);
+                btn.innerHTML = '<i class="bi bi-clipboard"></i>';
+                return btn;
+            },
+
+            handleCopyClick: function(btn) {
+                var text = btn.getAttribute('data-copy-markdown');
+                if (!text) return;
+                navigator.clipboard.writeText(text).then(function() {
+                    var orig = btn.innerHTML;
+                    btn.innerHTML = '<i class="bi bi-check"></i>';
+                    btn.style.color = '#0d6efd';
+                    btn.style.opacity = '1';
+                    setTimeout(function() {
+                        btn.innerHTML = orig;
+                        btn.style.color = '';
+                        btn.style.opacity = '';
+                    }, 1500);
+                }).catch(function() {});
             },
 
             copyConversation: function() {
