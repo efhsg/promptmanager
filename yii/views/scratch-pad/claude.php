@@ -828,6 +828,14 @@ $js = <<<JS
             },
 
             onStreamError: function(msg) {
+                this.streamEnded = true;
+
+                // Abort active reader to prevent further events
+                if (this.activeReader) {
+                    try { this.activeReader.cancel(); } catch (e) {}
+                    this.activeReader = null;
+                }
+
                 var sendBtn = document.getElementById('claude-send-btn');
                 sendBtn.disabled = false;
                 this.removeStreamDots();

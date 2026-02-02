@@ -9,6 +9,7 @@ trash/
 .php-cs-fixer.cache
 scripts/backup.log
 .claude/settings.local.json
+docker-compose.override.yml
 
 # Runtime storage (managed Claude workspaces, etc.)
 yii/storage/

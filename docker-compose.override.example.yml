@@ -1,0 +1,17 @@
+# docker-compose.override.example.yml
+# Copy to docker-compose.override.yml and configure additional project root mounts.
+# Docker Compose auto-merges this file with docker-compose.yml.
+# See: https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/
+#
+# After copying, add the corresponding env vars to .env:
+#   PROJECTS_ROOT_2=/c/www
+#
+# And update PATH_MAPPINGS to include the new mount:
+#   PATH_MAPPINGS={"/home/erwin/projects": "/projects", "/c/www": "/projects_2"}
+#
+# Then restart: docker compose down && docker compose up -d
+services:
+  pma_yii:
+    volumes:
+      - ${PROJECTS_ROOT_2}:/projects_2:rw
+      # - ${PROJECTS_ROOT_3}:/projects_3:rw
