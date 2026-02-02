@@ -5,6 +5,7 @@ namespace app\services;
 use app\models\Project;
 use common\enums\CopyType;
 use Yii;
+use RuntimeException;
 
 /**
  * Service for executing Claude CLI commands.
@@ -169,6 +170,145 @@ class ClaudeCliService
     }
 
     /**
+     * Executes Claude CLI with streaming output, calling $onLine for each stdout line.
+     *
+     * @param callable(string): void $onLine Callback invoked for each line of stdout
+     * @return array{exitCode: int, error: string}
+     * @throws RuntimeException
+     */
+    public function executeStreaming(
+        string $prompt,
+        string $workingDirectory,
+        callable $onLine,
+        int $timeout = 300,
+        array $options = [],
+        ?Project $project = null,
+        ?string $sessionId = null
+    ): array {
+        $effectiveWorkDir = $this->determineWorkingDirectory($workingDirectory, $project);
+        $containerPath = $this->translatePath($effectiveWorkDir);
+
+        if (!is_dir($containerPath)) {
+            throw new RuntimeException('Working directory does not exist: ' . $effectiveWorkDir);
+        }
+
+        $command = $this->buildCommand($options, $sessionId, true);
+
+        $descriptorSpec = [
+            0 => ['pipe', 'r'],
+            1 => ['pipe', 'w'],
+            2 => ['pipe', 'w'],
+        ];
+
+        $process = proc_open($command, $descriptorSpec, $pipes, $containerPath);
+
+        if (!is_resource($process)) {
+            throw new RuntimeException('Failed to start Claude CLI process');
+        }
+
+        fwrite($pipes[0], $prompt);
+        fclose($pipes[0]);
+
+        // Store PID in session so the cancel endpoint can terminate the process
+        $status = proc_get_status($process);
+        $this->storeProcessPid($status['pid']);
+
+        stream_set_blocking($pipes[1], true);
+        stream_set_timeout($pipes[1], 30);
+        stream_set_blocking($pipes[2], false);
+
+        $error = '';
+        $startTime = time();
+        $cancelled = false;
+
+        while (($line = fgets($pipes[1])) !== false) {
+            if ((time() - $startTime) > $timeout) {
+                proc_terminate($process, 9);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                proc_close($process);
+                $this->clearProcessPid();
+                return ['exitCode' => 124, 'error' => 'Command timed out after ' . $timeout . ' seconds'];
+            }
+
+            // Detect client disconnect (browser aborted the fetch)
+            if (connection_aborted()) {
+                proc_terminate($process, 15);
+                usleep(100000);
+                $s = proc_get_status($process);
+                if ($s['running']) {
+                    proc_terminate($process, 9);
+                }
+                $cancelled = true;
+                break;
+            }
+
+            $line = trim($line);
+            if ($line !== '') {
+                $onLine($line);
+            }
+
+            $error .= stream_get_contents($pipes[2]) ?: '';
+        }
+
+        $error .= stream_get_contents($pipes[2]) ?: '';
+
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+
+        $status = proc_get_status($process);
+        $exitCode = $cancelled ? 130 : ($status['running'] ? -1 : $status['exitcode']);
+        proc_close($process);
+        $this->clearProcessPid();
+
+        return ['exitCode' => $exitCode, 'error' => trim($error)];
+    }
+
+    /**
+     * Terminates a running Claude CLI process by its PID.
+     * Requires the POSIX extension for process signalling.
+     *
+     * @return bool True if a process was found and signalled
+     */
+    public function cancelRunningProcess(): bool
+    {
+        if (!function_exists('posix_kill')) {
+            Yii::warning('posix_kill not available — cannot cancel Claude CLI process', __METHOD__);
+            return false;
+        }
+
+        $session = Yii::$app->session;
+        $pid = $session->get('claude_cli_pid');
+
+        if ($pid === null) {
+            return false;
+        }
+
+        $session->remove('claude_cli_pid');
+
+        // Send SIGTERM — posix_kill returns false if process doesn't exist (ESRCH)
+        if (!posix_kill($pid, 15)) {
+            return false;
+        }
+
+        // Give process time to exit gracefully, then force-kill if still alive
+        usleep(200000);
+        posix_kill($pid, 9);
+
+        return true;
+    }
+
+    private function storeProcessPid(int $pid): void
+    {
+        Yii::$app->session->set('claude_cli_pid', $pid);
+    }
+
+    private function clearProcessPid(): void
+    {
+        Yii::$app->session->remove('claude_cli_pid');
+    }
+
+    /**
      * Determines the effective working directory based on config availability.
      *
      * Priority:
@@ -220,9 +360,13 @@ class ClaudeCliService
      *
      * Prompt is passed via stdin to avoid command-line argument length limits.
      */
-    private function buildCommand(array $options, ?string $sessionId = null): string
+    private function buildCommand(array $options, ?string $sessionId = null, bool $streaming = false): string
     {
         $cmd = 'claude --output-format stream-json --verbose';
+
+        if ($streaming) {
+            $cmd .= ' --include-partial-messages';
+        }
 
         if ($sessionId !== null) {
             $cmd .= ' --continue ' . escapeshellarg($sessionId);

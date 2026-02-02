@@ -12,8 +12,7 @@ class PlaceholderProcessor
     public function __construct(
         private readonly FieldValueBuilder $fieldValueBuilder = new FieldValueBuilder(),
         private readonly DeltaOpsHelper $deltaHelper = new DeltaOpsHelper()
-    ) {
-    }
+    ) {}
 
     public function setFieldMappings(array $fieldTypes, array $fields): void
     {

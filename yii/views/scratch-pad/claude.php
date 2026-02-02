@@ -6,9 +6,10 @@ use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\View;
+use app\models\ScratchPad;
 
 /** @var View $this */
-/** @var app\models\ScratchPad $model */
+/** @var ScratchPad $model */
 /** @var array $projectList */
 
 QuillAsset::register($this);
@@ -18,6 +19,8 @@ $this->registerJsFile('@web/js/purify.min.js', ['position' => View::POS_HEAD]);
 $this->registerCssFile('@web/css/claude-chat.css');
 
 $runClaudeUrl = Url::to(['/scratch-pad/run-claude', 'id' => $model->id]);
+$streamClaudeUrl = Url::to(['/scratch-pad/stream-claude', 'id' => $model->id]);
+$cancelClaudeUrl = Url::to(['/scratch-pad/cancel-claude', 'id' => $model->id]);
 $summarizeUrl = Url::to(['/scratch-pad/summarize-session', 'id' => $model->id]);
 $saveUrl = Url::to(['/scratch-pad/save']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
@@ -208,7 +211,10 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     </div>
 
     <!-- Section 3a: Current Exchange -->
-    <div id="claude-current-exchange" class="mb-4">
+    <div id="claude-current-exchange" class="mb-4 position-relative">
+        <button type="button" id="claude-cancel-btn" class="claude-cancel-btn d-none" title="Cancel inference">
+            <i class="bi bi-stop-circle-fill"></i> Stop
+        </button>
         <div>
             <div id="claude-current-response" class="d-none"></div>
             <div id="claude-current-prompt" class="d-none"></div>
@@ -292,6 +298,30 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                     <button type="button" class="btn btn-primary" id="save-dialog-save-btn">
                         <i class="bi bi-save"></i> Save
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Streaming Process Modal -->
+    <div class="modal fade" id="claudeStreamModal" tabindex="-1" aria-labelledby="claudeStreamModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="claudeStreamModalLabel">
+                        <i class="bi bi-terminal-fill me-1"></i> Claude Process
+                        <span id="claude-modal-dots" class="claude-thinking-dots">
+                            <span></span><span></span><span></span>
+                        </span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <details id="claude-modal-thinking" class="claude-thinking-block d-none" open>
+                        <summary>Thinking</summary>
+                        <div id="claude-modal-thinking-body" class="claude-thinking-block__content"></div>
+                    </details>
+                    <div id="claude-modal-body" class="claude-message__body"></div>
                 </div>
             </div>
         </div>
@@ -389,6 +419,7 @@ $js = <<<JS
             },
 
             checkConfigStatus: function() {
+                var self = this;
                 var statusEl = document.getElementById('claude-config-status');
                 var statusTextEl = document.getElementById('claude-config-status-text');
 
@@ -404,7 +435,7 @@ $js = <<<JS
                     method: 'GET',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
-                .then(function(r) { return r.json(); })
+                .then(function(r) { return self.parseJsonResponse(r); })
                 .then(function(data) {
                     if (!data.success) {
                         statusEl.classList.add('d-none');
@@ -448,6 +479,7 @@ $js = <<<JS
             setupEventListeners: function() {
                 var self = this;
                 document.getElementById('claude-send-btn').addEventListener('click', function() { self.send(); });
+                document.getElementById('claude-cancel-btn').addEventListener('click', function() { self.cancel(); });
                 document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
                 document.getElementById('claude-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
                 document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
@@ -480,8 +512,14 @@ $js = <<<JS
                 });
 
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
-                    var btn = e.target.closest('.claude-message__copy');
-                    if (btn) self.handleCopyClick(btn);
+                    var copyBtn = e.target.closest('.claude-message__copy');
+                    if (copyBtn) self.handleCopyClick(copyBtn);
+
+                    var thinkBtn = e.target.closest('.claude-thinking-btn');
+                    if (thinkBtn) {
+                        var thinking = thinkBtn.getAttribute('data-thinking');
+                        if (thinking) self.showThinkingModal(thinking);
+                    }
                 });
 
                 var settingsCard = document.getElementById('claudeSettingsCard');
@@ -526,11 +564,13 @@ $js = <<<JS
                     options.sessionId = this.sessionId;
 
                 var pendingPrompt = null;
+                var pendingHtml = null;
                 if (this.inputMode === 'quill') {
                     var delta = quill.getContents();
                     this.lastSentDelta = delta;
                     pendingPrompt = quill.getText().replace(/\\n$/, '');
                     if (!pendingPrompt.trim()) return;
+                    pendingHtml = quill.root.innerHTML;
                     options.contentDelta = JSON.stringify(delta);
                     quill.setText('');
                 } else {
@@ -556,10 +596,20 @@ $js = <<<JS
                     this.moveCurrentToHistory();
 
                 // Show user prompt immediately (before fetch)
-                this.showUserPrompt(pendingPrompt);
-                this.showLoadingPlaceholder();
+                this.showUserPrompt(pendingPrompt, pendingHtml);
 
-                fetch('$runClaudeUrl', {
+                // Reset stream state
+                this.streamBuffer = '';
+                this.streamThinkingBuffer = '';
+                this.streamCurrentBlockType = null;
+                this.streamMeta = {};
+                this.streamPromptMarkdown = null;
+                this.streamReceivedText = false;
+                this.activeReader = null;
+                this.showStreamingPlaceholder();
+                this.showCancelButton(true);
+
+                fetch('$streamClaudeUrl', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -568,74 +618,492 @@ $js = <<<JS
                     },
                     body: JSON.stringify(options)
                 })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    sendBtn.disabled = false;
-                    self.removeLoadingPlaceholder();
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    var contentType = response.headers.get('Content-Type') || '';
+                    if (contentType.indexOf('text/event-stream') === -1)
+                        throw new Error('Session may have expired (received ' + contentType.split(';')[0] + ' instead of SSE). Please reload the page.');
+                    var reader = response.body.getReader();
+                    self.activeReader = reader;
+                    var decoder = new TextDecoder();
+                    var buffer = '';
 
-                    if (data.success) {
-                        var userContent = data.promptMarkdown || options.prompt || '(prompt)';
-                        var claudeContent = data.output || '(No output)';
+                    function processStream() {
+                        return reader.read().then(function(result) {
+                            if (result.done) {
+                                self.onStreamEnd();
+                                return;
+                            }
+                            buffer += decoder.decode(result.value, { stream: true });
+                            var lines = buffer.split('\\n');
+                            buffer = lines.pop();
 
-                        // Context = input + cache tokens from this invocation.
-                        // Output tokens have a separate limit and don't consume the context window.
-                        if (data.context_window)
-                            self.maxContext = data.context_window;
-                        var contextUsed = (data.input_tokens || 0) + (data.cache_tokens || 0);
+                            lines.forEach(function(line) {
+                                if (line.startsWith('data: ')) {
+                                    var payload = line.substring(6);
+                                    if (payload === '[DONE]') {
+                                        self.onStreamEnd();
+                                        return;
+                                    }
+                                    try {
+                                        self.onStreamEvent(JSON.parse(payload));
+                                    } catch (e) {
+                                        // skip unparseable lines
+                                    }
+                                }
+                            });
 
-                        var meta = {
-                            duration_ms: data.duration_ms,
-                            model: data.model,
-                            context_used: contextUsed,
-                            output_tokens: data.output_tokens,
-                            num_turns: data.num_turns,
-                            tool_uses: data.tool_uses || [],
-                            configSource: data.configSource
-                        };
-
-                        self.renderCurrentExchange(userContent, claudeContent, meta);
-
-                        if (data.sessionId)
-                            self.sessionId = data.sessionId;
-
-                        self.messages.push(
-                            { role: 'user', content: userContent },
-                            { role: 'claude', content: claudeContent }
-                        );
-
-                        var pctUsed = Math.min(100, Math.round(contextUsed / self.maxContext * 100));
-                        self.lastNumTurns = data.num_turns || null;
-                        self.lastToolUses = data.tool_uses || [];
-                        self.updateContextMeter(pctUsed, contextUsed);
-                        if (pctUsed >= 80 && !self.warningDismissed)
-                            self.showContextWarning(pctUsed);
-
-                        // First successful run: show follow-up buttons
-                        if (self.messages.length === 2) {
-                            document.getElementById('claude-reuse-btn').classList.remove('d-none');
-                            document.getElementById('claude-summarize-group').classList.remove('d-none');
-                        }
-
-                        document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                    } else {
-                        self.addErrorMessage(data.error || data.output || 'An unknown error occurred');
+                            return processStream();
+                        });
                     }
-                    self.focusEditor();
+
+                    return processStream();
                 })
                 .catch(function(error) {
-                    sendBtn.disabled = false;
-                    self.removeLoadingPlaceholder();
-                    self.addErrorMessage('Failed to execute Claude CLI: ' + error.message);
-                    self.focusEditor();
+                    self.onStreamError('Failed to execute Claude CLI: ' + error.message);
                 });
+            },
+
+            // --- Stream event handlers ---
+
+            onStreamEvent: function(data) {
+                var type = data.type;
+
+                if (type === 'prompt_markdown')
+                    this.streamPromptMarkdown = data.markdown;
+                else if (type === 'system' && data.subtype === 'init')
+                    this.onStreamInit(data);
+                else if (type === 'stream_event')
+                    this.onStreamDelta(data.event);
+                else if (type === 'assistant' && !data.isSidechain)
+                    this.onStreamAssistant(data);
+                else if (type === 'result')
+                    this.onStreamResult(data);
+                else if (type === 'server_error')
+                    this.onStreamError(data.error || 'Unknown server error');
+            },
+
+            onStreamInit: function(data) {
+                if (data.session_id)
+                    this.sessionId = data.session_id;
+                if (data.model)
+                    this.streamMeta.model = this.formatModelShort(data.model);
+            },
+
+            onStreamDelta: function(event) {
+                if (!event) return;
+                var eventType = event.type;
+
+                if (eventType === 'content_block_start') {
+                    var block = event.content_block || event.contentBlock || {};
+                    this.streamCurrentBlockType = block.type || 'text';
+                } else if (eventType === 'content_block_stop') {
+                    this.streamCurrentBlockType = null;
+                } else if (eventType === 'content_block_delta') {
+                    var delta = event.delta;
+                    if (delta && delta.type === 'thinking_delta' && delta.thinking) {
+                        this.streamThinkingBuffer += delta.thinking;
+                        this.streamReceivedText = true;
+                        this.scheduleStreamRender();
+                    } else if (delta && delta.type === 'text_delta' && delta.text) {
+                        if (this.streamCurrentBlockType === 'thinking')
+                            this.streamThinkingBuffer += delta.text;
+                        else
+                            this.streamBuffer += delta.text;
+                        this.streamReceivedText = true;
+                        this.scheduleStreamRender();
+                    }
+                }
+            },
+
+            onStreamAssistant: function(data) {
+                var msg = data.message;
+                if (!msg) return;
+                // Capture usage from the last non-sidechain assistant message
+                if (msg.usage) {
+                    this.streamMeta.input_tokens = msg.usage.input_tokens || 0;
+                    this.streamMeta.cache_tokens = (msg.usage.cache_read_input_tokens || 0)
+                        + (msg.usage.cache_creation_input_tokens || 0);
+                }
+                // Extract tool uses
+                var content = msg.content || [];
+                var uses = [];
+                content.forEach(function(block) {
+                    if (block.type === 'tool_use') {
+                        var name = block.name || 'unknown';
+                        var input = block.input || {};
+                        var target = null;
+                        if (name === 'Read' || name === 'Edit' || name === 'Write') target = input.file_path;
+                        else if (name === 'Glob' || name === 'Grep') target = input.pattern;
+                        else if (name === 'Bash' && input.command) target = input.command.substring(0, 80);
+                        else if (name === 'Task') target = input.description;
+                        uses.push(target ? name + ': ' + target : name);
+                    }
+                });
+                if (uses.length)
+                    this.streamMeta.tool_uses = (this.streamMeta.tool_uses || []).concat(uses);
+            },
+
+            onStreamResult: function(data) {
+                if (data.session_id)
+                    this.sessionId = data.session_id;
+                if (data.duration_ms)
+                    this.streamMeta.duration_ms = data.duration_ms;
+                if (data.num_turns)
+                    this.streamMeta.num_turns = data.num_turns;
+                // Output tokens from result usage (cumulative)
+                if (data.usage && data.usage.output_tokens != null)
+                    this.streamMeta.output_tokens = data.usage.output_tokens;
+                // Model & context window from modelUsage
+                if (data.modelUsage) {
+                    var modelId = Object.keys(data.modelUsage)[0];
+                    if (modelId) {
+                        this.streamMeta.model = this.formatModelShort(modelId);
+                        var info = data.modelUsage[modelId];
+                        if (info && info.contextWindow)
+                            this.maxContext = info.contextWindow;
+                    }
+                }
+            },
+
+            onStreamEnd: function() {
+                if (this.streamEnded) return;
+                this.streamEnded = true;
+
+                var sendBtn = document.getElementById('claude-send-btn');
+                sendBtn.disabled = false;
+                this.removeStreamDots();
+                this.showCancelButton(false);
+                this.closeStreamModal();
+
+                // Remove compact preview (not part of final response)
+                var preview = document.getElementById('claude-stream-preview');
+                if (preview) preview.remove();
+
+                // Hide modal dots
+                var modalDots = document.getElementById('claude-modal-dots');
+                if (modalDots) modalDots.classList.add('d-none');
+
+                // Clear render timer and do final render
+                if (this.renderTimer) {
+                    clearTimeout(this.renderTimer);
+                    this.renderTimer = null;
+                }
+
+                var claudeContent = this.streamBuffer || (this.streamThinkingBuffer ? '' : '(No output)');
+                var userContent = this.streamPromptMarkdown || '(prompt)';
+
+                // Build meta for display
+                var contextUsed = (this.streamMeta.input_tokens || 0) + (this.streamMeta.cache_tokens || 0);
+                var meta = {
+                    duration_ms: this.streamMeta.duration_ms,
+                    model: this.streamMeta.model,
+                    context_used: contextUsed,
+                    output_tokens: this.streamMeta.output_tokens,
+                    num_turns: this.streamMeta.num_turns,
+                    tool_uses: this.streamMeta.tool_uses || [],
+                    configSource: this.streamMeta.configSource
+                };
+
+                this.renderCurrentExchange(userContent, claudeContent, meta);
+
+                this.messages.push(
+                    { role: 'user', content: userContent },
+                    { role: 'claude', content: claudeContent }
+                );
+
+                var pctUsed = Math.min(100, Math.round(contextUsed / this.maxContext * 100));
+                this.lastNumTurns = meta.num_turns || null;
+                this.lastToolUses = meta.tool_uses;
+                this.updateContextMeter(pctUsed, contextUsed);
+                if (pctUsed >= 80 && !this.warningDismissed)
+                    this.showContextWarning(pctUsed);
+
+                if (this.messages.length === 2) {
+                    document.getElementById('claude-reuse-btn').classList.remove('d-none');
+                    document.getElementById('claude-summarize-group').classList.remove('d-none');
+                }
+                document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                this.focusEditor();
+            },
+
+            onStreamError: function(msg) {
+                var sendBtn = document.getElementById('claude-send-btn');
+                sendBtn.disabled = false;
+                this.removeStreamDots();
+                this.showCancelButton(false);
+                this.closeStreamModal();
+
+                // Remove compact preview
+                var preview = document.getElementById('claude-stream-preview');
+                if (preview) preview.remove();
+
+                // Hide modal dots
+                var modalDots = document.getElementById('claude-modal-dots');
+                if (modalDots) modalDots.classList.add('d-none');
+
+                // If we have partial streamed text, show it with error appended
+                if (this.streamReceivedText) {
+                    var responseEl = document.getElementById('claude-current-response');
+                    responseEl.innerHTML = '';
+                    if (this.streamThinkingBuffer) {
+                        var btn = this.createThinkingButton(this.streamThinkingBuffer);
+                        responseEl.appendChild(btn);
+                    }
+                    var claudeDiv = document.createElement('div');
+                    claudeDiv.className = 'claude-message claude-message--claude';
+                    var claudeHeader = document.createElement('div');
+                    claudeHeader.className = 'claude-message__header';
+                    claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
+                    claudeDiv.appendChild(claudeHeader);
+                    var claudeBody = document.createElement('div');
+                    claudeBody.className = 'claude-message__body';
+                    claudeBody.innerHTML = this.renderMarkdown(this.streamBuffer);
+                    var alert = document.createElement('div');
+                    alert.className = 'alert alert-danger mt-2 mb-0';
+                    alert.textContent = msg;
+                    claudeBody.appendChild(alert);
+                    claudeDiv.appendChild(claudeBody);
+                    responseEl.appendChild(claudeDiv);
+                    responseEl.classList.remove('d-none');
+                } else {
+                    this.addErrorMessage(msg);
+                }
+                this.focusEditor();
+            },
+
+            cancel: function() {
+                // 1. Abort the ReadableStream reader
+                if (this.activeReader) {
+                    try { this.activeReader.cancel(); } catch (e) {}
+                    this.activeReader = null;
+                }
+
+                // 2. Tell the server to kill the process
+                fetch('$cancelClaudeUrl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': '$csrfToken',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).catch(function(e) { console.error('Cancel request failed:', e); });
+
+                // 3. Finalize UI with what we have so far
+                this.showCancelButton(false);
+                this.streamEnded = true;
+                this.removeStreamDots();
+                this.closeStreamModal();
+
+                var sendBtn = document.getElementById('claude-send-btn');
+                sendBtn.disabled = false;
+
+                if (this.renderTimer) {
+                    clearTimeout(this.renderTimer);
+                    this.renderTimer = null;
+                }
+
+                // Remove compact preview (not part of final response)
+                var preview = document.getElementById('claude-stream-preview');
+                if (preview) preview.remove();
+
+                // Hide modal dots
+                var modalDots = document.getElementById('claude-modal-dots');
+                if (modalDots) modalDots.classList.add('d-none');
+
+                // Render partial content as the final response
+                var responseEl = document.getElementById('claude-current-response');
+                responseEl.innerHTML = '';
+                var partialContent = this.streamBuffer || '';
+                if (partialContent || this.streamThinkingBuffer) {
+                    if (this.streamThinkingBuffer) {
+                        var btn = this.createThinkingButton(this.streamThinkingBuffer);
+                        responseEl.appendChild(btn);
+                    }
+                    var claudeDiv = document.createElement('div');
+                    claudeDiv.className = 'claude-message claude-message--claude';
+                    var claudeHeader = document.createElement('div');
+                    claudeHeader.className = 'claude-message__header';
+                    claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
+                    claudeDiv.appendChild(claudeHeader);
+                    var claudeBody = document.createElement('div');
+                    claudeBody.className = 'claude-message__body';
+                    claudeBody.innerHTML = this.renderMarkdown(partialContent);
+                    var notice = document.createElement('div');
+                    notice.className = 'claude-cancelled-notice';
+                    notice.innerHTML = '<i class="bi bi-stop-circle"></i> Generation cancelled';
+                    claudeBody.appendChild(notice);
+                    claudeDiv.appendChild(claudeBody);
+                    responseEl.appendChild(claudeDiv);
+                }
+                responseEl.classList.remove('d-none');
+
+                // Store partial content as a message
+                var claudeContent = this.streamBuffer || '(Cancelled)';
+                var userContent = this.streamPromptMarkdown || '(prompt)';
+                this.messages.push(
+                    { role: 'user', content: userContent },
+                    { role: 'claude', content: claudeContent }
+                );
+
+                if (this.messages.length === 2) {
+                    document.getElementById('claude-reuse-btn').classList.remove('d-none');
+                    document.getElementById('claude-summarize-group').classList.remove('d-none');
+                }
+                document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                this.focusEditor();
+            },
+
+            showCancelButton: function(visible) {
+                var btn = document.getElementById('claude-cancel-btn');
+                if (visible)
+                    btn.classList.remove('d-none');
+                else
+                    btn.classList.add('d-none');
+            },
+
+            scheduleStreamRender: function() {
+                if (this.renderTimer) return;
+                var self = this;
+                this.renderTimer = setTimeout(function() {
+                    self.renderTimer = null;
+                    self.renderStreamContent();
+                }, 100);
+            },
+
+            renderStreamContent: function() {
+                var previewBody = document.getElementById('claude-stream-body');
+                var modalBody = document.getElementById('claude-modal-body');
+                var modalThinking = document.getElementById('claude-modal-thinking');
+                var modalThinkingBody = document.getElementById('claude-modal-thinking-body');
+
+                // Render thinking into modal
+                if (modalThinking && modalThinkingBody && this.streamThinkingBuffer) {
+                    modalThinking.classList.remove('d-none');
+                    modalThinkingBody.innerHTML = this.renderMarkdown(this.streamThinkingBuffer);
+                }
+
+                // Render text into modal
+                if (modalBody)
+                    modalBody.innerHTML = this.renderMarkdown(this.streamBuffer);
+
+                // Render combined preview (thinking + text) into compact box
+                if (previewBody) {
+                    var previewContent = this.streamThinkingBuffer || this.streamBuffer;
+                    previewBody.innerHTML = this.renderMarkdown(previewContent);
+                    previewBody.scrollTop = previewBody.scrollHeight;
+                }
+            },
+
+            showStreamingPlaceholder: function() {
+                var self = this;
+                this.streamEnded = false;
+                this.hideEmptyState();
+
+                var responseEl = document.getElementById('claude-current-response');
+                responseEl.innerHTML = '';
+
+                // Compact 5-line preview box (not part of final response)
+                var preview = document.createElement('div');
+                preview.id = 'claude-stream-preview';
+                preview.className = 'claude-stream-preview';
+                preview.title = 'Click to view full process';
+                preview.innerHTML =
+                    '<div class="claude-stream-preview__header">' +
+                        '<i class="bi bi-terminal-fill"></i> Claude ' +
+                        '<span id="claude-stream-dots" class="claude-thinking-dots">' +
+                        '<span></span><span></span><span></span></span>' +
+                        '<i class="bi bi-arrows-fullscreen claude-stream-preview__expand"></i>' +
+                    '</div>' +
+                    '<div id="claude-stream-body" class="claude-stream-preview__body"></div>';
+                preview.addEventListener('click', function() {
+                    self.openStreamModal();
+                });
+                responseEl.appendChild(preview);
+                responseEl.classList.remove('d-none');
+
+                // Reset modal content
+                var modalThinking = document.getElementById('claude-modal-thinking');
+                var modalThinkingBody = document.getElementById('claude-modal-thinking-body');
+                var modalBody = document.getElementById('claude-modal-body');
+                var modalDots = document.getElementById('claude-modal-dots');
+                modalThinking.classList.add('d-none');
+                modalThinkingBody.innerHTML = '';
+                modalBody.innerHTML = '';
+                modalDots.classList.remove('d-none');
+            },
+
+            openStreamModal: function() {
+                var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('claudeStreamModal'));
+                modal.show();
+            },
+
+            closeStreamModal: function() {
+                var modalEl = document.getElementById('claudeStreamModal');
+                var modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            },
+
+            createThinkingButton: function(thinkingContent) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'claude-thinking-btn';
+                btn.setAttribute('data-thinking', thinkingContent);
+                btn.innerHTML = '<i class="bi bi-lightbulb"></i> View thinking process';
+                btn.addEventListener('click', function() {
+                    ClaudeChat.showThinkingModal(thinkingContent);
+                });
+                return btn;
+            },
+
+            showThinkingModal: function(thinkingContent) {
+                var modalThinking = document.getElementById('claude-modal-thinking');
+                var modalThinkingBody = document.getElementById('claude-modal-thinking-body');
+                var modalBody = document.getElementById('claude-modal-body');
+                var modalDots = document.getElementById('claude-modal-dots');
+
+                modalThinking.classList.remove('d-none');
+                modalThinkingBody.innerHTML = this.renderMarkdown(thinkingContent);
+                modalBody.innerHTML = '';
+                modalDots.classList.add('d-none');
+
+                this.openStreamModal();
+            },
+
+            removeStreamDots: function() {
+                var dots = document.getElementById('claude-stream-dots');
+                if (dots) dots.remove();
+            },
+
+            hideEmptyState: function() {
+                var empty = document.getElementById('claude-empty-state');
+                if (empty) empty.classList.add('d-none');
+            },
+
+            formatModelShort: function(modelId) {
+                var m = modelId.match(/claude-(\w+)-(\d+)-(\d+)/);
+                return m ? m[1] + '-' + m[2] + '.' + m[3] : modelId;
+            },
+
+            parseJsonResponse: function(response) {
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                var ct = response.headers.get('Content-Type') || '';
+                if (ct.indexOf('json') === -1)
+                    throw new Error('Session expired. Please reload the page.');
+                return response.json();
             },
 
             renderCurrentExchange: function(userContent, claudeContent, meta) {
 
                 var responseEl = document.getElementById('claude-current-response');
 
-                // Render Claude response (top)
                 responseEl.innerHTML = '';
+                if (this.streamThinkingBuffer) {
+                    var btn = this.createThinkingButton(this.streamThinkingBuffer);
+                    responseEl.appendChild(btn);
+                }
+
+                // Render Claude response
                 var claudeDiv = document.createElement('div');
                 claudeDiv.className = 'claude-message claude-message--claude';
 
@@ -824,36 +1292,7 @@ $js = <<<JS
                 responseEl.classList.remove('d-none');
             },
 
-            showLoadingPlaceholder: function() {
-
-                var responseEl = document.getElementById('claude-current-response');
-                responseEl.innerHTML = '';
-
-                var div = document.createElement('div');
-                div.className = 'claude-message claude-message--loading';
-
-                var header = document.createElement('div');
-                header.className = 'claude-message__header';
-                header.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
-                div.appendChild(header);
-
-                var body = document.createElement('div');
-                body.className = 'claude-message__body';
-                body.innerHTML = '<div class="claude-thinking-dots"><span></span><span></span><span></span></div>' +
-                    '<div class="text-muted small">Running Claude CLI...</div>';
-                div.appendChild(body);
-
-                responseEl.appendChild(div);
-                responseEl.classList.remove('d-none');
-            },
-
-            removeLoadingPlaceholder: function() {
-                var responseEl = document.getElementById('claude-current-response');
-                responseEl.innerHTML = '';
-                responseEl.classList.add('d-none');
-            },
-
-            showUserPrompt: function(plainText) {
+            showUserPrompt: function(plainText, preRenderedHtml) {
 
                 var promptEl = document.getElementById('claude-current-prompt');
                 promptEl.innerHTML = '';
@@ -868,7 +1307,9 @@ $js = <<<JS
 
                 var userBody = document.createElement('div');
                 userBody.className = 'claude-message__body';
-                if (plainText)
+                if (preRenderedHtml)
+                    userBody.innerHTML = DOMPurify.sanitize(preRenderedHtml, { ADD_ATTR: ['class', 'target', 'rel'] });
+                else if (plainText)
                     userBody.innerHTML = this.renderMarkdown(plainText);
                 else
                     userBody.innerHTML = '<span class="text-muted fst-italic">Sending prompt\u2026</span>';
@@ -885,8 +1326,18 @@ $js = <<<JS
 
             renderMarkdown: function(text) {
                 if (!text) return '';
-                var html = marked.parse(String(text));
+                text = this.normalizeMarkdown(String(text));
+                var html = marked.parse(text);
                 return DOMPurify.sanitize(html, { ADD_ATTR: ['class', 'target', 'rel'] });
+            },
+
+            normalizeMarkdown: function(text) {
+                // Ensure blank line before ATX headings squished against preceding text.
+                // Only triggers after sentence-ending punctuation or closing markup
+                // to avoid false positives like "C# language".
+                return text.replace(/([\\.\\!\\?\\:\\)\\*\\_\\>])\\n?(#{1,6} )/g, function(m, punct, heading) {
+                    return punct + '\\n\\n' + heading;
+                });
             },
 
             markdownToDelta: function(text) {
@@ -948,6 +1399,10 @@ $js = <<<JS
                 this.currentPromptText = null;
                 this.maxContext = 200000;
                 this.warningDismissed = false;
+                if (this.renderTimer) {
+                    clearTimeout(this.renderTimer);
+                    this.renderTimer = null;
+                }
                 document.getElementById('claude-context-meter-wrapper').classList.add('d-none');
                 document.getElementById('claude-context-meter-fill').style.width = '0%';
                 document.getElementById('claude-context-warning').classList.add('d-none');
@@ -1118,7 +1573,7 @@ $js = <<<JS
                     },
                     body: JSON.stringify({ conversation: conversationText })
                 })
-                .then(function(r) { return r.json(); })
+                .then(function(r) { return self.parseJsonResponse(r); })
                 .then(function(data) {
                     if (data.success && data.summary) {
                         var summary = data.summary;
@@ -1126,16 +1581,24 @@ $js = <<<JS
                         self.newSession();
 
                         if (autoSend) {
-                            self.switchToTextarea();
-                            var textarea = document.getElementById('claude-followup-textarea');
-                            textarea.value = summary;
+                            if (self.inputMode === 'quill') {
+                                quill.setText(summary);
+                            } else {
+                                document.getElementById('claude-followup-textarea').value = summary;
+                            }
                             self.send();
                         } else {
-                            self.switchToTextarea();
-                            var textarea = document.getElementById('claude-followup-textarea');
-                            textarea.value = 'Here is the summary of our previous session. Please read it carefully and continue from where we left off.\\n\\n' + summary;
-                            textarea.focus();
-                            textarea.setSelectionRange(0, 0);
+                            var prefixed = 'Here is the summary of our previous session. Please read it carefully and continue from where we left off.\\n\\n' + summary;
+                            if (self.inputMode === 'quill') {
+                                quill.setText(prefixed);
+                                quill.focus();
+                                quill.setSelection(0, 0);
+                            } else {
+                                var textarea = document.getElementById('claude-followup-textarea');
+                                textarea.value = prefixed;
+                                textarea.focus();
+                                textarea.setSelectionRange(0, 0);
+                            }
                         }
                     } else {
                         alert('Summarization failed: ' + (data.error || 'Unknown error'));
@@ -1407,7 +1870,7 @@ $js = <<<JS
                         project_id: projectId
                     })
                 })
-                .then(function(r) { return r.json(); })
+                .then(function(r) { return self.parseJsonResponse(r); })
                 .then(function(saveData) {
                     if (!saveData.success) {
                         var msg = saveData.message || '';

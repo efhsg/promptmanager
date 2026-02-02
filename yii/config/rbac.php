@@ -153,6 +153,8 @@ return [
                 'update' => 'updateScratchPad',
                 'delete' => 'deleteScratchPad',
                 'runClaude' => 'viewScratchPad',
+                'streamClaude' => 'viewScratchPad',
+                'cancelClaude' => 'viewScratchPad',
                 'claude' => 'viewScratchPad',
                 'summarizeSession' => 'viewScratchPad',
             ],

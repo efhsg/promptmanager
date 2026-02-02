@@ -144,13 +144,9 @@ class UserControllerTest extends Unit
         $service = $userService ?? new UserService();
 
         return new class ('user', Yii::$app, $service) extends UserController {
-            public function stdout($string): void
-            {
-            }
+            public function stdout($string): void {}
 
-            public function stderr($string): void
-            {
-            }
+            public function stderr($string): void {}
         };
     }
 }

@@ -6,6 +6,8 @@ use app\services\ClaudeCliService;
 use Codeception\Test\Unit;
 use ReflectionClass;
 use Yii;
+use RuntimeException;
+use app\services\ClaudeWorkspaceService;
 
 class ClaudeCliServiceTest extends Unit
 {
@@ -427,6 +429,77 @@ class ClaudeCliServiceTest extends Unit
         } finally {
             @rmdir($tmpDir);
         }
+    }
+
+    public function testBuildCommandWithStreamingFlagAddsPartialMessages(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        $command = $method->invoke($service, ['permissionMode' => 'plan'], null, true);
+
+        $this->assertStringContainsString('--include-partial-messages', $command);
+        $this->assertStringContainsString('--output-format stream-json', $command);
+        $this->assertStringContainsString('--verbose', $command);
+    }
+
+    public function testBuildCommandWithoutStreamingFlagOmitsPartialMessages(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        $command = $method->invoke($service, ['permissionMode' => 'plan'], null, false);
+
+        $this->assertStringNotContainsString('--include-partial-messages', $command);
+        $this->assertStringContainsString('--output-format stream-json', $command);
+    }
+
+    public function testExecuteStreamingThrowsWhenDirectoryMissing(): void
+    {
+        $mockWorkspace = $this->createMock(ClaudeWorkspaceService::class);
+        $mockWorkspace->method('getDefaultWorkspacePath')
+            ->willReturn('/nonexistent/workspace/' . uniqid());
+
+        $service = new ClaudeCliService(null, $mockWorkspace);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Working directory does not exist');
+
+        $service->executeStreaming(
+            'test prompt',
+            '/nonexistent/path/' . uniqid(),
+            function (string $line): void {},
+        );
+    }
+
+    public function testCancelRunningProcessReturnsFalseWhenNoPid(): void
+    {
+        $service = new ClaudeCliService();
+        $result = $service->cancelRunningProcess();
+
+        $this->assertFalse($result);
+    }
+
+    public function testStoreAndClearProcessPidViaReflection(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+
+        $storeMethod = $reflection->getMethod('storeProcessPid');
+        $storeMethod->setAccessible(true);
+        $storeMethod->invoke($service, 99999);
+
+        $this->assertSame(99999, Yii::$app->session->get('claude_cli_pid'));
+
+        $clearMethod = $reflection->getMethod('clearProcessPid');
+        $clearMethod->setAccessible(true);
+        $clearMethod->invoke($service);
+
+        $this->assertNull(Yii::$app->session->get('claude_cli_pid'));
     }
 
     private function buildAssistantLine(array $usage, bool $isSidechain = false): string

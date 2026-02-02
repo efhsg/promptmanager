@@ -66,6 +66,8 @@ class ScratchPadController extends Controller
                 'actions' => [
                     'delete' => ['POST'],
                     'run-claude' => ['POST'],
+                    'stream-claude' => ['POST'],
+                    'cancel-claude' => ['POST'],
                     'save' => ['POST'],
                     'summarize-session' => ['POST'],
                 ],
@@ -440,68 +442,20 @@ class ScratchPadController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        /** @var ScratchPad $model */
         $model = $this->findModel($id);
+        $prepared = $this->prepareClaudeRequest($model);
 
-        // Parse request options
-        $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
-        if (!is_array($requestOptions)) {
-            return [
-                'success' => false,
-                'error' => 'Invalid request format.',
-            ];
+        if (is_array($prepared['error'] ?? null)) {
+            return $prepared['error'];
         }
-
-        // Check for custom prompt (follow-up) vs contentDelta vs scratch pad content
-        $customPrompt = $requestOptions['prompt'] ?? null;
-        $contentDelta = $requestOptions['contentDelta'] ?? null;
-        $sessionId = $requestOptions['sessionId'] ?? null;
-
-        if (is_array($contentDelta)) {
-            $contentDelta = json_encode($contentDelta);
-        }
-
-        if ($customPrompt !== null) {
-            $markdown = $customPrompt;
-        } elseif ($contentDelta !== null) {
-            $markdown = $this->claudeCliService->convertToMarkdown($contentDelta);
-        } else {
-            $markdown = $this->claudeCliService->convertToMarkdown($model->content ?? '');
-        }
-
-        if (trim($markdown) === '') {
-            return [
-                'success' => false,
-                'error' => $customPrompt !== null ? 'Prompt is empty.' : 'Scratch pad content is empty.',
-            ];
-        }
-
-        // Get project if available
-        $project = $model->project;
-        $projectDefaults = $project !== null ? $project->getClaudeOptions() : [];
-
-        // Request options override project defaults (whitelist known keys, filter out empty values)
-        $allowedKeys = ['model', 'permissionMode', 'appendSystemPrompt', 'allowedTools', 'disallowedTools'];
-        $options = array_merge(
-            $projectDefaults,
-            array_filter(
-                array_intersect_key($requestOptions, array_flip($allowedKeys)),
-                fn($v) => $v !== null && $v !== ''
-            )
-        );
-
-        // Determine working directory (will be resolved by ClaudeCliService)
-        $workingDirectory = $project !== null && !empty($project->root_directory)
-            ? $project->root_directory
-            : '';
 
         $result = $this->claudeCliService->execute(
-            $markdown,
-            $workingDirectory,
+            $prepared['markdown'],
+            $prepared['workingDirectory'],
             300,
-            $options,
-            $project,
-            $sessionId
+            $prepared['options'],
+            $prepared['project'],
+            $prepared['sessionId']
         );
 
         return [
@@ -522,8 +476,168 @@ class ScratchPadController extends Controller
             'requestedPath' => $result['requestedPath'] ?? null,
             'effectivePath' => $result['effectivePath'] ?? null,
             'usedFallback' => $result['usedFallback'] ?? null,
-            'promptMarkdown' => $markdown,
+            'promptMarkdown' => $prepared['markdown'],
         ];
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionStreamClaude(int $id): void
+    {
+        $model = $this->findModel($id);
+        $prepared = $this->prepareClaudeRequest($model);
+
+        if (isset($prepared['error'])) {
+            $this->sendSseError($prepared['error']['error']);
+            return;
+        }
+
+        $markdown = $prepared['markdown'];
+
+        // Ensure connection abort is detectable inside the streaming loop
+        ignore_user_abort(false);
+
+        $this->beginSseResponse();
+
+        // Send prompt markdown as first event so frontend can display the user message
+        echo "data: " . json_encode(['type' => 'prompt_markdown', 'markdown' => $markdown]) . "\n\n";
+        flush();
+
+        $onLine = function (string $line): void {
+            echo "data: " . $line . "\n\n";
+            flush();
+        };
+
+        try {
+            $result = $this->claudeCliService->executeStreaming(
+                $markdown,
+                $prepared['workingDirectory'],
+                $onLine,
+                300,
+                $prepared['options'],
+                $prepared['project'],
+                $prepared['sessionId']
+            );
+
+            if ($result['error'] !== '') {
+                echo "data: " . json_encode([
+                    'type' => 'server_error',
+                    'error' => $result['error'],
+                    'exitCode' => $result['exitCode'],
+                ]) . "\n\n";
+                flush();
+            }
+        } catch (RuntimeException $e) {
+            echo "data: " . json_encode([
+                'type' => 'server_error',
+                'error' => $e->getMessage(),
+                'exitCode' => 1,
+            ]) . "\n\n";
+            flush();
+        }
+
+        echo "data: [DONE]\n\n";
+        flush();
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionCancelClaude(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        // Validate ownership via findModel
+        $this->findModel($id);
+
+        $cancelled = $this->claudeCliService->cancelRunningProcess();
+
+        return [
+            'success' => true,
+            'cancelled' => $cancelled,
+        ];
+    }
+
+    /**
+     * Parses the request body and resolves prompt, options, and working directory for Claude CLI.
+     *
+     * @return array{markdown: string, options: array, workingDirectory: string, project: ?Project, sessionId: ?string}|array{error: array}
+     */
+    private function prepareClaudeRequest(ScratchPad $model): array
+    {
+        $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestOptions)) {
+            return ['error' => ['success' => false, 'error' => 'Invalid request format.']];
+        }
+
+        $customPrompt = $requestOptions['prompt'] ?? null;
+        $contentDelta = $requestOptions['contentDelta'] ?? null;
+
+        if (is_array($contentDelta)) {
+            $contentDelta = json_encode($contentDelta);
+        }
+
+        if ($customPrompt !== null) {
+            $markdown = $customPrompt;
+        } elseif ($contentDelta !== null) {
+            $markdown = $this->claudeCliService->convertToMarkdown($contentDelta);
+        } else {
+            $markdown = $this->claudeCliService->convertToMarkdown($model->content ?? '');
+        }
+
+        if (trim($markdown) === '') {
+            $errorMsg = $customPrompt !== null ? 'Prompt is empty.' : 'Scratch pad content is empty.';
+            return ['error' => ['success' => false, 'error' => $errorMsg]];
+        }
+
+        $project = $model->project;
+        $projectDefaults = $project !== null ? $project->getClaudeOptions() : [];
+
+        $allowedKeys = ['model', 'permissionMode', 'appendSystemPrompt', 'allowedTools', 'disallowedTools'];
+        $options = array_merge(
+            $projectDefaults,
+            array_filter(
+                array_intersect_key($requestOptions, array_flip($allowedKeys)),
+                fn($v) => $v !== null && $v !== ''
+            )
+        );
+
+        $workingDirectory = $project !== null && !empty($project->root_directory)
+            ? $project->root_directory
+            : '';
+
+        return [
+            'markdown' => $markdown,
+            'options' => $options,
+            'workingDirectory' => $workingDirectory,
+            'project' => $project,
+            'sessionId' => $requestOptions['sessionId'] ?? null,
+        ];
+    }
+
+    private function beginSseResponse(): void
+    {
+        $response = Yii::$app->response;
+        $response->format = Response::FORMAT_RAW;
+        $response->headers->set('Content-Type', 'text/event-stream');
+        $response->headers->set('Cache-Control', 'no-cache');
+        $response->headers->set('Connection', 'keep-alive');
+        $response->headers->set('X-Accel-Buffering', 'no');
+        $response->send();
+
+        while (ob_get_level() > 0) {
+            ob_end_flush();
+        }
+    }
+
+    private function sendSseError(string $message): void
+    {
+        $this->beginSseResponse();
+
+        echo "data: " . json_encode(['type' => 'server_error', 'error' => $message, 'exitCode' => 1]) . "\n\n";
+        echo "data: [DONE]\n\n";
+        flush();
     }
 
     /**
@@ -586,35 +700,35 @@ class ScratchPadController extends Controller
     private function buildSummarizerSystemPrompt(): string
     {
         return <<<'PROMPT'
-You are a conversation summarizer. Your task is to produce a structured summary
-of the conversation provided. The summary will be used to seed a new chat session,
-so it must contain enough context for the assistant to continue the work seamlessly.
+            You are a conversation summarizer. Your task is to produce a structured summary
+            of the conversation provided. The summary will be used to seed a new chat session,
+            so it must contain enough context for the assistant to continue the work seamlessly.
 
-Produce the summary in the following markdown format:
+            Produce the summary in the following markdown format:
 
-## Context & Goal
-[What the user is trying to accomplish]
+            ## Context & Goal
+            [What the user is trying to accomplish]
 
-## Decisions Made
-[Key decisions, conclusions, and agreements reached]
+            ## Decisions Made
+            [Key decisions, conclusions, and agreements reached]
 
-## Code Changes & Artifacts
-[File paths modified/created, key code snippets, architectural choices.
-Include actual filenames and brief descriptions.]
+            ## Code Changes & Artifacts
+            [File paths modified/created, key code snippets, architectural choices.
+            Include actual filenames and brief descriptions.]
 
-## Current State
-[What has been completed. What is working. Test results.]
+            ## Current State
+            [What has been completed. What is working. Test results.]
 
-## Open Items & Next Steps
-[Unresolved questions, pending tasks, known issues, what to do next]
+            ## Open Items & Next Steps
+            [Unresolved questions, pending tasks, known issues, what to do next]
 
-Rules:
-- Be concise but semantically rich — preserve all actionable information
-- Include specific file paths, function names, and technical details
-- Do not include pleasantries or conversational filler
-- Do not include full code — only key snippets essential for context
-- The summary must be self-contained for a reader with no prior context
-PROMPT;
+            Rules:
+            - Be concise but semantically rich — preserve all actionable information
+            - Include specific file paths, function names, and technical details
+            - Do not include pleasantries or conversational filler
+            - Do not include full code — only key snippets essential for context
+            - The summary must be self-contained for a reader with no prior context
+            PROMPT;
     }
 
     /**
