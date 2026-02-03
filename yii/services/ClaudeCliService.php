@@ -301,7 +301,7 @@ class ClaudeCliService
     private function storeProcessPid(int $pid): void
     {
         $key = 'claude_cli_pid_' . Yii::$app->user->id;
-        Yii::$app->cache->set($key, $pid, 600);
+        Yii::$app->cache->set($key, $pid, 3900);
     }
 
     private function clearProcessPid(): void

@@ -78,7 +78,7 @@ xdebug.connect_timeout_ms=200
 EOF
 
 # Set max_execution_time
-RUN echo "max_execution_time=300" > /usr/local/etc/php/conf.d/custom.ini
+RUN echo "max_execution_time=3600" > /usr/local/etc/php/conf.d/custom.ini
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer

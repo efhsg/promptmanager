@@ -452,7 +452,7 @@ class ScratchPadController extends Controller
         $result = $this->claudeCliService->execute(
             $prepared['markdown'],
             $prepared['workingDirectory'],
-            300,
+            3600,
             $prepared['options'],
             $prepared['project'],
             $prepared['sessionId']
@@ -517,7 +517,7 @@ class ScratchPadController extends Controller
                 $markdown,
                 $prepared['workingDirectory'],
                 $onLine,
-                300,
+                3600,
                 $prepared['options'],
                 $prepared['project'],
                 $prepared['sessionId']
