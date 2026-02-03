@@ -277,14 +277,14 @@ class ClaudeCliService
             return false;
         }
 
-        $session = Yii::$app->session;
-        $pid = $session->get('claude_cli_pid');
+        $key = 'claude_cli_pid_' . Yii::$app->user->id;
+        $pid = Yii::$app->cache->get($key);
 
-        if ($pid === null) {
+        if ($pid === false) {
             return false;
         }
 
-        $session->remove('claude_cli_pid');
+        Yii::$app->cache->delete($key);
 
         // Send SIGTERM — posix_kill returns false if process doesn't exist (ESRCH)
         if (!posix_kill($pid, 15)) {
@@ -300,12 +300,14 @@ class ClaudeCliService
 
     private function storeProcessPid(int $pid): void
     {
-        Yii::$app->session->set('claude_cli_pid', $pid);
+        $key = 'claude_cli_pid_' . Yii::$app->user->id;
+        Yii::$app->cache->set($key, $pid, 600);
     }
 
     private function clearProcessPid(): void
     {
-        Yii::$app->session->remove('claude_cli_pid');
+        $key = 'claude_cli_pid_' . Yii::$app->user->id;
+        Yii::$app->cache->delete($key);
     }
 
     /**

@@ -495,6 +495,9 @@ class ScratchPadController extends Controller
 
         $markdown = $prepared['markdown'];
 
+        // Release session file lock so other requests from this user are not blocked
+        Yii::$app->session->close();
+
         // Ensure connection abort is detectable inside the streaming loop
         ignore_user_abort(false);
 

@@ -493,13 +493,14 @@ class ClaudeCliServiceTest extends Unit
         $storeMethod->setAccessible(true);
         $storeMethod->invoke($service, 99999);
 
-        $this->assertSame(99999, Yii::$app->session->get('claude_cli_pid'));
+        $cacheKey = 'claude_cli_pid_' . Yii::$app->user->id;
+        $this->assertSame(99999, Yii::$app->cache->get($cacheKey));
 
         $clearMethod = $reflection->getMethod('clearProcessPid');
         $clearMethod->setAccessible(true);
         $clearMethod->invoke($service);
 
-        $this->assertNull(Yii::$app->session->get('claude_cli_pid'));
+        $this->assertFalse(Yii::$app->cache->get($cacheKey));
     }
 
     private function buildAssistantLine(array $usage, bool $isSidechain = false): string
