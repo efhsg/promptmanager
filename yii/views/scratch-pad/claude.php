@@ -211,10 +211,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     </div>
 
     <!-- Section 3a: Current Exchange -->
-    <div id="claude-current-exchange" class="mb-4 position-relative">
-        <button type="button" id="claude-cancel-btn" class="claude-cancel-btn d-none" title="Cancel inference">
-            <i class="bi bi-stop-circle-fill"></i> Stop
-        </button>
+    <div id="claude-current-exchange" class="mb-4">
         <div>
             <div id="claude-current-response" class="d-none"></div>
             <div id="claude-current-prompt" class="d-none"></div>
@@ -314,6 +311,9 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                             <span></span><span></span><span></span>
                         </span>
                     </h5>
+                    <button type="button" id="claude-modal-cancel-btn" class="claude-cancel-btn claude-cancel-btn--modal d-none" title="Cancel inference">
+                        <i class="bi bi-stop-fill"></i> Stop
+                    </button>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -479,7 +479,6 @@ $js = <<<JS
             setupEventListeners: function() {
                 var self = this;
                 document.getElementById('claude-send-btn').addEventListener('click', function() { self.send(); });
-                document.getElementById('claude-cancel-btn').addEventListener('click', function() { self.cancel(); });
                 document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
                 document.getElementById('claude-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
                 document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
@@ -489,6 +488,7 @@ $js = <<<JS
                 document.getElementById('save-dialog-back-btn').addEventListener('click', function() { self.saveDialogBack(); });
                 document.getElementById('save-dialog-save-btn').addEventListener('click', function() { self.saveDialogSave(); });
                 document.getElementById('claude-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
+                document.getElementById('claude-modal-cancel-btn').addEventListener('click', function() { self.cancel(); });
                 document.getElementById('claude-editor-toggle').addEventListener('click', function(e) {
                     e.preventDefault();
                     if (self.inputMode === 'quill')
@@ -964,10 +964,14 @@ $js = <<<JS
 
             showCancelButton: function(visible) {
                 var btn = document.getElementById('claude-cancel-btn');
-                if (visible)
-                    btn.classList.remove('d-none');
-                else
-                    btn.classList.add('d-none');
+                var modalBtn = document.getElementById('claude-modal-cancel-btn');
+                if (visible) {
+                    if (btn) btn.classList.remove('d-none');
+                    if (modalBtn) modalBtn.classList.remove('d-none');
+                } else {
+                    if (btn) btn.classList.add('d-none');
+                    if (modalBtn) modalBtn.classList.add('d-none');
+                }
             },
 
             scheduleStreamRender: function() {
@@ -1021,11 +1025,18 @@ $js = <<<JS
                         '<i class="bi bi-terminal-fill"></i> Claude ' +
                         '<span id="claude-stream-dots" class="claude-thinking-dots">' +
                         '<span></span><span></span><span></span></span>' +
+                        '<button type="button" id="claude-cancel-btn" class="claude-cancel-btn d-none" title="Cancel inference">' +
+                            '<i class="bi bi-stop-fill"></i> Stop' +
+                        '</button>' +
                         '<i class="bi bi-arrows-fullscreen claude-stream-preview__expand"></i>' +
                     '</div>' +
                     '<div id="claude-stream-body" class="claude-stream-preview__body"></div>';
-                preview.addEventListener('click', function() {
+                preview.addEventListener('click', function(e) {
+                    if (e.target.closest('.claude-cancel-btn')) return;
                     self.openStreamModal();
+                });
+                preview.querySelector('.claude-cancel-btn').addEventListener('click', function() {
+                    self.cancel();
                 });
                 responseEl.appendChild(preview);
                 responseEl.classList.remove('d-none');
