@@ -31,6 +31,8 @@ use RuntimeException;
 
 class ScratchPadController extends Controller
 {
+    private const CLAUDE_TIMEOUT = 3600;
+
     private ProjectContext $projectContext;
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
@@ -452,7 +454,7 @@ class ScratchPadController extends Controller
         $result = $this->claudeCliService->execute(
             $prepared['markdown'],
             $prepared['workingDirectory'],
-            3600,
+            self::CLAUDE_TIMEOUT,
             $prepared['options'],
             $prepared['project'],
             $prepared['sessionId']
@@ -517,7 +519,7 @@ class ScratchPadController extends Controller
                 $markdown,
                 $prepared['workingDirectory'],
                 $onLine,
-                3600,
+                self::CLAUDE_TIMEOUT,
                 $prepared['options'],
                 $prepared['project'],
                 $prepared['sessionId']

@@ -59,7 +59,7 @@ class ClaudeCliService
     public function execute(
         string $prompt,
         string $workingDirectory,
-        int $timeout = 300,
+        int $timeout = 3600,
         array $options = [],
         ?Project $project = null,
         ?string $sessionId = null
@@ -180,7 +180,7 @@ class ClaudeCliService
         string $prompt,
         string $workingDirectory,
         callable $onLine,
-        int $timeout = 300,
+        int $timeout = 3600,
         array $options = [],
         ?Project $project = null,
         ?string $sessionId = null
