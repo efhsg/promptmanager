@@ -34,6 +34,9 @@ services:
       - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
       - ${HOME}/.local/bin:/home/${USER_NAME}/.local/bin
       - ${HOME}/.local/share:/home/${USER_NAME}/.local/share
+      - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
+      - ${HOME}/.gitconfig:/home/${USER_NAME}/.gitconfig:ro
+      - ${HOME}/.config/gh:/home/${USER_NAME}/.config/gh:ro
     networks:
       - promptmanager_network
 
