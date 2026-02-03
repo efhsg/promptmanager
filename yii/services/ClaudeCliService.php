@@ -26,7 +26,7 @@ class ClaudeCliService
     /**
      * Translates a host path to a container path using configured mappings.
      */
-    private function translatePath(string $hostPath): string
+    public function translatePath(string $hostPath): string
     {
         $mappings = Yii::$app->params['pathMappings'] ?? [];
         foreach ($mappings as $hostPrefix => $containerPrefix) {

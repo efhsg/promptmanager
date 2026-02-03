@@ -11,6 +11,7 @@ use app\models\ScratchPad;
 /** @var View $this */
 /** @var ScratchPad $model */
 /** @var array $projectList */
+/** @var array $claudeCommands */
 
 QuillAsset::register($this);
 HighlightAsset::register($this);
@@ -330,6 +331,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 
 <?php
 $contentJson = Json::encode($model->content ?? '{"ops":[]}', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$claudeCommandsJson = Json::encode($claudeCommands, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $csrfToken = Yii::$app->request->csrfToken;
 $js = <<<JS
     (function() {
@@ -344,6 +346,7 @@ $js = <<<JS
                     [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                     [{ 'align': [] }],
                     ['clean'],
+                    [{ 'insertClaudeCommand': [] }],
                     [{ 'smartPaste': [] }],
                     [{ 'loadMd': [] }]
                 ]
@@ -359,6 +362,34 @@ $js = <<<JS
             window.QuillToolbar.setupSmartPaste(quill, null, urlConfig);
             window.QuillToolbar.setupLoadMd(quill, null, urlConfig);
         }
+
+        // Build Claude command dropdown
+        var claudeCommands = $claudeCommandsJson;
+        var commandDropdown = document.createElement('select');
+        commandDropdown.classList.add('ql-insertClaudeCommand', 'ql-picker', 'ql-font');
+        commandDropdown.innerHTML = '<option value="" selected disabled>Command</option>';
+        Object.keys(claudeCommands).forEach(function(key) {
+            var option = document.createElement('option');
+            option.value = key + ' ';
+            option.textContent = key;
+            option.title = claudeCommands[key];
+            commandDropdown.appendChild(option);
+        });
+        var toolbarContainer = quill.getModule('toolbar').container;
+        var placeholder = toolbarContainer.querySelector('.ql-insertClaudeCommand');
+        if (placeholder) {
+            placeholder.replaceWith(commandDropdown);
+        }
+        commandDropdown.addEventListener('change', function() {
+            var value = this.value;
+            if (value) {
+                var range = quill.getSelection();
+                var position = range ? range.index : 0;
+                quill.insertText(position, value);
+                quill.setSelection(position + value.length);
+                this.selectedIndex = 0;
+            }
+        });
 
         var initialDelta = JSON.parse($contentJson);
         quill.setContents(initialDelta);

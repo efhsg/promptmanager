@@ -434,6 +434,7 @@ class ScratchPadController extends Controller
         return $this->render('claude', [
             'model' => $model,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
+            'claudeCommands' => $this->loadClaudeCommands($model->project->root_directory),
         ]);
     }
 
@@ -734,6 +735,60 @@ class ScratchPadController extends Controller
             - Do not include full code — only key snippets essential for context
             - The summary must be self-contained for a reader with no prior context
             PROMPT;
+    }
+
+    /**
+     * Loads available Claude slash commands from the project's .claude/commands/ directory.
+     *
+     * @return array<string, string> command name => description, sorted alphabetically
+     */
+    private function loadClaudeCommands(?string $rootDirectory): array
+    {
+        if ($rootDirectory === null || trim($rootDirectory) === '') {
+            return [];
+        }
+
+        $containerPath = $this->claudeCliService->translatePath($rootDirectory);
+        $commandsDir = rtrim($containerPath, '/') . '/.claude/commands';
+        if (!is_dir($commandsDir)) {
+            Yii::debug("Claude commands dir not found: '$commandsDir' (root: '$rootDirectory', mapped: '$containerPath')", 'claude');
+            return [];
+        }
+
+        $files = glob($commandsDir . '/*.md');
+        if ($files === false) {
+            return [];
+        }
+
+        $commands = [];
+        foreach ($files as $file) {
+            $name = pathinfo($file, PATHINFO_FILENAME);
+            $description = $this->parseCommandDescription($file);
+            $commands[$name] = $description;
+        }
+
+        ksort($commands);
+
+        return $commands;
+    }
+
+    /**
+     * Extracts the description from a command file's YAML frontmatter.
+     */
+    private function parseCommandDescription(string $filePath): string
+    {
+        $content = file_get_contents($filePath);
+        if ($content === false) {
+            return '';
+        }
+
+        if (preg_match('/^---\s*\n(.*?)\n---/s', $content, $matches)) {
+            if (preg_match('/^description:\s*(.+)$/m', $matches[1], $descMatch)) {
+                return trim($descMatch[1]);
+            }
+        }
+
+        return '';
     }
 
     /**
