@@ -32,6 +32,7 @@ RUN apt-get update \
  && apt-get install -y netcat-openbsd \
  && apt-get install -y openssh-client \
  && apt-get install -y python3 python3-pip python3-venv \
+ && apt-get install -y jq \
  && rm -rf /var/lib/apt/lists/*
 
 # Install youtube-transcript-api for YouTube transcript import
