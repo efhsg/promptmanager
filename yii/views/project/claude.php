@@ -1478,6 +1478,11 @@ $js = <<<JS
                 } else {
                     promptEl.innerHTML = '<span class="text-muted fst-italic">Sending prompt\u2026</span>';
                 }
+
+                if (plainText) {
+                    var copyBtn = this.createCopyButton(plainText);
+                    promptEl.appendChild(copyBtn);
+                }
             },
 
             renderMarkdown: function(text) {
