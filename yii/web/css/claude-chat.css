@@ -1,6 +1,6 @@
 /* Claude Chat Page — scoped styles */
 
-.claude-chat-page .claude-settings-summary {
+.claude-chat-page .claude-collapsible-summary {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
     color: #6c757d;
@@ -9,12 +9,38 @@
     background: #f8f9fa;
 }
 
-.claude-chat-page .claude-settings-summary:hover {
+.claude-chat-page .claude-collapsible-summary:hover {
     background: #e9ecef;
 }
 
 .claude-chat-page .claude-prompt-section {
+    position: relative;
     width: 100%;
+}
+
+.claude-chat-page .claude-prompt-collapse-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: #adb5bd;
+    font-size: 0.6rem;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+}
+
+.claude-chat-page .claude-prompt-collapse-btn:hover {
+    color: #495057;
+    background: #e9ecef;
 }
 
 .claude-chat-page .resizable-editor-container {
@@ -59,14 +85,6 @@
 
 .claude-chat-page .claude-message:last-child {
     margin-bottom: 0;
-}
-
-.claude-chat-page .claude-message--user {
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    position: relative;
-    padding-bottom: 2.5rem;
 }
 
 .claude-chat-page .claude-message--claude {
@@ -122,6 +140,67 @@
 .claude-chat-page .claude-message__body {
     font-size: 0.95rem;
     line-height: 1.6;
+}
+
+/* Quill read-only viewer — remove Snow theme chrome */
+.claude-chat-page .claude-message__body .ql-container.ql-snow,
+.claude-chat-page .claude-stream-preview__body .ql-container.ql-snow,
+.claude-chat-page .claude-thinking-block__content .ql-container.ql-snow {
+    border: none;
+    font-family: inherit;
+}
+
+.claude-chat-page .claude-active-prompt .ql-container.ql-snow {
+    border: none;
+}
+
+.claude-chat-page .claude-message__body .ql-editor,
+.claude-chat-page .claude-active-prompt .ql-editor,
+.claude-chat-page .claude-thinking-block__content .ql-editor {
+    padding: 0;
+    line-height: inherit;
+    overflow: visible;
+}
+
+/* Restore paragraph spacing that Quill's .ql-editor p { margin:0 } removes */
+.claude-chat-page .claude-message__body .ql-editor p,
+.claude-chat-page .claude-message__body .ql-editor h1,
+.claude-chat-page .claude-message__body .ql-editor h2,
+.claude-chat-page .claude-message__body .ql-editor h3,
+.claude-chat-page .claude-message__body .ql-editor h4,
+.claude-chat-page .claude-message__body .ql-editor h5,
+.claude-chat-page .claude-message__body .ql-editor h6 {
+    margin-bottom: 0.5em;
+}
+
+.claude-chat-page .claude-message__body .ql-editor > *:last-child {
+    margin-bottom: 0;
+}
+
+.claude-chat-page .claude-stream-preview__body .ql-editor {
+    padding: 0;
+    line-height: inherit;
+}
+
+.claude-chat-page .claude-message__body .ql-editor > *:first-child,
+.claude-chat-page .claude-active-prompt .ql-editor > *:first-child,
+.claude-chat-page .claude-stream-preview__body .ql-editor > *:first-child,
+.claude-chat-page .claude-thinking-block__content .ql-editor > *:first-child {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.claude-chat-page .claude-message__body .ql-editor .ql-code-block-container,
+.claude-chat-page .claude-active-prompt .ql-editor .ql-code-block-container,
+.claude-chat-page .claude-stream-preview__body .ql-editor .ql-code-block-container,
+.claude-chat-page .claude-thinking-block__content .ql-editor .ql-code-block-container {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    margin: 0.75rem 0;
 }
 
 .claude-chat-page .claude-message__meta {
@@ -423,6 +502,11 @@
     line-height: 1.5;
     color: #6c757d;
     font-style: italic;
+    transition: height 0.2s ease;
+}
+
+.claude-chat-page .claude-stream-preview__body--tall {
+    height: 15em;
 }
 
 .claude-chat-page .claude-stream-preview__body p:last-child {
@@ -521,6 +605,17 @@
     font-size: 0.8rem;
     color: #6c757d;
     white-space: nowrap;
+}
+
+/* Active accordion item response/prompt zones */
+.claude-chat-page .claude-active-response,
+.claude-chat-page .claude-active-prompt {
+    padding: 0.75rem 1rem;
+}
+
+.claude-chat-page .claude-active-response:empty,
+.claude-chat-page .claude-active-prompt:empty {
+    padding: 0;
 }
 
 /* Context Usage Meter */

@@ -126,67 +126,77 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                 </div>
             </div>
         </div>
-        <div id="claude-settings-summary" class="claude-settings-summary d-none"
+        <div id="claude-settings-summary" class="claude-collapsible-summary d-none"
              data-bs-toggle="collapse" data-bs-target="#claudeSettingsCard" role="button">
         </div>
     </div>
 
-    <!-- Section 2: Prompt Editor -->
+    <!-- Section 2: Prompt Editor (collapsible) -->
     <div class="card mb-4">
-        <div class="card-body claude-prompt-section">
-            <!-- Quill editor (initial mode) -->
-            <div id="claude-quill-wrapper" class="resizable-editor-container">
-                <div id="claude-quill-editor" class="resizable-editor"></div>
-            </div>
-
-            <!-- Textarea (follow-up mode, hidden initially) -->
-            <div id="claude-textarea-wrapper" class="d-none">
-                <textarea id="claude-followup-textarea" class="form-control claude-followup-textarea"
-                          rows="3" placeholder="Ask a follow-up question..."></textarea>
-            </div>
-
-            <!-- Action buttons + editor toggle -->
-            <div class="mt-3 d-flex justify-content-between align-items-center">
-                <div class="claude-editor-toggle">
-                    <a href="#" id="claude-editor-toggle" class="small text-muted">
-                        Switch to plain text
-                    </a>
+        <div class="collapse show" id="claudePromptCard">
+            <div class="card-body claude-prompt-section">
+                <button type="button" id="claude-prompt-collapse-btn" class="claude-prompt-collapse-btn"
+                        title="Collapse editor">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <!-- Quill editor (initial mode) -->
+                <div id="claude-quill-wrapper" class="resizable-editor-container">
+                    <div id="claude-quill-editor" class="resizable-editor"></div>
                 </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <div id="claude-summarize-group" class="btn-group d-none">
-                        <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary"
-                                title="Summarize conversation and start a new session with the summary">
-                            <i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session
-                        </button>
-                        <button type="button" id="claude-summarize-split-toggle"
-                                class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                            <span class="visually-hidden">Toggle Dropdown</span>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li>
-                                <a class="dropdown-item" href="#" id="claude-summarize-btn">
-                                    <i class="bi bi-pencil-square me-1"></i> Summarize
-                                    <small class="d-block text-muted">Review summary before sending</small>
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <a class="dropdown-item" href="#" id="claude-new-session-btn">
-                                    <i class="bi bi-x-circle me-1"></i> New Session
-                                    <small class="d-block text-muted">Discard context and start fresh</small>
-                                </a>
-                            </li>
-                        </ul>
+
+                <!-- Textarea (follow-up mode, hidden initially) -->
+                <div id="claude-textarea-wrapper" class="d-none">
+                    <textarea id="claude-followup-textarea" class="form-control claude-followup-textarea"
+                              rows="3" placeholder="Ask a follow-up question..."></textarea>
+                </div>
+
+                <!-- Action buttons + editor toggle -->
+                <div class="mt-3 d-flex justify-content-between align-items-center">
+                    <div class="claude-editor-toggle">
+                        <a href="#" id="claude-editor-toggle" class="small text-muted">
+                            Switch to plain text
+                        </a>
                     </div>
-                    <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
-                        <i class="bi bi-arrow-counterclockwise"></i> Last prompt
-                    </button>
-                    <button type="button" id="claude-send-btn" class="btn btn-primary" title="Send (Ctrl+Enter)">
-                        <i class="bi bi-send-fill"></i> Send
-                    </button>
+                    <div class="d-flex gap-2 align-items-center">
+                        <div id="claude-summarize-group" class="btn-group d-none">
+                            <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary"
+                                    title="Summarize conversation and start a new session with the summary">
+                                <i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session
+                            </button>
+                            <button type="button" id="claude-summarize-split-toggle"
+                                    class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
+                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                <span class="visually-hidden">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="#" id="claude-summarize-btn">
+                                        <i class="bi bi-pencil-square me-1"></i> Summarize
+                                        <small class="d-block text-muted">Review summary before sending</small>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="#" id="claude-new-session-btn">
+                                        <i class="bi bi-x-circle me-1"></i> New Session
+                                        <small class="d-block text-muted">Discard context and start fresh</small>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                        <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
+                            <i class="bi bi-arrow-counterclockwise"></i> Last prompt
+                        </button>
+                        <button type="button" id="claude-send-btn" class="btn btn-primary" title="Send (Ctrl+Enter)">
+                            <i class="bi bi-send-fill"></i> Send
+                        </button>
+                    </div>
                 </div>
             </div>
+        </div>
+        <div id="claude-prompt-summary" class="claude-collapsible-summary d-none"
+             data-bs-toggle="collapse" data-bs-target="#claudePromptCard" role="button">
+            <i class="bi bi-pencil-square me-1"></i> Prompt editor
         </div>
     </div>
 
@@ -211,19 +221,17 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <button type="button" class="btn-close" id="claude-context-warning-close" aria-label="Close"></button>
     </div>
 
-    <!-- Section 3a: Current Exchange -->
-    <div id="claude-current-exchange" class="mb-4">
-        <div>
-            <div id="claude-current-response" class="d-none"></div>
-            <div id="claude-current-prompt" class="d-none"></div>
-        </div>
-    </div>
+    <!-- Streaming preview (lives above the accordion while Claude is working) -->
+    <div id="claude-stream-container" class="d-none mb-4"></div>
 
-    <!-- Section 3b: History Accordion -->
+    <!-- Active response (rendered here after stream ends, moved into accordion on next send) -->
+    <div id="claude-active-response-container" class="d-none mb-4"></div>
+
+    <!-- Exchange History Accordion (exchanges go here immediately on send) -->
     <div id="claude-history-wrapper" class="d-none mb-4">
         <div class="d-flex justify-content-end mb-2">
             <button type="button" id="claude-toggle-history-btn" class="btn btn-outline-secondary btn-sm">
-                <i class="bi bi-arrows-expand"></i> Expand All
+                <i class="bi bi-arrows-collapse"></i> Collapse All
             </button>
         </div>
         <div class="accordion" id="claude-history-accordion"></div>
@@ -537,6 +545,9 @@ $js = <<<JS
                 document.getElementById('save-dialog-back-btn').addEventListener('click', function() { self.saveDialogBack(); });
                 document.getElementById('save-dialog-save-btn').addEventListener('click', function() { self.saveDialogSave(); });
                 document.getElementById('claude-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
+                var historyAccordion = document.getElementById('claude-history-accordion');
+                historyAccordion.addEventListener('shown.bs.collapse', function() { self.updateToggleHistoryBtn(); });
+                historyAccordion.addEventListener('hidden.bs.collapse', function() { self.updateToggleHistoryBtn(); });
                 document.getElementById('claude-modal-cancel-btn').addEventListener('click', function() { self.cancel(); });
                 document.getElementById('claude-editor-toggle').addEventListener('click', function(e) {
                     e.preventDefault();
@@ -569,6 +580,19 @@ $js = <<<JS
                 settingsCard.addEventListener('hidden.bs.collapse', function() { self.updateSettingsSummary(); });
                 settingsCard.addEventListener('shown.bs.collapse', function() {
                     document.getElementById('claude-settings-summary').classList.add('d-none');
+                });
+
+                var promptCard = document.getElementById('claudePromptCard');
+                promptCard.addEventListener('hidden.bs.collapse', function() {
+                    document.getElementById('claude-prompt-summary').classList.remove('d-none');
+                    self.setStreamPreviewTall(true);
+                });
+                promptCard.addEventListener('shown.bs.collapse', function() {
+                    document.getElementById('claude-prompt-summary').classList.add('d-none');
+                    self.setStreamPreviewTall(false);
+                });
+                document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
+                    self.collapsePromptEditor();
                 });
 
                 document.getElementById('claude-context-warning-close').addEventListener('click', function() {
@@ -607,13 +631,13 @@ $js = <<<JS
                     options.sessionId = this.sessionId;
 
                 var pendingPrompt = null;
-                var pendingHtml = null;
+                var pendingDelta = null;
                 if (this.inputMode === 'quill') {
                     var delta = quill.getContents();
                     this.lastSentDelta = delta;
                     pendingPrompt = quill.getText().replace(/\\n$/, '');
                     if (!pendingPrompt.trim()) return;
-                    pendingHtml = quill.root.innerHTML;
+                    pendingDelta = delta;
                     options.contentDelta = JSON.stringify(delta);
                     quill.setText('');
                 } else {
@@ -634,12 +658,11 @@ $js = <<<JS
 
                 sendBtn.disabled = true;
 
-                // Archive current exchange before new content overwrites the DOM
-                if (this.messages.length >= 2)
-                    this.moveCurrentToHistory();
+                // Move the active response into its accordion item before starting a new exchange
+                this.moveActiveResponseToAccordion();
 
-                // Show user prompt immediately (before fetch)
-                this.showUserPrompt(pendingPrompt, pendingHtml);
+                // Collapse previous accordion item (if any)
+                this.collapseActiveItem();
 
                 // Reset stream state
                 this.streamBuffer = '';
@@ -650,8 +673,14 @@ $js = <<<JS
                 this.streamPromptMarkdown = null;
                 this.streamReceivedText = false;
                 this.activeReader = null;
-                this.showStreamingPlaceholder();
+                this.streamPreviewQuill = null;
+                this.streamModalQuill = null;
+                this.streamModalThinkingQuill = null;
+
+                // Create new accordion item with user prompt + streaming placeholder
+                this.createActiveAccordionItem(pendingPrompt, pendingDelta);
                 this.showCancelButton(true);
+                this.collapsePromptEditor();
 
                 fetch('$streamClaudeUrl', {
                     method: 'POST',
@@ -821,29 +850,28 @@ $js = <<<JS
                 }
             },
 
-            onStreamEnd: function() {
-                if (this.streamEnded) return;
-                this.streamEnded = true;
-
-                var sendBtn = document.getElementById('claude-send-btn');
-                sendBtn.disabled = false;
+            /**
+             * Shared teardown for all stream-ending paths (success, error, cancel).
+             * Disables streaming UI, re-enables the send button, clears the render timer.
+             */
+            cleanupStreamUI: function() {
+                document.getElementById('claude-send-btn').disabled = false;
                 this.removeStreamDots();
                 this.showCancelButton(false);
                 this.closeStreamModal();
-
-                // Remove compact preview (not part of final response)
-                var preview = document.getElementById('claude-stream-preview');
-                if (preview) preview.remove();
-
-                // Hide modal dots
+                this.hideStreamContainer();
                 var modalDots = document.getElementById('claude-modal-dots');
                 if (modalDots) modalDots.classList.add('d-none');
-
-                // Clear render timer and do final render
                 if (this.renderTimer) {
                     clearTimeout(this.renderTimer);
                     this.renderTimer = null;
                 }
+            },
+
+            onStreamEnd: function() {
+                if (this.streamEnded) return;
+                this.streamEnded = true;
+                this.cleanupStreamUI();
 
                 var userContent = this.streamPromptMarkdown || '(prompt)';
 
@@ -894,6 +922,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                this.expandPromptEditor();
                 this.focusEditor();
             },
 
@@ -906,47 +935,19 @@ $js = <<<JS
                     this.activeReader = null;
                 }
 
-                var sendBtn = document.getElementById('claude-send-btn');
-                sendBtn.disabled = false;
-                this.removeStreamDots();
-                this.showCancelButton(false);
-                this.closeStreamModal();
-
-                // Remove compact preview
-                var preview = document.getElementById('claude-stream-preview');
-                if (preview) preview.remove();
-
-                // Hide modal dots
-                var modalDots = document.getElementById('claude-modal-dots');
-                if (modalDots) modalDots.classList.add('d-none');
+                this.cleanupStreamUI();
 
                 // If we have partial streamed text, show it with error appended
                 if (this.streamReceivedText) {
-                    var responseEl = document.getElementById('claude-current-response');
-                    responseEl.innerHTML = '';
-                    if (this.streamThinkingBuffer) {
-                        var details = this.createProcessBlock(this.streamThinkingBuffer, '');
-                        responseEl.appendChild(details);
-                    }
-                    var claudeDiv = document.createElement('div');
-                    claudeDiv.className = 'claude-message claude-message--claude';
-                    var claudeHeader = document.createElement('div');
-                    claudeHeader.className = 'claude-message__header';
-                    claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
-                    claudeDiv.appendChild(claudeHeader);
-                    var claudeBody = document.createElement('div');
-                    claudeBody.className = 'claude-message__body';
-                    claudeBody.innerHTML = this.renderMarkdown(this.streamBuffer);
+                    var claudeBody = this.renderPartialResponse(this.streamBuffer);
                     var alert = document.createElement('div');
                     alert.className = 'alert alert-danger mt-2 mb-0';
                     alert.textContent = msg;
                     claudeBody.appendChild(alert);
-                    claudeDiv.appendChild(claudeBody);
-                    responseEl.appendChild(claudeDiv);
-                    responseEl.classList.remove('d-none');
                 } else {
                     this.addErrorMessage(msg);
                 }
+                this.expandPromptEditor();
                 this.focusEditor();
             },
 
@@ -968,53 +969,18 @@ $js = <<<JS
                 }).catch(function(e) { console.error('Cancel request failed:', e); });
 
                 // 3. Finalize UI with what we have so far
-                this.showCancelButton(false);
                 this.streamEnded = true;
-                this.removeStreamDots();
-                this.closeStreamModal();
+                this.cleanupStreamUI();
 
-                var sendBtn = document.getElementById('claude-send-btn');
-                sendBtn.disabled = false;
-
-                if (this.renderTimer) {
-                    clearTimeout(this.renderTimer);
-                    this.renderTimer = null;
-                }
-
-                // Remove compact preview (not part of final response)
-                var preview = document.getElementById('claude-stream-preview');
-                if (preview) preview.remove();
-
-                // Hide modal dots
-                var modalDots = document.getElementById('claude-modal-dots');
-                if (modalDots) modalDots.classList.add('d-none');
-
-                // Render partial content as the final response
-                var responseEl = document.getElementById('claude-current-response');
-                responseEl.innerHTML = '';
+                // Render partial content into the standalone active response container
                 var partialContent = this.streamBuffer || '';
                 if (partialContent || this.streamThinkingBuffer) {
-                    if (this.streamThinkingBuffer) {
-                        var details = this.createProcessBlock(this.streamThinkingBuffer, '');
-                        responseEl.appendChild(details);
-                    }
-                    var claudeDiv = document.createElement('div');
-                    claudeDiv.className = 'claude-message claude-message--claude';
-                    var claudeHeader = document.createElement('div');
-                    claudeHeader.className = 'claude-message__header';
-                    claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
-                    claudeDiv.appendChild(claudeHeader);
-                    var claudeBody = document.createElement('div');
-                    claudeBody.className = 'claude-message__body';
-                    claudeBody.innerHTML = this.renderMarkdown(partialContent);
+                    var claudeBody = this.renderPartialResponse(partialContent);
                     var notice = document.createElement('div');
                     notice.className = 'claude-cancelled-notice';
                     notice.innerHTML = '<i class="bi bi-stop-circle"></i> Generation cancelled';
                     claudeBody.appendChild(notice);
-                    claudeDiv.appendChild(claudeBody);
-                    responseEl.appendChild(claudeDiv);
                 }
-                responseEl.classList.remove('d-none');
 
                 // Store partial content as a message
                 var claudeContent = this.streamBuffer || '(Cancelled)';
@@ -1029,6 +995,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                this.expandPromptEditor();
                 this.focusEditor();
             },
 
@@ -1054,35 +1021,28 @@ $js = <<<JS
             },
 
             renderStreamContent: function() {
-                var previewBody = document.getElementById('claude-stream-body');
-                var modalBody = document.getElementById('claude-modal-body');
                 var modalThinking = document.getElementById('claude-modal-thinking');
-                var modalThinkingBody = document.getElementById('claude-modal-thinking-body');
 
                 // Render thinking into modal
-                if (modalThinking && modalThinkingBody && this.streamThinkingBuffer) {
+                if (modalThinking && this.streamThinkingBuffer) {
                     modalThinking.classList.remove('d-none');
-                    modalThinkingBody.innerHTML = this.renderMarkdown(this.streamThinkingBuffer);
+                    this.updateStreamQuill(this.streamModalThinkingQuill, this.streamThinkingBuffer);
                 }
 
                 // Render text into modal
-                if (modalBody)
-                    modalBody.innerHTML = this.renderMarkdown(this.streamBuffer);
+                this.updateStreamQuill(this.streamModalQuill, this.streamBuffer);
 
                 // Render combined preview (thinking + text) into compact box
-                if (previewBody) {
-                    var previewContent = this.streamThinkingBuffer || this.streamBuffer;
-                    previewBody.innerHTML = this.renderMarkdown(previewContent);
+                var previewContent = this.streamThinkingBuffer || this.streamBuffer;
+                this.updateStreamQuill(this.streamPreviewQuill, previewContent);
+                var previewBody = document.getElementById('claude-stream-body');
+                if (previewBody)
                     previewBody.scrollTop = previewBody.scrollHeight;
-                }
             },
 
-            showStreamingPlaceholder: function() {
+            renderStreamingPlaceholderInto: function(responseEl) {
                 var self = this;
-                this.streamEnded = false;
-                this.hideEmptyState();
 
-                var responseEl = document.getElementById('claude-current-response');
                 responseEl.innerHTML = '';
 
                 // Compact 5-line preview box (not part of final response)
@@ -1109,9 +1069,11 @@ $js = <<<JS
                     self.cancel();
                 });
                 responseEl.appendChild(preview);
-                responseEl.classList.remove('d-none');
 
-                // Reset modal content
+                // Initialize persistent Quill viewer for preview
+                this.streamPreviewQuill = this.createStreamQuill('claude-stream-body');
+
+                // Reset modal content and initialize Quill viewers
                 var modalThinking = document.getElementById('claude-modal-thinking');
                 var modalThinkingBody = document.getElementById('claude-modal-thinking-body');
                 var modalBody = document.getElementById('claude-modal-body');
@@ -1120,6 +1082,8 @@ $js = <<<JS
                 modalThinkingBody.innerHTML = '';
                 modalBody.innerHTML = '';
                 modalDots.classList.remove('d-none');
+                this.streamModalThinkingQuill = this.createStreamQuill('claude-modal-thinking-body');
+                this.streamModalQuill = this.createStreamQuill('claude-modal-body');
             },
 
             openStreamModal: function() {
@@ -1170,6 +1134,21 @@ $js = <<<JS
                 if (dots) dots.remove();
             },
 
+            hideStreamContainer: function() {
+                var el = document.getElementById('claude-stream-container');
+                el.innerHTML = '';
+                el.classList.add('d-none');
+                this.streamPreviewQuill = null;
+                this.streamModalQuill = null;
+                this.streamModalThinkingQuill = null;
+            },
+
+            setStreamPreviewTall: function(tall) {
+                var body = document.getElementById('claude-stream-body');
+                if (!body) return;
+                body.classList.toggle('claude-stream-preview__body--tall', tall);
+            },
+
             hideEmptyState: function() {
                 var empty = document.getElementById('claude-empty-state');
                 if (empty) empty.classList.add('d-none');
@@ -1188,105 +1167,140 @@ $js = <<<JS
                 return response.json();
             },
 
-            renderCurrentExchange: function(userContent, claudeContent, processContent, meta) {
-
-                var responseEl = document.getElementById('claude-current-response');
-
-                responseEl.innerHTML = '';
-
-                // Collapsible process section (thinking + intermediate reasoning)
-                if (this.streamThinkingBuffer || processContent) {
-                    var details = this.createProcessBlock(this.streamThinkingBuffer, processContent);
-                    responseEl.appendChild(details);
-                }
-
-                // Render Claude response (final result only)
-                var claudeDiv = document.createElement('div');
-                claudeDiv.className = 'claude-message claude-message--claude';
-
-                var claudeHeader = document.createElement('div');
-                claudeHeader.className = 'claude-message__header';
-                claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
-                claudeDiv.appendChild(claudeHeader);
-
-                var claudeBody = document.createElement('div');
-                claudeBody.className = 'claude-message__body';
-                claudeBody.innerHTML = this.renderMarkdown(claudeContent);
-                claudeDiv.appendChild(claudeBody);
-
-                if (meta) {
-                    var metaDiv = document.createElement('div');
-                    metaDiv.className = 'claude-message__meta';
-                    metaDiv.textContent = this.formatMeta(meta);
-                    if (meta.tool_uses && meta.tool_uses.length)
-                        metaDiv.title = meta.tool_uses.join('\\n');
-                    claudeDiv.appendChild(metaDiv);
-                }
-
-                var copyBtn = this.createCopyButton(claudeContent);
-                claudeDiv.appendChild(copyBtn);
-
-                responseEl.appendChild(claudeDiv);
-                responseEl.classList.remove('d-none');
-
-                // Update user prompt with server-converted markdown
-                this.showUserPrompt(userContent);
-
-                // Store meta for when this exchange moves to history
-                this.currentMeta = meta;
-                this.currentPromptText = userContent;
-            },
-
-            moveCurrentToHistory: function() {
-                if (!this.currentPromptText) return;
-
-                var responseEl = document.getElementById('claude-current-response');
-                var promptEl = document.getElementById('claude-current-prompt');
+            /**
+             * Create a new accordion item with user prompt and streaming placeholder.
+             * The item starts expanded. The response zone inside it will be filled
+             * by renderCurrentExchange() or onStreamError()/cancel() when the stream ends.
+             */
+            createActiveAccordionItem: function(promptText, promptDelta) {
+                this.hideEmptyState();
+                this.streamEnded = false;
 
                 var accordion = document.getElementById('claude-history-accordion');
                 var idx = this.historyCounter++;
                 var itemId = 'claude-history-item-' + idx;
+                this.activeItemId = itemId;
 
-                // Build header text: truncated prompt + meta
-                var headerText = (this.currentPromptText || '').replace(/[#*_`>\\[\\]]/g, '').trim();
+                // Build header text from prompt
+                var headerText = (promptText || '').replace(/[#*_`>\[\]]/g, '').trim();
                 if (headerText.length > 80) headerText = headerText.substring(0, 80) + '\u2026';
-                var metaSummary = this.currentMeta ? this.formatMeta(this.currentMeta) : '';
 
                 var item = document.createElement('div');
                 item.className = 'accordion-item';
+                item.id = 'item-' + itemId;
                 item.innerHTML =
                     '<h2 class="accordion-header" id="heading-' + itemId + '">' +
-                        '<button class="accordion-button collapsed claude-history-item__header" type="button" ' +
+                        '<button class="accordion-button claude-history-item__header" type="button" ' +
                             'data-bs-toggle="collapse" data-bs-target="#collapse-' + itemId + '" ' +
-                            'aria-expanded="false" aria-controls="collapse-' + itemId + '">' +
+                            'aria-expanded="true" aria-controls="collapse-' + itemId + '">' +
                             '<span class="claude-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
-                            (metaSummary ? '<span class="claude-history-item__meta">' + this.escapeHtml(metaSummary) + '</span>' : '') +
+                            '<span class="claude-history-item__meta"></span>' +
                         '</button>' +
                     '</h2>' +
-                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
+                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse show" ' +
                         'aria-labelledby="heading-' + itemId + '">' +
-                        '<div class="accordion-body p-0"></div>' +
+                        '<div class="accordion-body p-0">' +
+                            '<div class="claude-active-response"></div>' +
+                            '<div class="claude-active-prompt"></div>' +
+                        '</div>' +
                     '</div>';
-
-                // Set tool_uses title via DOM to avoid attribute injection
-                var metaSpan = item.querySelector('.claude-history-item__meta');
-                if (metaSpan && this.currentMeta && this.currentMeta.tool_uses && this.currentMeta.tool_uses.length) {
-                    metaSpan.title = this.currentMeta.tool_uses.join('\\n');
-                }
-
-                // Move current content into accordion body
-                var body = item.querySelector('.accordion-body');
-                body.innerHTML = responseEl.innerHTML + promptEl.innerHTML;
 
                 // Prepend (newest first)
                 accordion.insertBefore(item, accordion.firstChild);
                 document.getElementById('claude-history-wrapper').classList.remove('d-none');
 
-                // Clear current zones
-                responseEl.innerHTML = '';
-                responseEl.classList.add('d-none');
-                promptEl.innerHTML = '';
-                promptEl.classList.add('d-none');
+                // Render user prompt inside the accordion body using Quill Delta
+                var promptZone = item.querySelector('.claude-active-prompt');
+                this.renderUserPromptInto(promptZone, promptText, promptDelta);
+
+                // Render streaming placeholder outside the accordion
+                var streamContainer = document.getElementById('claude-stream-container');
+                streamContainer.classList.remove('d-none');
+                this.renderStreamingPlaceholderInto(streamContainer);
+
+                // If the prompt editor is already collapsed, use the tall preview
+                if (!document.getElementById('claudePromptCard').classList.contains('show'))
+                    this.setStreamPreviewTall(true);
+            },
+
+            /**
+             * Collapse the currently active accordion item (before creating a new one).
+             */
+            collapseActiveItem: function() {
+                if (!this.activeItemId) return;
+                var collapseEl = document.getElementById('collapse-' + this.activeItemId);
+                if (collapseEl) {
+                    var bsCollapse = bootstrap.Collapse.getInstance(collapseEl);
+                    if (bsCollapse)
+                        bsCollapse.hide();
+                    else
+                        new bootstrap.Collapse(collapseEl, { toggle: false }).hide();
+                }
+            },
+
+            /**
+             * Move the standalone active response container contents into the
+             * current accordion item's response zone. Called on the next send()
+             * so the previous response settles into the accordion.
+             */
+            moveActiveResponseToAccordion: function() {
+                var container = document.getElementById('claude-active-response-container');
+                if (container.classList.contains('d-none') || !container.hasChildNodes())
+                    return;
+
+                var zones = this.getActiveZones();
+                if (zones && zones.response) {
+                    zones.response.innerHTML = '';
+                    while (container.firstChild)
+                        zones.response.appendChild(container.firstChild);
+                    this.reinitQuillViewers(zones.response);
+                }
+
+                container.innerHTML = '';
+                container.classList.add('d-none');
+            },
+
+            /**
+             * Get the active accordion item's response/prompt zones.
+             */
+            getActiveZones: function() {
+                var item = this.activeItemId ? document.getElementById('item-' + this.activeItemId) : null;
+                if (!item) return null;
+                return {
+                    item: item,
+                    response: item.querySelector('.claude-active-response'),
+                    prompt: item.querySelector('.claude-active-prompt'),
+                    metaSpan: item.querySelector('.claude-history-item__meta')
+                };
+            },
+
+            renderCurrentExchange: function(userContent, claudeContent, processContent, meta) {
+                // Render into the standalone container above the accordion.
+                // On the next send(), this content is moved into the accordion item.
+                var container = document.getElementById('claude-active-response-container');
+                container.innerHTML = '';
+                container.classList.remove('d-none');
+
+                var msg = this.createClaudeMessageDiv(claudeContent, meta);
+                container.appendChild(msg.div);
+
+                // Collapsible process section (thinking + intermediate reasoning)
+                if (this.streamThinkingBuffer || processContent) {
+                    var details = this.createProcessBlock(this.streamThinkingBuffer, processContent);
+                    container.appendChild(details);
+                }
+
+                // Initialize Quill after element is in the DOM
+                this.renderToQuillViewer(msg.body, claudeContent);
+
+                // Update accordion header meta
+                var zones = this.getActiveZones();
+                if (zones && meta && zones.metaSpan) {
+                    var metaSummary = this.formatMeta(meta);
+                    zones.metaSpan.textContent = metaSummary;
+                    if (meta.tool_uses && meta.tool_uses.length)
+                        zones.metaSpan.title = meta.tool_uses.join('\\n');
+                }
             },
 
             formatMeta: function(meta) {
@@ -1364,10 +1378,64 @@ $js = <<<JS
                 return div.innerHTML;
             },
 
-            addErrorMessage: function(errorText) {
+            /**
+             * Build a claude-message div with header, body, and optional meta/copy button.
+             * Returns { div, body } so callers can append notices or extra elements.
+             */
+            createClaudeMessageDiv: function(markdownContent, meta) {
+                var claudeDiv = document.createElement('div');
+                claudeDiv.className = 'claude-message claude-message--claude';
 
-                var responseEl = document.getElementById('claude-current-response');
-                responseEl.innerHTML = '';
+                var claudeHeader = document.createElement('div');
+                claudeHeader.className = 'claude-message__header';
+                claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
+                claudeDiv.appendChild(claudeHeader);
+
+                var claudeBody = document.createElement('div');
+                claudeBody.className = 'claude-message__body';
+                claudeBody.setAttribute('data-quill-markdown', markdownContent);
+                claudeDiv.appendChild(claudeBody);
+
+                if (meta) {
+                    var metaDiv = document.createElement('div');
+                    metaDiv.className = 'claude-message__meta';
+                    metaDiv.textContent = this.formatMeta(meta);
+                    if (meta.tool_uses && meta.tool_uses.length)
+                        metaDiv.title = meta.tool_uses.join('\\n');
+                    claudeDiv.appendChild(metaDiv);
+                }
+
+                var copyBtn = this.createCopyButton(markdownContent);
+                claudeDiv.appendChild(copyBtn);
+
+                return { div: claudeDiv, body: claudeBody };
+            },
+
+            /**
+             * Render partial streamed content into the active response container.
+             * Used by onStreamError (with an error alert) and cancel (with a cancelled notice).
+             * Returns the .claude-message__body element so callers can append notices.
+             */
+            renderPartialResponse: function(markdownContent) {
+                var container = document.getElementById('claude-active-response-container');
+                container.innerHTML = '';
+                container.classList.remove('d-none');
+
+                var msg = this.createClaudeMessageDiv(markdownContent, null);
+                container.appendChild(msg.div);
+                this.renderToQuillViewer(msg.body, markdownContent);
+
+                if (this.streamThinkingBuffer) {
+                    var details = this.createProcessBlock(this.streamThinkingBuffer, '');
+                    container.appendChild(details);
+                }
+                return msg.body;
+            },
+
+            addErrorMessage: function(errorText) {
+                var container = document.getElementById('claude-active-response-container');
+                container.innerHTML = '';
+                container.classList.remove('d-none');
 
                 var div = document.createElement('div');
                 div.className = 'claude-message claude-message--error';
@@ -1385,40 +1453,28 @@ $js = <<<JS
                 body.appendChild(alert);
                 div.appendChild(body);
 
-                responseEl.appendChild(div);
-                responseEl.classList.remove('d-none');
+                container.appendChild(div);
             },
 
-            showUserPrompt: function(plainText, preRenderedHtml) {
-
-                var promptEl = document.getElementById('claude-current-prompt');
+            /**
+             * Render user prompt into the given container as a bare Quill read-only viewer,
+             * matching the QuillViewerWidget style used on the view page.
+             *
+             * @param {HTMLElement} promptEl  Container element
+             * @param {string}     plainText Plain text (markdown fallback when no delta)
+             * @param {object|null} delta    Quill Delta object (preferred) or null
+             */
+            renderUserPromptInto: function(promptEl, plainText, delta) {
                 promptEl.innerHTML = '';
 
-                var userDiv = document.createElement('div');
-                userDiv.className = 'claude-message claude-message--user';
-
-                var userHeader = document.createElement('div');
-                userHeader.className = 'claude-message__header';
-                userHeader.innerHTML = '<i class="bi bi-person-fill"></i> You';
-                userDiv.appendChild(userHeader);
-
-                var userBody = document.createElement('div');
-                userBody.className = 'claude-message__body';
-                if (preRenderedHtml)
-                    userBody.innerHTML = DOMPurify.sanitize(preRenderedHtml, { ADD_ATTR: ['class', 'target', 'rel'] });
-                else if (plainText)
-                    userBody.innerHTML = this.renderMarkdown(plainText);
-                else
-                    userBody.innerHTML = '<span class="text-muted fst-italic">Sending prompt\u2026</span>';
-                userDiv.appendChild(userBody);
-
-                if (plainText) {
-                    var copyBtn = this.createCopyButton(plainText);
-                    userDiv.appendChild(copyBtn);
+                if (delta) {
+                    this.renderDeltaToQuillViewer(promptEl, delta);
+                } else if (plainText) {
+                    promptEl.setAttribute('data-quill-markdown', plainText);
+                    this.renderToQuillViewer(promptEl, plainText);
+                } else {
+                    promptEl.innerHTML = '<span class="text-muted fst-italic">Sending prompt\u2026</span>';
                 }
-
-                promptEl.appendChild(userDiv);
-                promptEl.classList.remove('d-none');
             },
 
             renderMarkdown: function(text) {
@@ -1441,6 +1497,77 @@ $js = <<<JS
                 var html = this.renderMarkdown(text);
                 var delta = quill.clipboard.convert({ html: html });
                 return JSON.stringify(delta);
+            },
+
+            /**
+             * Create a read-only Quill instance inside the given container element.
+             * Clears existing content and returns the new Quill instance.
+             */
+            createReadOnlyQuill: function(container) {
+                container.innerHTML = '';
+                var viewerDiv = document.createElement('div');
+                container.appendChild(viewerDiv);
+                return new Quill(viewerDiv, {
+                    readOnly: true,
+                    theme: 'snow',
+                    modules: { toolbar: false }
+                });
+            },
+
+            /**
+             * Render markdown text into a read-only Quill viewer inside the given container.
+             * Returns the Quill instance so callers can reference it if needed.
+             */
+            renderToQuillViewer: function(container, markdownText) {
+                var viewer = this.createReadOnlyQuill(container);
+                var html = this.renderMarkdown(markdownText);
+                var delta = quill.clipboard.convert({ html: html });
+                viewer.setContents(delta);
+                return viewer;
+            },
+
+            /**
+             * Render a Quill Delta directly into a read-only Quill viewer.
+             * Used for user prompts where we already have the original Delta.
+             */
+            renderDeltaToQuillViewer: function(container, delta) {
+                var viewer = this.createReadOnlyQuill(container);
+                viewer.setContents(delta);
+                return viewer;
+            },
+
+            /**
+             * Create a read-only Quill instance inside the element with the given ID.
+             * Used for streaming content that updates incrementally.
+             */
+            createStreamQuill: function(containerId) {
+                var container = document.getElementById(containerId);
+                if (!container) return null;
+                return this.createReadOnlyQuill(container);
+            },
+
+            /**
+             * Update a persistent streaming Quill instance with new markdown content.
+             */
+            updateStreamQuill: function(viewer, markdownText) {
+                if (!viewer) return;
+                var html = this.renderMarkdown(markdownText || '');
+                var delta = quill.clipboard.convert({ html: html });
+                viewer.setContents(delta);
+            },
+
+            /**
+             * Re-initialize all Quill viewers inside a container (e.g. after DOM move).
+             * Finds elements with data-quill-markdown and creates fresh Quill instances.
+             */
+            reinitQuillViewers: function(container) {
+                var self = this;
+                var targets = container.querySelectorAll('[data-quill-markdown]');
+                targets.forEach(function(el) {
+                    var md = el.getAttribute('data-quill-markdown');
+                    if (md)
+                        self.renderToQuillViewer(el, md);
+                });
             },
 
             hasFormatting: function() {
@@ -1492,8 +1619,6 @@ $js = <<<JS
                 this.messages = [];
                 this.lastSentDelta = null;
                 this.historyCounter = 0;
-                this.currentMeta = null;
-                this.currentPromptText = null;
                 this.streamResultText = null;
                 this.maxContext = 200000;
                 this.warningDismissed = false;
@@ -1501,21 +1626,23 @@ $js = <<<JS
                     clearTimeout(this.renderTimer);
                     this.renderTimer = null;
                 }
+                if (this._toggleBtnTimer) {
+                    clearTimeout(this._toggleBtnTimer);
+                    this._toggleBtnTimer = null;
+                }
                 document.getElementById('claude-context-meter-wrapper').classList.add('d-none');
                 document.getElementById('claude-context-meter-fill').style.width = '0%';
                 document.getElementById('claude-context-warning').classList.add('d-none');
 
-                // Clear current exchange
-                var responseEl = document.getElementById('claude-current-response');
-                var promptEl = document.getElementById('claude-current-prompt');
-                responseEl.innerHTML = '';
-                responseEl.classList.add('d-none');
-                promptEl.innerHTML = '';
-                promptEl.classList.add('d-none');
+                this.activeItemId = null;
 
-                // Clear history
+                // Clear history, streaming container, and active response
                 document.getElementById('claude-history-accordion').innerHTML = '';
                 document.getElementById('claude-history-wrapper').classList.add('d-none');
+                this.hideStreamContainer();
+                var activeResponseContainer = document.getElementById('claude-active-response-container');
+                activeResponseContainer.innerHTML = '';
+                activeResponseContainer.classList.add('d-none');
 
                 document.getElementById('claude-copy-all-wrapper').classList.add('d-none');
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
@@ -1524,6 +1651,7 @@ $js = <<<JS
                 this.summarizing = false;
 
                 this.expandSettings();
+                this.expandPromptEditor();
                 this.expandEditor();
                 this.switchToQuill(initialDelta);
             },
@@ -1532,7 +1660,21 @@ $js = <<<JS
                 var card = document.getElementById('claudeSettingsCard');
                 var bsCollapse = bootstrap.Collapse.getInstance(card);
                 if (bsCollapse) bsCollapse.hide();
-                else new bootstrap.Collapse(card, { toggle: true });
+                else new bootstrap.Collapse(card, { toggle: false }).hide();
+            },
+
+            collapsePromptEditor: function() {
+                var card = document.getElementById('claudePromptCard');
+                var bsCollapse = bootstrap.Collapse.getInstance(card);
+                if (bsCollapse) bsCollapse.hide();
+                else new bootstrap.Collapse(card, { toggle: false }).hide();
+            },
+
+            expandPromptEditor: function() {
+                var card = document.getElementById('claudePromptCard');
+                var bsCollapse = bootstrap.Collapse.getInstance(card);
+                if (bsCollapse) bsCollapse.show();
+                else new bootstrap.Collapse(card, { toggle: false }).show();
             },
 
             compactEditor: function() {
@@ -2008,24 +2150,38 @@ $js = <<<JS
             toggleHistory: function() {
                 var accordion = document.getElementById('claude-history-accordion');
                 var panels = accordion.querySelectorAll('.accordion-collapse');
-                var btn = document.getElementById('claude-toggle-history-btn');
-                var allExpanded = Array.prototype.every.call(panels, function(p) {
-                    return p.classList.contains('show');
+                var allCollapsed = Array.prototype.every.call(panels, function(p) {
+                    return !p.classList.contains('show');
                 });
 
                 panels.forEach(function(panel) {
                     var instance = bootstrap.Collapse.getOrCreateInstance(panel, { toggle: false });
-                    if (allExpanded)
-                        instance.hide();
-                    else
+                    if (allCollapsed)
                         instance.show();
+                    else
+                        instance.hide();
                 });
+            },
 
-                if (allExpanded) {
-                    btn.innerHTML = '<i class="bi bi-arrows-expand"></i> Expand All';
-                } else {
-                    btn.innerHTML = '<i class="bi bi-arrows-collapse"></i> Collapse All';
-                }
+            updateToggleHistoryBtn: function() {
+                if (this._toggleBtnTimer) return;
+                var self = this;
+                this._toggleBtnTimer = setTimeout(function() {
+                    self._toggleBtnTimer = null;
+                    var accordion = document.getElementById('claude-history-accordion');
+                    var panels = accordion.querySelectorAll('.accordion-collapse');
+                    var btn = document.getElementById('claude-toggle-history-btn');
+                    if (!panels.length) return;
+
+                    var allCollapsed = Array.prototype.every.call(panels, function(p) {
+                        return !p.classList.contains('show');
+                    });
+
+                    if (allCollapsed)
+                        btn.innerHTML = '<i class="bi bi-arrows-expand"></i> Expand All';
+                    else
+                        btn.innerHTML = '<i class="bi bi-arrows-collapse"></i> Collapse All';
+                }, 150);
             }
         };
 
