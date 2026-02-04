@@ -243,27 +243,81 @@
     margin-bottom: 0;
 }
 
-/* View thinking button (post-stream) */
-.claude-chat-page .claude-thinking-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.75rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #6c757d;
+/* Process block (thinking + intermediate reasoning, collapsible) */
+.claude-chat-page .claude-process-block {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
     border-radius: 0.375rem;
-    cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
 }
 
-.claude-chat-page .claude-thinking-btn:hover {
-    color: #0d6efd;
-    border-color: #0d6efd;
-    background: #e8edf5;
+.claude-chat-page .claude-process-block summary {
+    padding: 0.5rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #6c757d;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.claude-chat-page .claude-process-block summary:hover {
+    color: #495057;
+}
+
+.claude-chat-page .claude-process-block summary i {
+    font-size: 0.75rem;
+}
+
+.claude-chat-page .claude-process-block__content {
+    border-top: 1px solid #dee2e6;
+    padding: 0.75rem;
+    max-height: 30em;
+    overflow-y: auto;
+    color: #6c757d;
+}
+
+.claude-chat-page .claude-process-block__label {
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #adb5bd;
+    margin-bottom: 0.35rem;
+}
+
+.claude-chat-page .claude-process-block__thinking {
+    font-style: italic;
+    margin-bottom: 0.75rem;
+}
+
+.claude-chat-page .claude-process-block__thinking p:last-child,
+.claude-chat-page .claude-process-block__reasoning p:last-child {
+    margin-bottom: 0;
+}
+
+.claude-chat-page .claude-process-block__content pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+    font-size: 0.825rem;
+}
+
+.claude-chat-page .claude-process-block__content code {
+    background: #e9ecef;
+    padding: 0.1rem 0.3rem;
+    border-radius: 0.2rem;
+    font-size: 0.85em;
+}
+
+.claude-chat-page .claude-process-block__content pre code {
+    background: none;
+    padding: 0;
 }
 
 /* Cancel button — inline within stream preview header and modal header */

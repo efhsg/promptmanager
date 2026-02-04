@@ -563,12 +563,6 @@ $js = <<<JS
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
                     if (copyBtn) self.handleCopyClick(copyBtn);
-
-                    var thinkBtn = e.target.closest('.claude-thinking-btn');
-                    if (thinkBtn) {
-                        var thinking = thinkBtn.getAttribute('data-thinking');
-                        if (thinking) self.showThinkingModal(thinking);
-                    }
                 });
 
                 var settingsCard = document.getElementById('claudeSettingsCard');
@@ -650,6 +644,7 @@ $js = <<<JS
                 // Reset stream state
                 this.streamBuffer = '';
                 this.streamThinkingBuffer = '';
+                this.streamResultText = null;
                 this.streamCurrentBlockType = null;
                 this.streamMeta = {};
                 this.streamPromptMarkdown = null;
@@ -805,6 +800,8 @@ $js = <<<JS
             onStreamResult: function(data) {
                 if (data.session_id)
                     this.sessionId = data.session_id;
+                if (data.result != null)
+                    this.streamResultText = data.result;
                 if (data.duration_ms)
                     this.streamMeta.duration_ms = data.duration_ms;
                 if (data.num_turns)
@@ -848,8 +845,23 @@ $js = <<<JS
                     this.renderTimer = null;
                 }
 
-                var claudeContent = this.streamBuffer || (this.streamThinkingBuffer ? '' : '(No output)');
                 var userContent = this.streamPromptMarkdown || '(prompt)';
+
+                // Separate process (intermediate) text from final result.
+                // The result event carries the canonical final answer; the full
+                // streamBuffer contains ALL text_delta output (intermediate + final)
+                // and is shown in the collapsible process block.
+                var claudeContent, processContent;
+                if (this.streamResultText != null) {
+                    claudeContent = this.streamResultText || '';
+                    processContent = this.streamBuffer || '';
+                    // Single-turn: process buffer is identical to result — no intermediate content
+                    if (processContent === claudeContent)
+                        processContent = '';
+                } else {
+                    claudeContent = this.streamBuffer || (this.streamThinkingBuffer ? '' : '(No output)');
+                    processContent = '';
+                }
 
                 // Build meta for display
                 var contextUsed = (this.streamMeta.input_tokens || 0) + (this.streamMeta.cache_tokens || 0);
@@ -863,11 +875,11 @@ $js = <<<JS
                     configSource: this.streamMeta.configSource
                 };
 
-                this.renderCurrentExchange(userContent, claudeContent, meta);
+                this.renderCurrentExchange(userContent, claudeContent, processContent, meta);
 
                 this.messages.push(
                     { role: 'user', content: userContent },
-                    { role: 'claude', content: claudeContent }
+                    { role: 'claude', content: claudeContent, processContent: processContent || '' }
                 );
 
                 var pctUsed = Math.min(100, Math.round(contextUsed / this.maxContext * 100));
@@ -913,8 +925,8 @@ $js = <<<JS
                     var responseEl = document.getElementById('claude-current-response');
                     responseEl.innerHTML = '';
                     if (this.streamThinkingBuffer) {
-                        var btn = this.createThinkingButton(this.streamThinkingBuffer);
-                        responseEl.appendChild(btn);
+                        var details = this.createProcessBlock(this.streamThinkingBuffer, '');
+                        responseEl.appendChild(details);
                     }
                     var claudeDiv = document.createElement('div');
                     claudeDiv.className = 'claude-message claude-message--claude';
@@ -983,8 +995,8 @@ $js = <<<JS
                 var partialContent = this.streamBuffer || '';
                 if (partialContent || this.streamThinkingBuffer) {
                     if (this.streamThinkingBuffer) {
-                        var btn = this.createThinkingButton(this.streamThinkingBuffer);
-                        responseEl.appendChild(btn);
+                        var details = this.createProcessBlock(this.streamThinkingBuffer, '');
+                        responseEl.appendChild(details);
                     }
                     var claudeDiv = document.createElement('div');
                     claudeDiv.className = 'claude-message claude-message--claude';
@@ -1121,30 +1133,36 @@ $js = <<<JS
                 if (modal) modal.hide();
             },
 
-            createThinkingButton: function(thinkingContent) {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'claude-thinking-btn';
-                btn.setAttribute('data-thinking', thinkingContent);
-                btn.innerHTML = '<i class="bi bi-lightbulb"></i> View thinking process';
-                btn.addEventListener('click', function() {
-                    ClaudeChat.showThinkingModal(thinkingContent);
-                });
-                return btn;
-            },
+            createProcessBlock: function(thinkingContent, processContent) {
+                var details = document.createElement('details');
+                details.className = 'claude-process-block';
+                var summary = document.createElement('summary');
+                summary.innerHTML = '<i class="bi bi-gear-fill"></i> View process';
+                details.appendChild(summary);
+                var body = document.createElement('div');
+                body.className = 'claude-process-block__content';
 
-            showThinkingModal: function(thinkingContent) {
-                var modalThinking = document.getElementById('claude-modal-thinking');
-                var modalThinkingBody = document.getElementById('claude-modal-thinking-body');
-                var modalBody = document.getElementById('claude-modal-body');
-                var modalDots = document.getElementById('claude-modal-dots');
+                if (thinkingContent) {
+                    var thinkingSection = document.createElement('div');
+                    thinkingSection.className = 'claude-process-block__thinking';
+                    thinkingSection.innerHTML = '<div class="claude-process-block__label">Thinking</div>' +
+                        this.renderMarkdown(thinkingContent);
+                    body.appendChild(thinkingSection);
+                }
 
-                modalThinking.classList.remove('d-none');
-                modalThinkingBody.innerHTML = this.renderMarkdown(thinkingContent);
-                modalBody.innerHTML = '';
-                modalDots.classList.add('d-none');
+                if (processContent) {
+                    var reasoningSection = document.createElement('div');
+                    reasoningSection.className = 'claude-process-block__reasoning';
+                    var reasoningHtml = '';
+                    if (thinkingContent)
+                        reasoningHtml += '<div class="claude-process-block__label">Intermediate output</div>';
+                    reasoningHtml += this.renderMarkdown(processContent);
+                    reasoningSection.innerHTML = reasoningHtml;
+                    body.appendChild(reasoningSection);
+                }
 
-                this.openStreamModal();
+                details.appendChild(body);
+                return details;
             },
 
             removeStreamDots: function() {
@@ -1170,17 +1188,19 @@ $js = <<<JS
                 return response.json();
             },
 
-            renderCurrentExchange: function(userContent, claudeContent, meta) {
+            renderCurrentExchange: function(userContent, claudeContent, processContent, meta) {
 
                 var responseEl = document.getElementById('claude-current-response');
 
                 responseEl.innerHTML = '';
-                if (this.streamThinkingBuffer) {
-                    var btn = this.createThinkingButton(this.streamThinkingBuffer);
-                    responseEl.appendChild(btn);
+
+                // Collapsible process section (thinking + intermediate reasoning)
+                if (this.streamThinkingBuffer || processContent) {
+                    var details = this.createProcessBlock(this.streamThinkingBuffer, processContent);
+                    responseEl.appendChild(details);
                 }
 
-                // Render Claude response
+                // Render Claude response (final result only)
                 var claudeDiv = document.createElement('div');
                 claudeDiv.className = 'claude-message claude-message--claude';
 
@@ -1474,6 +1494,7 @@ $js = <<<JS
                 this.historyCounter = 0;
                 this.currentMeta = null;
                 this.currentPromptText = null;
+                this.streamResultText = null;
                 this.maxContext = 200000;
                 this.warningDismissed = false;
                 if (this.renderTimer) {
