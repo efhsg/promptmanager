@@ -747,6 +747,15 @@ $js = <<<JS
                     var block = event.content_block || event.contentBlock || {};
                     this.streamCurrentBlockType = block.type || 'text';
                 } else if (eventType === 'content_block_stop') {
+                    // Ensure the active buffer ends with a newline so consecutive
+                    // blocks don't glue together (e.g. "text### Heading").
+                    if (this.streamCurrentBlockType === 'thinking') {
+                        if (this.streamThinkingBuffer && !this.streamThinkingBuffer.endsWith('\\n'))
+                            this.streamThinkingBuffer += '\\n';
+                    } else {
+                        if (this.streamBuffer && !this.streamBuffer.endsWith('\\n'))
+                            this.streamBuffer += '\\n';
+                    }
                     this.streamCurrentBlockType = null;
                 } else if (eventType === 'content_block_delta') {
                     var delta = event.delta;
@@ -1400,12 +1409,12 @@ $js = <<<JS
             },
 
             normalizeMarkdown: function(text) {
-                // Ensure blank line before ATX headings squished against preceding text.
-                // Only triggers after sentence-ending punctuation or closing markup
-                // to avoid false positives like "C# language".
-                return text.replace(/([\\.\\!\\?\\:\\)\\*\\_\\>])\\n?(#{1,6} )/g, function(m, punct, heading) {
-                    return punct + '\\n\\n' + heading;
-                });
+                // Ensure blank line before ATX headings so marked.js parses them.
+                // 1. Heading on its own line but missing the blank line above it
+                // 2. Heading glued to preceding text with no newline at all (##+ only to avoid C# false positives)
+                return text
+                    .replace(/([^\\n])\\n(#{1,6} )/g, '$1\\n\\n$2')
+                    .replace(/(\\S)(#{2,6} )/g, '$1\\n\\n$2');
             },
 
             markdownToDelta: function(text) {
