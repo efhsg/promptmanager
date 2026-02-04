@@ -297,11 +297,13 @@ class ProjectController extends Controller
     {
         /** @var Project $model */
         $model = $this->findModel($id);
+        $rootDir = $model->root_directory;
 
         return $this->render('claude', [
             'model' => $model,
             'projectList' => $this->projectService->fetchProjectsList(Yii::$app->user->id),
-            'claudeCommands' => $this->loadClaudeCommands($model->root_directory, $model),
+            'claudeCommands' => $this->loadClaudeCommands($rootDir, $model),
+            'gitBranch' => $rootDir ? $this->claudeCliService->getGitBranch($rootDir) : null,
         ]);
     }
 

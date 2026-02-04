@@ -12,6 +12,7 @@ use app\models\ScratchPad;
 /** @var ScratchPad $model */
 /** @var array $projectList */
 /** @var array $claudeCommands */
+/** @var string|null $gitBranch */
 
 QuillAsset::register($this);
 HighlightAsset::register($this);
@@ -31,6 +32,8 @@ $checkConfigUrl = $model->project ? Url::to(['/project/check-claude-config', 'id
 $projectDefaults = $model->project ? $model->project->getClaudeOptions() : [];
 $projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$gitBranchJson = Json::encode($gitBranch, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$projectNameJson = Json::encode($model->project ? $model->project->name : null, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 $permissionModes = [
     '' => '(Use default)',
@@ -63,18 +66,28 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                 ['class' => 'text-decoration-none']) ?>
             <h1 class="h3 mt-2 mb-0"><i class="bi bi-terminal-fill me-2"></i>Claude CLI</h1>
         </div>
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="claude-settings-toggle"
-                data-bs-toggle="collapse" data-bs-target="#claudeSettingsCard" aria-expanded="true">
-            <i class="bi bi-gear"></i> Settings
-        </button>
     </div>
 
     <!-- Section 1: CLI Settings (collapsible) -->
     <div class="card mb-4">
         <div class="collapse show" id="claudeSettingsCard">
-            <div class="card-body">
+            <div class="card-body claude-settings-section">
+                <button type="button" class="claude-settings-collapse-btn" id="claude-settings-toggle"
+                        data-bs-toggle="collapse" data-bs-target="#claudeSettingsCard" aria-expanded="true"
+                        title="Toggle settings">
+                    <i class="bi bi-x-lg"></i>
+                </button>
                 <div id="claude-config-status" class="alert alert-secondary mb-3 d-none">
                     <small><span id="claude-config-status-text">Checking config...</span></small>
+                </div>
+
+                <div class="mb-3">
+                    <?php if ($model->project): ?>
+                    <span class="badge bg-secondary"><i class="bi bi-folder2-open"></i> <?= Html::encode($model->project->name) ?></span>
+                    <?php endif; ?>
+                    <?php if ($gitBranch): ?>
+                    <span class="badge bg-secondary"><i class="bi bi-signpost-split"></i> <?= Html::encode($gitBranch) ?></span>
+                    <?php endif; ?>
                 </div>
 
                 <div class="row g-3">
@@ -158,6 +171,9 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                         </a>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
+                        <button type="button" id="claude-goahead-btn" class="btn btn-outline-primary d-none" title="Send &quot;Proceed&quot; (Alt+G)">
+                            <i class="bi bi-check-lg"></i> Proceed
+                        </button>
                         <div id="claude-summarize-group" class="btn-group d-none">
                             <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary"
                                     title="Summarize conversation and start a new session with the summary">
@@ -187,7 +203,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                         <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
                             <i class="bi bi-arrow-counterclockwise"></i> Last prompt
                         </button>
-                        <button type="button" id="claude-send-btn" class="btn btn-primary" title="Send (Ctrl+Enter)">
+                        <button type="button" id="claude-send-btn" class="btn btn-primary" title="Send (Ctrl+Enter / Alt+S)">
                             <i class="bi bi-send-fill"></i> Send
                         </button>
                     </div>
@@ -456,6 +472,8 @@ $js = <<<JS
             historyCounter: 0,
             projectDefaults: $projectDefaultsJson,
             checkConfigUrl: $checkConfigUrlJson,
+            projectName: $projectNameJson,
+            gitBranch: $gitBranchJson,
             maxContext: 200000,
             warningDismissed: false,
             summarizing: false,
@@ -536,6 +554,7 @@ $js = <<<JS
             setupEventListeners: function() {
                 var self = this;
                 document.getElementById('claude-send-btn').addEventListener('click', function() { self.send(); });
+                document.getElementById('claude-goahead-btn').addEventListener('click', function() { self.sendFixedText('Proceed'); });
                 document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
                 document.getElementById('claude-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
                 document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
@@ -557,19 +576,22 @@ $js = <<<JS
                         self.switchToQuill(null);
                 });
 
-                document.getElementById('claude-followup-textarea').addEventListener('keydown', function(e) {
+                var handleEditorKeydown = function(e) {
                     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                         e.preventDefault();
                         self.send();
                     }
-                });
-
-                quill.root.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    if (e.altKey && e.key.toLowerCase() === 's') {
                         e.preventDefault();
                         self.send();
                     }
-                });
+                    if (e.altKey && e.key.toLowerCase() === 'g') {
+                        e.preventDefault();
+                        self.sendFixedText('Proceed');
+                    }
+                };
+                document.getElementById('claude-followup-textarea').addEventListener('keydown', handleEditorKeydown);
+                quill.root.addEventListener('keydown', handleEditorKeydown);
 
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
@@ -660,6 +682,7 @@ $js = <<<JS
                 }
 
                 sendBtn.disabled = true;
+                document.getElementById('claude-goahead-btn').disabled = true;
 
                 // Move the active response into its accordion item before starting a new exchange
                 this.moveActiveResponseToAccordion();
@@ -738,6 +761,14 @@ $js = <<<JS
                 .catch(function(error) {
                     self.onStreamError('Failed to execute Claude CLI: ' + error.message);
                 });
+            },
+
+            sendFixedText: function(text) {
+                if (this.inputMode === 'quill')
+                    quill.setText(text);
+                else
+                    document.getElementById('claude-followup-textarea').value = text;
+                this.send();
             },
 
             // --- Stream event handlers ---
@@ -859,6 +890,7 @@ $js = <<<JS
              */
             cleanupStreamUI: function() {
                 document.getElementById('claude-send-btn').disabled = false;
+                document.getElementById('claude-goahead-btn').disabled = false;
                 this.removeStreamDots();
                 this.showCancelButton(false);
                 this.closeStreamModal();
@@ -912,6 +944,8 @@ $js = <<<JS
                     { role: 'user', content: userContent },
                     { role: 'claude', content: claudeContent, processContent: processContent || '' }
                 );
+
+                document.getElementById('claude-goahead-btn').classList.remove('d-none');
 
                 var pctUsed = Math.min(100, Math.round(contextUsed / this.maxContext * 100));
                 this.lastNumTurns = meta.num_turns || null;
@@ -1309,18 +1343,14 @@ $js = <<<JS
 
             formatMeta: function(meta) {
                 var parts = [];
-                if (meta.duration_ms)
-                    parts.push((meta.duration_ms / 1000).toFixed(1) + 's');
-                if (meta.context_used != null || meta.output_tokens != null) {
-                    var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
-                    parts.push(fmt(meta.context_used) + '/' + fmt(meta.output_tokens));
+                if (meta.context_used != null) {
                     var maxContext = this.maxContext || 200000;
                     var pctUsed = Math.min(100, Math.round((meta.context_used || 0) / maxContext * 100));
                     parts.push(pctUsed + '% context used');
                 }
-                if (meta.num_turns)
-                    parts.push(meta.num_turns + (meta.num_turns === 1 ? ' turn' : ' turns'));
                 if (meta.model) parts.push(meta.model);
+                if (meta.duration_ms)
+                    parts.push((meta.duration_ms / 1000).toFixed(1) + 's');
                 return parts.join(' \u00b7 ');
             },
 
@@ -1655,6 +1685,7 @@ $js = <<<JS
                 activeResponseContainer.classList.add('d-none');
 
                 document.getElementById('claude-copy-all-wrapper').classList.add('d-none');
+                document.getElementById('claude-goahead-btn').classList.add('d-none');
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
                 document.getElementById('claude-summarize-group').classList.add('d-none');
                 this.updateSummarizeButtonColor(0);
@@ -1710,6 +1741,12 @@ $js = <<<JS
                 var permEl = document.getElementById('claude-permission-mode');
 
                 var parts = [];
+                if (this.projectName)
+                    parts.push(this.projectName);
+
+                if (this.gitBranch)
+                    parts.push('\u2387 ' + this.gitBranch);
+
                 var modelText = modelEl.options[modelEl.selectedIndex]?.text || '';
                 if (modelText && modelText !== '(Use default)') parts.push(modelText);
                 else parts.push('Default model');
@@ -1812,6 +1849,7 @@ $js = <<<JS
                 summarizeAutoBtn.disabled = true;
                 summarizeWarningBtn.disabled = true;
                 sendBtn.disabled = true;
+                document.getElementById('claude-goahead-btn').disabled = true;
                 summarizeAutoBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Summarizing…';
 
                 fetch('$summarizeUrl', {
@@ -1869,6 +1907,7 @@ $js = <<<JS
                 summarizeAutoBtn.disabled = false;
                 summarizeWarningBtn.disabled = false;
                 sendBtn.disabled = false;
+                document.getElementById('claude-goahead-btn').disabled = false;
                 summarizeAutoBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session';
             },
 

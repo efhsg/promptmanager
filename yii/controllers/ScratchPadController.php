@@ -431,10 +431,13 @@ class ScratchPadController extends Controller
             throw new NotFoundHttpException('Claude CLI requires a project.');
         }
 
+        $rootDir = $model->project->root_directory;
+
         return $this->render('claude', [
             'model' => $model,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
-            'claudeCommands' => $this->loadClaudeCommands($model->project->root_directory, $model->project),
+            'claudeCommands' => $this->loadClaudeCommands($rootDir, $model->project),
+            'gitBranch' => $rootDir ? $this->claudeCliService->getGitBranch($rootDir) : null,
         ]);
     }
 

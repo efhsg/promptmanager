@@ -679,4 +679,25 @@ class ClaudeCliService
 
         return 'unknown';
     }
+
+    /**
+     * Detects the current git branch for a host path.
+     */
+    public function getGitBranch(string $hostPath): ?string
+    {
+        $containerPath = $this->translatePath($hostPath);
+
+        if (!is_dir($containerPath))
+            return null;
+
+        $command = 'git -C ' . escapeshellarg($containerPath) . ' rev-parse --abbrev-ref HEAD 2>/dev/null';
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+
+        if ($exitCode !== 0 || empty($output[0]))
+            return null;
+
+        return trim($output[0]);
+    }
 }

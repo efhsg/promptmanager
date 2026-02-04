@@ -13,6 +13,36 @@
     background: #e9ecef;
 }
 
+.claude-chat-page .claude-settings-section {
+    position: relative;
+    width: 100%;
+}
+
+.claude-chat-page .claude-settings-collapse-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    border-radius: 0.25rem;
+    background: transparent;
+    color: #adb5bd;
+    font-size: 0.6rem;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+}
+
+.claude-chat-page .claude-settings-collapse-btn:hover {
+    color: #495057;
+    background: #e9ecef;
+}
+
 .claude-chat-page .claude-prompt-section {
     position: relative;
     width: 100%;

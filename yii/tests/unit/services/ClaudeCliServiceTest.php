@@ -643,6 +643,63 @@ class ClaudeCliServiceTest extends Unit
         }
     }
 
+    public function testGetGitBranchReturnsNullWhenDirectoryDoesNotExist(): void
+    {
+        $service = new ClaudeCliService();
+        $this->assertNull($service->getGitBranch('/nonexistent/path/' . uniqid()));
+    }
+
+    public function testGetGitBranchReturnsNullWhenNotAGitRepo(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/claude_git_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+
+        try {
+            $service = new ClaudeCliService();
+            $this->assertNull($service->getGitBranch($tmpDir));
+        } finally {
+            @rmdir($tmpDir);
+        }
+    }
+
+    public function testGetGitBranchReturnsBranchNameForGitRepo(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/claude_git_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+
+        exec('git -C ' . escapeshellarg($tmpDir) . ' init -b test-branch 2>/dev/null', $out, $exitCode);
+        if ($exitCode !== 0) {
+            // Older git without -b flag
+            exec('git -C ' . escapeshellarg($tmpDir) . ' init 2>/dev/null');
+            exec('git -C ' . escapeshellarg($tmpDir) . ' checkout -b test-branch 2>/dev/null');
+        }
+
+        try {
+            $service = new ClaudeCliService();
+            $branch = $service->getGitBranch($tmpDir);
+            $this->assertSame('test-branch', $branch);
+        } finally {
+            // Clean up .git directory and tmpDir
+            $this->removeDirectory($tmpDir);
+        }
+    }
+
+    private function removeDirectory(string $dir): void
+    {
+        if (!is_dir($dir))
+            return;
+
+        $items = scandir($dir);
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..')
+                continue;
+
+            $path = $dir . '/' . $item;
+            is_dir($path) ? $this->removeDirectory($path) : @unlink($path);
+        }
+        @rmdir($dir);
+    }
+
     private function buildAssistantLine(array $usage, bool $isSidechain = false): string
     {
         $line = [

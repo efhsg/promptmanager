@@ -81,6 +81,13 @@ EOF
 # Set max_execution_time
 RUN echo "max_execution_time=3600" > /usr/local/etc/php/conf.d/custom.ini
 
+# Enable PHP error logging to a writable runtime file
+RUN mkdir -p /var/www/html/yii/runtime/logs && \
+    cat <<'EOF' > /usr/local/etc/php/conf.d/error-logging.ini
+log_errors=On
+error_log=/var/www/html/yii/runtime/logs/php_errors.log
+EOF
+
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
