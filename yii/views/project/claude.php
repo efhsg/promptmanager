@@ -453,6 +453,7 @@ $js = <<<JS
 
         window.ClaudeChat = {
             sessionId: null,
+            streamToken: null,
             messages: [],
             lastSentDelta: null,
             inputMode: 'quill',
@@ -629,6 +630,9 @@ $js = <<<JS
                 var self = this;
                 var options = this.getOptions();
                 var sendBtn = document.getElementById('claude-send-btn');
+
+                this.streamToken = crypto.randomUUID();
+                options.streamToken = this.streamToken;
 
                 if (this.sessionId)
                     options.sessionId = this.sessionId;
@@ -968,7 +972,8 @@ $js = <<<JS
                         'Content-Type': 'application/json',
                         'X-CSRF-Token': yii.getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    },
+                    body: JSON.stringify({ streamToken: this.streamToken })
                 }).catch(function(e) { console.error('Cancel request failed:', e); });
 
                 // 3. Finalize UI with what we have so far
@@ -1624,6 +1629,7 @@ $js = <<<JS
 
             newSession: function() {
                 this.sessionId = null;
+                this.streamToken = null;
                 this.messages = [];
                 this.lastSentDelta = null;
                 this.historyCounter = 0;

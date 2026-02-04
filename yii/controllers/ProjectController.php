@@ -387,7 +387,8 @@ class ProjectController extends Controller
                 self::CLAUDE_TIMEOUT,
                 $prepared['options'],
                 $prepared['project'],
-                $prepared['sessionId']
+                $prepared['sessionId'],
+                $prepared['streamToken']
             );
 
             if ($result['error'] !== '') {
@@ -421,7 +422,11 @@ class ProjectController extends Controller
         // Validate ownership via findModel
         $this->findModel($id);
 
-        $cancelled = $this->claudeCliService->cancelRunningProcess();
+        $requestData = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        $raw = $requestData['streamToken'] ?? null;
+        $streamToken = $this->sanitizeStreamToken(is_string($raw) ? $raw : null);
+
+        $cancelled = $this->claudeCliService->cancelRunningProcess($streamToken);
 
         return [
             'success' => true,
@@ -484,7 +489,7 @@ class ProjectController extends Controller
     }
 
     /**
-     * @return array{markdown: string, options: array, workingDirectory: string, project: Project, sessionId: ?string}|array{error: array}
+     * @return array{markdown: string, options: array, workingDirectory: string, project: Project, sessionId: ?string, streamToken: ?string}|array{error: array}
      */
     private function prepareClaudeRequest(Project $model): array
     {
@@ -531,6 +536,9 @@ class ProjectController extends Controller
             'workingDirectory' => $workingDirectory,
             'project' => $model,
             'sessionId' => $requestOptions['sessionId'] ?? null,
+            'streamToken' => $this->sanitizeStreamToken(
+                is_string($requestOptions['streamToken'] ?? null) ? $requestOptions['streamToken'] : null
+            ),
         ];
     }
 
@@ -555,6 +563,17 @@ class ProjectController extends Controller
         echo "data: " . json_encode(['type' => 'server_error', 'error' => $message, 'exitCode' => 1]) . "\n\n";
         echo "data: [DONE]\n\n";
         flush();
+    }
+
+    private function sanitizeStreamToken(?string $token): ?string
+    {
+        if ($token === null) {
+            return null;
+        }
+
+        return preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i', $token)
+            ? $token
+            : null;
     }
 
     private function buildSummarizerSystemPrompt(): string

@@ -503,6 +503,56 @@ class ClaudeCliServiceTest extends Unit
         $this->assertFalse(Yii::$app->cache->get($cacheKey));
     }
 
+    public function testStoreProcessPidWithStreamTokenUsesTokenInKey(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+
+        $storeMethod = $reflection->getMethod('storeProcessPid');
+        $storeMethod->setAccessible(true);
+        $storeMethod->invoke($service, 11111, 'token-abc');
+
+        $userId = Yii::$app->user->id;
+        $scopedKey = 'claude_cli_pid_' . $userId . '_token-abc';
+        $globalKey = 'claude_cli_pid_' . $userId;
+
+        $this->assertSame(11111, Yii::$app->cache->get($scopedKey));
+        $this->assertFalse(Yii::$app->cache->get($globalKey));
+
+        $clearMethod = $reflection->getMethod('clearProcessPid');
+        $clearMethod->setAccessible(true);
+        $clearMethod->invoke($service, 'token-abc');
+
+        $this->assertFalse(Yii::$app->cache->get($scopedKey));
+    }
+
+    public function testConcurrentStreamTokensDoNotCollide(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+
+        $storeMethod = $reflection->getMethod('storeProcessPid');
+        $storeMethod->setAccessible(true);
+
+        $storeMethod->invoke($service, 11111, 'token-a');
+        $storeMethod->invoke($service, 22222, 'token-b');
+
+        $userId = Yii::$app->user->id;
+
+        $this->assertSame(11111, Yii::$app->cache->get('claude_cli_pid_' . $userId . '_token-a'));
+        $this->assertSame(22222, Yii::$app->cache->get('claude_cli_pid_' . $userId . '_token-b'));
+
+        $clearMethod = $reflection->getMethod('clearProcessPid');
+        $clearMethod->setAccessible(true);
+        $clearMethod->invoke($service, 'token-a');
+
+        $this->assertFalse(Yii::$app->cache->get('claude_cli_pid_' . $userId . '_token-a'));
+        $this->assertSame(22222, Yii::$app->cache->get('claude_cli_pid_' . $userId . '_token-b'));
+
+        $clearMethod->invoke($service, 'token-b');
+        $this->assertFalse(Yii::$app->cache->get('claude_cli_pid_' . $userId . '_token-b'));
+    }
+
     public function testLoadCommandsFromDirectoryReturnsEmptyWhenNull(): void
     {
         $service = new ClaudeCliService();

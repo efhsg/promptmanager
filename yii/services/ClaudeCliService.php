@@ -183,7 +183,8 @@ class ClaudeCliService
         int $timeout = 3600,
         array $options = [],
         ?Project $project = null,
-        ?string $sessionId = null
+        ?string $sessionId = null,
+        ?string $streamToken = null
     ): array {
         $effectiveWorkDir = $this->determineWorkingDirectory($workingDirectory, $project);
         $containerPath = $this->translatePath($effectiveWorkDir);
@@ -209,9 +210,9 @@ class ClaudeCliService
         fwrite($pipes[0], $prompt);
         fclose($pipes[0]);
 
-        // Store PID in session so the cancel endpoint can terminate the process
+        // Store PID in cache so the cancel endpoint can terminate the process
         $status = proc_get_status($process);
-        $this->storeProcessPid($status['pid']);
+        $this->storeProcessPid($status['pid'], $streamToken);
 
         stream_set_blocking($pipes[1], true);
         stream_set_timeout($pipes[1], 30);
@@ -227,7 +228,7 @@ class ClaudeCliService
                 fclose($pipes[1]);
                 fclose($pipes[2]);
                 proc_close($process);
-                $this->clearProcessPid();
+                $this->clearProcessPid($streamToken);
                 return ['exitCode' => 124, 'error' => 'Command timed out after ' . $timeout . ' seconds'];
             }
 
@@ -259,7 +260,7 @@ class ClaudeCliService
         $status = proc_get_status($process);
         $exitCode = $cancelled ? 130 : ($status['running'] ? -1 : $status['exitcode']);
         proc_close($process);
-        $this->clearProcessPid();
+        $this->clearProcessPid($streamToken);
 
         return ['exitCode' => $exitCode, 'error' => trim($error)];
     }
@@ -270,14 +271,14 @@ class ClaudeCliService
      *
      * @return bool True if a process was found and signalled
      */
-    public function cancelRunningProcess(): bool
+    public function cancelRunningProcess(?string $streamToken = null): bool
     {
         if (!function_exists('posix_kill')) {
             Yii::warning('posix_kill not available — cannot cancel Claude CLI process', __METHOD__);
             return false;
         }
 
-        $key = 'claude_cli_pid_' . Yii::$app->user->id;
+        $key = $this->buildPidCacheKey($streamToken);
         $pid = Yii::$app->cache->get($key);
 
         if ($pid === false) {
@@ -298,16 +299,23 @@ class ClaudeCliService
         return true;
     }
 
-    private function storeProcessPid(int $pid): void
+    private function storeProcessPid(int $pid, ?string $streamToken = null): void
     {
-        $key = 'claude_cli_pid_' . Yii::$app->user->id;
+        $key = $this->buildPidCacheKey($streamToken);
         Yii::$app->cache->set($key, $pid, 3900);
     }
 
-    private function clearProcessPid(): void
+    private function clearProcessPid(?string $streamToken = null): void
     {
-        $key = 'claude_cli_pid_' . Yii::$app->user->id;
+        $key = $this->buildPidCacheKey($streamToken);
         Yii::$app->cache->delete($key);
+    }
+
+    private function buildPidCacheKey(?string $streamToken): string
+    {
+        $base = 'claude_cli_pid_' . Yii::$app->user->id;
+
+        return $streamToken !== null ? $base . '_' . $streamToken : $base;
     }
 
     /**
