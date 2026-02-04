@@ -340,7 +340,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 <?php
 $contentJson = Json::encode($model->content ?? '{"ops":[]}', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $claudeCommandsJson = Json::encode($claudeCommands, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
-$csrfToken = Yii::$app->request->csrfToken;
 $js = <<<JS
     (function() {
         var quill = new Quill('#claude-quill-editor', {
@@ -686,7 +685,7 @@ $js = <<<JS
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '$csrfToken',
+                        'X-CSRF-Token': yii.getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify(options)
@@ -963,7 +962,7 @@ $js = <<<JS
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '$csrfToken',
+                        'X-CSRF-Token': yii.getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     }
                 }).catch(function(e) { console.error('Cancel request failed:', e); });
@@ -1808,7 +1807,7 @@ $js = <<<JS
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '$csrfToken',
+                        'X-CSRF-Token': yii.getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({ conversation: conversationText })
@@ -2100,7 +2099,7 @@ $js = <<<JS
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': '$csrfToken',
+                        'X-CSRF-Token': yii.getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify({

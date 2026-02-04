@@ -99,6 +99,7 @@ $config = [
         ],
         'session' => [
             'class' => 'yii\web\Session',
+            'timeout' => 3600 * 4, // 4 hours - allows long Claude CLI sessions
         ],
         'mailer' => [
             'class' => Mailer::class,
