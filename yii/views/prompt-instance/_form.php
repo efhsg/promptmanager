@@ -35,8 +35,9 @@ $this->registerJsVar('quillUrlConfig', [
     'importMarkdownUrl' => Url::to(['/scratch-pad/import-markdown']),
 ]);
 
-$projectCopyFormat = (\Yii::$app->projectContext)->getCurrentProject()?->getPromptInstanceCopyFormatEnum()->value
-    ?? CopyType::MD->value;
+$currentProject = (\Yii::$app->projectContext)->getCurrentProject();
+$projectCopyFormat = $currentProject?->getPromptInstanceCopyFormatEnum()->value ?? CopyType::MD->value;
+$claudeUrl = $currentProject ? Url::to(['/project/claude', 'id' => $currentProject->id]) : null;
 ?>
 
 <div class="prompt-instance-form focus-on-first-field">
@@ -187,6 +188,12 @@ echo $form->field($model, 'template_id')
             'class' => 'btn btn-secondary me-2 d-none',
             'id' => 'edit-button',
         ]) ?>
+        <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
+            'class' => 'btn btn-primary me-2 d-none',
+            'id' => 'claude-button',
+            'title' => $claudeUrl ? 'Talk to Claude' : 'Project required',
+            'disabled' => !$claudeUrl,
+        ]) ?>
         <?= Html::submitButton('Next', [
             'class' => 'btn btn-primary',
             'id' => 'form-submit-button',
@@ -202,6 +209,7 @@ $script = <<<'JS'
             var $nextButton = $('#form-submit-button');
             var $prevButton = $('#previous-button');
             var $editButton = $('#edit-button');
+            var $claudeButton = $('#claude-button');
             var $finalPromptContainer = $('#final-prompt-container');
             var $labelContainer = $('#label-input-container');
             var $labelInput = $('#prompt-instance-label');
@@ -213,14 +221,17 @@ $script = <<<'JS'
                     $nextButton.text('Next').attr('data-action', 'next');
                     $prevButton.addClass('d-none');
                     $editButton.addClass('d-none');
+                    $claudeButton.addClass('d-none');
                 } else if (step === 2) {
                     $nextButton.text('Next').attr('data-action', 'next');
                     $prevButton.removeClass('d-none');
                     $editButton.addClass('d-none');
+                    $claudeButton.addClass('d-none');
                 } else if (step === 3) {
                     $nextButton.text('Save').attr('data-action', 'save');
                     $prevButton.removeClass('d-none');
                     $editButton.removeClass('d-none');
+                    $claudeButton.removeClass('d-none');
                 }
             }
 
@@ -481,6 +492,24 @@ $script = <<<'JS'
                         $(this).text('Edit');
                 }
             });
+
+            $claudeButton.on('click', function() {
+                if ($(this).prop('disabled')) return;
+
+                const deltaObj = (typeof quillEditor !== 'undefined' && quillEditor)
+                    ? quillEditor.getContents()
+                    : $finalPromptContainer.data('deltaObj') || {};
+
+                if (!deltaObj || !deltaObj.ops || !deltaObj.ops.length) {
+                    alert('No prompt content to send to Claude.');
+                    return;
+                }
+
+                sessionStorage.setItem('claudePromptContent', JSON.stringify(deltaObj));
+                window.location.href = claudeUrl;
+            });
             JS;
+$claudeUrlJs = json_encode($claudeUrl, JSON_UNESCAPED_SLASHES);
+$this->registerJs("var claudeUrl = $claudeUrlJs;", View::POS_HEAD);
 $this->registerJs($script);
 ?>

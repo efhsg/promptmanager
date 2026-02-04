@@ -38,6 +38,11 @@ return [
                 'setCurrent' => 'setCurrentProject',
                 'checkClaudeConfig' => 'viewProject',
                 'claudeCommands' => 'viewProject',
+                'claude' => 'viewProject',
+                'runClaude' => 'viewProject',
+                'streamClaude' => 'viewProject',
+                'cancelClaude' => 'viewProject',
+                'summarizeSession' => 'viewProject',
             ],
             'permissions' => [
                 'createProject' => [

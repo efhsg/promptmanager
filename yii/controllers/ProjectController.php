@@ -8,6 +8,7 @@ use app\models\ProjectSearch;
 use app\services\ClaudeCliService;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
+use RuntimeException;
 use Throwable;
 use Yii;
 use yii\db\ActiveRecord;
@@ -25,6 +26,8 @@ use yii\web\Response;
  */
 class ProjectController extends Controller
 {
+    private const CLAUDE_TIMEOUT = 3600;
+
     private ProjectContext $projectContext;
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
@@ -285,6 +288,310 @@ class ProjectController extends Controller
     }
 
     /**
+     * Renders Claude CLI chat interface for a project.
+     * Initial content can be provided via sessionStorage (set by prompt-instance create).
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionClaude(int $id): string
+    {
+        /** @var Project $model */
+        $model = $this->findModel($id);
+
+        return $this->render('claude', [
+            'model' => $model,
+            'projectList' => $this->projectService->fetchProjectsList(Yii::$app->user->id),
+            'claudeCommands' => $this->loadClaudeCommands($model->root_directory, $model),
+        ]);
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionRunClaude(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        /** @var Project $model */
+        $model = $this->findModel($id);
+        $prepared = $this->prepareClaudeRequest($model);
+
+        if (is_array($prepared['error'] ?? null)) {
+            return $prepared['error'];
+        }
+
+        $result = $this->claudeCliService->execute(
+            $prepared['markdown'],
+            $prepared['workingDirectory'],
+            self::CLAUDE_TIMEOUT,
+            $prepared['options'],
+            $prepared['project'],
+            $prepared['sessionId']
+        );
+
+        return [
+            'success' => $result['success'],
+            'output' => $result['output'],
+            'error' => $result['error'],
+            'exitCode' => $result['exitCode'],
+            'duration_ms' => $result['duration_ms'] ?? null,
+            'model' => $result['model'] ?? null,
+            'input_tokens' => $result['input_tokens'] ?? null,
+            'cache_tokens' => $result['cache_tokens'] ?? null,
+            'output_tokens' => $result['output_tokens'] ?? null,
+            'context_window' => $result['context_window'] ?? null,
+            'num_turns' => $result['num_turns'] ?? null,
+            'tool_uses' => $result['tool_uses'] ?? [],
+            'configSource' => $result['configSource'] ?? null,
+            'sessionId' => $result['session_id'] ?? null,
+            'requestedPath' => $result['requestedPath'] ?? null,
+            'effectivePath' => $result['effectivePath'] ?? null,
+            'usedFallback' => $result['usedFallback'] ?? null,
+            'promptMarkdown' => $prepared['markdown'],
+        ];
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionStreamClaude(int $id): void
+    {
+        /** @var Project $model */
+        $model = $this->findModel($id);
+        $prepared = $this->prepareClaudeRequest($model);
+
+        if (isset($prepared['error'])) {
+            $this->sendSseError($prepared['error']['error']);
+            return;
+        }
+
+        $markdown = $prepared['markdown'];
+
+        Yii::$app->session->close();
+        ignore_user_abort(false);
+        $this->beginSseResponse();
+
+        echo "data: " . json_encode(['type' => 'prompt_markdown', 'markdown' => $markdown]) . "\n\n";
+        flush();
+
+        $onLine = function (string $line): void {
+            echo "data: " . $line . "\n\n";
+            flush();
+        };
+
+        try {
+            $result = $this->claudeCliService->executeStreaming(
+                $markdown,
+                $prepared['workingDirectory'],
+                $onLine,
+                self::CLAUDE_TIMEOUT,
+                $prepared['options'],
+                $prepared['project'],
+                $prepared['sessionId']
+            );
+
+            if ($result['error'] !== '') {
+                echo "data: " . json_encode([
+                    'type' => 'server_error',
+                    'error' => $result['error'],
+                    'exitCode' => $result['exitCode'],
+                ]) . "\n\n";
+                flush();
+            }
+        } catch (RuntimeException $e) {
+            echo "data: " . json_encode([
+                'type' => 'server_error',
+                'error' => $e->getMessage(),
+                'exitCode' => 1,
+            ]) . "\n\n";
+            flush();
+        }
+
+        echo "data: [DONE]\n\n";
+        flush();
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionCancelClaude(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        // Validate ownership via findModel
+        $this->findModel($id);
+
+        $cancelled = $this->claudeCliService->cancelRunningProcess();
+
+        return [
+            'success' => true,
+            'cancelled' => $cancelled,
+        ];
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionSummarizeSession(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        /** @var Project $model */
+        $model = $this->findModel($id);
+
+        $requestData = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestData)) {
+            return ['success' => false, 'error' => 'Invalid request format.'];
+        }
+        $conversation = $requestData['conversation'] ?? '';
+
+        if (!is_string($conversation) || trim($conversation) === '') {
+            return ['success' => false, 'error' => 'Conversation text is empty.'];
+        }
+
+        $workingDirectory = !empty($model->root_directory) ? $model->root_directory : '';
+
+        $options = [
+            'model' => 'sonnet',
+            'permissionMode' => 'plan',
+            'appendSystemPrompt' => $this->buildSummarizerSystemPrompt(),
+        ];
+
+        $result = $this->claudeCliService->execute(
+            $conversation,
+            $workingDirectory,
+            120,
+            $options,
+            $model,
+            null
+        );
+
+        $output = $result['output'] ?? '';
+        if (!$result['success'] || !is_string($output) || trim($output) === '') {
+            Yii::warning('Summarize session failed: ' . ($result['error'] ?? 'empty output'), __METHOD__);
+            return [
+                'success' => false,
+                'error' => $result['error'] ?: 'Summarization returned empty output.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'summary' => $output,
+            'duration_ms' => $result['duration_ms'] ?? null,
+            'model' => $result['model'] ?? null,
+        ];
+    }
+
+    /**
+     * @return array{markdown: string, options: array, workingDirectory: string, project: Project, sessionId: ?string}|array{error: array}
+     */
+    private function prepareClaudeRequest(Project $model): array
+    {
+        $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestOptions)) {
+            return ['error' => ['success' => false, 'error' => 'Invalid request format.']];
+        }
+
+        $customPrompt = $requestOptions['prompt'] ?? null;
+        $contentDelta = $requestOptions['contentDelta'] ?? null;
+
+        if (is_array($contentDelta)) {
+            $contentDelta = json_encode($contentDelta);
+        }
+
+        if ($customPrompt !== null) {
+            $markdown = $customPrompt;
+        } elseif ($contentDelta !== null) {
+            $markdown = $this->claudeCliService->convertToMarkdown($contentDelta);
+        } else {
+            return ['error' => ['success' => false, 'error' => 'No prompt content provided.']];
+        }
+
+        if (trim($markdown) === '') {
+            return ['error' => ['success' => false, 'error' => 'Prompt is empty.']];
+        }
+
+        $projectDefaults = $model->getClaudeOptions();
+
+        $allowedKeys = ['model', 'permissionMode', 'appendSystemPrompt', 'allowedTools', 'disallowedTools'];
+        $options = array_merge(
+            $projectDefaults,
+            array_filter(
+                array_intersect_key($requestOptions, array_flip($allowedKeys)),
+                fn($v) => $v !== null && $v !== ''
+            )
+        );
+
+        $workingDirectory = !empty($model->root_directory) ? $model->root_directory : '';
+
+        return [
+            'markdown' => $markdown,
+            'options' => $options,
+            'workingDirectory' => $workingDirectory,
+            'project' => $model,
+            'sessionId' => $requestOptions['sessionId'] ?? null,
+        ];
+    }
+
+    private function beginSseResponse(): void
+    {
+        $response = Yii::$app->response;
+        $response->format = Response::FORMAT_RAW;
+        $response->headers->set('Content-Type', 'text/event-stream');
+        $response->headers->set('Cache-Control', 'no-cache');
+        $response->headers->set('Connection', 'keep-alive');
+        $response->headers->set('X-Accel-Buffering', 'no');
+        $response->send();
+
+        while (ob_get_level() > 0) {
+            ob_end_flush();
+        }
+    }
+
+    private function sendSseError(string $message): void
+    {
+        $this->beginSseResponse();
+        echo "data: " . json_encode(['type' => 'server_error', 'error' => $message, 'exitCode' => 1]) . "\n\n";
+        echo "data: [DONE]\n\n";
+        flush();
+    }
+
+    private function buildSummarizerSystemPrompt(): string
+    {
+        return <<<'PROMPT'
+            You are a conversation summarizer. Your task is to produce a structured summary
+            of the conversation provided. The summary will be used to seed a new chat session,
+            so it must contain enough context for the assistant to continue the work seamlessly.
+
+            Produce the summary in the following markdown format:
+
+            ## Context & Goal
+            [What the user is trying to accomplish]
+
+            ## Decisions Made
+            [Key decisions, conclusions, and agreements reached]
+
+            ## Code Changes & Artifacts
+            [File paths modified/created, key code snippets, architectural choices.
+            Include actual filenames and brief descriptions.]
+
+            ## Current State
+            [What has been completed. What is working. Test results.]
+
+            ## Open Items & Next Steps
+            [Unresolved questions, pending tasks, known issues, what to do next]
+
+            Rules:
+            - Be concise but semantically rich — preserve all actionable information
+            - Include specific file paths, function names, and technical details
+            - Do not include pleasantries or conversational filler
+            - Do not include full code — only key snippets essential for context
+            - The summary must be self-contained for a reader with no prior context
+            PROMPT;
+    }
+
+    /**
      * @throws NotFoundHttpException
      */
     protected function findModel(int $id): ActiveRecord
@@ -299,5 +606,45 @@ class ProjectController extends Controller
     {
         $claudeOptions = Yii::$app->request->post('claude_options', []);
         $model->setClaudeOptions($claudeOptions);
+    }
+
+    private function loadClaudeCommands(?string $rootDirectory, Project $project): array
+    {
+        $commands = $this->claudeCliService->loadCommandsFromDirectory($rootDirectory);
+        if ($commands === []) {
+            return [];
+        }
+
+        $blacklist = $project->getClaudeCommandBlacklist();
+        if ($blacklist !== []) {
+            $commands = array_diff_key($commands, array_flip($blacklist));
+        }
+
+        $groups = $project->getClaudeCommandGroups();
+        if ($groups === []) {
+            return $commands;
+        }
+
+        $grouped = [];
+        $ungrouped = [];
+        foreach ($commands as $cmd => $desc) {
+            $placed = false;
+            foreach ($groups as $groupName => $members) {
+                if (in_array($cmd, $members, true)) {
+                    $grouped[$groupName][$cmd] = $desc;
+                    $placed = true;
+                    break;
+                }
+            }
+            if (!$placed) {
+                $ungrouped[$cmd] = $desc;
+            }
+        }
+
+        if ($ungrouped !== []) {
+            $grouped['Other'] = $ungrouped;
+        }
+
+        return $grouped;
     }
 }
