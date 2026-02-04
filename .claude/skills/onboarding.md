@@ -58,7 +58,7 @@ docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interact
 | `/refactor` | Refactor code without behavior change |
 | `/finalize-changes` | Lint, test, prepare commit |
 | `/onboarding` | Show this quick start guide |
-| `/cp` | Commit and push |
+| `/commit-push` | Commit and push |
 
 Run `/help` for full command list.
 

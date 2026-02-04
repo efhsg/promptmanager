@@ -72,7 +72,7 @@ Commands are thin executable wrappers that invoke skills:
 | `/improve-prompt` | `skills/improve-prompt.md` | Improve agent prompt file |
 | `/audit-config` | (workflow) | Audit config completeness and consistency |
 | `/finalize-changes` | (workflow) | Lint, test, commit prep |
-| `/cp` | (workflow) | Commit and push to origin |
+| `/commit-push` | (workflow) | Commit and push to origin |
 | `/analyze-codebase` | (workflow) | Generate documentation |
 | `/refactor-plan` | (workflow) | Create refactoring plan |
 | `/switch-db` | (workflow) | Switch database profile (local/remote/status) |

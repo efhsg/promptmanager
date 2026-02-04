@@ -29,7 +29,7 @@ No migration. Add two new keys to the existing `claude_options` JSON column:
                      "new-migration", "new-model", "new-search", "new-service",
                      "new-test", "new-tests-staged"],
     "Review": ["check-standards", "refactor", "refactor-plan", "review-changes", "triage-review"],
-    "Git": ["cp", "finalize-changes"]
+    "Git": ["commit-push", "finalize-changes"]
   }
 }
 ```
