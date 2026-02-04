@@ -503,6 +503,96 @@ class ClaudeCliServiceTest extends Unit
         $this->assertFalse(Yii::$app->cache->get($cacheKey));
     }
 
+    public function testLoadCommandsFromDirectoryReturnsEmptyWhenNull(): void
+    {
+        $service = new ClaudeCliService();
+        $this->assertSame([], $service->loadCommandsFromDirectory(null));
+    }
+
+    public function testLoadCommandsFromDirectoryReturnsEmptyWhenBlank(): void
+    {
+        $service = new ClaudeCliService();
+        $this->assertSame([], $service->loadCommandsFromDirectory('   '));
+    }
+
+    public function testLoadCommandsFromDirectoryReturnsEmptyWhenNoCommandsDir(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/claude_cmd_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+
+        try {
+            $service = new ClaudeCliService();
+            $this->assertSame([], $service->loadCommandsFromDirectory($tmpDir));
+        } finally {
+            @rmdir($tmpDir);
+        }
+    }
+
+    public function testLoadCommandsFromDirectoryScansMarkdownFiles(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/claude_cmd_test_' . uniqid();
+        $commandsDir = $tmpDir . '/.claude/commands';
+        mkdir($commandsDir, 0o755, true);
+
+        file_put_contents($commandsDir . '/review.md', "---\ndescription: Review code changes\n---\n# Review");
+        file_put_contents($commandsDir . '/deploy.md', "---\ndescription: Deploy to production\n---\n# Deploy");
+        file_put_contents($commandsDir . '/plain.md', "# No frontmatter here");
+
+        try {
+            $service = new ClaudeCliService();
+            $result = $service->loadCommandsFromDirectory($tmpDir);
+
+            $this->assertCount(3, $result);
+            // Sorted alphabetically
+            $keys = array_keys($result);
+            $this->assertSame(['deploy', 'plain', 'review'], $keys);
+            $this->assertSame('Deploy to production', $result['deploy']);
+            $this->assertSame('Review code changes', $result['review']);
+            $this->assertSame('', $result['plain']);
+        } finally {
+            @unlink($commandsDir . '/review.md');
+            @unlink($commandsDir . '/deploy.md');
+            @unlink($commandsDir . '/plain.md');
+            @rmdir($commandsDir);
+            @rmdir($tmpDir . '/.claude');
+            @rmdir($tmpDir);
+        }
+    }
+
+    public function testParseCommandDescriptionExtractsFromFrontmatter(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseCommandDescription');
+        $method->setAccessible(true);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'cmd_');
+        file_put_contents($tmpFile, "---\nname: test\ndescription: Run all tests\n---\n# Test command");
+
+        try {
+            $this->assertSame('Run all tests', $method->invoke($service, $tmpFile));
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    public function testParseCommandDescriptionReturnsEmptyWhenNoFrontmatter(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseCommandDescription');
+        $method->setAccessible(true);
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'cmd_');
+        file_put_contents($tmpFile, "# Just a heading\nSome content.");
+
+        try {
+            $this->assertSame('', $method->invoke($service, $tmpFile));
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
     private function buildAssistantLine(array $usage, bool $isSidechain = false): string
     {
         $line = [

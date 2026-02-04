@@ -321,6 +321,15 @@ class Project extends ActiveRecord
     {
         if (is_array($value)) {
             $value = array_filter($value, fn($v) => $v !== null && $v !== '');
+            // Decode JSON string values submitted by hidden form fields (e.g. commandBlacklist, commandGroups)
+            foreach ($value as $k => $v) {
+                if (is_string($v) && ($v[0] === '[' || $v[0] === '{')) {
+                    $decoded = json_decode($v, true);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        $value[$k] = $decoded;
+                    }
+                }
+            }
             $this->claude_options = empty($value) ? null : json_encode($value);
         } else {
             $this->claude_options = $value;
@@ -330,6 +339,34 @@ class Project extends ActiveRecord
     public function getClaudeOption(string $key, mixed $default = null): mixed
     {
         return $this->getClaudeOptions()[$key] ?? $default;
+    }
+
+    public function getClaudeCommandBlacklist(): array
+    {
+        $raw = $this->getClaudeOption('commandBlacklist');
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+        if (is_array($raw)) {
+            return array_values(array_filter($raw, static fn($v): bool => is_string($v) && $v !== ''));
+        }
+        return [];
+    }
+
+    public function getClaudeCommandGroups(): array
+    {
+        $raw = $this->getClaudeOption('commandGroups');
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+        if (is_array($raw)) {
+            return array_filter(
+                $raw,
+                static fn($v, $k): bool => is_string($k) && $k !== '' && is_array($v),
+                ARRAY_FILTER_USE_BOTH
+            );
+        }
+        return [];
     }
 
     public function getClaudeContext(): ?string

@@ -434,7 +434,7 @@ class ScratchPadController extends Controller
         return $this->render('claude', [
             'model' => $model,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
-            'claudeCommands' => $this->loadClaudeCommands($model->project->root_directory),
+            'claudeCommands' => $this->loadClaudeCommands($model->project->root_directory, $model->project),
         ]);
     }
 
@@ -738,57 +738,49 @@ class ScratchPadController extends Controller
     }
 
     /**
-     * Loads available Claude slash commands from the project's .claude/commands/ directory.
+     * Loads available Claude slash commands, applies blacklist and grouping from project config.
      *
-     * @return array<string, string> command name => description, sorted alphabetically
+     * @return array flat list or grouped structure with optgroup labels
      */
-    private function loadClaudeCommands(?string $rootDirectory): array
+    private function loadClaudeCommands(?string $rootDirectory, Project $project): array
     {
-        if ($rootDirectory === null || trim($rootDirectory) === '') {
+        $commands = $this->claudeCliService->loadCommandsFromDirectory($rootDirectory);
+        if ($commands === []) {
             return [];
         }
 
-        $containerPath = $this->claudeCliService->translatePath($rootDirectory);
-        $commandsDir = rtrim($containerPath, '/') . '/.claude/commands';
-        if (!is_dir($commandsDir)) {
-            Yii::debug("Claude commands dir not found: '$commandsDir' (root: '$rootDirectory', mapped: '$containerPath')", 'claude');
-            return [];
+        $blacklist = $project->getClaudeCommandBlacklist();
+        if ($blacklist !== []) {
+            $commands = array_diff_key($commands, array_flip($blacklist));
         }
 
-        $files = glob($commandsDir . '/*.md');
-        if ($files === false) {
-            return [];
+        $groups = $project->getClaudeCommandGroups();
+        if ($groups === []) {
+            return $commands;
         }
 
-        $commands = [];
-        foreach ($files as $file) {
-            $name = pathinfo($file, PATHINFO_FILENAME);
-            $description = $this->parseCommandDescription($file);
-            $commands[$name] = $description;
-        }
+        $grouped = [];
+        $assigned = [];
 
-        ksort($commands);
-
-        return $commands;
-    }
-
-    /**
-     * Extracts the description from a command file's YAML frontmatter.
-     */
-    private function parseCommandDescription(string $filePath): string
-    {
-        $content = file_get_contents($filePath);
-        if ($content === false) {
-            return '';
-        }
-
-        if (preg_match('/^---\s*\n(.*?)\n---/s', $content, $matches)) {
-            if (preg_match('/^description:\s*(.+)$/m', $matches[1], $descMatch)) {
-                return trim($descMatch[1]);
+        foreach ($groups as $label => $commandNames) {
+            $groupCommands = [];
+            foreach ($commandNames as $name) {
+                if (isset($commands[$name]) && !isset($assigned[$name])) {
+                    $groupCommands[$name] = $commands[$name];
+                    $assigned[$name] = true;
+                }
+            }
+            if ($groupCommands !== []) {
+                $grouped[$label] = $groupCommands;
             }
         }
 
-        return '';
+        $other = array_diff_key($commands, $assigned);
+        if ($other !== []) {
+            $grouped['Other'] = $other;
+        }
+
+        return $grouped;
     }
 
     /**

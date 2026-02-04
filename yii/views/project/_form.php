@@ -2,6 +2,7 @@
 use app\assets\QuillAsset;
 use conquer\select2\Select2Widget;
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 
@@ -115,6 +116,60 @@ $modelOptions = [
                         'placeholder' => 'Additional instructions appended to Claude\'s system prompt',
                     ]) ?>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header" data-bs-toggle="collapse" data-bs-target="#claudeCommandsCollapse" aria-expanded="false" aria-controls="claudeCommandsCollapse" style="cursor: pointer;">
+            <i class="bi bi-list-ul me-2"></i>Claude Command Dropdown
+            <i class="bi bi-chevron-down float-end"></i>
+        </div>
+        <div class="collapse" id="claudeCommandsCollapse">
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Configure which slash commands appear in the Claude chat dropdown and how they are grouped.
+                </p>
+
+                <?php if (!$model->id): ?>
+                    <div class="alert alert-info small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Save the project first to configure command dropdown settings.
+                    </div>
+                <?php elseif (empty($model->root_directory)): ?>
+                    <div class="alert alert-warning small">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Set a Root Directory to load available commands.
+                    </div>
+                <?php else: ?>
+                    <div id="claude-commands-loading" class="text-muted small mb-3" style="display:none;">
+                        <i class="bi bi-hourglass-split me-1"></i>Loading commands...
+                    </div>
+                    <div id="claude-commands-empty" class="alert alert-info small" style="display:none;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        No commands found in <code>.claude/commands/</code>.
+                    </div>
+
+                    <div id="claude-commands-content" style="display:none;">
+                        <div class="mb-3">
+                            <label class="form-label">Hidden Commands</label>
+                            <select id="command-blacklist-select" class="form-select" multiple></select>
+                            <div class="form-text">Commands hidden from the Claude chat dropdown.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Command Groups</label>
+                            <div id="command-groups-container"></div>
+                            <button type="button" id="add-group-btn" class="btn btn-sm btn-outline-secondary mt-2">
+                                <i class="bi bi-plus-circle"></i> Add Group
+                            </button>
+                            <div class="form-text">Leave empty for a flat alphabetical list. Ungrouped commands appear under "Other".</div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="claude-command-blacklist-hidden" name="claude_options[commandBlacklist]" value="<?= Html::encode(Json::encode($model->getClaudeCommandBlacklist())) ?>">
+                    <input type="hidden" id="claude-command-groups-hidden" name="claude_options[commandGroups]" value="<?= Html::encode(Json::encode($model->getClaudeCommandGroups() ?: new \stdClass())) ?>">
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -340,4 +395,275 @@ $script = <<<JS
     JS;
 
 $this->registerJs($script);
+
+if ($model->id && !empty($model->root_directory)):
+    $commandBlacklistJson = Json::encode($model->getClaudeCommandBlacklist());
+    $commandGroupsJson = Json::encode($model->getClaudeCommandGroups() ?: new \stdClass());
+    $claudeCommandsUrl = Url::to(['/project/claude-commands', 'id' => $model->id]);
+
+    $commandDropdownJs = <<<JS
+            (function() {
+                var availableCommands = {};
+                var blacklistSelect = null;
+                var groupCounter = 0;
+
+                function escapeHtml(str) {
+                    var div = document.createElement('div');
+                    div.appendChild(document.createTextNode(str));
+                    return div.innerHTML;
+                }
+
+                function fetchCommands() {
+                    document.getElementById('claude-commands-loading').style.display = '';
+                    fetch('$claudeCommandsUrl')
+                        .then(function(r) {
+                            if (!r.ok) return r.text().then(function(t) { throw new Error('HTTP ' + r.status + ': ' + t.substring(0, 200)); });
+                            return r.json();
+                        })
+                        .then(function(data) {
+                            document.getElementById('claude-commands-loading').style.display = 'none';
+                            if (data.success && Object.keys(data.commands).length > 0) {
+                                availableCommands = data.commands;
+                                document.getElementById('claude-commands-content').style.display = '';
+                                initializeUI();
+                            } else if (data.success) {
+                                document.getElementById('claude-commands-empty').style.display = '';
+                            } else {
+                                document.getElementById('claude-commands-empty').style.display = '';
+                            }
+                        })
+                        .catch(function(err) {
+                            console.error('claude-commands fetch error:', err);
+                            document.getElementById('claude-commands-loading').style.display = 'none';
+                            document.getElementById('claude-commands-empty').style.display = '';
+                        });
+                }
+
+                function initializeUI() {
+                    initBlacklistSelect();
+                    initGroupsFromData();
+                    syncHiddenFields();
+                }
+
+                function initBlacklistSelect() {
+                    blacklistSelect = jQuery('#command-blacklist-select');
+                    blacklistSelect.empty();
+                    Object.keys(availableCommands).forEach(function(cmd) {
+                        blacklistSelect.append(new Option(cmd, cmd, false, false));
+                    });
+
+                    var currentBlacklist = $commandBlacklistJson;
+                    // Preserve blacklisted commands that are no longer on disk
+                    currentBlacklist.forEach(function(cmd) {
+                        if (availableCommands[cmd] === undefined) {
+                            var opt = new Option(cmd + ' (not found)', cmd, false, false);
+                            blacklistSelect.append(opt);
+                        }
+                    });
+                    blacklistSelect.val(currentBlacklist).trigger('change');
+
+                    blacklistSelect.select2({
+                        placeholder: 'Select commands to hide...',
+                        allowClear: true,
+                        width: '100%'
+                    });
+
+                    blacklistSelect.on('change', function() {
+                        removeBlacklistedFromGroups();
+                        rebuildAllGroupSelects();
+                        syncHiddenFields();
+                    });
+                }
+
+                function initGroupsFromData() {
+                    var groups = $commandGroupsJson;
+                    Object.keys(groups).forEach(function(label) {
+                        addGroupRow(label, groups[label]);
+                    });
+                }
+
+                function addGroupRow(label, selectedCommands) {
+                    label = label || '';
+                    selectedCommands = selectedCommands || [];
+
+                    var groupId = 'group-' + (++groupCounter);
+                    var container = document.getElementById('command-groups-container');
+
+                    var row = document.createElement('div');
+                    row.className = 'card mb-2';
+                    row.id = groupId;
+                    row.innerHTML =
+                        '<div class="card-body py-2 px-3">' +
+                        '  <div class="d-flex gap-2 align-items-start mb-2">' +
+                        '    <input type="text" class="form-control form-control-sm group-label-input" placeholder="Group name" value="' + escapeHtml(label) + '" style="max-width:200px;">' +
+                        '    <select class="form-select form-select-sm group-commands-select" style="flex:1;"></select>' +
+                        '    <button type="button" class="btn btn-sm btn-outline-danger remove-group-btn" title="Remove group">' +
+                        '      <i class="bi bi-x-circle"></i>' +
+                        '    </button>' +
+                        '  </div>' +
+                        '  <ul class="group-order-list list-group list-group-flush"></ul>' +
+                        '</div>';
+
+                    container.appendChild(row);
+
+                    var select = row.querySelector('.group-commands-select');
+                    var orderList = row.querySelector('.group-order-list');
+
+                    // Store ordered commands as data on the row
+                    row._orderedCommands = [];
+
+                    populateGroupSelect(select, row);
+
+                    jQuery(select).select2({
+                        placeholder: 'Add command...',
+                        width: '100%'
+                    });
+
+                    // When a command is selected in the dropdown, add it to the ordered list
+                    jQuery(select).on('select2:select', function(e) {
+                        var cmd = e.params.data.id;
+                        row._orderedCommands.push(cmd);
+                        renderOrderList(row);
+                        rebuildAllGroupSelects();
+                        syncHiddenFields();
+                        // Clear the dropdown selection (it's just for adding)
+                        jQuery(select).val(null).trigger('change.select2');
+                    });
+
+                    // Seed the ordered list from saved data (keep missing commands)
+                    selectedCommands.forEach(function(cmd) {
+                        row._orderedCommands.push(cmd);
+                    });
+                    renderOrderList(row);
+
+                    row.querySelector('.group-label-input').addEventListener('input', syncHiddenFields);
+                    row.querySelector('.remove-group-btn').addEventListener('click', function() {
+                        jQuery(select).select2('destroy');
+                        row.remove();
+                        rebuildAllGroupSelects();
+                        syncHiddenFields();
+                    });
+                }
+
+                function renderOrderList(row) {
+                    var list = row.querySelector('.group-order-list');
+                    list.innerHTML = '';
+                    var commands = row._orderedCommands;
+                    commands.forEach(function(cmd, idx) {
+                        var isMissing = availableCommands[cmd] === undefined;
+                        var li = document.createElement('li');
+                        li.className = 'list-group-item d-flex align-items-center py-1 px-2 group-order-item';
+                        li.innerHTML =
+                            '<span class="me-auto small' + (isMissing ? ' text-muted' : '') + '">' + escapeHtml(cmd) + (isMissing ? ' <em>(not found)</em>' : '') + '</span>' +
+                            '<button type="button" class="btn btn-link btn-sm p-0 me-1 group-order-up" title="Move up"' + (idx === 0 ? ' disabled' : '') + '>' +
+                            '  <i class="bi bi-arrow-up"></i>' +
+                            '</button>' +
+                            '<button type="button" class="btn btn-link btn-sm p-0 me-1 group-order-down" title="Move down"' + (idx === commands.length - 1 ? ' disabled' : '') + '>' +
+                            '  <i class="bi bi-arrow-down"></i>' +
+                            '</button>' +
+                            '<button type="button" class="btn btn-link btn-sm p-0 text-danger group-order-remove" title="Remove">' +
+                            '  <i class="bi bi-x"></i>' +
+                            '</button>';
+
+                        li.querySelector('.group-order-up').addEventListener('click', function() {
+                            if (idx > 0) {
+                                commands.splice(idx, 1);
+                                commands.splice(idx - 1, 0, cmd);
+                                renderOrderList(row);
+                                syncHiddenFields();
+                            }
+                        });
+                        li.querySelector('.group-order-down').addEventListener('click', function() {
+                            if (idx < commands.length - 1) {
+                                commands.splice(idx, 1);
+                                commands.splice(idx + 1, 0, cmd);
+                                renderOrderList(row);
+                                syncHiddenFields();
+                            }
+                        });
+                        li.querySelector('.group-order-remove').addEventListener('click', function() {
+                            commands.splice(idx, 1);
+                            renderOrderList(row);
+                            rebuildAllGroupSelects();
+                            syncHiddenFields();
+                        });
+
+                        list.appendChild(li);
+                    });
+                }
+
+                function populateGroupSelect(selectElement, row) {
+                    var blacklisted = blacklistSelect ? (blacklistSelect.val() || []) : [];
+                    var allAssigned = getAllAssignedCommands();
+
+                    jQuery(selectElement).empty();
+                    // Only show unassigned, non-blacklisted commands
+                    Object.keys(availableCommands).forEach(function(cmd) {
+                        if (blacklisted.indexOf(cmd) === -1 && allAssigned.indexOf(cmd) === -1) {
+                            selectElement.add(new Option(cmd, cmd, false, false));
+                        }
+                    });
+                    jQuery(selectElement).val(null).trigger('change.select2');
+                }
+
+                function getAllAssignedCommands() {
+                    var assigned = [];
+                    document.querySelectorAll('#command-groups-container .card').forEach(function(row) {
+                        if (row._orderedCommands)
+                            assigned = assigned.concat(row._orderedCommands);
+                    });
+                    return assigned;
+                }
+
+                function removeBlacklistedFromGroups() {
+                    var blacklisted = blacklistSelect ? (blacklistSelect.val() || []) : [];
+                    if (blacklisted.length === 0) return;
+                    document.querySelectorAll('#command-groups-container .card').forEach(function(row) {
+                        if (!row._orderedCommands) return;
+                        var before = row._orderedCommands.length;
+                        row._orderedCommands = row._orderedCommands.filter(function(cmd) {
+                            return blacklisted.indexOf(cmd) === -1;
+                        });
+                        if (row._orderedCommands.length !== before)
+                            renderOrderList(row);
+                    });
+                }
+
+                function rebuildAllGroupSelects() {
+                    document.querySelectorAll('#command-groups-container .card').forEach(function(row) {
+                        var sel = row.querySelector('.group-commands-select');
+                        if (sel) populateGroupSelect(sel, row);
+                    });
+                }
+
+                function syncHiddenFields() {
+                    var blacklist = blacklistSelect ? (blacklistSelect.val() || []) : [];
+                    document.getElementById('claude-command-blacklist-hidden').value = JSON.stringify(blacklist);
+
+                    var groups = {};
+                    document.querySelectorAll('#command-groups-container .card').forEach(function(row) {
+                        var label = row.querySelector('.group-label-input').value.trim();
+                        var commands = row._orderedCommands || [];
+                        if (label !== '' && commands.length > 0) {
+                            groups[label] = commands;
+                        }
+                    });
+                    document.getElementById('claude-command-groups-hidden').value = JSON.stringify(groups);
+                }
+
+                document.getElementById('add-group-btn').addEventListener('click', function() {
+                    addGroupRow('', []);
+                });
+
+                var collapse = document.getElementById('claudeCommandsCollapse');
+                collapse.addEventListener('show.bs.collapse', function() {
+                    if (Object.keys(availableCommands).length === 0) {
+                        fetchCommands();
+                    }
+                }, { once: true });
+            })();
+        JS;
+
+    $this->registerJs($commandDropdownJs);
+endif;
 ?>

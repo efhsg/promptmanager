@@ -831,6 +831,215 @@ class ScratchPadControllerTest extends Unit
         $this->assertSame('Invalid request format.', $result['error']);
     }
 
+    public function testLoadClaudeCommandsReturnsFlatListWithoutGroups(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+            'deploy' => 'Deploy app',
+            'review' => 'Review code',
+            'test' => 'Run tests',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+
+        $this->assertCount(3, $result);
+        $this->assertSame('Deploy app', $result['deploy']);
+    }
+
+    public function testLoadClaudeCommandsAppliesBlacklist(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'claude_options' => json_encode(['commandBlacklist' => ['deploy', 'test']]),
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+            'deploy' => 'Deploy app',
+            'review' => 'Review code',
+            'test' => 'Run tests',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+
+        $this->assertCount(1, $result);
+        $this->assertArrayHasKey('review', $result);
+        $this->assertArrayNotHasKey('deploy', $result);
+        $this->assertArrayNotHasKey('test', $result);
+    }
+
+    public function testLoadClaudeCommandsAppliesGrouping(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'claude_options' => json_encode([
+                'commandGroups' => [
+                    'CI' => ['test', 'deploy'],
+                ],
+            ]),
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+            'deploy' => 'Deploy app',
+            'review' => 'Review code',
+            'test' => 'Run tests',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+
+        $this->assertArrayHasKey('CI', $result);
+        $this->assertArrayHasKey('Other', $result);
+        $this->assertCount(2, $result['CI']);
+        $this->assertArrayHasKey('test', $result['CI']);
+        $this->assertArrayHasKey('deploy', $result['CI']);
+        $this->assertCount(1, $result['Other']);
+        $this->assertArrayHasKey('review', $result['Other']);
+    }
+
+    public function testLoadClaudeCommandsDropsMissingGroupedCommands(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'claude_options' => json_encode([
+                'commandGroups' => [
+                    'CI' => ['test', 'nonexistent'],
+                ],
+            ]),
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+            'review' => 'Review code',
+            'test' => 'Run tests',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+
+        $this->assertCount(1, $result['CI']);
+        $this->assertArrayNotHasKey('nonexistent', $result['CI']);
+    }
+
+    public function testLoadClaudeCommandsAppliesBlacklistBeforeGrouping(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'claude_options' => json_encode([
+                'commandBlacklist' => ['test'],
+                'commandGroups' => [
+                    'CI' => ['test', 'deploy'],
+                ],
+            ]),
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+            'deploy' => 'Deploy app',
+            'review' => 'Review code',
+            'test' => 'Run tests',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+
+        // test is blacklisted so CI group only has deploy
+        $this->assertCount(1, $result['CI']);
+        $this->assertArrayHasKey('deploy', $result['CI']);
+        $this->assertArrayNotHasKey('test', $result['CI']);
+        $this->assertArrayHasKey('Other', $result);
+        $this->assertArrayHasKey('review', $result['Other']);
+    }
+
+    public function testLoadClaudeCommandsReturnsEmptyWhenNoCommands(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+
+        $this->assertSame([], $result);
+    }
+
+    public function testLoadClaudeCommandsDropsEmptyGroupsAfterFiltering(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'claude_options' => json_encode([
+                'commandBlacklist' => ['test'],
+                'commandGroups' => [
+                    'CI' => ['test'],
+                ],
+            ]),
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+            'review' => 'Review code',
+            'test' => 'Run tests',
+        ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+
+        // CI group should be dropped because its only command was blacklisted
+        $this->assertArrayNotHasKey('CI', $result);
+        // review goes to Other
+        $this->assertArrayHasKey('Other', $result);
+        $this->assertArrayHasKey('review', $result['Other']);
+    }
+
+    private function invokeLoadClaudeCommands(
+        ScratchPadController $controller,
+        ?string $rootDirectory,
+        Project $project
+    ): array {
+        $reflection = new ReflectionClass($controller);
+        $method = $reflection->getMethod('loadClaudeCommands');
+        $method->setAccessible(true);
+        return $method->invoke($controller, $rootDirectory, $project);
+    }
+
     private function createControllerWithClaudeService(ClaudeCliService $claudeService): ScratchPadController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);

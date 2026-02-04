@@ -77,6 +77,76 @@ class ProjectControllerTest extends Unit
         $this->assertSame('has_config', $result['pathStatus']);
     }
 
+    public function testClaudeCommandsReturnsEmptyWhenNoRootDirectory(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'root_directory' => null,
+        ]);
+        $project->save(false);
+
+        $controller = $this->createController();
+
+        $result = $controller->actionClaudeCommands($project->id);
+
+        $this->assertFalse($result['success']);
+        $this->assertSame([], $result['commands']);
+    }
+
+    public function testClaudeCommandsReturnsCommandList(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'root_directory' => '/some/path',
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')
+            ->with('/some/path')
+            ->willReturn([
+                'deploy' => 'Deploy app',
+                'review' => 'Review code',
+            ]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionClaudeCommands($project->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertCount(2, $result['commands']);
+        $this->assertSame('Deploy app', $result['commands']['deploy']);
+        $this->assertSame('Review code', $result['commands']['review']);
+    }
+
+    public function testClaudeCommandsReturnsEmptyWhenNoneFound(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = new Project([
+            'user_id' => self::TEST_USER_ID,
+            'name' => 'Test Project',
+            'root_directory' => '/nonexistent/path',
+        ]);
+        $project->save(false);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([]);
+
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+
+        $result = $controller->actionClaudeCommands($project->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame([], $result['commands']);
+    }
+
     public function testCheckClaudeConfigIncludesPromptManagerContextStatus(): void
     {
         $this->mockAuthenticatedUser(self::TEST_USER_ID);

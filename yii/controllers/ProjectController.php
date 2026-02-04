@@ -263,6 +263,28 @@ class ProjectController extends Controller
     }
 
     /**
+     * Returns available Claude slash commands for a project.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionClaudeCommands(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        /** @var Project $model */
+        $model = $this->findModel($id);
+
+        if (empty($model->root_directory)) {
+            return ['success' => false, 'commands' => []];
+        }
+
+        return [
+            'success' => true,
+            'commands' => $this->claudeCliService->loadCommandsFromDirectory($model->root_directory),
+        ];
+    }
+
+    /**
      * @throws NotFoundHttpException
      */
     protected function findModel(int $id): ActiveRecord

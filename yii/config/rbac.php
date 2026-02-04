@@ -37,6 +37,7 @@ return [
                 'delete' => 'deleteProject',
                 'setCurrent' => 'setCurrentProject',
                 'checkClaudeConfig' => 'viewProject',
+                'claudeCommands' => 'viewProject',
             ],
             'permissions' => [
                 'createProject' => [

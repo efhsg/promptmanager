@@ -26,7 +26,7 @@ class ClaudeCliService
     /**
      * Translates a host path to a container path using configured mappings.
      */
-    public function translatePath(string $hostPath): string
+    private function translatePath(string $hostPath): string
     {
         $mappings = Yii::$app->params['pathMappings'] ?? [];
         foreach ($mappings as $hostPrefix => $containerPrefix) {
@@ -530,6 +530,60 @@ class ClaudeCliService
         }
 
         return $modelId;
+    }
+
+    /**
+     * Loads available Claude slash commands from a project's .claude/commands/ directory.
+     *
+     * @return array<string, string> command name => description, sorted alphabetically
+     */
+    public function loadCommandsFromDirectory(?string $rootDirectory): array
+    {
+        if ($rootDirectory === null || trim($rootDirectory) === '') {
+            return [];
+        }
+
+        $containerPath = $this->translatePath($rootDirectory);
+        $commandsDir = rtrim($containerPath, '/') . '/.claude/commands';
+        if (!is_dir($commandsDir)) {
+            Yii::debug("Claude commands dir not found: '$commandsDir' (root: '$rootDirectory', mapped: '$containerPath')", 'claude');
+            return [];
+        }
+
+        $files = glob($commandsDir . '/*.md');
+        if ($files === false) {
+            return [];
+        }
+
+        $commands = [];
+        foreach ($files as $file) {
+            $name = pathinfo($file, PATHINFO_FILENAME);
+            $description = $this->parseCommandDescription($file);
+            $commands[$name] = $description;
+        }
+
+        ksort($commands);
+
+        return $commands;
+    }
+
+    /**
+     * Extracts the description from a command file's YAML frontmatter.
+     */
+    private function parseCommandDescription(string $filePath): string
+    {
+        $content = file_get_contents($filePath);
+        if ($content === false) {
+            return '';
+        }
+
+        if (preg_match('/^---\s*\n(.*?)\n---/s', $content, $matches)) {
+            if (preg_match('/^description:\s*(.+)$/m', $matches[1], $descMatch)) {
+                return trim($descMatch[1]);
+            }
+        }
+
+        return '';
     }
 
     /**

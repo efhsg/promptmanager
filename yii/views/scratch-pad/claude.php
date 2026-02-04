@@ -366,15 +366,33 @@ $js = <<<JS
         // Build Claude command dropdown
         var claudeCommands = $claudeCommandsJson;
         var commandDropdown = document.createElement('select');
-        commandDropdown.classList.add('ql-insertClaudeCommand', 'ql-picker', 'ql-font');
+        commandDropdown.classList.add('ql-insertClaudeCommand', 'ql-picker');
         commandDropdown.innerHTML = '<option value="" selected disabled>Command</option>';
-        Object.keys(claudeCommands).forEach(function(key) {
-            var option = document.createElement('option');
-            option.value = key + ' ';
-            option.textContent = key;
-            option.title = claudeCommands[key];
-            commandDropdown.appendChild(option);
-        });
+        var firstValue = Object.values(claudeCommands)[0];
+        var isGrouped = firstValue !== null && firstValue !== undefined && typeof firstValue === 'object';
+
+        if (isGrouped) {
+            Object.keys(claudeCommands).forEach(function(group) {
+                var optgroup = document.createElement('optgroup');
+                optgroup.label = group;
+                Object.keys(claudeCommands[group]).forEach(function(key) {
+                    var option = document.createElement('option');
+                    option.value = '/' + key + ' ';
+                    option.textContent = key;
+                    option.title = claudeCommands[group][key];
+                    optgroup.appendChild(option);
+                });
+                commandDropdown.appendChild(optgroup);
+            });
+        } else {
+            Object.keys(claudeCommands).forEach(function(key) {
+                var option = document.createElement('option');
+                option.value = '/' + key + ' ';
+                option.textContent = key;
+                option.title = claudeCommands[key];
+                commandDropdown.appendChild(option);
+            });
+        }
         var toolbarContainer = quill.getModule('toolbar').container;
         var placeholder = toolbarContainer.querySelector('.ql-insertClaudeCommand');
         if (placeholder) {
