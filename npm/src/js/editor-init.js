@@ -10,6 +10,17 @@ window.QuillToolbar = (function() {
         '<text x="9" y="13" text-anchor="middle" font-size="9" font-weight="bold" font-family="sans-serif" fill="currentColor">P</text>' +
         '</svg>';
 
+    const CLEAR_EDITOR_SVG = '<svg viewBox="0 0 18 18" width="18" height="18">' +
+        '<path d="M3 5h12M7 5V3h4v2M5 5v9a1 1 0 001 1h6a1 1 0 001-1V5" fill="none" stroke="currentColor" stroke-width="1.2"/>' +
+        '<line x1="8" y1="8" x2="8" y2="12" stroke="currentColor" stroke-width="1"/>' +
+        '<line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1"/>' +
+        '</svg>';
+
+    const UNDO_SVG = '<svg viewBox="0 0 18 18" width="18" height="18">' +
+        '<path d="M4 7h8a3 3 0 010 6H9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+        '<path d="M7 4L4 7l3 3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>';
+
     const LOAD_MD_SVG = '<svg viewBox="0 0 18 18" width="18" height="18">' +
         '<path d="M4 2h7l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1"/>' +
         '<path d="M9 7v6M7 11l2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
@@ -52,23 +63,86 @@ window.QuillToolbar = (function() {
     const DEFAULT_IMPORT_TEXT_URL = '/scratch-pad/import-text';
     const DEFAULT_IMPORT_MARKDOWN_URL = '/scratch-pad/import-markdown';
 
+    const setupClearEditor = (quill, hidden) => {
+        const toolbar = quill.getModule('toolbar');
+        if (!toolbar || !toolbar.container) return;
+
+        const el = toolbar.container.querySelector('.ql-clearEditor');
+        if (!el) return;
+
+        let btn;
+        if (el.tagName === 'BUTTON') {
+            btn = el;
+        } else {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ql-clearEditor';
+            btn.title = 'Clear editor content';
+            btn.innerHTML = CLEAR_EDITOR_SVG;
+            el.replaceWith(btn);
+        }
+
+        const syncHidden = () => {
+            if (hidden) hidden.value = JSON.stringify(quill.getContents());
+        };
+
+        let cleared = false;
+
+        const setTrashMode = () => {
+            cleared = false;
+            btn.innerHTML = CLEAR_EDITOR_SVG;
+            btn.title = 'Clear editor content';
+        };
+
+        const setUndoMode = () => {
+            cleared = true;
+            btn.innerHTML = UNDO_SVG;
+            btn.title = 'Undo clear';
+        };
+
+        btn.addEventListener('click', () => {
+            if (cleared) {
+                quill.history.undo();
+                syncHidden();
+                setTrashMode();
+                return;
+            }
+
+            const len = quill.getLength();
+            if (len <= 1) return;
+
+            quill.deleteText(0, len - 1);
+            syncHidden();
+            setUndoMode();
+        });
+
+        quill.on('text-change', (delta, oldDelta, source) => {
+            if (source === 'user' && cleared) setTrashMode();
+        });
+    };
+
     const setupSmartPaste = (quill, hidden, config) => {
         const toolbar = quill.getModule('toolbar');
         if (!toolbar || !toolbar.container) return;
 
-        const placeholder = toolbar.container.querySelector('.ql-smartPaste');
-        if (!placeholder) return;
+        const el = toolbar.container.querySelector('.ql-smartPaste');
+        if (!el) return;
 
         const importUrl = (config && config.importTextUrl) || DEFAULT_IMPORT_TEXT_URL;
 
         ensureSpinnerCss();
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'ql-smartPaste';
-        btn.title = 'Smart Paste (auto-detects markdown)';
-        btn.innerHTML = SMART_PASTE_SVG;
-        placeholder.replaceWith(btn);
+        let btn;
+        if (el.tagName === 'BUTTON') {
+            btn = el;
+        } else {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ql-smartPaste';
+            btn.title = 'Smart Paste (auto-detects markdown)';
+            btn.innerHTML = SMART_PASTE_SVG;
+            el.replaceWith(btn);
+        }
 
         btn.addEventListener('click', async () => {
             const originalHtml = btn.innerHTML;
@@ -129,8 +203,8 @@ window.QuillToolbar = (function() {
         const toolbar = quill.getModule('toolbar');
         if (!toolbar || !toolbar.container) return;
 
-        const placeholder = toolbar.container.querySelector('.ql-loadMd');
-        if (!placeholder) return;
+        const el = toolbar.container.querySelector('.ql-loadMd');
+        if (!el) return;
 
         const importUrl = (config && config.importMarkdownUrl) || DEFAULT_IMPORT_MARKDOWN_URL;
 
@@ -142,12 +216,17 @@ window.QuillToolbar = (function() {
         fileInput.style.display = 'none';
         document.body.appendChild(fileInput);
 
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'ql-loadMd';
-        btn.title = 'Load markdown file';
-        btn.innerHTML = LOAD_MD_SVG;
-        placeholder.replaceWith(btn);
+        let btn;
+        if (el.tagName === 'BUTTON') {
+            btn = el;
+        } else {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ql-loadMd';
+            btn.title = 'Load markdown file';
+            btn.innerHTML = LOAD_MD_SVG;
+            el.replaceWith(btn);
+        }
 
         btn.addEventListener('click', () => fileInput.click());
 
@@ -347,6 +426,7 @@ window.QuillToolbar = (function() {
     };
 
     return {
+        setupClearEditor: setupClearEditor,
         setupSmartPaste: setupSmartPaste,
         setupLoadMd: setupLoadMd,
         showToast: showToast,
@@ -377,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
             importTextUrl: node.dataset.importTextUrl,
             importMarkdownUrl: node.dataset.importMarkdownUrl
         };
+        window.QuillToolbar.setupClearEditor(quill, hidden);
         window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
         window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 

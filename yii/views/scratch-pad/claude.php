@@ -169,6 +169,61 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                 </button>
                 <!-- Quill editor (initial mode) -->
                 <div id="claude-quill-wrapper" class="resizable-editor-container">
+                    <div id="claude-quill-toolbar">
+                        <span class="ql-formats">
+                            <button class="ql-bold"></button>
+                            <button class="ql-italic"></button>
+                            <button class="ql-underline"></button>
+                            <button class="ql-strike"></button>
+                            <button class="ql-code"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-blockquote"></button>
+                            <button class="ql-code-block"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-list" value="ordered"></button>
+                            <button class="ql-list" value="bullet"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-indent" value="-1"></button>
+                            <button class="ql-indent" value="+1"></button>
+                        </span>
+                        <span class="ql-formats">
+                            <select class="ql-header">
+                                <option value="1"></option>
+                                <option value="2"></option>
+                                <option value="3"></option>
+                                <option value="4"></option>
+                                <option value="5"></option>
+                                <option value="6"></option>
+                                <option selected></option>
+                            </select>
+                        </span>
+                        <span class="ql-formats">
+                            <select class="ql-align"></select>
+                        </span>
+                        <span class="ql-formats">
+                            <button class="ql-clean"></button>
+                        </span>
+                        <span class="ql-formats" id="claude-command-slot">
+                        </span>
+                        <span class="ql-formats">
+                            <button type="button" class="ql-clearEditor" title="Clear editor content">
+                                <svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 5h12M7 5V3h4v2M5 5v9a1 1 0 001 1h6a1 1 0 001-1V5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="8" x2="8" y2="12" stroke="currentColor" stroke-width="1"/><line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1"/></svg>
+                            </button>
+                        </span>
+                        <span class="ql-formats">
+                            <button type="button" class="ql-smartPaste" title="Smart Paste (auto-detects markdown)">
+                                <svg viewBox="0 0 18 18" width="18" height="18"><rect x="3" y="2" width="12" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1"/><rect x="6" y="0" width="6" height="3" rx="0.5" fill="none" stroke="currentColor" stroke-width="1"/><text x="9" y="13" text-anchor="middle" font-size="9" font-weight="bold" font-family="sans-serif" fill="currentColor">P</text></svg>
+                            </button>
+                        </span>
+                        <span class="ql-formats">
+                            <button type="button" class="ql-loadMd" title="Load markdown file">
+                                <svg viewBox="0 0 18 18" width="18" height="18"><path d="M4 2h7l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M9 7v6M7 11l2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            </button>
+                        </span>
+                    </div>
                     <div id="claude-quill-editor" class="resizable-editor"></div>
                 </div>
 
@@ -366,18 +421,7 @@ $js = <<<JS
         var quill = new Quill('#claude-quill-editor', {
             theme: 'snow',
             modules: {
-                toolbar: [
-                    ['bold', 'italic', 'underline', 'strike', 'code'],
-                    ['blockquote', 'code-block'],
-                    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                    [{ 'indent': '-1' }, { 'indent': '+1' }],
-                    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                    [{ 'align': [] }],
-                    ['clean'],
-                    [{ 'insertClaudeCommand': [] }],
-                    [{ 'smartPaste': [] }],
-                    [{ 'loadMd': [] }]
-                ]
+                toolbar: { container: '#claude-quill-toolbar' }
             },
             placeholder: 'Enter your prompt...'
         });
@@ -387,6 +431,7 @@ $js = <<<JS
             importMarkdownUrl: '$importMarkdownUrl'
         };
         if (window.QuillToolbar) {
+            window.QuillToolbar.setupClearEditor(quill, null);
             window.QuillToolbar.setupSmartPaste(quill, null, urlConfig);
             window.QuillToolbar.setupLoadMd(quill, null, urlConfig);
         }
@@ -421,11 +466,7 @@ $js = <<<JS
                 commandDropdown.appendChild(option);
             });
         }
-        var toolbarContainer = quill.getModule('toolbar').container;
-        var placeholder = toolbarContainer.querySelector('.ql-insertClaudeCommand');
-        if (placeholder) {
-            placeholder.replaceWith(commandDropdown);
-        }
+        document.getElementById('claude-command-slot').appendChild(commandDropdown);
         commandDropdown.addEventListener('change', function() {
             var value = this.value;
             if (value) {
