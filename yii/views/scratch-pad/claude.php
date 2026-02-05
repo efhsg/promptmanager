@@ -71,15 +71,16 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     </div>
 
     <!-- Subscription Usage (collapsible) -->
-    <div id="claude-subscription-usage" class="claude-subscription-usage d-none mb-3">
+    <div id="claude-subscription-usage" class="claude-subscription-usage mb-3">
         <div class="collapse" id="claudeUsageCard">
             <div class="claude-usage-section" role="button"
                  data-bs-toggle="collapse" data-bs-target="#claudeUsageCard">
                 <div id="claude-subscription-bars"></div>
             </div>
         </div>
-        <div id="claude-usage-summary" class="claude-usage-summary" role="button"
+        <div id="claude-usage-summary" class="claude-usage-summary claude-usage-summary--loading" role="button"
              data-bs-toggle="collapse" data-bs-target="#claudeUsageCard">
+            <span class="claude-usage-summary__placeholder">Loading usage...</span>
         </div>
     </div>
 
@@ -1482,15 +1483,23 @@ $js = <<<JS
             },
 
             fetchSubscriptionUsage: function() {
-                if (!this.usageUrl) return;
+                var wrapper = document.getElementById('claude-subscription-usage');
+                if (!this.usageUrl) {
+                    wrapper.classList.add('d-none');
+                    return;
+                }
                 var self = this;
                 fetch(this.usageUrl)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         if (data.success && data.data)
                             self.renderSubscriptionUsage(data.data);
+                        else
+                            wrapper.classList.add('d-none');
                     })
-                    .catch(function() { /* silent — non-critical */ });
+                    .catch(function() {
+                        wrapper.classList.add('d-none');
+                    });
             },
 
             renderSubscriptionUsage: function(data) {
@@ -1553,7 +1562,6 @@ $js = <<<JS
                 if (contextRow)
                     bars.appendChild(contextRow);
 
-                wrapper.classList.remove('d-none');
                 if (hasWarning) wrapper.classList.add('claude-subscription-usage--warning');
                 else wrapper.classList.remove('claude-subscription-usage--warning');
 
@@ -1929,8 +1937,12 @@ $js = <<<JS
             updateUsageSummary: function() {
                 var summary = document.getElementById('claude-usage-summary');
                 var rows = document.querySelectorAll('#claude-subscription-bars .claude-subscription-row');
+
+                // Remove loading state
+                summary.classList.remove('claude-usage-summary--loading');
+
                 if (!rows.length) {
-                    summary.classList.add('d-none');
+                    summary.innerHTML = '';
                     return;
                 }
 
@@ -1967,8 +1979,6 @@ $js = <<<JS
                     item.appendChild(pctSpan);
                     summary.appendChild(item);
                 });
-
-                summary.classList.remove('d-none');
             },
 
             focusEditor: function() {

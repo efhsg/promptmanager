@@ -809,6 +809,14 @@
     font-variant-numeric: tabular-nums;
 }
 
+.claude-chat-page .claude-usage-summary--loading {
+    color: #adb5bd;
+}
+
+.claude-chat-page .claude-usage-summary__placeholder {
+    font-style: italic;
+}
+
 .claude-chat-page #claude-summarize-warning-btn {
     vertical-align: baseline;
 }
