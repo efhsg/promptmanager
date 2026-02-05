@@ -79,6 +79,7 @@ $config = [
             ],
         ],
         'assetManager' => [
+            'appendTimestamp' => true,
             'basePath' => __DIR__ . '/../web/assets',
             'bundles' => [
                 'yii\bootstrap\BootstrapAsset' => [

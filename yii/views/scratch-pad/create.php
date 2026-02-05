@@ -152,6 +152,7 @@ $script = <<<JS
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'align': [] }],
                 ['clean'],
+                [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
                 [{ 'loadMd': [] }]
             ]
@@ -162,6 +163,7 @@ $script = <<<JS
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
     };
+    window.QuillToolbar.setupClearEditor(window.quill, null);
     window.QuillToolbar.setupSmartPaste(window.quill, null, urlConfig);
     window.QuillToolbar.setupLoadMd(window.quill, null, urlConfig);
 
@@ -177,12 +179,14 @@ $script = <<<JS
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'align': [] }],
                 ['clean'],
+                [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
                 [{ 'loadMd': [] }]
             ]
         }
     });
 
+    window.QuillToolbar.setupClearEditor(window.responseQuill, null);
     window.QuillToolbar.setupSmartPaste(window.responseQuill, null, urlConfig);
     window.QuillToolbar.setupLoadMd(window.responseQuill, null, urlConfig);
 

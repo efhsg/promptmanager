@@ -71,6 +71,7 @@ $script = <<<JS
                 [{ 'color': [] }, { 'background': [] }],
                 [{ 'align': [] }],
                 ['clean'],
+                [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
                 [{ 'loadMd': [] }]
             ]
@@ -82,6 +83,7 @@ $script = <<<JS
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
     };
+    window.QuillToolbar.setupClearEditor(quill, hidden);
     window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
     window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 

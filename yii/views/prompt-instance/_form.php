@@ -434,11 +434,13 @@ $script = <<<'JS'
                                 ['bold', 'italic', 'underline', 'strike', 'code'],
                                 [{ 'list': 'ordered'}, { 'list': 'bullet' }],
                                 ['clean'],
+                                [{ 'clearEditor': [] }],
                                 [{ 'smartPaste': [] }],
                                 [{ 'loadMd': [] }]
                             ]
                         }
                     });
+                    window.QuillToolbar.setupClearEditor(quillEditor, null);
                     window.QuillToolbar.setupSmartPaste(quillEditor, null, quillUrlConfig);
                     window.QuillToolbar.setupLoadMd(quillEditor, null, quillUrlConfig);
                 }

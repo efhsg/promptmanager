@@ -66,6 +66,7 @@ $script = <<<JS
                     [{ 'insertGeneralField': [] }],
                     [{ 'insertProjectField': [] }],
                     [{ 'insertExternalField': [] }],
+                    [{ 'clearEditor': [] }],
                     [{ 'smartPaste': [] }],
                     [{ 'loadMd': [] }]
                 ]
@@ -121,6 +122,7 @@ $script = <<<JS
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
     };
+    window.QuillToolbar.setupClearEditor(window.quill, hidden);
     window.QuillToolbar.setupSmartPaste(window.quill, hidden, urlConfig);
     window.QuillToolbar.setupLoadMd(window.quill, hidden, urlConfig);
 

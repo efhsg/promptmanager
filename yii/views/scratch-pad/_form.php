@@ -153,6 +153,7 @@ $script = <<<JS
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'align': [] }],
                 ['clean'],
+                [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
                 [{ 'loadMd': [] }]
             ]
@@ -164,6 +165,7 @@ $script = <<<JS
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
     };
+    window.QuillToolbar.setupClearEditor(quill, hidden);
     window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
     window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 
@@ -189,6 +191,7 @@ $script = <<<JS
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'align': [] }],
                 ['clean'],
+                [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
                 [{ 'loadMd': [] }]
             ]
@@ -196,6 +199,7 @@ $script = <<<JS
     });
 
     var responseHidden = document.getElementById('scratch-pad-response');
+    window.QuillToolbar.setupClearEditor(responseQuill, responseHidden);
     window.QuillToolbar.setupSmartPaste(responseQuill, responseHidden, urlConfig);
     window.QuillToolbar.setupLoadMd(responseQuill, responseHidden, urlConfig);
 

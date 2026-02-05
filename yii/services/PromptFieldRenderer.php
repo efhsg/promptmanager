@@ -147,6 +147,7 @@ class PromptFieldRenderer
                                 [['header' => [1, 2, 3, 4, 5, 6, false]]],
                                 [['align' => []]],
                                 ['clean'],
+                                [['clearEditor' => []]],
                                 [['smartPaste' => []]],
                                 [['loadMd' => []]],
                             ],

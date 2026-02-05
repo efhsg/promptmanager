@@ -149,6 +149,28 @@ a.desc:after {
     border-right: none;
 }
 
+/* Custom Quill toolbar buttons (clearEditor, smartPaste, loadMd) */
+.ql-snow .ql-toolbar button.ql-clearEditor,
+.ql-snow .ql-toolbar button.ql-smartPaste,
+.ql-snow .ql-toolbar button.ql-loadMd,
+.ql-snow.ql-toolbar button.ql-clearEditor,
+.ql-snow.ql-toolbar button.ql-smartPaste,
+.ql-snow.ql-toolbar button.ql-loadMd {
+    width: 28px;
+    height: 24px;
+    padding: 3px 5px;
+}
+
+.ql-snow .ql-toolbar button.ql-clearEditor svg,
+.ql-snow .ql-toolbar button.ql-smartPaste svg,
+.ql-snow .ql-toolbar button.ql-loadMd svg,
+.ql-snow.ql-toolbar button.ql-clearEditor svg,
+.ql-snow.ql-toolbar button.ql-smartPaste svg,
+.ql-snow.ql-toolbar button.ql-loadMd svg {
+    float: left;
+    height: 100%;
+}
+
 /* Make sure your custom pickers look like the default Quill pickers. */
 .ql-toolbar .ql-picker.ql-insertGeneralField,
 .ql-toolbar .ql-picker.ql-insertProjectField,

@@ -311,6 +311,7 @@ $script = <<<JS
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'align': [] }],
                 ['clean'],
+                [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
                 [{ 'loadMd': [] }]
             ]
@@ -322,6 +323,7 @@ $script = <<<JS
         importMarkdownUrl: '$importMarkdownUrl'
     };
     if (window.QuillToolbar) {
+        window.QuillToolbar.setupClearEditor(contextQuill, null);
         window.QuillToolbar.setupSmartPaste(contextQuill, null, contextUrlConfig);
         window.QuillToolbar.setupLoadMd(contextQuill, null, contextUrlConfig);
     }

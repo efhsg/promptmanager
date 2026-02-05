@@ -18,10 +18,11 @@
     width: 100%;
 }
 
+/* Collapse button positioned slightly outside container for better visual separation */
 .claude-chat-page .claude-settings-collapse-btn {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: -2px;
+    right: -2px;
     z-index: 2;
     display: flex;
     align-items: center;
@@ -48,10 +49,11 @@
     width: 100%;
 }
 
+/* Collapse button positioned slightly outside container for better visual separation */
 .claude-chat-page .claude-prompt-collapse-btn {
     position: absolute;
-    top: 0;
-    right: 0;
+    top: -2px;
+    right: -2px;
     z-index: 2;
     display: flex;
     align-items: center;
