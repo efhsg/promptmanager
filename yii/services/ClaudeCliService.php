@@ -680,24 +680,135 @@ class ClaudeCliService
         return 'unknown';
     }
 
-    /**
-     * Detects the current git branch for a host path.
-     */
     public function getGitBranch(string $hostPath): ?string
     {
         $containerPath = $this->translatePath($hostPath);
 
-        if (!is_dir($containerPath))
+        if (!is_dir($containerPath)) {
             return null;
+        }
 
         $command = 'git -C ' . escapeshellarg($containerPath) . ' rev-parse --abbrev-ref HEAD 2>/dev/null';
         $output = [];
         $exitCode = 0;
         exec($command, $output, $exitCode);
 
-        if ($exitCode !== 0 || empty($output[0]))
+        if ($exitCode !== 0 || empty($output[0])) {
             return null;
+        }
 
         return trim($output[0]);
+    }
+
+    public function getSubscriptionUsage(): array
+    {
+        $credentialsPath = $this->resolveCredentialsPath();
+        if ($credentialsPath === null || !is_file($credentialsPath)) {
+            return ['success' => false, 'error' => 'Claude credentials file not found'];
+        }
+
+        $raw = file_get_contents($credentialsPath);
+        if ($raw === false) {
+            return ['success' => false, 'error' => 'Could not read credentials file'];
+        }
+
+        $credentials = json_decode($raw, true);
+        $accessToken = $credentials['claudeAiOauth']['accessToken'] ?? null;
+        if ($accessToken === null) {
+            return ['success' => false, 'error' => 'No OAuth access token found in credentials'];
+        }
+
+        $fetch = $this->fetchSubscriptionUsage($accessToken);
+        if (!$fetch['success']) {
+            return ['success' => false, 'error' => 'API request failed: ' . $fetch['error']];
+        }
+
+        $httpCode = $fetch['status'] ?? 0;
+        $response = $fetch['body'] ?? '';
+        if ($httpCode !== 200) {
+            Yii::warning("Claude usage API returned HTTP {$httpCode}", __METHOD__);
+            return ['success' => false, 'error' => 'API returned HTTP ' . $httpCode];
+        }
+
+        $data = json_decode($response, true);
+        if (!is_array($data)) {
+            return ['success' => false, 'error' => 'Invalid JSON response from API'];
+        }
+
+        return [
+            'success' => true,
+            'data' => $this->normalizeUsageData($data),
+        ];
+    }
+
+    protected function fetchSubscriptionUsage(string $accessToken): array
+    {
+        $ch = curl_init('https://api.anthropic.com/api/oauth/usage');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $accessToken,
+                'User-Agent: claude-code/2.1.31',
+                'anthropic-beta: oauth-2025-04-20',
+                'Accept: application/json',
+                'Content-Type: application/json',
+            ],
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            return ['success' => false, 'error' => $curlError];
+        }
+
+        return [
+            'success' => true,
+            'status' => $httpCode,
+            'body' => $response,
+        ];
+    }
+
+    private function normalizeUsageData(array $raw): array
+    {
+        $windows = [];
+        $windowKeys = [
+            'five_hour' => '5h limit',
+            'seven_day' => '7d limit',
+            'seven_day_opus' => '7d Opus',
+            'seven_day_sonnet' => '7d Sonnet',
+        ];
+
+        foreach ($windowKeys as $key => $label) {
+            if (!isset($raw[$key]) || !is_array($raw[$key])) {
+                continue;
+            }
+
+            $windows[] = [
+                'key' => $key,
+                'label' => $label,
+                'utilization' => (float) ($raw[$key]['utilization'] ?? 0),
+                'resets_at' => $raw[$key]['resets_at'] ?? null,
+            ];
+        }
+
+        return ['windows' => $windows];
+    }
+
+    private function resolveCredentialsPath(): ?string
+    {
+        // Allow override via app params
+        $configured = Yii::$app->params['claudeCredentialsPath'] ?? null;
+        if ($configured !== null) {
+            return $configured;
+        }
+
+        // Standard location: ~/.claude/.credentials.json
+        $home = getenv('HOME') ?: (getenv('USERPROFILE') ?: '/root');
+
+        return $home . '/.claude/.credentials.json';
     }
 }

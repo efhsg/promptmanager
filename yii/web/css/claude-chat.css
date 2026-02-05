@@ -691,6 +691,122 @@
     text-align: right;
 }
 
+/* Subscription Usage */
+.claude-chat-page .claude-subscription-usage {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+}
+
+.claude-chat-page .claude-usage-section {
+    position: relative;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.claude-chat-page .claude-usage-section:hover {
+    background: #e9ecef;
+}
+
+.claude-chat-page .claude-subscription-usage--warning {
+    background: #fff8f0;
+}
+
+.claude-chat-page .claude-subscription-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.claude-chat-page .claude-subscription-row + .claude-subscription-row {
+    margin-top: 0.35rem;
+}
+
+.claude-chat-page .claude-subscription-row__label {
+    flex: 0 0 90px;
+    max-width: 90px;
+    color: #6c757d;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.claude-chat-page .claude-subscription-row__bar {
+    flex: 1;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.claude-chat-page .claude-subscription-row__fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease, background-color 0.3s ease;
+}
+
+.claude-chat-page .claude-subscription-row__fill--green { background-color: #198754; }
+.claude-chat-page .claude-subscription-row__fill--orange { background-color: #fd7e14; }
+.claude-chat-page .claude-subscription-row__fill--red { background-color: #dc3545; }
+
+.claude-chat-page .claude-subscription-row__pct {
+    flex: 0 0 32px;
+    text-align: right;
+    color: #6c757d;
+    font-variant-numeric: tabular-nums;
+}
+
+.claude-chat-page .claude-usage-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+    cursor: pointer;
+    background: #f8f9fa;
+}
+
+.claude-chat-page .claude-usage-summary:hover {
+    background: #e9ecef;
+}
+
+.claude-chat-page .claude-usage-summary__item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.claude-chat-page .claude-usage-summary__label {
+    white-space: nowrap;
+}
+
+.claude-chat-page .claude-usage-summary__bar {
+    width: 40px;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.claude-chat-page .claude-usage-summary__fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+}
+
+.claude-chat-page .claude-usage-summary__fill--green { background-color: #198754; }
+.claude-chat-page .claude-usage-summary__fill--orange { background-color: #fd7e14; }
+.claude-chat-page .claude-usage-summary__fill--red { background-color: #dc3545; }
+
+.claude-chat-page .claude-usage-summary__pct {
+    min-width: 28px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
 .claude-chat-page #claude-summarize-warning-btn {
     vertical-align: baseline;
 }

@@ -288,6 +288,17 @@ class ProjectController extends Controller
     }
 
     /**
+     * @throws NotFoundHttpException
+     */
+    public function actionClaudeUsage(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $this->findModel($id);
+
+        return $this->claudeCliService->getSubscriptionUsage();
+    }
+
+    /**
      * Renders Claude CLI chat interface for a project.
      * Initial content can be provided via sessionStorage (set by prompt-instance create).
      *

@@ -29,9 +29,11 @@ $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $viewUrlTemplate = Url::to(['/scratch-pad/view', 'id' => '__ID__']);
 $checkConfigUrl = $model->project ? Url::to(['/project/check-claude-config', 'id' => $model->project->id]) : null;
+$usageUrl = Url::to(['/scratch-pad/claude-usage', 'id' => $model->id]);
 $projectDefaults = $model->project ? $model->project->getClaudeOptions() : [];
 $projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$usageUrlJson = Json::encode($usageUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $gitBranchJson = Json::encode($gitBranch, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $projectNameJson = Json::encode($model->project ? $model->project->name : null, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
@@ -65,6 +67,19 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                 ['view', 'id' => $model->id],
                 ['class' => 'text-decoration-none']) ?>
             <h1 class="h3 mt-2 mb-0"><i class="bi bi-terminal-fill me-2"></i>Claude CLI</h1>
+        </div>
+    </div>
+
+    <!-- Subscription Usage (collapsible) -->
+    <div id="claude-subscription-usage" class="claude-subscription-usage d-none mb-3">
+        <div class="collapse" id="claudeUsageCard">
+            <div class="claude-usage-section" role="button"
+                 data-bs-toggle="collapse" data-bs-target="#claudeUsageCard">
+                <div id="claude-subscription-bars"></div>
+            </div>
+        </div>
+        <div id="claude-usage-summary" class="claude-usage-summary" role="button"
+             data-bs-toggle="collapse" data-bs-target="#claudeUsageCard">
         </div>
     </div>
 
@@ -213,16 +228,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <div id="claude-prompt-summary" class="claude-collapsible-summary d-none"
              data-bs-toggle="collapse" data-bs-target="#claudePromptCard" role="button">
             <i class="bi bi-pencil-square me-1"></i> Prompt editor
-        </div>
-    </div>
-
-    <!-- Context Usage Meter -->
-    <div id="claude-context-meter-wrapper" class="claude-context-meter d-none mb-3">
-        <div class="claude-context-meter__bar-container">
-            <div id="claude-context-meter-fill" class="claude-context-meter__fill" style="width: 0%"></div>
-        </div>
-        <div class="claude-context-meter__label">
-            <span id="claude-context-meter-text">0% context used</span>
         </div>
     </div>
 
@@ -472,6 +477,7 @@ $js = <<<JS
             historyCounter: 0,
             projectDefaults: $projectDefaultsJson,
             checkConfigUrl: $checkConfigUrlJson,
+            usageUrl: $usageUrlJson,
             projectName: $projectNameJson,
             gitBranch: $gitBranchJson,
             maxContext: 200000,
@@ -481,6 +487,7 @@ $js = <<<JS
             init: function() {
                 this.prefillFromDefaults();
                 this.checkConfigStatus();
+                this.fetchSubscriptionUsage();
                 this.setupEventListeners();
             },
 
@@ -602,6 +609,12 @@ $js = <<<JS
                 settingsCard.addEventListener('hidden.bs.collapse', function() { self.updateSettingsSummary(); });
                 settingsCard.addEventListener('shown.bs.collapse', function() {
                     document.getElementById('claude-settings-summary').classList.add('d-none');
+                });
+
+                var usageCard = document.getElementById('claudeUsageCard');
+                usageCard.addEventListener('hidden.bs.collapse', function() { self.updateUsageSummary(); });
+                usageCard.addEventListener('shown.bs.collapse', function() {
+                    document.getElementById('claude-usage-summary').classList.add('d-none');
                 });
 
                 var promptCard = document.getElementById('claudePromptCard');
@@ -961,6 +974,7 @@ $js = <<<JS
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
                 this.expandPromptEditor();
                 this.focusEditor();
+                this.fetchSubscriptionUsage();
             },
 
             onStreamError: function(msg) {
@@ -1355,32 +1369,52 @@ $js = <<<JS
             },
 
             updateContextMeter: function(pctUsed, totalUsed) {
-                var wrapper = document.getElementById('claude-context-meter-wrapper');
-                var fill = document.getElementById('claude-context-meter-fill');
-                var textEl = document.getElementById('claude-context-meter-text');
+                var wrapper = document.getElementById('claude-subscription-usage');
+                var bars = document.getElementById('claude-subscription-bars');
+                var colorClass = pctUsed < 60 ? 'green' : pctUsed < 80 ? 'orange' : 'red';
+
+                // Build tooltip with token details
+                var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
+                var tooltip = fmt(totalUsed) + ' / ' + fmt(this.maxContext) + ' tokens';
+                if (this.lastNumTurns)
+                    tooltip += ' \u00b7 ' + this.lastNumTurns + (this.lastNumTurns === 1 ? ' turn' : ' turns');
+
+                // Find or create the context row
+                var row = document.getElementById('claude-context-row');
+                if (!row) {
+                    row = document.createElement('div');
+                    row.id = 'claude-context-row';
+                    row.className = 'claude-subscription-row';
+
+                    var label = document.createElement('span');
+                    label.className = 'claude-subscription-row__label';
+                    label.textContent = 'Context used';
+
+                    var barOuter = document.createElement('div');
+                    barOuter.className = 'claude-subscription-row__bar';
+
+                    var barFill = document.createElement('div');
+                    barFill.className = 'claude-subscription-row__fill';
+                    barOuter.appendChild(barFill);
+
+                    var pctLabel = document.createElement('span');
+                    pctLabel.className = 'claude-subscription-row__pct';
+
+                    row.appendChild(label);
+                    row.appendChild(barOuter);
+                    row.appendChild(pctLabel);
+                    bars.appendChild(row);
+                }
+
+                // Update values
+                var fill = row.querySelector('.claude-subscription-row__fill');
+                var pctLabel = row.querySelector('.claude-subscription-row__pct');
+                fill.style.width = pctUsed + '%';
+                fill.className = 'claude-subscription-row__fill claude-subscription-row__fill--' + colorClass;
+                pctLabel.textContent = pctUsed + '%';
+                pctLabel.title = tooltip;
 
                 wrapper.classList.remove('d-none');
-                fill.style.width = pctUsed + '%';
-
-                fill.classList.remove(
-                    'claude-context-meter__fill--green',
-                    'claude-context-meter__fill--orange',
-                    'claude-context-meter__fill--red'
-                );
-                if (pctUsed < 60)
-                    fill.classList.add('claude-context-meter__fill--green');
-                else if (pctUsed < 80)
-                    fill.classList.add('claude-context-meter__fill--orange');
-                else
-                    fill.classList.add('claude-context-meter__fill--red');
-
-                var fmt = function(n) { return n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n || 0); };
-                var label = pctUsed + '% context used (' + fmt(totalUsed) + ' / ' + fmt(this.maxContext) + ' tokens)';
-                if (this.lastNumTurns)
-                    label += ' \u00b7 ' + this.lastNumTurns + (this.lastNumTurns === 1 ? ' turn' : ' turns');
-                textEl.textContent = label;
-                textEl.title = this.lastToolUses.length ? this.lastToolUses.join('\\n') : '';
-
                 this.updateSummarizeButtonColor(pctUsed);
             },
 
@@ -1404,6 +1438,86 @@ $js = <<<JS
                 var warningText = document.getElementById('claude-context-warning-text');
                 warningText.textContent = 'Context usage is at ' + pctUsed + '%.';
                 warning.classList.remove('d-none');
+            },
+
+            fetchSubscriptionUsage: function() {
+                if (!this.usageUrl) return;
+                var self = this;
+                fetch(this.usageUrl)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.success && data.data)
+                            self.renderSubscriptionUsage(data.data);
+                    })
+                    .catch(function() { /* silent — non-critical */ });
+            },
+
+            renderSubscriptionUsage: function(data) {
+                var wrapper = document.getElementById('claude-subscription-usage');
+                var bars = document.getElementById('claude-subscription-bars');
+                if (!data.windows || !data.windows.length) return;
+
+                // Preserve context row before clearing
+                var contextRow = document.getElementById('claude-context-row');
+                if (contextRow) contextRow.remove();
+
+                bars.innerHTML = '';
+                var hasWarning = false;
+
+                data.windows.forEach(function(w) {
+                    var pct = Math.min(100, Math.round(w.utilization || 0));
+                    var colorClass = pct < 60 ? 'green' : pct < 80 ? 'orange' : 'red';
+                    if (pct >= 80) hasWarning = true;
+
+                    var resetLabel = '';
+                    if (w.resets_at) {
+                        var d = new Date(w.resets_at);
+                        var now = new Date();
+                        var diffMs = d - now;
+                        if (diffMs > 0) {
+                            var hrs = Math.floor(diffMs / 3600000);
+                            var mins = Math.floor((diffMs % 3600000) / 60000);
+                            resetLabel = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+                        }
+                    }
+
+                    var row = document.createElement('div');
+                    row.className = 'claude-subscription-row';
+
+                    var label = document.createElement('span');
+                    label.className = 'claude-subscription-row__label';
+                    label.textContent = w.label;
+
+                    var barOuter = document.createElement('div');
+                    barOuter.className = 'claude-subscription-row__bar';
+
+                    var barFill = document.createElement('div');
+                    barFill.className = 'claude-subscription-row__fill claude-subscription-row__fill--' + colorClass;
+                    barFill.style.width = pct + '%';
+                    barOuter.appendChild(barFill);
+
+                    var pctLabel = document.createElement('span');
+                    pctLabel.className = 'claude-subscription-row__pct';
+                    pctLabel.textContent = pct + '%';
+                    if (resetLabel)
+                        pctLabel.title = 'Resets in ' + resetLabel;
+
+                    row.appendChild(label);
+                    row.appendChild(barOuter);
+                    row.appendChild(pctLabel);
+                    bars.appendChild(row);
+                });
+
+                // Re-insert context row at the bottom if it existed
+                if (contextRow)
+                    bars.appendChild(contextRow);
+
+                wrapper.classList.remove('d-none');
+                if (hasWarning) wrapper.classList.add('claude-subscription-usage--warning');
+                else wrapper.classList.remove('claude-subscription-usage--warning');
+
+                // Populate the collapsed summary view so widgets show at startup
+                this.updateUsageSummary();
             },
 
             escapeHtml: function(text) {
@@ -1670,8 +1784,8 @@ $js = <<<JS
                     clearTimeout(this._toggleBtnTimer);
                     this._toggleBtnTimer = null;
                 }
-                document.getElementById('claude-context-meter-wrapper').classList.add('d-none');
-                document.getElementById('claude-context-meter-fill').style.width = '0%';
+                var contextRow = document.getElementById('claude-context-row');
+                if (contextRow) contextRow.remove();
                 document.getElementById('claude-context-warning').classList.add('d-none');
 
                 this.activeItemId = null;
@@ -1768,6 +1882,51 @@ $js = <<<JS
                 }
 
                 summary.textContent = parts.join(' \u00b7 ');
+                summary.classList.remove('d-none');
+            },
+
+            updateUsageSummary: function() {
+                var summary = document.getElementById('claude-usage-summary');
+                var rows = document.querySelectorAll('#claude-subscription-bars .claude-subscription-row');
+                if (!rows.length) {
+                    summary.classList.add('d-none');
+                    return;
+                }
+
+                summary.innerHTML = '';
+                rows.forEach(function(row) {
+                    var label = row.querySelector('.claude-subscription-row__label');
+                    var fill = row.querySelector('.claude-subscription-row__fill');
+                    if (!label || !fill) return;
+
+                    var pct = parseInt(fill.style.width, 10) || 0;
+                    var colorClass = pct < 60 ? 'green' : pct < 80 ? 'orange' : 'red';
+
+                    var item = document.createElement('span');
+                    item.className = 'claude-usage-summary__item';
+
+                    var labelSpan = document.createElement('span');
+                    labelSpan.className = 'claude-usage-summary__label';
+                    labelSpan.textContent = label.textContent;
+
+                    var barOuter = document.createElement('span');
+                    barOuter.className = 'claude-usage-summary__bar';
+
+                    var barFill = document.createElement('span');
+                    barFill.className = 'claude-usage-summary__fill claude-usage-summary__fill--' + colorClass;
+                    barFill.style.width = pct + '%';
+                    barOuter.appendChild(barFill);
+
+                    var pctSpan = document.createElement('span');
+                    pctSpan.className = 'claude-usage-summary__pct';
+                    pctSpan.textContent = pct + '%';
+
+                    item.appendChild(labelSpan);
+                    item.appendChild(barOuter);
+                    item.appendChild(pctSpan);
+                    summary.appendChild(item);
+                });
+
                 summary.classList.remove('d-none');
             },
 

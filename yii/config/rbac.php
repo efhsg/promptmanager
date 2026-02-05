@@ -42,6 +42,7 @@ return [
                 'runClaude' => 'viewProject',
                 'streamClaude' => 'viewProject',
                 'cancelClaude' => 'viewProject',
+                'claudeUsage' => 'viewProject',
                 'summarizeSession' => 'viewProject',
             ],
             'permissions' => [
@@ -162,6 +163,7 @@ return [
                 'streamClaude' => 'viewScratchPad',
                 'cancelClaude' => 'viewScratchPad',
                 'claude' => 'viewScratchPad',
+                'claudeUsage' => 'viewScratchPad',
                 'summarizeSession' => 'viewScratchPad',
             ],
             'permissions' => [

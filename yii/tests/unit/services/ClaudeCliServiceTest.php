@@ -664,6 +664,12 @@ class ClaudeCliServiceTest extends Unit
 
     public function testGetGitBranchReturnsBranchNameForGitRepo(): void
     {
+        exec('git --version 2>/dev/null', $versionOut, $versionExitCode);
+        if ($versionExitCode !== 0) {
+            $this->markTestSkipped('git is not available in the test environment.');
+        }
+
+        $originalMappings = Yii::$app->params['pathMappings'] ?? [];
         $tmpDir = sys_get_temp_dir() . '/claude_git_test_' . uniqid();
         mkdir($tmpDir, 0o755, true);
 
@@ -671,33 +677,188 @@ class ClaudeCliServiceTest extends Unit
         if ($exitCode !== 0) {
             // Older git without -b flag
             exec('git -C ' . escapeshellarg($tmpDir) . ' init 2>/dev/null');
-            exec('git -C ' . escapeshellarg($tmpDir) . ' checkout -b test-branch 2>/dev/null');
+            exec('git -C ' . escapeshellarg($tmpDir) . ' checkout -b test-branch 2>/dev/null', $out, $exitCode);
+        }
+
+        if ($exitCode !== 0) {
+            $this->removeDirectory($tmpDir);
+            $this->markTestSkipped('git init failed in the test environment.');
         }
 
         try {
+            file_put_contents($tmpDir . '/README.md', 'test');
+            exec('git -C ' . escapeshellarg($tmpDir) . ' add README.md 2>/dev/null');
+            exec(
+                'git -C ' . escapeshellarg($tmpDir)
+                . ' -c user.email=test@example.com -c user.name=test commit -m "init" 2>/dev/null',
+                $out,
+                $exitCode
+            );
+            if ($exitCode !== 0) {
+                $this->markTestSkipped('git commit failed in the test environment.');
+            }
+
+            $tempRoot = sys_get_temp_dir();
+            Yii::$app->params['pathMappings'] = [$tempRoot => $tempRoot];
             $service = new ClaudeCliService();
             $branch = $service->getGitBranch($tmpDir);
             $this->assertSame('test-branch', $branch);
         } finally {
             // Clean up .git directory and tmpDir
             $this->removeDirectory($tmpDir);
+            Yii::$app->params['pathMappings'] = $originalMappings;
+        }
+    }
+
+    public function testGetSubscriptionUsageReturnsErrorWhenCredentialsMissing(): void
+    {
+        $path = sys_get_temp_dir() . '/claude_credentials_missing_' . uniqid() . '.json';
+        $service = new ClaudeCliService();
+
+        $this->withCredentialsPath($path, function () use ($service) {
+            $result = $service->getSubscriptionUsage();
+            $this->assertFalse($result['success']);
+            $this->assertSame('Claude credentials file not found', $result['error']);
+        });
+    }
+
+    public function testGetSubscriptionUsageReturnsErrorWhenTokenMissing(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'claude_credentials_');
+        file_put_contents($tmpFile, json_encode(['claudeAiOauth' => []]));
+        $service = new ClaudeCliService();
+
+        try {
+            $this->withCredentialsPath($tmpFile, function () use ($service) {
+                $result = $service->getSubscriptionUsage();
+                $this->assertFalse($result['success']);
+                $this->assertSame('No OAuth access token found in credentials', $result['error']);
+            });
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    public function testGetSubscriptionUsageReturnsErrorWhenApiNon200(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'claude_credentials_');
+        file_put_contents($tmpFile, json_encode(['claudeAiOauth' => ['accessToken' => 'token']]));
+
+        $service = new class extends ClaudeCliService {
+            protected function fetchSubscriptionUsage(string $accessToken): array
+            {
+                return ['success' => true, 'status' => 429, 'body' => 'Rate limit'];
+            }
+        };
+
+        try {
+            $this->withCredentialsPath($tmpFile, function () use ($service) {
+                $result = $service->getSubscriptionUsage();
+                $this->assertFalse($result['success']);
+                $this->assertSame('API returned HTTP 429', $result['error']);
+            });
+        } finally {
+            @unlink($tmpFile);
+        }
+    }
+
+    public function testGetSubscriptionUsageNormalizesUsageWindows(): void
+    {
+        $tmpFile = tempnam(sys_get_temp_dir(), 'claude_credentials_');
+        file_put_contents($tmpFile, json_encode(['claudeAiOauth' => ['accessToken' => 'token']]));
+
+        $payload = json_encode([
+            'five_hour' => ['utilization' => 12.5, 'resets_at' => '2026-02-05T10:00:00Z'],
+            'seven_day' => ['utilization' => 45, 'resets_at' => null],
+            'seven_day_opus' => ['utilization' => 80, 'resets_at' => '2026-02-10T00:00:00Z'],
+            'seven_day_sonnet' => ['utilization' => 55, 'resets_at' => null],
+            'ignored_window' => ['utilization' => 100, 'resets_at' => null],
+        ]);
+
+        $service = new class ($payload) extends ClaudeCliService {
+            private string $payload;
+
+            public function __construct(string $payload)
+            {
+                parent::__construct();
+                $this->payload = $payload;
+            }
+
+            protected function fetchSubscriptionUsage(string $accessToken): array
+            {
+                return ['success' => true, 'status' => 200, 'body' => $this->payload];
+            }
+        };
+
+        try {
+            $this->withCredentialsPath($tmpFile, function () use ($service) {
+                $result = $service->getSubscriptionUsage();
+                $this->assertTrue($result['success']);
+
+                $windows = $result['data']['windows'] ?? [];
+                $this->assertCount(4, $windows);
+
+                $byKey = [];
+                foreach ($windows as $window) {
+                    $this->assertArrayHasKey('key', $window);
+                    $this->assertArrayHasKey('label', $window);
+                    $this->assertArrayHasKey('utilization', $window);
+                    $this->assertArrayHasKey('resets_at', $window);
+                    $this->assertIsString($window['label']);
+                    $this->assertNotSame('', $window['label']);
+                    $byKey[$window['key']] = $window;
+                }
+
+                $this->assertSame(12.5, $byKey['five_hour']['utilization']);
+                $this->assertSame('2026-02-05T10:00:00Z', $byKey['five_hour']['resets_at']);
+
+                $this->assertSame(45.0, $byKey['seven_day']['utilization']);
+                $this->assertNull($byKey['seven_day']['resets_at']);
+
+                $this->assertSame(80.0, $byKey['seven_day_opus']['utilization']);
+                $this->assertSame('2026-02-10T00:00:00Z', $byKey['seven_day_opus']['resets_at']);
+
+                $this->assertSame(55.0, $byKey['seven_day_sonnet']['utilization']);
+                $this->assertNull($byKey['seven_day_sonnet']['resets_at']);
+            });
+        } finally {
+            @unlink($tmpFile);
         }
     }
 
     private function removeDirectory(string $dir): void
     {
-        if (!is_dir($dir))
+        if (!is_dir($dir)) {
             return;
+        }
 
         $items = scandir($dir);
         foreach ($items as $item) {
-            if ($item === '.' || $item === '..')
+            if ($item === '.' || $item === '..') {
                 continue;
+            }
 
             $path = $dir . '/' . $item;
             is_dir($path) ? $this->removeDirectory($path) : @unlink($path);
         }
         @rmdir($dir);
+    }
+
+    private function withCredentialsPath(?string $path, callable $callback): void
+    {
+        $hadKey = array_key_exists('claudeCredentialsPath', Yii::$app->params);
+        $original = $hadKey ? Yii::$app->params['claudeCredentialsPath'] : null;
+        Yii::$app->params['claudeCredentialsPath'] = $path;
+
+        try {
+            $callback();
+        } finally {
+            if ($hadKey) {
+                Yii::$app->params['claudeCredentialsPath'] = $original;
+            } else {
+                unset(Yii::$app->params['claudeCredentialsPath']);
+            }
+        }
     }
 
     private function buildAssistantLine(array $usage, bool $isSidechain = false): string

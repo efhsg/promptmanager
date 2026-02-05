@@ -423,6 +423,17 @@ class ScratchPadController extends Controller
     /**
      * @throws NotFoundHttpException
      */
+    public function actionClaudeUsage(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $this->findModel($id);
+
+        return $this->claudeCliService->getSubscriptionUsage();
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
     public function actionClaude(int $id): string
     {
         $model = $this->findModel($id);
