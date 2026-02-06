@@ -1258,8 +1258,8 @@ $js = <<<JS
                     '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
                         'aria-labelledby="heading-' + itemId + '">' +
                         '<div class="accordion-body p-0">' +
-                            '<div class="claude-active-response"></div>' +
                             '<div class="claude-active-prompt"></div>' +
+                            '<div class="claude-active-response"></div>' +
                         '</div>' +
                     '</div>';
 
