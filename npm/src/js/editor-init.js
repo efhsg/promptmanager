@@ -471,15 +471,62 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     };
 
+    // ── Fixed toolbar on page scroll ──
+    const NAVBAR_HEIGHT = 56;
+
+    const setupFixedToolbar = container => {
+        if (container.closest('.claude-prompt-card-sticky')) return;
+
+        const toolbar = container.querySelector('.ql-toolbar');
+        if (!toolbar) return;
+
+        let spacer = null;
+        let fixed = false;
+
+        const apply = () => {
+            const cRect = container.getBoundingClientRect();
+            const shouldFix = cRect.top < NAVBAR_HEIGHT && cRect.bottom > NAVBAR_HEIGHT + toolbar.offsetHeight;
+
+            if (shouldFix && !fixed) {
+                fixed = true;
+                spacer = document.createElement('div');
+                spacer.style.height = toolbar.offsetHeight + 'px';
+                toolbar.parentNode.insertBefore(spacer, toolbar);
+                toolbar.classList.add('ql-toolbar-fixed');
+                toolbar.style.left = cRect.left + 'px';
+                toolbar.style.width = cRect.width + 'px';
+            } else if (shouldFix && fixed) {
+                toolbar.style.left = cRect.left + 'px';
+                toolbar.style.width = cRect.width + 'px';
+            } else if (!shouldFix && fixed) {
+                fixed = false;
+                toolbar.classList.remove('ql-toolbar-fixed');
+                toolbar.style.left = '';
+                toolbar.style.width = '';
+                if (spacer) {
+                    spacer.remove();
+                    spacer = null;
+                }
+            }
+        };
+
+        window.addEventListener('scroll', apply, { passive: true });
+        window.addEventListener('resize', apply, { passive: true });
+    };
+
     // 1️⃣ initial pass
     document.querySelectorAll('[data-editor="quill"]').forEach(init);
 
-    // 2️⃣ future nodes (AJAX, modal, cloneRow...)
+    // 2️⃣ setup fixed toolbars for all containers
+    document.querySelectorAll('.resizable-editor-container').forEach(setupFixedToolbar);
+
+    // 3️⃣ future nodes (AJAX, modal, cloneRow...)
     new MutationObserver(muts =>
         muts.forEach(m =>
-            m.addedNodes.forEach(n =>
-                n.querySelectorAll?.('[data-editor="quill"]').forEach(init)
-            )
+            m.addedNodes.forEach(n => {
+                n.querySelectorAll?.('[data-editor="quill"]').forEach(init);
+                n.querySelectorAll?.('.resizable-editor-container').forEach(setupFixedToolbar);
+            })
         )
     ).observe(document.body, {childList:true, subtree:true});
 });

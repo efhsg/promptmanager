@@ -64,10 +64,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     <!-- Page Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <?= Html::a('<i class="bi bi-arrow-left"></i> Back to "' . Html::encode($model->name) . '"',
-                ['view', 'id' => $model->id],
-                ['class' => 'text-decoration-none']) ?>
-            <h1 class="h3 mt-2 mb-0"><i class="bi bi-terminal-fill me-2"></i>Claude CLI</h1>
+            <h1 class="h3 mb-0"><i class="bi bi-terminal-fill me-2"></i>Claude CLI</h1>
         </div>
     </div>
 
@@ -154,7 +151,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     </div>
 
     <!-- Section 2: Prompt Editor (collapsible) -->
-    <div class="card mb-4">
+    <div class="card mb-4 claude-prompt-card-sticky">
         <div class="collapse show" id="claudePromptCard">
             <div class="card-body claude-prompt-section">
                 <button type="button" id="claude-prompt-collapse-btn" class="claude-prompt-collapse-btn"

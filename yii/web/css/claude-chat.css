@@ -938,3 +938,15 @@
 .claude-chat-page .claude-new-conversation-btn i {
     font-size: 0.875rem;
 }
+
+/* Sticky prompt editor — stays below navbar while scrolling chat history */
+.claude-chat-page .claude-prompt-card-sticky {
+    position: sticky;
+    top: 62px;
+    z-index: 1020;
+    background: #fff;
+}
+
+.claude-chat-page .claude-prompt-card-sticky .resizable-editor-container {
+    max-height: min(40vh, 500px);
+}
