@@ -207,6 +207,12 @@ class ClaudeCliService
         ?string $sessionId = null,
         ?string $streamToken = null
     ): array {
+        // Ensure streamToken is never null to prevent shared PID cache keys
+        if ($streamToken === null) {
+            $streamToken = bin2hex(random_bytes(16));
+            Yii::warning('streamToken was null, generated fallback: ' . $streamToken, __METHOD__);
+        }
+
         $effectiveWorkDir = $this->determineWorkingDirectory($workingDirectory, $project);
         $containerPath = $this->translatePath($effectiveWorkDir);
 
@@ -292,7 +298,7 @@ class ClaudeCliService
      *
      * @return bool True if a process was found and signalled
      */
-    public function cancelRunningProcess(?string $streamToken = null): bool
+    public function cancelRunningProcess(string $streamToken): bool
     {
         if (!function_exists('posix_kill')) {
             Yii::warning('posix_kill not available — cannot cancel Claude CLI process', __METHOD__);
@@ -320,23 +326,21 @@ class ClaudeCliService
         return true;
     }
 
-    private function storeProcessPid(int $pid, ?string $streamToken = null): void
+    private function storeProcessPid(int $pid, string $streamToken): void
     {
         $key = $this->buildPidCacheKey($streamToken);
         Yii::$app->cache->set($key, $pid, 3900);
     }
 
-    private function clearProcessPid(?string $streamToken = null): void
+    private function clearProcessPid(string $streamToken): void
     {
         $key = $this->buildPidCacheKey($streamToken);
         Yii::$app->cache->delete($key);
     }
 
-    private function buildPidCacheKey(?string $streamToken): string
+    private function buildPidCacheKey(string $streamToken): string
     {
-        $base = 'claude_cli_pid_' . Yii::$app->user->id;
-
-        return $streamToken !== null ? $base . '_' . $streamToken : $base;
+        return 'claude_cli_pid_' . Yii::$app->user->id . '_' . $streamToken;
     }
 
     /**
@@ -413,7 +417,7 @@ class ClaudeCliService
         }
 
         if ($sessionId !== null) {
-            $cmd .= ' --continue ' . escapeshellarg($sessionId);
+            $cmd .= ' --resume ' . escapeshellarg($sessionId);
         }
 
         if (!empty($options['permissionMode']))

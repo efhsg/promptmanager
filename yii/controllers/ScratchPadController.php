@@ -581,6 +581,9 @@ class ScratchPadController extends Controller
         $raw = $requestData['streamToken'] ?? null;
         $streamToken = $this->sanitizeStreamToken(is_string($raw) ? $raw : null);
 
+        if ($streamToken === null)
+            return ['success' => true, 'cancelled' => false];
+
         $cancelled = $this->claudeCliService->cancelRunningProcess($streamToken);
 
         return [

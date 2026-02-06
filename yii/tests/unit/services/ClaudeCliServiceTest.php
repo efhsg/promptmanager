@@ -26,7 +26,7 @@ class ClaudeCliServiceTest extends Unit
         $this->assertStringNotContainsString('--continue', $command);
     }
 
-    public function testBuildCommandWithSessionIdPassesContinueFlag(): void
+    public function testBuildCommandWithSessionIdPassesResumeFlag(): void
     {
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
@@ -35,7 +35,8 @@ class ClaudeCliServiceTest extends Unit
 
         $command = $method->invoke($service, ['permissionMode' => 'plan'], 'test-session-abc123');
 
-        $this->assertStringContainsString('--continue', $command);
+        $this->assertStringContainsString('--resume', $command);
+        $this->assertStringNotContainsString('--continue', $command);
         $this->assertStringContainsString('test-session-abc123', $command);
     }
 
@@ -48,7 +49,7 @@ class ClaudeCliServiceTest extends Unit
 
         $command = $method->invoke($service, [], 'session; rm -rf /');
 
-        $this->assertStringContainsString("--continue 'session; rm -rf /'", $command);
+        $this->assertStringContainsString("--resume 'session; rm -rf /'", $command);
     }
 
     public function testParseStreamJsonOutputExtractsSessionId(): void
@@ -610,10 +611,17 @@ class ClaudeCliServiceTest extends Unit
         );
     }
 
-    public function testCancelRunningProcessReturnsFalseWhenNoPid(): void
+    public function testCancelRunningProcessThrowsTypeErrorWhenNoStreamToken(): void
     {
         $service = new ClaudeCliService();
-        $result = $service->cancelRunningProcess();
+        $this->expectException(\TypeError::class);
+        $service->cancelRunningProcess(null);
+    }
+
+    public function testCancelRunningProcessReturnsFalseWhenNoPidInCache(): void
+    {
+        $service = new ClaudeCliService();
+        $result = $service->cancelRunningProcess('nonexistent-token');
 
         $this->assertFalse($result);
     }
@@ -623,16 +631,17 @@ class ClaudeCliServiceTest extends Unit
         $service = new ClaudeCliService();
         $reflection = new ReflectionClass($service);
 
+        $token = 'test-token-abc';
         $storeMethod = $reflection->getMethod('storeProcessPid');
         $storeMethod->setAccessible(true);
-        $storeMethod->invoke($service, 99999);
+        $storeMethod->invoke($service, 99999, $token);
 
-        $cacheKey = 'claude_cli_pid_' . Yii::$app->user->id;
+        $cacheKey = 'claude_cli_pid_' . Yii::$app->user->id . '_' . $token;
         $this->assertSame(99999, Yii::$app->cache->get($cacheKey));
 
         $clearMethod = $reflection->getMethod('clearProcessPid');
         $clearMethod->setAccessible(true);
-        $clearMethod->invoke($service);
+        $clearMethod->invoke($service, $token);
 
         $this->assertFalse(Yii::$app->cache->get($cacheKey));
     }
@@ -685,6 +694,54 @@ class ClaudeCliServiceTest extends Unit
 
         $clearMethod->invoke($service, 'token-b');
         $this->assertFalse(Yii::$app->cache->get('claude_cli_pid_' . $userId . '_token-b'));
+    }
+
+    public function testBuildPidCacheKeyNeverProducesSharedKey(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildPidCacheKey');
+        $method->setAccessible(true);
+
+        $userId = Yii::$app->user->id;
+        $sharedKey = 'claude_cli_pid_' . $userId;
+
+        // Any token should produce a key that is NOT the shared (token-less) key
+        $key = $method->invoke($service, 'any-token');
+        $this->assertNotSame($sharedKey, $key);
+        $this->assertStringStartsWith($sharedKey . '_', $key);
+    }
+
+    public function testExecuteStreamingGeneratesFallbackTokenWhenNull(): void
+    {
+        $mockWorkspace = $this->createMock(ClaudeWorkspaceService::class);
+        $mockWorkspace->method('getDefaultWorkspacePath')
+            ->willReturn('/nonexistent/workspace/' . uniqid());
+
+        $service = new ClaudeCliService(null, $mockWorkspace);
+        $userId = Yii::$app->user->id;
+        $sharedKey = 'claude_cli_pid_' . $userId;
+
+        // executeStreaming with null streamToken should NOT store under the shared key.
+        // It will throw because the directory doesn't exist, but the fallback token
+        // generation happens before the directory check.
+        try {
+            $service->executeStreaming(
+                'test prompt',
+                '/nonexistent/path/' . uniqid(),
+                function (string $line): void {},
+                3600,
+                [],
+                null,
+                null,
+                null // explicitly null streamToken
+            );
+        } catch (RuntimeException) {
+            // expected — directory doesn't exist
+        }
+
+        // The shared key must NOT have been written
+        $this->assertFalse(Yii::$app->cache->get($sharedKey));
     }
 
     public function testLoadCommandsFromDirectoryReturnsEmptyWhenNull(): void
