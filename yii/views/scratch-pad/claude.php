@@ -71,40 +71,35 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         </div>
     </div>
 
-    <!-- Subscription Usage (collapsible) -->
+    <!-- Subscription Usage (collapsed / expanded / silenced) -->
     <div id="claude-subscription-usage" class="claude-subscription-usage mb-3">
-        <div class="collapse" id="claudeUsageCard">
-            <div class="claude-usage-section" role="button"
-                 data-bs-toggle="collapse" data-bs-target="#claudeUsageCard">
+        <div id="claudeUsageCard" class="d-none">
+            <div class="claude-usage-section" role="button" id="claude-usage-expanded">
                 <div id="claude-subscription-bars"></div>
             </div>
         </div>
-        <div id="claude-usage-summary" class="claude-usage-summary claude-usage-summary--loading" role="button"
-             data-bs-toggle="collapse" data-bs-target="#claudeUsageCard">
+        <div id="claude-usage-summary" class="claude-usage-summary claude-usage-summary--loading" role="button">
             <span class="claude-usage-summary__placeholder">Loading usage...</span>
         </div>
+        <div id="claude-usage-silenced" class="claude-usage-silenced d-none" role="button"></div>
     </div>
 
-    <!-- Section 1: CLI Settings (collapsible) -->
+    <!-- Section 1: CLI Settings (expanded / collapsed) -->
     <div class="card mb-4">
-        <div class="collapse show" id="claudeSettingsCard">
+        <div id="claudeSettingsCard" class="d-none">
             <div class="card-body claude-settings-section">
                 <button type="button" class="claude-settings-collapse-btn" id="claude-settings-toggle"
-                        data-bs-toggle="collapse" data-bs-target="#claudeSettingsCard" aria-expanded="true"
                         title="Toggle settings">
                     <i class="bi bi-x-lg"></i>
                 </button>
-                <div id="claude-config-status" class="alert alert-secondary mb-3 d-none">
-                    <small><span id="claude-config-status-text">Checking config...</span></small>
-                </div>
-
-                <div class="mb-3">
+                <div class="mb-3" id="claude-settings-badges">
                     <?php if ($model->project): ?>
-                    <span class="badge bg-secondary"><i class="bi bi-folder2-open"></i> <?= Html::encode($model->project->name) ?></span>
+                    <span class="badge bg-secondary" title="Project"><i class="bi bi-folder2-open"></i> <?= Html::encode($model->project->name) ?></span>
                     <?php endif; ?>
                     <?php if ($gitBranch): ?>
-                    <span class="badge bg-secondary"><i class="bi bi-signpost-split"></i> <?= Html::encode($gitBranch) ?></span>
+                    <span class="badge bg-secondary" title="Git branch"><i class="bi bi-signpost-split"></i> <?= Html::encode($gitBranch) ?></span>
                     <?php endif; ?>
+                    <span id="claude-config-badge" class="badge d-none"></span>
                 </div>
 
                 <div class="row g-3">
@@ -124,40 +119,9 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                     </div>
                 </div>
 
-                <div class="row g-3 mt-1">
-                    <div class="col-md-6">
-                        <label for="claude-allowed-tools" class="form-label">Allowed Tools</label>
-                        <?= Html::textInput('claude-allowed-tools', '', [
-                            'id' => 'claude-allowed-tools',
-                            'class' => 'form-control',
-                            'placeholder' => 'e.g. Read,Glob,Grep',
-                        ]) ?>
-                        <div class="form-text">Comma-separated tool names</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label for="claude-disallowed-tools" class="form-label">Disallowed Tools</label>
-                        <?= Html::textInput('claude-disallowed-tools', '', [
-                            'id' => 'claude-disallowed-tools',
-                            'class' => 'form-control',
-                            'placeholder' => 'e.g. Bash,Write',
-                        ]) ?>
-                        <div class="form-text">Comma-separated tool names</div>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <label for="claude-system-prompt" class="form-label">Append to System Prompt</label>
-                    <?= Html::textarea('claude-system-prompt', '', [
-                        'id' => 'claude-system-prompt',
-                        'class' => 'form-control',
-                        'rows' => 2,
-                        'placeholder' => 'Additional instructions appended to Claude\'s system prompt',
-                    ]) ?>
-                </div>
             </div>
         </div>
-        <div id="claude-settings-summary" class="claude-collapsible-summary d-none"
-             data-bs-toggle="collapse" data-bs-target="#claudeSettingsCard" role="button">
+        <div id="claude-settings-summary" class="claude-collapsible-summary" role="button">
         </div>
     </div>
 
@@ -520,6 +484,8 @@ $js = <<<JS
             historyCounter: 0,
             projectDefaults: $projectDefaultsJson,
             checkConfigUrl: $checkConfigUrlJson,
+            settingsState: 'collapsed',
+            usageState: 'collapsed',
             usageUrl: $usageUrlJson,
             projectName: $projectNameJson,
             gitBranch: $gitBranchJson,
@@ -531,6 +497,7 @@ $js = <<<JS
                 this.prefillFromDefaults();
                 this.checkConfigStatus();
                 this.fetchSubscriptionUsage();
+                this.updateSettingsSummary();
                 this.setupEventListeners();
             },
 
@@ -538,23 +505,13 @@ $js = <<<JS
                 var d = this.projectDefaults;
                 document.getElementById('claude-model').value = d.model || '';
                 document.getElementById('claude-permission-mode').value = d.permissionMode || '';
-                document.getElementById('claude-system-prompt').value = d.appendSystemPrompt || '';
-                document.getElementById('claude-allowed-tools').value = d.allowedTools || '';
-                document.getElementById('claude-disallowed-tools').value = d.disallowedTools || '';
             },
 
             checkConfigStatus: function() {
                 var self = this;
-                var statusEl = document.getElementById('claude-config-status');
-                var statusTextEl = document.getElementById('claude-config-status-text');
+                var badge = document.getElementById('claude-config-badge');
 
-                if (!this.checkConfigUrl) {
-                    statusEl.classList.add('d-none');
-                    return;
-                }
-
-                statusEl.classList.remove('d-none');
-                statusTextEl.textContent = 'Checking config...';
+                if (!this.checkConfigUrl) return;
 
                 fetch(this.checkConfigUrl, {
                     method: 'GET',
@@ -562,43 +519,47 @@ $js = <<<JS
                 })
                 .then(function(r) { return self.parseJsonResponse(r); })
                 .then(function(data) {
-                    if (!data.success) {
-                        statusEl.classList.add('d-none');
-                        return;
-                    }
-                    statusEl.classList.remove('alert-secondary', 'alert-success', 'alert-info', 'alert-warning', 'alert-danger');
+                    if (!data.success) return;
+
                     var ps = data.pathStatus;
+                    var icon, label, bg, title;
+
                     if (ps === 'not_mapped') {
-                        statusEl.classList.add('alert-danger');
-                        var msg = '<i class="bi bi-x-circle me-1"></i>Project directory not mapped. Check PATH_MAPPINGS in .env and PROJECTS_ROOT volume mount.';
-                        if (data.hasPromptManagerContext)
-                            msg += '<br><small class="text-muted">Falling back to managed workspace with PromptManager context.</small>';
-                        statusTextEl.innerHTML = msg;
+                        icon = 'bi-x-circle'; bg = 'bg-danger'; label = 'Not mapped';
+                        title = 'Project directory not mapped. Check PATH_MAPPINGS in .env and PROJECTS_ROOT volume mount.';
                     } else if (ps === 'not_accessible') {
-                        statusEl.classList.add('alert-danger');
-                        var msg2 = '<i class="bi bi-x-circle me-1"></i>Project directory not accessible in container. Check that PROJECTS_ROOT volume is mounted correctly.';
-                        if (data.hasPromptManagerContext)
-                            msg2 += '<br><small class="text-muted">Falling back to managed workspace with PromptManager context.</small>';
-                        statusTextEl.innerHTML = msg2;
+                        icon = 'bi-x-circle'; bg = 'bg-danger'; label = 'Not accessible';
+                        title = 'Project directory not accessible in container. Check that PROJECTS_ROOT volume is mounted correctly.';
                     } else if (ps === 'has_config') {
-                        statusEl.classList.add('alert-success');
+                        icon = 'bi-check-circle'; bg = 'badge-config';
                         var parts = [];
                         if (data.hasCLAUDE_MD) parts.push('CLAUDE.md');
                         if (data.hasClaudeDir) parts.push('.claude/');
-                        statusTextEl.innerHTML = '<i class="bi bi-check-circle me-1"></i>Using project\\'s own config: ' + parts.join(' + ');
+                        label = parts.join(' + ');
+                        title = 'Using project\'s own config: ' + label;
                     } else if (ps === 'no_config' && data.hasPromptManagerContext) {
-                        statusEl.classList.add('alert-info');
-                        statusTextEl.innerHTML = '<i class="bi bi-info-circle me-1"></i>No project config found. Using managed workspace with PromptManager context.';
-                        if (data.claudeContext) {
-                            statusEl.title = data.claudeContext;
-                            statusEl.style.cursor = 'help';
-                        }
+                        icon = 'bi-info-circle'; bg = 'bg-info'; label = 'PM context';
+                        title = 'No project config found. Using managed workspace with PromptManager context.';
                     } else {
-                        statusEl.classList.add('alert-warning');
-                        statusTextEl.innerHTML = '<i class="bi bi-exclamation-triangle me-1"></i>No config found. Claude will use defaults. Consider adding context in Project settings.';
+                        icon = 'bi-exclamation-triangle'; bg = 'bg-warning'; label = 'No config';
+                        title = 'No config found. Claude will use defaults.';
                     }
+
+                    badge.className = 'badge ' + bg;
+                    badge.textContent = '';
+                    var badgeIcon = document.createElement('i');
+                    badgeIcon.className = 'bi ' + icon + ' me-1';
+                    badge.appendChild(badgeIcon);
+                    badge.appendChild(document.createTextNode(label));
+                    badge.title = title;
+                    badge.classList.remove('d-none');
+                    self.configBadgeLabel = label;
+                    self.configBadgeTitle = title;
+                    self.configBadgeBg = bg;
+                    self.configBadgeIcon = icon;
+                    self.updateSettingsSummary();
                 })
-                .catch(function() { statusEl.classList.add('d-none'); });
+                .catch(function(err) { console.warn('Config status check failed:', err); });
             },
 
             setupEventListeners: function() {
@@ -648,16 +609,21 @@ $js = <<<JS
                     if (copyBtn) self.handleCopyClick(copyBtn);
                 });
 
-                var settingsCard = document.getElementById('claudeSettingsCard');
-                settingsCard.addEventListener('hidden.bs.collapse', function() { self.updateSettingsSummary(); });
-                settingsCard.addEventListener('shown.bs.collapse', function() {
-                    document.getElementById('claude-settings-summary').classList.add('d-none');
+                document.getElementById('claude-settings-toggle').addEventListener('click', function() {
+                    self.cycleSettingsState();
+                });
+                document.getElementById('claude-settings-summary').addEventListener('click', function() {
+                    self.cycleSettingsState();
                 });
 
-                var usageCard = document.getElementById('claudeUsageCard');
-                usageCard.addEventListener('hidden.bs.collapse', function() { self.updateUsageSummary(); });
-                usageCard.addEventListener('shown.bs.collapse', function() {
-                    document.getElementById('claude-usage-summary').classList.add('d-none');
+                document.getElementById('claude-usage-summary').addEventListener('click', function() {
+                    self.cycleUsageState();
+                });
+                document.getElementById('claude-usage-expanded').addEventListener('click', function() {
+                    self.cycleUsageState();
+                });
+                document.getElementById('claude-usage-silenced').addEventListener('click', function() {
+                    self.cycleUsageState();
                 });
 
                 var promptCard = document.getElementById('claudePromptCard');
@@ -693,10 +659,7 @@ $js = <<<JS
             getOptions: function() {
                 return {
                     model: document.getElementById('claude-model').value,
-                    permissionMode: document.getElementById('claude-permission-mode').value,
-                    appendSystemPrompt: document.getElementById('claude-system-prompt').value,
-                    allowedTools: document.getElementById('claude-allowed-tools').value,
-                    disallowedTools: document.getElementById('claude-disallowed-tools').value
+                    permissionMode: document.getElementById('claude-permission-mode').value
                 };
             },
 
@@ -1903,10 +1866,11 @@ $js = <<<JS
             },
 
             collapseSettings: function() {
-                var card = document.getElementById('claudeSettingsCard');
-                var bsCollapse = bootstrap.Collapse.getInstance(card);
-                if (bsCollapse) bsCollapse.hide();
-                else new bootstrap.Collapse(card, { toggle: false }).hide();
+                if (this.settingsState === 'expanded') {
+                    this.settingsState = 'collapsed';
+                    document.getElementById('claudeSettingsCard').classList.add('d-none');
+                    this.updateSettingsSummary();
+                }
             },
 
             collapsePromptEditor: function() {
@@ -1934,10 +1898,11 @@ $js = <<<JS
             },
 
             expandSettings: function() {
-                var card = document.getElementById('claudeSettingsCard');
-                var bsCollapse = bootstrap.Collapse.getInstance(card);
-                if (bsCollapse) bsCollapse.show();
-                else new bootstrap.Collapse(card, { toggle: false }).show();
+                if (this.settingsState !== 'expanded') {
+                    this.settingsState = 'expanded';
+                    document.getElementById('claude-settings-summary').classList.add('d-none');
+                    document.getElementById('claudeSettingsCard').classList.remove('d-none');
+                }
             },
 
             updateSettingsSummary: function() {
@@ -1945,35 +1910,56 @@ $js = <<<JS
                 var modelEl = document.getElementById('claude-model');
                 var permEl = document.getElementById('claude-permission-mode');
 
-                var parts = [];
+                summary.innerHTML = '';
+
+                var addBadge = function(icon, text, title, bg) {
+                    var span = document.createElement('span');
+                    span.className = 'badge ' + (bg || 'bg-secondary');
+                    var i = document.createElement('i');
+                    i.className = 'bi ' + icon + ' me-1';
+                    span.appendChild(i);
+                    span.appendChild(document.createTextNode(text));
+                    if (title) span.title = title;
+                    summary.appendChild(span);
+                };
+
                 if (this.projectName)
-                    parts.push(this.projectName);
+                    addBadge('bi-folder2-open', this.projectName, 'Project');
 
                 if (this.gitBranch)
-                    parts.push('\u2387 ' + this.gitBranch);
+                    addBadge('bi-signpost-split', this.gitBranch, 'Git branch');
+
+                if (this.configBadgeLabel)
+                    addBadge(this.configBadgeIcon, this.configBadgeLabel, this.configBadgeTitle, this.configBadgeBg);
 
                 var modelText = modelEl.options[modelEl.selectedIndex]?.text || '';
-                if (modelText && modelText !== '(Use default)') parts.push(modelText);
-                else parts.push('Default model');
+                if (modelText && modelText !== '(Use default)')
+                    addBadge('bi-cpu', modelText, 'Model', 'badge-setting');
+                else
+                    addBadge('bi-cpu', 'Default model', 'Model', 'badge-setting');
 
                 var permText = permEl.options[permEl.selectedIndex]?.text || '';
-                if (permText && permText !== '(Use default)') {
-                    // Just the first word before the parenthetical
-                    parts.push(permText.split(' (')[0]);
-                } else {
-                    parts.push('Default permissions');
-                }
+                if (permText && permText !== '(Use default)')
+                    addBadge('bi-shield-check', permText.split(' (')[0], 'Permission mode', 'badge-setting');
+                else
+                    addBadge('bi-shield-check', 'Default permissions', 'Permission mode', 'badge-setting');
 
-                var statusEl = document.getElementById('claude-config-status');
-                if (!statusEl.classList.contains('d-none')) {
-                    if (statusEl.classList.contains('alert-danger')) parts.push('Setup issue');
-                    else if (statusEl.classList.contains('alert-success')) parts.push('Project config');
-                    else if (statusEl.classList.contains('alert-info')) parts.push('PM context');
-                    else parts.push('No config');
-                }
-
-                summary.textContent = parts.join(' \u00b7 ');
                 summary.classList.remove('d-none');
+            },
+
+            cycleSettingsState: function() {
+                var card = document.getElementById('claudeSettingsCard');
+                var summary = document.getElementById('claude-settings-summary');
+
+                if (this.settingsState === 'expanded') {
+                    this.settingsState = 'collapsed';
+                    card.classList.add('d-none');
+                    this.updateSettingsSummary();
+                } else {
+                    this.settingsState = 'expanded';
+                    summary.classList.add('d-none');
+                    card.classList.remove('d-none');
+                }
             },
 
             updateUsageSummary: function() {
@@ -1985,6 +1971,7 @@ $js = <<<JS
 
                 if (!rows.length) {
                     summary.innerHTML = '';
+                    summary.classList.remove('d-none');
                     return;
                 }
 
@@ -2021,6 +2008,30 @@ $js = <<<JS
                     item.appendChild(pctSpan);
                     summary.appendChild(item);
                 });
+                summary.classList.remove('d-none');
+            },
+
+            cycleUsageState: function() {
+                var card = document.getElementById('claudeUsageCard');
+                var summary = document.getElementById('claude-usage-summary');
+                var silenced = document.getElementById('claude-usage-silenced');
+
+                if (this.usageState === 'collapsed') {
+                    this.usageState = 'expanded';
+                    summary.classList.add('d-none');
+                    silenced.classList.add('d-none');
+                    card.classList.remove('d-none');
+                } else if (this.usageState === 'expanded') {
+                    this.usageState = 'silenced';
+                    card.classList.add('d-none');
+                    summary.classList.add('d-none');
+                    silenced.classList.remove('d-none');
+                } else {
+                    this.usageState = 'collapsed';
+                    silenced.classList.add('d-none');
+                    card.classList.add('d-none');
+                    this.updateUsageSummary();
+                }
             },
 
             focusEditor: function() {
