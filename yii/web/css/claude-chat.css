@@ -99,7 +99,7 @@
 }
 
 .claude-chat-page .claude-editor-compact .ql-toolbar .ql-formats {
-    margin: 0 2px 0 0;
+    margin: 0;
 }
 
 .claude-chat-page .claude-editor-compact .claude-followup-textarea {
@@ -939,6 +939,45 @@
     font-size: 0.875rem;
 }
 
+/* Toolbar layout — left-aligned groups with uniform spacing */
+.claude-chat-page #claude-quill-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.claude-chat-page #claude-quill-toolbar .ql-formats {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+}
+
+/* Override Quill Snow float-based layout so buttons participate in flex */
+.claude-chat-page #claude-quill-toolbar .ql-formats button,
+.claude-chat-page #claude-quill-toolbar .ql-formats .ql-picker {
+    float: none;
+}
+
+/* Remove Quill clearfix pseudo-element that disrupts flex layout */
+.claude-chat-page #claude-quill-toolbar .ql-formats::after {
+    display: none;
+}
+
+/* Focus toggle — match Quill button dimensions for consistent alignment */
+.claude-chat-page #claude-quill-toolbar .claude-focus-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+}
+
+.claude-chat-page .claude-focus-toggle i {
+    font-size: 14px;
+}
+
 /* Sticky prompt editor — stays below navbar while scrolling chat history */
 .claude-chat-page .claude-prompt-card-sticky {
     position: sticky;
@@ -948,5 +987,74 @@
 }
 
 .claude-chat-page .claude-prompt-card-sticky .resizable-editor-container {
-    max-height: min(40vh, 500px);
+    min-height: auto;
+    max-height: min(60vh, 500px);
+    resize: vertical;
+    overflow-y: auto;
+}
+
+.claude-chat-page .claude-prompt-card-sticky .resizable-editor {
+    min-height: 15em;
+}
+
+.claude-chat-page .claude-prompt-card-sticky .resizable-editor .ql-editor {
+    min-height: unset;
+}
+
+/* Focus mode — fullscreen editor overlay */
+.claude-chat-page.claude-focus-mode .claude-prompt-card-sticky {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    margin: 0;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.claude-chat-page.claude-focus-mode .claude-prompt-card-sticky #claudePromptCard {
+    flex: 1;
+    display: flex !important;
+    flex-direction: column;
+}
+
+.claude-chat-page.claude-focus-mode .claude-prompt-card-sticky .claude-prompt-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.claude-chat-page.claude-focus-mode .claude-prompt-card-sticky .resizable-editor-container {
+    flex: 1;
+    max-height: none;
+    min-height: 0;
+    resize: none;
+}
+
+.claude-chat-page.claude-focus-mode .claude-prompt-card-sticky .resizable-editor {
+    min-height: 100%;
+}
+
+.claude-chat-page.claude-focus-mode .claude-prompt-card-sticky .claude-followup-textarea {
+    flex: 1;
+    min-height: 0;
+}
+
+.claude-chat-page.claude-focus-mode .claude-prompt-card-sticky .claude-prompt-collapse-btn {
+    display: none;
+}
+
+.claude-chat-page.claude-focus-mode .claude-focus-toggle .bi-arrows-fullscreen {
+    display: none;
+}
+
+.claude-chat-page.claude-focus-mode .claude-focus-toggle .bi-fullscreen-exit {
+    display: inline;
+}
+
+.claude-chat-page:not(.claude-focus-mode) .claude-focus-toggle .bi-fullscreen-exit {
+    display: none;
 }

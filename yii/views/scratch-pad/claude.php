@@ -171,19 +171,19 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                         </span>
                         <span class="ql-formats" id="claude-command-slot">
                         </span>
-                        <span class="ql-formats">
+                        <span class="ql-formats claude-toolbar-utils">
                             <button type="button" class="ql-clearEditor" title="Clear editor content">
                                 <svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 5h12M7 5V3h4v2M5 5v9a1 1 0 001 1h6a1 1 0 001-1V5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="8" x2="8" y2="12" stroke="currentColor" stroke-width="1"/><line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1"/></svg>
                             </button>
-                        </span>
-                        <span class="ql-formats">
                             <button type="button" class="ql-smartPaste" title="Smart Paste (auto-detects markdown)">
                                 <svg viewBox="0 0 18 18" width="18" height="18"><rect x="3" y="2" width="12" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1"/><rect x="6" y="0" width="6" height="3" rx="0.5" fill="none" stroke="currentColor" stroke-width="1"/><text x="9" y="13" text-anchor="middle" font-size="9" font-weight="bold" font-family="sans-serif" fill="currentColor">P</text></svg>
                             </button>
-                        </span>
-                        <span class="ql-formats">
                             <button type="button" class="ql-loadMd" title="Load markdown file">
                                 <svg viewBox="0 0 18 18" width="18" height="18"><path d="M4 2h7l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M9 7v6M7 11l2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                            </button>
+                            <button type="button" id="claude-focus-toggle" class="claude-focus-toggle" title="Focus mode (Alt+F)">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                                <i class="bi bi-fullscreen-exit"></i>
                             </button>
                         </span>
                     </div>
@@ -597,6 +597,14 @@ $js = <<<JS
                         e.preventDefault();
                         self.sendFixedText('Proceed');
                     }
+                    if (e.altKey && e.key.toLowerCase() === 'f') {
+                        e.preventDefault();
+                        self.toggleFocusMode();
+                    }
+                    if (e.key === 'Escape' && document.querySelector('.claude-chat-page').classList.contains('claude-focus-mode')) {
+                        e.preventDefault();
+                        self.toggleFocusMode();
+                    }
                 };
                 document.getElementById('claude-followup-textarea').addEventListener('keydown', handleEditorKeydown);
                 quill.root.addEventListener('keydown', handleEditorKeydown);
@@ -634,6 +642,9 @@ $js = <<<JS
                 });
                 document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
                     self.collapsePromptEditor();
+                });
+                document.getElementById('claude-focus-toggle').addEventListener('click', function() {
+                    self.toggleFocusMode();
                 });
 
                 document.getElementById('claude-context-warning-close').addEventListener('click', function() {
@@ -1892,6 +1903,16 @@ $js = <<<JS
             expandEditor: function() {
                 document.getElementById('claude-quill-wrapper').classList.remove('claude-editor-compact');
                 document.getElementById('claude-textarea-wrapper').classList.remove('claude-editor-compact');
+            },
+
+            toggleFocusMode: function() {
+                var page = document.querySelector('.claude-chat-page');
+                var entering = !page.classList.contains('claude-focus-mode');
+                page.classList.toggle('claude-focus-mode');
+                if (entering) {
+                    this.expandPromptEditor();
+                    this.focusEditor();
+                }
             },
 
             expandSettings: function() {
