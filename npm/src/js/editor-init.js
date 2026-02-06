@@ -445,6 +445,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const hidden = document.getElementById(node.dataset.target);
         const cfg    = JSON.parse(node.dataset.config);
 
+        // Register no-op handlers for custom toolbar buttons so Quill
+        // doesn't warn about nonexistent formats during init.
+        const noopHandlers = { clearEditor: function() {}, smartPaste: function() {}, loadMd: function() {} };
+        if (cfg.modules && cfg.modules.toolbar) {
+            if (Array.isArray(cfg.modules.toolbar)) {
+                cfg.modules.toolbar = { container: cfg.modules.toolbar, handlers: noopHandlers };
+            } else if (typeof cfg.modules.toolbar === 'object' && cfg.modules.toolbar !== null) {
+                cfg.modules.toolbar.handlers = Object.assign(noopHandlers, cfg.modules.toolbar.handlers || {});
+            }
+        }
+
         const quill  = new Quill(node, cfg);      // Quill global is present
 
         // Register in global registry for external access

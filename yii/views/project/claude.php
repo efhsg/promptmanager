@@ -416,7 +416,14 @@ $js = <<<JS
         var quill = new Quill('#claude-quill-editor', {
             theme: 'snow',
             modules: {
-                toolbar: { container: '#claude-quill-toolbar' }
+                toolbar: {
+                    container: '#claude-quill-toolbar',
+                    handlers: {
+                        clearEditor: function() {},
+                        smartPaste: function() {},
+                        loadMd: function() {}
+                    }
+                }
             },
             placeholder: 'Enter your prompt...'
         });
@@ -528,6 +535,7 @@ $js = <<<JS
                 this.fetchSubscriptionUsage();
                 this.updateSettingsSummary();
                 this.setupEventListeners();
+                this.startUsageAutoRefresh();
             },
 
             prefillFromDefaults: function() {
@@ -1527,6 +1535,11 @@ $js = <<<JS
                 warning.classList.remove('d-none');
             },
 
+            startUsageAutoRefresh: function() {
+                var self = this;
+                setInterval(function() { self.fetchSubscriptionUsage(); }, 300000);
+            },
+
             fetchSubscriptionUsage: function() {
                 var wrapper = document.getElementById('claude-subscription-usage');
                 if (!this.usageUrl) {
@@ -1564,15 +1577,21 @@ $js = <<<JS
                     var colorClass = pct < 60 ? 'green' : pct < 80 ? 'orange' : 'red';
                     if (pct >= 80) hasWarning = true;
 
-                    var resetLabel = '';
+                    var resetTooltip = '';
                     if (w.resets_at) {
                         var d = new Date(w.resets_at);
                         var now = new Date();
                         var diffMs = d - now;
+                        var timeStr = d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+                        var dateStr = d.toLocaleDateString([], {day: 'numeric', month: 'short'});
                         if (diffMs > 0) {
-                            var hrs = Math.floor(diffMs / 3600000);
+                            var days = Math.floor(diffMs / 86400000);
+                            var hrs = Math.floor((diffMs % 86400000) / 3600000);
                             var mins = Math.floor((diffMs % 3600000) / 60000);
-                            resetLabel = hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+                            var relLabel = days > 0 ? days + 'd ' + hrs + 'h ' + mins + 'm' : hrs > 0 ? hrs + 'h ' + mins + 'm' : mins + 'm';
+                            resetTooltip = 'Resets at ' + dateStr + ' ' + timeStr + ' (in ' + relLabel + ')';
+                        } else {
+                            resetTooltip = 'Reset at ' + dateStr + ' ' + timeStr;
                         }
                     }
 
@@ -1582,6 +1601,8 @@ $js = <<<JS
                     var label = document.createElement('span');
                     label.className = 'claude-subscription-row__label';
                     label.textContent = w.label;
+                    if (resetTooltip)
+                        label.title = resetTooltip;
 
                     var barOuter = document.createElement('div');
                     barOuter.className = 'claude-subscription-row__bar';
@@ -1594,8 +1615,8 @@ $js = <<<JS
                     var pctLabel = document.createElement('span');
                     pctLabel.className = 'claude-subscription-row__pct';
                     pctLabel.textContent = pct + '%';
-                    if (resetLabel)
-                        pctLabel.title = 'Resets in ' + resetLabel;
+                    if (resetTooltip)
+                        pctLabel.title = resetTooltip;
 
                     row.appendChild(label);
                     row.appendChild(barOuter);
@@ -2033,40 +2054,65 @@ $js = <<<JS
                     return;
                 }
 
+                // Track highest utilization for silenced bar color
+                var maxPct = 0;
+
                 summary.innerHTML = '';
+                var itemCount = 0;
                 rows.forEach(function(row) {
                     var label = row.querySelector('.claude-subscription-row__label');
                     var fill = row.querySelector('.claude-subscription-row__fill');
                     if (!label || !fill) return;
 
+                    if (itemCount > 0) {
+                        var sep = document.createElement('span');
+                        sep.className = 'claude-usage-summary__sep';
+                        sep.textContent = '\u00B7';
+                        summary.appendChild(sep);
+                    }
+
                     var pct = parseInt(fill.style.width, 10) || 0;
+                    if (pct > maxPct) maxPct = pct;
                     var colorClass = pct < 60 ? 'green' : pct < 80 ? 'orange' : 'red';
 
                     var item = document.createElement('span');
                     item.className = 'claude-usage-summary__item';
+                    if (label.title)
+                        item.title = label.title;
 
                     var labelSpan = document.createElement('span');
                     labelSpan.className = 'claude-usage-summary__label';
                     labelSpan.textContent = label.textContent;
 
-                    var barOuter = document.createElement('span');
-                    barOuter.className = 'claude-usage-summary__bar';
-
-                    var barFill = document.createElement('span');
-                    barFill.className = 'claude-usage-summary__fill claude-usage-summary__fill--' + colorClass;
-                    barFill.style.width = pct + '%';
-                    barOuter.appendChild(barFill);
-
                     var pctSpan = document.createElement('span');
-                    pctSpan.className = 'claude-usage-summary__pct';
+                    pctSpan.className = 'claude-usage-summary__pct claude-usage-summary__pct--' + colorClass;
                     pctSpan.textContent = pct + '%';
 
                     item.appendChild(labelSpan);
-                    item.appendChild(barOuter);
                     item.appendChild(pctSpan);
                     summary.appendChild(item);
+                    itemCount++;
                 });
+
+                // Propagate warning state to summary
+                var wrapper = document.getElementById('claude-subscription-usage');
+                if (maxPct >= 80)
+                    wrapper.classList.add('claude-subscription-usage--warning');
+                else
+                    wrapper.classList.remove('claude-subscription-usage--warning');
+
+                // Store max utilization for silenced bar
+                this._maxUsagePct = maxPct;
+                this.updateSilencedBar();
+
                 summary.classList.remove('d-none');
+            },
+
+            updateSilencedBar: function() {
+                var silenced = document.getElementById('claude-usage-silenced');
+                var pct = this._maxUsagePct || 0;
+                var color = pct < 60 ? '#198754' : pct < 80 ? '#fd7e14' : '#dc3545';
+                silenced.style.background = pct > 0 ? color : '';
             },
 
             cycleUsageState: function() {
@@ -2083,6 +2129,7 @@ $js = <<<JS
                     this.usageState = 'silenced';
                     card.classList.add('d-none');
                     summary.classList.add('d-none');
+                    this.updateSilencedBar();
                     silenced.classList.remove('d-none');
                 } else {
                     this.usageState = 'collapsed';
