@@ -5,6 +5,7 @@ namespace app\controllers;
 use app\components\ProjectContext;
 use app\models\Project;
 use app\models\ProjectSearch;
+use app\handlers\ClaudeQuickHandler;
 use app\services\ClaudeCliService;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
@@ -33,6 +34,7 @@ class ProjectController extends Controller
     private readonly EntityPermissionService $permissionService;
     private readonly ProjectService $projectService;
     private readonly ClaudeCliService $claudeCliService;
+    private readonly ClaudeQuickHandler $claudeQuickHandler;
 
     public function __construct(
         $id,
@@ -40,12 +42,14 @@ class ProjectController extends Controller
         EntityPermissionService $permissionService,
         ProjectService $projectService,
         ClaudeCliService $claudeCliService,
+        ClaudeQuickHandler $claudeQuickHandler,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->projectService = $projectService;
         $this->claudeCliService = $claudeCliService;
+        $this->claudeQuickHandler = $claudeQuickHandler;
         // Load the permission mapping for "project" actions
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('project');
     }
@@ -587,6 +591,33 @@ class ProjectController extends Controller
         return preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i', $token)
             ? $token
             : null;
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionSummarizePrompt(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        // findModel triggers RBAC ownership check via matchCallback behavior
+        $this->findModel($id);
+
+        $requestData = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestData)) {
+            return ['success' => false, 'error' => 'Invalid request format.'];
+        }
+        $prompt = $requestData['prompt'] ?? '';
+
+        if (!is_string($prompt) || trim($prompt) === '') {
+            return ['success' => false, 'error' => 'Prompt text is empty.'];
+        }
+
+        $result = $this->claudeQuickHandler->run('prompt-title', $prompt);
+
+        return $result['success']
+            ? ['success' => true, 'title' => $result['output']]
+            : $result;
     }
 
     private function buildSummarizerSystemPrompt(): string

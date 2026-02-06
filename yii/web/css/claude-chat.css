@@ -633,6 +633,10 @@
     min-width: 0;
 }
 
+.claude-chat-page .claude-history-item__title--summarized {
+    font-style: italic;
+}
+
 .claude-chat-page .claude-history-item__meta {
     flex-shrink: 0;
     font-size: 0.8rem;

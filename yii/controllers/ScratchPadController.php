@@ -10,6 +10,7 @@ use app\models\Project;
 use app\models\ScratchPad;
 use app\models\ScratchPadSearch;
 use app\models\YouTubeImportForm;
+use app\handlers\ClaudeQuickHandler;
 use app\services\ClaudeCliService;
 use app\services\CopyFormatConverter;
 use app\services\copyformat\MarkdownParser;
@@ -38,6 +39,7 @@ class ScratchPadController extends Controller
     private readonly EntityPermissionService $permissionService;
     private readonly YouTubeTranscriptService $youtubeService;
     private readonly ClaudeCliService $claudeCliService;
+    private readonly ClaudeQuickHandler $claudeQuickHandler;
 
     public function __construct(
         $id,
@@ -45,12 +47,14 @@ class ScratchPadController extends Controller
         EntityPermissionService $permissionService,
         YouTubeTranscriptService $youtubeService,
         ClaudeCliService $claudeCliService,
+        ClaudeQuickHandler $claudeQuickHandler,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->youtubeService = $youtubeService;
         $this->claudeCliService = $claudeCliService;
+        $this->claudeQuickHandler = $claudeQuickHandler;
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('scratchPad');
     }
 
@@ -72,6 +76,7 @@ class ScratchPadController extends Controller
                     'cancel-claude' => ['POST'],
                     'save' => ['POST'],
                     'summarize-session' => ['POST'],
+                    'summarize-prompt' => ['POST'],
                 ],
             ],
             'access' => [
@@ -734,6 +739,33 @@ class ScratchPadController extends Controller
             'duration_ms' => $result['duration_ms'] ?? null,
             'model' => $result['model'] ?? null,
         ];
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionSummarizePrompt(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        // findModel triggers RBAC ownership check via matchCallback behavior
+        $this->findModel($id);
+
+        $requestData = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestData)) {
+            return ['success' => false, 'error' => 'Invalid request format.'];
+        }
+        $prompt = $requestData['prompt'] ?? '';
+
+        if (!is_string($prompt) || trim($prompt) === '') {
+            return ['success' => false, 'error' => 'Prompt text is empty.'];
+        }
+
+        $result = $this->claudeQuickHandler->run('prompt-title', $prompt);
+
+        return $result['success']
+            ? ['success' => true, 'title' => $result['output']]
+            : $result;
     }
 
     private function buildSummarizerSystemPrompt(): string

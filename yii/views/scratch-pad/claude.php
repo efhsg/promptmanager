@@ -24,6 +24,7 @@ $runClaudeUrl = Url::to(['/scratch-pad/run-claude', 'id' => $model->id]);
 $streamClaudeUrl = Url::to(['/scratch-pad/stream-claude', 'id' => $model->id]);
 $cancelClaudeUrl = Url::to(['/scratch-pad/cancel-claude', 'id' => $model->id]);
 $summarizeUrl = Url::to(['/scratch-pad/summarize-session', 'id' => $model->id]);
+$summarizePromptUrl = Url::to(['/scratch-pad/summarize-prompt', 'id' => $model->id]);
 $saveUrl = Url::to(['/scratch-pad/save']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
@@ -1275,9 +1276,9 @@ $js = <<<JS
                 var itemId = 'claude-history-item-' + idx;
                 this.activeItemId = itemId;
 
-                // Build header text from prompt
+                // Build header text from prompt (CSS text-overflow handles visual clipping)
                 var headerText = (promptText || '').replace(/[#*_`>\[\]]/g, '').trim();
-                if (headerText.length > 80) headerText = headerText.substring(0, 80) + '\u2026';
+                if (headerText.length > 200) headerText = headerText.substring(0, 200) + '\u2026';
 
                 var item = document.createElement('div');
                 item.className = 'accordion-item';
@@ -1315,6 +1316,47 @@ $js = <<<JS
                 // If the prompt editor is already collapsed, use the tall preview
                 if (!document.getElementById('claudePromptCard').classList.contains('show'))
                     this.setStreamPreviewTall(true);
+
+                // Fire-and-forget: summarize prompt into a short title
+                this.summarizePromptTitle(itemId, promptText);
+            },
+
+            /**
+             * Request a short AI-generated title for the accordion item.
+             */
+            summarizePromptTitle: function(itemId, promptText) {
+                fetch('$summarizePromptUrl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': yii.getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ prompt: promptText })
+                })
+                .then(function(r) {
+                    if (!r.ok) {
+                        console.warn('summarizePromptTitle HTTP ' + r.status);
+                        return null;
+                    }
+                    return r.json();
+                })
+                .then(function(data) {
+                    if (!data) return;
+                    if (!data.success || !data.title) {
+                        console.warn('summarizePromptTitle response:', data);
+                        return;
+                    }
+                    var title = data.title;
+                    var titleEl = document.querySelector(
+                        '#item-' + itemId + ' .claude-history-item__title'
+                    );
+                    if (titleEl) {
+                        titleEl.textContent = title;
+                        titleEl.classList.add('claude-history-item__title--summarized');
+                    }
+                })
+                .catch(function(err) { console.warn('summarizePromptTitle failed:', err); });
             },
 
             /**

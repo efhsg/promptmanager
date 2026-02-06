@@ -20,7 +20,8 @@ class ClaudeCliServiceTest extends Unit
 
         $command = $method->invoke($service, ['permissionMode' => 'plan'], null);
 
-        $this->assertStringContainsString('claude --output-format stream-json --verbose', $command);
+        $this->assertStringContainsString("--output-format 'stream-json'", $command);
+        $this->assertStringContainsString('--verbose', $command);
         $this->assertStringContainsString('--permission-mode', $command);
         $this->assertStringNotContainsString('--continue', $command);
     }
@@ -441,7 +442,7 @@ class ClaudeCliServiceTest extends Unit
         $command = $method->invoke($service, ['permissionMode' => 'plan'], null, true);
 
         $this->assertStringContainsString('--include-partial-messages', $command);
-        $this->assertStringContainsString('--output-format stream-json', $command);
+        $this->assertStringContainsString("--output-format 'stream-json'", $command);
         $this->assertStringContainsString('--verbose', $command);
     }
 
@@ -455,7 +456,140 @@ class ClaudeCliServiceTest extends Unit
         $command = $method->invoke($service, ['permissionMode' => 'plan'], null, false);
 
         $this->assertStringNotContainsString('--include-partial-messages', $command);
-        $this->assertStringContainsString('--output-format stream-json', $command);
+        $this->assertStringContainsString("--output-format 'stream-json'", $command);
+    }
+
+    public function testBuildCommandWithTextFormatOmitsVerbose(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        $command = $method->invoke($service, [
+            'outputFormat' => 'text',
+            'verbose' => false,
+            'permissionMode' => 'plan',
+        ], null);
+
+        $this->assertStringContainsString("--output-format 'text'", $command);
+        $this->assertStringNotContainsString('--verbose', $command);
+    }
+
+    public function testBuildCommandWithJsonFormatOmitsVerbose(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        $command = $method->invoke($service, [
+            'outputFormat' => 'json',
+            'verbose' => false,
+        ], null);
+
+        $this->assertStringContainsString("--output-format 'json'", $command);
+        $this->assertStringNotContainsString('--verbose', $command);
+    }
+
+    public function testParseJsonOutputExtractsResult(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseJsonOutput');
+        $method->setAccessible(true);
+
+        $json = json_encode([
+            'result' => 'Refactor authentication to use JWT',
+            'is_error' => false,
+            'duration_ms' => 1500,
+            'session_id' => 'sess-123',
+            'num_turns' => 1,
+        ]);
+
+        $result = $method->invoke($service, $json);
+
+        $this->assertSame('Refactor authentication to use JWT', $result['result']);
+        $this->assertFalse($result['is_error']);
+        $this->assertSame(1500, $result['duration_ms']);
+        $this->assertSame('sess-123', $result['session_id']);
+        $this->assertSame(1, $result['num_turns']);
+    }
+
+    public function testParseJsonOutputHandlesEmptyOutput(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseJsonOutput');
+        $method->setAccessible(true);
+
+        $this->assertEmpty($method->invoke($service, ''));
+    }
+
+    public function testParseJsonOutputHandlesInvalidJson(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('parseJsonOutput');
+        $method->setAccessible(true);
+
+        $this->assertEmpty($method->invoke($service, 'not json'));
+    }
+
+    public function testBuildCommandWithQuickHandlerOptions(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        $command = $method->invoke($service, [
+            'model' => 'haiku',
+            'systemPromptFile' => '/path/to/prompt.md',
+            'maxTurns' => 1,
+            'outputFormat' => 'json',
+            'verbose' => false,
+            'tools' => '',
+            'noSessionPersistence' => true,
+        ], null);
+
+        $this->assertStringContainsString("--output-format 'json'", $command);
+        $this->assertStringNotContainsString('--verbose', $command);
+        $this->assertStringNotContainsString('--permission-mode', $command);
+        $this->assertStringContainsString('--no-session-persistence', $command);
+        $this->assertStringContainsString("--tools ''", $command);
+        $this->assertStringContainsString("--model 'haiku'", $command);
+        $this->assertStringContainsString("--system-prompt-file '/path/to/prompt.md'", $command);
+        $this->assertStringContainsString('--max-turns 1', $command);
+        $this->assertStringContainsString('-p -', $command);
+    }
+
+    public function testBuildCommandOmitsPermissionModeWhenNotSet(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        $command = $method->invoke($service, ['model' => 'haiku'], null);
+
+        $this->assertStringNotContainsString('--permission-mode', $command);
+    }
+
+    public function testBuildCommandSystemPromptFileTakesPrecedenceOverSystemPrompt(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        $command = $method->invoke($service, [
+            'systemPromptFile' => '/path/to/file.md',
+            'systemPrompt' => 'Inline prompt',
+        ], null);
+
+        $this->assertStringContainsString('--system-prompt-file', $command);
+        $this->assertStringNotContainsString("--system-prompt 'Inline", $command);
     }
 
     public function testExecuteStreamingThrowsWhenDirectoryMissing(): void

@@ -44,6 +44,7 @@ return [
                 'cancelClaude' => 'viewProject',
                 'claudeUsage' => 'viewProject',
                 'summarizeSession' => 'viewProject',
+                'summarizePrompt' => 'viewProject',
             ],
             'permissions' => [
                 'createProject' => [
@@ -165,6 +166,7 @@ return [
                 'claude' => 'viewScratchPad',
                 'claudeUsage' => 'viewScratchPad',
                 'summarizeSession' => 'viewScratchPad',
+                'summarizePrompt' => 'viewScratchPad',
             ],
             'permissions' => [
                 'createScratchPad' => [

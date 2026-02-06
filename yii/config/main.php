@@ -150,6 +150,9 @@ $config = [
 
 $config['container'] = [
     'definitions' => [
+        'app\services\AiCompletionClient' => [
+            'class' => 'app\services\ClaudeCliCompletionClient',
+        ],
         'app\modules\identity\services\UserDataSeederInterface' => [
             'class' => 'app\services\UserDataSeeder',
         ],

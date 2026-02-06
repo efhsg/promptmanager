@@ -65,9 +65,14 @@ class ClaudeCliService
         ?string $sessionId = null
     ): array {
         // Determine effective working directory (managed workspace vs project's own)
-        $effectiveWorkDir = $this->determineWorkingDirectory($workingDirectory, $project);
+        $skipWorkspaceResolution = !empty($options['rawWorkingDirectory']);
+        $effectiveWorkDir = $skipWorkspaceResolution
+            ? $workingDirectory
+            : $this->determineWorkingDirectory($workingDirectory, $project);
         $usedFallback = ($effectiveWorkDir !== $workingDirectory);
-        $containerPath = $this->translatePath($effectiveWorkDir);
+        $containerPath = $skipWorkspaceResolution
+            ? $effectiveWorkDir
+            : $this->translatePath($effectiveWorkDir);
 
         if (!is_dir($containerPath)) {
             return [
@@ -82,6 +87,8 @@ class ClaudeCliService
         $configSource = $this->determineConfigSource($effectiveWorkDir, $workingDirectory, $project);
 
         $command = $this->buildCommand($options, $sessionId);
+
+        Yii::debug("ClaudeCliService::execute cmd={$command} cwd={$containerPath}", 'claude');
 
         $descriptorSpec = [
             0 => ['pipe', 'r'],  // stdin
@@ -123,6 +130,7 @@ class ClaudeCliService
             }
 
             if ((time() - $startTime) > $timeout) {
+                Yii::warning("ClaudeCliService timeout after {$timeout}s. stdout so far: " . mb_substr($output, 0, 500) . " | stderr so far: " . mb_substr($error, 0, 500), 'claude');
                 proc_terminate($process, 9);
                 fclose($pipes[1]);
                 fclose($pipes[2]);
@@ -146,12 +154,25 @@ class ClaudeCliService
         fclose($pipes[2]);
         proc_close($process);
 
-        $parsedOutput = $this->parseStreamJsonOutput(trim($output));
+        $outputFormat = $options['outputFormat'] ?? 'stream-json';
+
+        // Claude CLI may emit structured output on stderr instead of stdout;
+        // when stdout is empty, fall back to stderr for parsing.
+        $rawOutput = trim($output) !== '' ? trim($output) : trim($error);
+
+        $parsedOutput = match ($outputFormat) {
+            'text' => ['result' => $rawOutput],
+            'json' => $this->parseJsonOutput($rawOutput),
+            default => $this->parseStreamJsonOutput($rawOutput),
+        };
+
+        // When stderr was consumed as output, don't duplicate it as error
+        $effectiveError = ($rawOutput === trim($error)) ? '' : trim($error);
 
         return [
             'success' => $exitCode === 0 && !($parsedOutput['is_error'] ?? false),
-            'output' => $parsedOutput['result'] ?? trim($output),
-            'error' => trim($error),
+            'output' => $parsedOutput['result'] ?? $rawOutput,
+            'error' => $effectiveError,
             'exitCode' => $exitCode,
             'duration_ms' => $parsedOutput['duration_ms'] ?? null,
             'model' => $parsedOutput['model'] ?? null,
@@ -372,7 +393,20 @@ class ClaudeCliService
      */
     private function buildCommand(array $options, ?string $sessionId = null, bool $streaming = false): string
     {
-        $cmd = 'claude --output-format stream-json --verbose';
+        $outputFormat = $options['outputFormat'] ?? 'stream-json';
+        $cmd = 'claude --output-format ' . escapeshellarg($outputFormat);
+
+        if (($options['verbose'] ?? true) !== false)
+            $cmd .= ' --verbose';
+
+        if (!empty($options['noSessionPersistence']))
+            $cmd .= ' --no-session-persistence';
+
+        if (array_key_exists('tools', $options))
+            $cmd .= ' --tools ' . escapeshellarg($options['tools']);
+
+        if (!empty($options['settingSources']))
+            $cmd .= ' --setting-sources ' . escapeshellarg($options['settingSources']);
 
         if ($streaming) {
             $cmd .= ' --include-partial-messages';
@@ -382,15 +416,23 @@ class ClaudeCliService
             $cmd .= ' --continue ' . escapeshellarg($sessionId);
         }
 
-        $mode = $options['permissionMode'] ?? 'plan';
-        $cmd .= ' --permission-mode ' . escapeshellarg($mode);
+        if (!empty($options['permissionMode']))
+            $cmd .= ' --permission-mode ' . escapeshellarg($options['permissionMode']);
 
         if (!empty($options['model'])) {
             $cmd .= ' --model ' . escapeshellarg($options['model']);
         }
 
-        if (!empty($options['appendSystemPrompt'])) {
+        if (!empty($options['systemPromptFile'])) {
+            $cmd .= ' --system-prompt-file ' . escapeshellarg($options['systemPromptFile']);
+        } elseif (!empty($options['systemPrompt'])) {
+            $cmd .= ' --system-prompt ' . escapeshellarg($options['systemPrompt']);
+        } elseif (!empty($options['appendSystemPrompt'])) {
             $cmd .= ' --append-system-prompt ' . escapeshellarg($options['appendSystemPrompt']);
+        }
+
+        if (!empty($options['maxTurns'])) {
+            $cmd .= ' --max-turns ' . (int) $options['maxTurns'];
         }
 
         if (!empty($options['allowedTools'])) {
@@ -478,6 +520,29 @@ class ClaudeCliService
         }
 
         return $parsed;
+    }
+
+    /**
+     * Parses single JSON output from Claude CLI --output-format json.
+     *
+     * @return array{result?: string, is_error?: bool, duration_ms?: int, session_id?: string}
+     */
+    private function parseJsonOutput(string $output): array
+    {
+        if ($output === '')
+            return [];
+
+        $decoded = json_decode($output, true);
+        if (!is_array($decoded))
+            return [];
+
+        return [
+            'result' => $decoded['result'] ?? null,
+            'is_error' => $decoded['is_error'] ?? false,
+            'duration_ms' => $decoded['duration_ms'] ?? null,
+            'session_id' => $decoded['session_id'] ?? null,
+            'num_turns' => $decoded['num_turns'] ?? null,
+        ];
     }
 
     /**
