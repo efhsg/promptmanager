@@ -2044,11 +2044,19 @@ $js = <<<JS
                     labelSpan.className = 'claude-usage-summary__label';
                     labelSpan.textContent = label.textContent;
 
+                    var bar = document.createElement('span');
+                    bar.className = 'claude-usage-summary__bar';
+                    var barFill = document.createElement('span');
+                    barFill.className = 'claude-usage-summary__bar-fill claude-usage-summary__bar-fill--' + colorClass;
+                    barFill.style.width = pct + '%';
+                    bar.appendChild(barFill);
+
                     var pctSpan = document.createElement('span');
                     pctSpan.className = 'claude-usage-summary__pct claude-usage-summary__pct--' + colorClass;
                     pctSpan.textContent = pct + '%';
 
                     item.appendChild(labelSpan);
+                    item.appendChild(bar);
                     item.appendChild(pctSpan);
                     summary.appendChild(item);
                     itemCount++;

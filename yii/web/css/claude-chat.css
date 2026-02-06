@@ -804,9 +804,37 @@
     font-variant-numeric: tabular-nums;
 }
 
+.claude-chat-page .claude-usage-summary__bar {
+    display: inline-block;
+    width: 48px;
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+.claude-chat-page .claude-usage-summary__bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.claude-chat-page .claude-usage-summary__bar-fill--green { background-color: #198754; }
+.claude-chat-page .claude-usage-summary__bar-fill--orange { background-color: #fd7e14; }
+.claude-chat-page .claude-usage-summary__bar-fill--red { background-color: #dc3545; }
+
 .claude-chat-page .claude-usage-summary__pct--green { color: #198754; }
 .claude-chat-page .claude-usage-summary__pct--orange { color: #fd7e14; }
 .claude-chat-page .claude-usage-summary__pct--red { color: #dc3545; }
+
+@media (max-width: 576px) {
+    .claude-chat-page .claude-usage-summary__label,
+    .claude-chat-page .claude-usage-summary__bar {
+        display: none;
+    }
+}
 
 .claude-chat-page .claude-usage-summary--loading {
     color: #adb5bd;
