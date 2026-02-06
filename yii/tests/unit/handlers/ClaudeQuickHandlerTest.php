@@ -79,17 +79,17 @@ class ClaudeQuickHandlerTest extends Unit
 
     public function testRunTruncatesLongPrompts(): void
     {
-        $longPrompt = str_repeat('a', 600);
+        $longPrompt = str_repeat('a', 1200);
 
         $client = $this->createMock(AiCompletionClient::class);
         $client->expects($this->once())
             ->method('complete')
             ->with(
                 $this->callback(function (string $p) {
-                    // 500 chars content + <document></document> wrapper
+                    // 1000 chars content + <document></document> wrapper
                     return str_starts_with($p, '<document>')
                         && str_ends_with($p, '</document>')
-                        && mb_strlen($p) === 500 + strlen('<document></document>');
+                        && mb_strlen($p) === 1000 + strlen('<document></document>');
                 }),
                 $this->anything(),
                 $this->anything()

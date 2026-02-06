@@ -24,7 +24,7 @@ class ClaudeQuickHandler
             'timeout' => 60,
             'workdir' => 'prompt-title',
             'minChars' => 120,
-            'maxChars' => 500,
+            'maxChars' => 1000,
         ],
     ];
 
