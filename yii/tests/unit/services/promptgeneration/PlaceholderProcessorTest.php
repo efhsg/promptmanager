@@ -440,6 +440,168 @@ class PlaceholderProcessorTest extends Unit
         $this->assertIsArray($result);
     }
 
+    // --- Inline field rendering tests ---
+
+    public function testProcessRendersStringFieldInlineWhenOnSeparateLine(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'string'],
+            []
+        );
+
+        // Template: "Write a\nGEN:{{1}}\nfunction" — placeholder on its own line
+        $ops = [['insert' => "Write a\nGEN:{{1}}\nfunction"]];
+        $fieldValues = [1 => 'sorting'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString('Write a sorting function', $plainText);
+        $this->assertStringNotContainsString("Write a\nsorting", $plainText);
+        $this->assertStringNotContainsString("sorting\nfunction", $plainText);
+    }
+
+    public function testProcessRendersNumberFieldInline(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'number'],
+            []
+        );
+
+        $ops = [['insert' => "Use\nGEN:{{1}}\nretries"]];
+        $fieldValues = [1 => '3'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString('Use 3 retries', $plainText);
+    }
+
+    public function testProcessRendersSelectFieldInlineWhenOnSeparateLine(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'select'],
+            []
+        );
+
+        $ops = [['insert' => "Write in\nGEN:{{1}}\nlanguage"]];
+        $fieldValues = [1 => '{"ops":[{"insert":"Python\n"}]}'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString('Write in Python language', $plainText);
+        $this->assertStringNotContainsString("in\nPython", $plainText);
+        $this->assertStringNotContainsString("Python\nlanguage", $plainText);
+    }
+
+    public function testProcessRendersSelectInvertFieldInline(): void
+    {
+        $field = new stdClass();
+        $field->id = 1;
+        $field->render_label = false;
+        $field->label = '';
+        $field->content = '{"ops":[{"insert":" not "}]}';
+        $field->fieldOptions = [
+            $this->makeFieldOption('{"ops":[{"insert":"Yes\n"}]}', ''),
+            $this->makeFieldOption('{"ops":[{"insert":"No\n"}]}', ''),
+        ];
+
+        $this->processor->setFieldMappings(
+            [1 => 'select-invert'],
+            [1 => $field]
+        );
+
+        $ops = [['insert' => "Answer:\nGEN:{{1}}\nplease"]];
+        $fieldValues = [1 => '{"ops":[{"insert":"Yes\n"}]}'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringNotContainsString("Answer:\nYes", $plainText);
+        $this->assertStringContainsString('Answer: Yes', $plainText);
+    }
+
+    public function testProcessPreservesNewlinesForBlockFieldTypes(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'text'],
+            []
+        );
+
+        // Block-level fields should still get newlines
+        $ops = [['insert' => "Context:\nGEN:{{1}}\nEnd"]];
+        $fieldValues = [1 => '{"ops":[{"insert":"Some long text\n"}]}'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString("Context:\n", $plainText);
+    }
+
+    public function testProcessRendersInlineFieldWithoutExtraNewlineWhenAlreadyOnSameLine(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'select'],
+            []
+        );
+
+        // Placeholder already inline — should stay inline
+        $ops = [['insert' => 'Write in GEN:{{1}} please']];
+        $fieldValues = [1 => '{"ops":[{"insert":"Python\n"}]}'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString('Write in Python please', $plainText);
+    }
+
+    public function testProcessRendersMultipleInlinePlaceholdersSeparatedByNewlines(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'string', 2 => 'select'],
+            []
+        );
+
+        // Two inline placeholders each on their own line
+        $ops = [['insert' => "Write a\nGEN:{{1}}\nGEN:{{2}}\nfunction"]];
+        $fieldValues = [
+            1 => 'sorting',
+            2 => '{"ops":[{"insert":"Python\n"}]}',
+        ];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString('Write a sorting Python function', $plainText);
+        $this->assertStringNotContainsString("\n", $plainText);
+    }
+
+    public function testProcessRendersInlineFollowedByBlockPlaceholder(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'select', 2 => 'text'],
+            []
+        );
+
+        // Inline placeholder followed by block placeholder
+        $ops = [['insert' => "Use\nGEN:{{1}}\nGEN:{{2}}"]];
+        $fieldValues = [
+            1 => '{"ops":[{"insert":"Python\n"}]}',
+            2 => '{"ops":[{"insert":"Some detailed instructions\n"}]}',
+        ];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        // Inline field should not have newline before/after it
+        $this->assertStringContainsString('Use Python', $plainText);
+        // Block field content should be present
+        $this->assertStringContainsString('Some detailed instructions', $plainText);
+        // No double newline between inline and block field
+        $this->assertStringNotContainsString("Python\n\n", $plainText);
+    }
+
     // --- Edge cases ---
 
     public function testProcessHandlesEmptyOps(): void
@@ -472,5 +634,13 @@ class PlaceholderProcessorTest extends Unit
             }
         }
         return $text;
+    }
+
+    private function makeFieldOption(string $value, string $label): stdClass
+    {
+        $option = new stdClass();
+        $option->value = $value;
+        $option->label = $label;
+        return $option;
     }
 }

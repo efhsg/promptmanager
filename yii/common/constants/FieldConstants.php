@@ -10,5 +10,6 @@ class FieldConstants
     public const PATH_FIELD_TYPES = ['file', 'directory'];
     public const PATH_PREVIEWABLE_FIELD_TYPES = ['file'];
     public const INLINE_FIELD_TYPES = ['string', 'number'];
+    public const INLINE_RENDER_TYPES = ['string', 'number', 'select', 'select-invert'];
     public const NO_OPTION_FIELD_TYPES = 'input, textarea, select, code';
 }

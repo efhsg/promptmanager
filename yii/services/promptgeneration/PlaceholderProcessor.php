@@ -2,6 +2,8 @@
 
 namespace app\services\promptgeneration;
 
+use common\constants\FieldConstants;
+
 class PlaceholderProcessor
 {
     private const PLACEHOLDER_PATTERN = '/\b(?:GEN|PRJ|EXT):\{\{(\d+)}}/';
@@ -74,6 +76,7 @@ class PlaceholderProcessor
     ): array {
         $originalBlockAttrs = $this->extractBlockAttributes($originalAttributes);
         $lastFieldOps = [];
+        $lastFieldInline = false;
 
         foreach ($matches as $match) {
             $placeholder = $match[0];
@@ -81,8 +84,20 @@ class PlaceholderProcessor
 
             [$beforeText, $afterText] = array_pad(explode($placeholder, $text, 2), 2, '');
 
-            $fieldOps = $this->getFieldOperations($fieldValues, $fieldId);
+            [$fieldOps, $resolvedFieldId] = $this->getFieldOperations($fieldValues, $fieldId);
+            $fieldType = $resolvedFieldId !== null
+                ? ($this->templateFieldTypes[$resolvedFieldId] ?? null)
+                : null;
+            $isInlineField = in_array($fieldType, FieldConstants::INLINE_RENDER_TYPES, true);
             $fieldAnalysis = $this->deltaHelper->analyzeFieldContent($fieldOps);
+
+            // For inline field types, collapse surrounding newlines to spaces
+            // and strip trailing newlines from field ops to prevent line breaks
+            if ($isInlineField) {
+                $beforeText = $this->collapseNewlineBoundaryForInline($beforeText, true);
+                $afterText = $this->collapseNewlineBoundaryForInline($afterText, false);
+                $fieldOps = $this->stripTrailingNewlineFromOps($fieldOps);
+            }
 
             // If original op has block attributes (list, header, etc.) and field content doesn't,
             // normalize field content so it integrates cleanly into the list item.
@@ -96,6 +111,7 @@ class PlaceholderProcessor
             }
 
             $lastFieldOps = $fieldOps;
+            $lastFieldInline = $isInlineField;
 
             $finalOps = $this->processBeforeText($beforeText, $fieldAnalysis, $finalOps);
             $finalOps = $this->processFieldContent($fieldOps, $fieldAnalysis, $beforeText, $finalOps);
@@ -104,7 +120,7 @@ class PlaceholderProcessor
         }
 
         if ($text !== '') {
-            $leftover = ltrim($text, ' ');
+            $leftover = $lastFieldInline ? $text : ltrim($text, ' ');
             if ($leftover !== '') {
                 // If we have block attributes and leftover ends with newline,
                 // split to preserve the attributes on the trailing newline (Quill format)
@@ -121,6 +137,34 @@ class PlaceholderProcessor
         }
 
         return $finalOps;
+    }
+
+    /**
+     * Collapses a leading or trailing newline boundary to a space for inline field types.
+     * For beforeText (trailing side): "\nSome intro\n" → "\nSome intro " (only the trailing \n → space)
+     * For afterText (leading side): "\nmore text" → " more text" (only the leading \n → space)
+     */
+    private function collapseNewlineBoundaryForInline(string $text, bool $isBefore): string
+    {
+        if ($text === '') {
+            return '';
+        }
+
+        if ($isBefore) {
+            // Collapse trailing newline(s) to a space — the boundary adjacent to the field
+            if (str_ends_with($text, "\n")) {
+                $trimmed = rtrim($text, "\n");
+                return $trimmed === '' ? ' ' : $trimmed . ' ';
+            }
+            return $text;
+        }
+
+        // afterText: collapse leading newline(s) to a space
+        if (str_starts_with($text, "\n")) {
+            $trimmed = ltrim($text, "\n");
+            return $trimmed === '' ? ' ' : ' ' . $trimmed;
+        }
+        return $text;
     }
 
     private function stripTrailingNewlineFromOps(array $ops): array
@@ -217,22 +261,25 @@ class PlaceholderProcessor
         return $ops;
     }
 
+    /**
+     * @return array{0: array, 1: int|null} [fieldOps, resolvedFieldId]
+     */
     private function getFieldOperations(array &$fieldValues, int $fieldId): array
     {
         if (isset($fieldValues[$fieldId])) {
             $value = $fieldValues[$fieldId];
             unset($fieldValues[$fieldId]);
-            return $this->buildFieldOperations($value, $fieldId);
+            return [$this->buildFieldOperations($value, $fieldId), $fieldId];
         }
 
         if (!empty($fieldValues)) {
             $nextFieldId = array_key_first($fieldValues);
             $value = $fieldValues[$nextFieldId];
             unset($fieldValues[$nextFieldId]);
-            return $this->buildFieldOperations($value, $nextFieldId);
+            return [$this->buildFieldOperations($value, $nextFieldId), $nextFieldId];
         }
 
-        return [];
+        return [[], null];
     }
 
     private function buildFieldOperations(mixed $fieldValue, int $fieldId): array
