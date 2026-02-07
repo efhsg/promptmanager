@@ -443,6 +443,11 @@ $script = <<<'JS'
                     window.QuillToolbar.setupClearEditor(quillEditor, null);
                     window.QuillToolbar.setupSmartPaste(quillEditor, null, quillUrlConfig);
                     window.QuillToolbar.setupLoadMd(quillEditor, null, quillUrlConfig);
+
+                    // Enable sticky/fixed toolbar on page scroll
+                    var editorContainer = document.querySelector('#quill-editor').closest('.resizable-editor-container');
+                    if (editorContainer && window.QuillToolbar.setupFixedToolbar)
+                        window.QuillToolbar.setupFixedToolbar(editorContainer);
                 }
             }
 

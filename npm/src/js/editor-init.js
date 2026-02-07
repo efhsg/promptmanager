@@ -437,6 +437,54 @@ window.QuillToolbar = (function() {
     };
 })();
 
+// ── Fixed toolbar on page scroll ──
+// Defined outside DOMContentLoaded so inline Quill inits (registerJs) can call
+// it without a race condition between DOMContentLoaded and jQuery ready.
+const NAVBAR_HEIGHT = 56;
+
+const setupFixedToolbar = container => {
+    if (container.closest('.claude-prompt-card-sticky')) return;
+
+    const toolbar = container.querySelector('.ql-toolbar');
+    if (!toolbar) return;
+
+    let spacer = null;
+    let fixed = false;
+
+    const apply = () => {
+        const cRect = container.getBoundingClientRect();
+        const shouldFix = cRect.top < NAVBAR_HEIGHT && cRect.bottom > NAVBAR_HEIGHT + toolbar.offsetHeight;
+
+        if (shouldFix && !fixed) {
+            fixed = true;
+            spacer = document.createElement('div');
+            spacer.style.height = toolbar.offsetHeight + 'px';
+            toolbar.parentNode.insertBefore(spacer, toolbar);
+            toolbar.classList.add('ql-toolbar-fixed');
+            toolbar.style.left = cRect.left + 'px';
+            toolbar.style.width = cRect.width + 'px';
+        } else if (shouldFix && fixed) {
+            toolbar.style.left = cRect.left + 'px';
+            toolbar.style.width = cRect.width + 'px';
+        } else if (!shouldFix && fixed) {
+            fixed = false;
+            toolbar.classList.remove('ql-toolbar-fixed');
+            toolbar.style.left = '';
+            toolbar.style.width = '';
+            if (spacer) {
+                spacer.remove();
+                spacer = null;
+            }
+        }
+    };
+
+    window.addEventListener('scroll', apply, { passive: true });
+    window.addEventListener('resize', apply, { passive: true });
+};
+
+// Expose immediately for inline-initialized editors (prompt-template, scratch-pad, etc.)
+window.QuillToolbar.setupFixedToolbar = setupFixedToolbar;
+
 document.addEventListener('DOMContentLoaded', () => {
     const init = node => {
         if (node.dataset.inited) return;          // idempotent
@@ -480,49 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
         quill.on('text-change', () =>
             hidden.value = JSON.stringify(quill.getContents())
         );
-    };
-
-    // ── Fixed toolbar on page scroll ──
-    const NAVBAR_HEIGHT = 56;
-
-    const setupFixedToolbar = container => {
-        if (container.closest('.claude-prompt-card-sticky')) return;
-
-        const toolbar = container.querySelector('.ql-toolbar');
-        if (!toolbar) return;
-
-        let spacer = null;
-        let fixed = false;
-
-        const apply = () => {
-            const cRect = container.getBoundingClientRect();
-            const shouldFix = cRect.top < NAVBAR_HEIGHT && cRect.bottom > NAVBAR_HEIGHT + toolbar.offsetHeight;
-
-            if (shouldFix && !fixed) {
-                fixed = true;
-                spacer = document.createElement('div');
-                spacer.style.height = toolbar.offsetHeight + 'px';
-                toolbar.parentNode.insertBefore(spacer, toolbar);
-                toolbar.classList.add('ql-toolbar-fixed');
-                toolbar.style.left = cRect.left + 'px';
-                toolbar.style.width = cRect.width + 'px';
-            } else if (shouldFix && fixed) {
-                toolbar.style.left = cRect.left + 'px';
-                toolbar.style.width = cRect.width + 'px';
-            } else if (!shouldFix && fixed) {
-                fixed = false;
-                toolbar.classList.remove('ql-toolbar-fixed');
-                toolbar.style.left = '';
-                toolbar.style.width = '';
-                if (spacer) {
-                    spacer.remove();
-                    spacer = null;
-                }
-            }
-        };
-
-        window.addEventListener('scroll', apply, { passive: true });
-        window.addEventListener('resize', apply, { passive: true });
     };
 
     // 1️⃣ initial pass

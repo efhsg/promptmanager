@@ -87,6 +87,11 @@ $script = <<<JS
     window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
     window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 
+    // Enable sticky/fixed toolbar on page scroll
+    var editorContainer = document.querySelector('#editor').closest('.resizable-editor-container');
+    if (editorContainer && window.QuillToolbar.setupFixedToolbar)
+        window.QuillToolbar.setupFixedToolbar(editorContainer);
+
     try {
         quill.setContents(JSON.parse($templateBody))
     } catch (error) {

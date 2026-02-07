@@ -126,6 +126,11 @@ $script = <<<JS
     window.QuillToolbar.setupSmartPaste(window.quill, hidden, urlConfig);
     window.QuillToolbar.setupLoadMd(window.quill, hidden, urlConfig);
 
+    // Enable sticky/fixed toolbar on page scroll
+    var editorContainer = document.querySelector('#editor').closest('.resizable-editor-container');
+    if (editorContainer && window.QuillToolbar.setupFixedToolbar)
+        window.QuillToolbar.setupFixedToolbar(editorContainer);
+
     function insertFieldText(dropdown) {
         var value = dropdown.value;
         if (value) {

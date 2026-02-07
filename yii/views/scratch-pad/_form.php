@@ -175,6 +175,11 @@ $script = <<<JS
     window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
     window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 
+    // Enable sticky/fixed toolbar on page scroll
+    var contentContainer = document.querySelector('#scratch-pad-editor').closest('.resizable-editor-container');
+    if (contentContainer && window.QuillToolbar.setupFixedToolbar)
+        window.QuillToolbar.setupFixedToolbar(contentContainer);
+
     try {
         quill.setContents(JSON.parse($content))
     } catch (error) {
@@ -208,6 +213,11 @@ $script = <<<JS
     window.QuillToolbar.setupClearEditor(responseQuill, responseHidden);
     window.QuillToolbar.setupSmartPaste(responseQuill, responseHidden, urlConfig);
     window.QuillToolbar.setupLoadMd(responseQuill, responseHidden, urlConfig);
+
+    // Enable sticky/fixed toolbar on page scroll
+    var responseContainer = document.querySelector('#scratch-pad-response-editor').closest('.resizable-editor-container');
+    if (responseContainer && window.QuillToolbar.setupFixedToolbar)
+        window.QuillToolbar.setupFixedToolbar(responseContainer);
 
     try {
         responseQuill.setContents(JSON.parse($response))
