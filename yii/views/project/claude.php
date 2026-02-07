@@ -85,16 +85,13 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     <div class="card mb-4">
         <div id="claudeSettingsCard" class="d-none">
             <div class="card-body claude-settings-section">
-                <button type="button" class="claude-settings-collapse-btn" id="claude-settings-toggle"
-                        title="Toggle settings">
-                    <i class="bi bi-x-lg"></i>
-                </button>
-                <div class="mb-3" id="claude-settings-badges">
+                <div class="claude-settings-badges-bar" id="claude-settings-badges" role="button" title="Collapse settings">
                     <span class="badge bg-secondary" title="Project"><i class="bi bi-folder2-open"></i> <?= Html::encode($model->name) ?></span>
                     <?php if ($gitBranch): ?>
                     <span class="badge bg-secondary" title="Git branch"><i class="bi bi-signpost-split"></i> <?= Html::encode($gitBranch) ?></span>
                     <?php endif; ?>
                     <span id="claude-config-badge" class="badge d-none"></span>
+                    <i class="bi bi-chevron-up claude-settings-badges-bar__chevron"></i>
                 </div>
 
                 <div class="row g-3">
@@ -154,10 +151,11 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
     <div class="card mb-4 claude-prompt-card-sticky">
         <div class="collapse show" id="claudePromptCard">
             <div class="card-body claude-prompt-section">
-                <button type="button" id="claude-prompt-collapse-btn" class="claude-prompt-collapse-btn"
-                        title="Collapse editor">
-                    <i class="bi bi-x-lg"></i>
-                </button>
+                <div class="claude-prompt-collapse-bar" id="claude-prompt-collapse-btn" role="button" title="Collapse editor">
+                    <i class="bi bi-pencil-square claude-prompt-collapse-bar__icon"></i>
+                    <span class="claude-prompt-collapse-bar__label">Prompt editor</span>
+                    <i class="bi bi-chevron-up claude-prompt-collapse-bar__chevron"></i>
+                </div>
                 <!-- Quill editor (initial mode) -->
                 <div id="claude-quill-wrapper" class="resizable-editor-container">
                     <div id="claude-quill-toolbar">
@@ -232,8 +230,8 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                         </a>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
-                        <button type="button" id="claude-goahead-btn" class="btn btn-outline-primary d-none" title="Send &quot;Proceed&quot; (Alt+G)">
-                            <i class="bi bi-check-lg"></i> Proceed
+                        <button type="button" id="claude-goahead-btn" class="btn btn-outline-primary d-none" title="Approve and execute Claude's suggestion (Alt+G)">
+                            <i class="bi bi-check-lg"></i> Go!
                         </button>
                         <div id="claude-summarize-group" class="btn-group d-none">
                             <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary"
@@ -652,16 +650,19 @@ $js = <<<JS
                 document.getElementById('claude-followup-textarea').addEventListener('keydown', handleEditorKeydown);
                 quill.root.addEventListener('keydown', handleEditorKeydown);
 
+                quill.on('text-change', function() { self.updateGoButton(); });
+                document.getElementById('claude-followup-textarea').addEventListener('input', function() { self.updateGoButton(); });
+
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
                     if (copyBtn) self.handleCopyClick(copyBtn);
                 });
 
-                document.getElementById('claude-settings-toggle').addEventListener('click', function() {
-                    self.cycleSettingsState();
+                document.getElementById('claude-settings-badges').addEventListener('click', function() {
+                    self.collapseSettings();
                 });
                 document.getElementById('claude-settings-summary').addEventListener('click', function() {
-                    self.cycleSettingsState();
+                    self.expandSettings();
                 });
 
                 document.getElementById('claude-usage-summary').addEventListener('click', function() {
@@ -955,7 +956,7 @@ $js = <<<JS
              */
             cleanupStreamUI: function() {
                 document.getElementById('claude-send-btn').disabled = false;
-                document.getElementById('claude-goahead-btn').disabled = false;
+                this.updateGoButton();
                 this.removeStreamDots();
                 this.showCancelButton(false);
                 this.closeStreamModal();
@@ -1018,6 +1019,7 @@ $js = <<<JS
                     this.showContextWarning(pctUsed);
 
                 document.getElementById('claude-goahead-btn').classList.remove('d-none');
+                this.updateGoButton();
 
                 if (this.messages.length === 2) {
                     document.getElementById('claude-reuse-btn').classList.remove('d-none');
@@ -1095,6 +1097,7 @@ $js = <<<JS
                 );
 
                 document.getElementById('claude-goahead-btn').classList.remove('d-none');
+                this.updateGoButton();
 
                 if (this.messages.length === 2) {
                     document.getElementById('claude-reuse-btn').classList.remove('d-none');
@@ -1882,6 +1885,18 @@ $js = <<<JS
                     this.switchToQuill(this.lastSentDelta);
             },
 
+            isEditorEmpty: function() {
+                if (this.inputMode === 'quill')
+                    return !quill.getText().replace(/\\n$/, '').trim();
+                return !document.getElementById('claude-followup-textarea').value.trim();
+            },
+
+            updateGoButton: function() {
+                var btn = document.getElementById('claude-goahead-btn');
+                if (btn.classList.contains('d-none')) return;
+                btn.disabled = !this.isEditorEmpty();
+            },
+
             sendFixedText: function(text) {
                 if (this.inputMode === 'quill')
                     quill.setText(text);
@@ -2024,21 +2039,6 @@ $js = <<<JS
                     addBadge('bi-shield-check', 'Default permissions', 'Permission mode', 'badge-setting');
 
                 summary.classList.remove('d-none');
-            },
-
-            cycleSettingsState: function() {
-                var card = document.getElementById('claudeSettingsCard');
-                var summary = document.getElementById('claude-settings-summary');
-
-                if (this.settingsState === 'expanded') {
-                    this.settingsState = 'collapsed';
-                    card.classList.add('d-none');
-                    this.updateSettingsSummary();
-                } else {
-                    this.settingsState = 'expanded';
-                    summary.classList.add('d-none');
-                    card.classList.remove('d-none');
-                }
             },
 
             updateUsageSummary: function() {
@@ -2283,7 +2283,7 @@ $js = <<<JS
                 summarizeAutoBtn.disabled = false;
                 summarizeWarningBtn.disabled = false;
                 sendBtn.disabled = false;
-                document.getElementById('claude-goahead-btn').disabled = false;
+                this.updateGoButton();
                 summarizeAutoBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session';
             },
 
