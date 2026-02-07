@@ -95,6 +95,18 @@ class UserService
         }
     }
 
+    public function changePassword(User $user, string $newPassword): bool
+    {
+        $user->setPassword($newPassword);
+
+        try {
+            return $user->save(false, ['password_hash']);
+        } catch (Exception $e) {
+            Yii::error("Error changing password for user ID $user->id: " . $e->getMessage(), __METHOD__);
+            return false;
+        }
+    }
+
     public function removePasswordResetToken(User $user): bool
     {
         return $this->updateUserAttribute($user, 'password_reset_token', null);

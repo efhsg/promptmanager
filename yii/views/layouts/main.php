@@ -77,18 +77,30 @@ if (!Yii::$app->user->isGuest) {
 
 echo Nav::widget([
     'options' => ['class' => 'navbar-nav'],
+    'encodeLabels' => false,
     'items' => Yii::$app->user->isGuest ? [
         ['label' => 'Signup', 'url' => ['/identity/auth/signup']],
         ['label' => 'Login', 'url' => ['/identity/auth/login']],
     ] : [
-        '<li class="nav-item">'
-        . Html::beginForm(['/identity/auth/logout'])
-        . Html::submitButton(
-            'Logout (' . Html::encode(Yii::$app->user->identity->username) . ')',
-            ['class' => 'nav-link btn btn-link logout']
-        )
-        . Html::endForm()
-        . '</li>',
+        [
+            'label' => '<i class="bi bi-person-circle"></i> '
+                . Html::encode(Yii::$app->user->identity->username),
+            'dropdownOptions' => ['class' => 'dropdown-menu dropdown-menu-end'],
+            'items' => [
+                [
+                    'label' => '<i class="bi bi-key"></i> ' . Yii::t('app', 'Change password'),
+                    'url' => ['/identity/auth/change-password'],
+                    'encode' => false,
+                ],
+                '<hr class="dropdown-divider">',
+                [
+                    'label' => '<i class="bi bi-box-arrow-right"></i> ' . Yii::t('app', 'Logout'),
+                    'url' => ['/identity/auth/logout'],
+                    'linkOptions' => ['data-method' => 'post'],
+                    'encode' => false,
+                ],
+            ],
+        ],
     ],
 ]);
 

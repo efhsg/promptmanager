@@ -4,6 +4,7 @@
 
 namespace app\modules\identity\controllers;
 
+use app\modules\identity\models\ChangePasswordForm;
 use app\modules\identity\models\LoginForm;
 use app\modules\identity\models\SignupForm;
 use app\modules\identity\services\UserService;
@@ -50,6 +51,22 @@ class AuthController extends Controller
     {
         Yii::$app->user->logout();
         return $this->goHome();
+    }
+
+    public function actionChangePassword(): Response|string
+    {
+        if (Yii::$app->user->isGuest) {
+            return $this->redirect(['/identity/auth/login']);
+        }
+
+        $model = new ChangePasswordForm($this->userService);
+
+        if ($model->load(Yii::$app->request->post()) && $model->changePassword()) {
+            Yii::$app->session->setFlash('success', 'Password changed successfully.');
+            return $this->goHome();
+        }
+
+        return $this->render('change-password', ['model' => $model]);
     }
 
     public function actionSignup(): Response|string
