@@ -103,8 +103,13 @@ $copyTypes = CopyType::labels();
                 <div class="alert alert-danger d-none" id="save-error-alert"></div>
                 <div class="mb-3">
                     <label for="scratch-pad-name" class="form-label">Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control" id="scratch-pad-name" placeholder="Enter a name...">
-                    <div class="invalid-feedback" id="scratch-pad-name-error"></div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="scratch-pad-name" placeholder="Enter a name...">
+                        <button type="button" class="btn btn-outline-secondary" id="suggest-name-btn" title="Suggest name based on content">
+                            <i class="bi bi-stars"></i> Suggest
+                        </button>
+                    </div>
+                    <div class="invalid-feedback d-block d-none" id="scratch-pad-name-error"></div>
                 </div>
                 <div class="mb-3">
                     <label for="scratch-pad-project" class="form-label">Project</label>
@@ -139,6 +144,7 @@ $saveUrl = Url::to(['/scratch-pad/save']);
 $savedListUrl = Url::to(['/scratch-pad/index']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$suggestNameUrl = Url::to(['/scratch-pad/suggest-name']);
 
 $script = <<<JS
     window.quill = new Quill('#editor', {
@@ -215,6 +221,7 @@ $script = <<<JS
         document.getElementById('scratch-pad-name').value = '';
         document.getElementById('save-error-alert').classList.add('d-none');
         document.getElementById('scratch-pad-name').classList.remove('is-invalid');
+        document.getElementById('scratch-pad-name-error').classList.add('d-none');
         modal.show();
     });
 
@@ -225,10 +232,12 @@ $script = <<<JS
 
         errorAlert.classList.add('d-none');
         nameInput.classList.remove('is-invalid');
+        document.getElementById('scratch-pad-name-error').classList.add('d-none');
 
         if (!name) {
             nameInput.classList.add('is-invalid');
             document.getElementById('scratch-pad-name-error').textContent = 'Name is required.';
+            document.getElementById('scratch-pad-name-error').classList.remove('d-none');
             return;
         }
 
@@ -272,6 +281,53 @@ $script = <<<JS
             errorAlert.textContent = 'An unexpected error occurred.';
             errorAlert.classList.remove('d-none');
             console.error('Save error:', error);
+        });
+    });
+
+    document.getElementById('suggest-name-btn').addEventListener('click', function() {
+        const btn = this;
+        const nameInput = document.getElementById('scratch-pad-name');
+        const errorDiv = document.getElementById('scratch-pad-name-error');
+        const content = window.quill.getText().trim();
+
+        errorDiv.classList.add('d-none');
+
+        if (!content) {
+            errorDiv.textContent = 'Write some content first.';
+            errorDiv.classList.remove('d-none');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        fetch('$suggestNameUrl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ content: content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.name) {
+                nameInput.value = data.name;
+                nameInput.classList.remove('is-invalid');
+                errorDiv.classList.add('d-none');
+            } else {
+                errorDiv.textContent = data.error || 'Could not generate name.';
+                errorDiv.classList.remove('d-none');
+            }
+        })
+        .catch(() => {
+            errorDiv.textContent = 'Request failed.';
+            errorDiv.classList.remove('d-none');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-stars"></i> Suggest';
         });
     });
     JS;
