@@ -26,6 +26,13 @@ class ClaudeQuickHandler
             'minChars' => 120,
             'maxChars' => 1000,
         ],
+        'scratch-pad-name' => [
+            'model' => 'haiku',
+            'timeout' => 60,
+            'workdir' => 'scratch-pad-name',
+            'minChars' => 20,
+            'maxChars' => 3000,
+        ],
     ];
 
     public function __construct(
@@ -39,17 +46,20 @@ class ClaudeQuickHandler
      */
     public function run(string $useCase, string $prompt): array
     {
-        if (!isset(self::USE_CASES[$useCase]))
+        if (!isset(self::USE_CASES[$useCase])) {
             throw new InvalidArgumentException("Unknown use case: {$useCase}");
+        }
 
         $config = self::USE_CASES[$useCase];
         $length = mb_strlen($prompt);
 
-        if (isset($config['minChars']) && $length < $config['minChars'])
+        if (isset($config['minChars']) && $length < $config['minChars']) {
             return ['success' => false, 'error' => 'Prompt too short for summarization.'];
+        }
 
-        if (isset($config['maxChars']) && $length > $config['maxChars'])
+        if (isset($config['maxChars']) && $length > $config['maxChars']) {
             $prompt = mb_substr($prompt, 0, $config['maxChars']);
+        }
 
         $systemPromptFile = $this->resolveSystemPromptFile($config['workdir']);
 
@@ -83,8 +93,9 @@ class ClaudeQuickHandler
     {
         $path = Yii::getAlias(self::WORKDIR_BASE) . '/' . $workdir . '/CLAUDE.md';
 
-        if (!is_file($path))
+        if (!is_file($path)) {
             throw new RuntimeException("System prompt file not found: {$path}");
+        }
 
         return $path;
     }

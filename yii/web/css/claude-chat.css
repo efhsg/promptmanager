@@ -188,6 +188,79 @@
     margin-right: 0.35rem;
 }
 
+/* Collapsible response bar — clickable header inside .claude-message--claude */
+.claude-chat-page .claude-message--claude .claude-message__header {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin: -1rem -1.25rem 0.5rem -1.25rem;
+    padding: 0.4rem 0.75rem;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+    border-radius: 0.375rem 0.375rem 0 0;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.claude-chat-page .claude-message--claude .claude-message__header:hover {
+    background: #e9ecef;
+}
+
+.claude-chat-page .claude-message__header-chevron {
+    margin-left: auto;
+    font-size: 0.7rem;
+    color: #adb5bd;
+    transition: color 0.15s, transform 0.2s;
+}
+
+.claude-chat-page .claude-message--claude .claude-message__header:hover .claude-message__header-chevron {
+    color: #495057;
+}
+
+/* Collapsed response state */
+.claude-chat-page .claude-message--collapsed {
+    padding-bottom: 0;
+}
+
+.claude-chat-page .claude-message--collapsed .claude-message__header {
+    margin-bottom: 0;
+    border-bottom: none;
+    border-radius: 0.375rem;
+}
+
+.claude-chat-page .claude-message--collapsed .claude-message__header-chevron {
+    transform: rotate(180deg);
+}
+
+.claude-chat-page .claude-message--collapsed .claude-message__body,
+.claude-chat-page .claude-message--collapsed .claude-message__copy {
+    display: none;
+}
+
+.claude-chat-page .claude-message__header-summary {
+    flex: 1;
+    font-weight: 400;
+    font-size: 0.8rem;
+    color: #6c757d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    display: none;
+}
+
+.claude-chat-page .claude-message--collapsed .claude-message__header-summary {
+    display: block;
+}
+
+.claude-chat-page .claude-message__header-meta {
+    flex-shrink: 0;
+    font-weight: 400;
+    font-size: 0.75rem;
+    color: #6c757d;
+    white-space: nowrap;
+}
+
 .claude-chat-page .claude-message__body {
     font-size: 0.95rem;
     line-height: 1.6;
@@ -254,11 +327,6 @@
     margin: 0.75rem 0;
 }
 
-.claude-chat-page .claude-message__meta {
-    margin-top: 0.75rem;
-    font-size: 0.8rem;
-    color: #6c757d;
-}
 
 /* Markdown content styles within messages */
 .claude-chat-page .claude-message__body h1,

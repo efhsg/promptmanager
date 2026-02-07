@@ -6,6 +6,7 @@ use app\controllers\ScratchPadController;
 use app\models\Project;
 use app\models\ScratchPad;
 use app\modules\identity\models\User;
+use app\handlers\ClaudeQuickHandler;
 use app\services\ClaudeCliService;
 use app\services\EntityPermissionService;
 use app\services\YouTubeTranscriptService;
@@ -170,13 +171,15 @@ class ScratchPadControllerTest extends Unit
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeCliService = new ClaudeCliService();
+        $claudeQuickHandler = $this->createMock(ClaudeQuickHandler::class);
 
         return new ScratchPadController(
             'scratch-pad',
             Yii::$app,
             $permissionService,
             $youtubeService,
-            $claudeCliService
+            $claudeCliService,
+            $claudeQuickHandler
         );
     }
 
@@ -831,6 +834,81 @@ class ScratchPadControllerTest extends Unit
         $this->assertSame('Invalid request format.', $result['error']);
     }
 
+    public function testSuggestNameReturnsSuccessWithValidContent(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $this->mockJsonRequest(['content' => 'Help me refactor the authentication module to use JWT tokens']);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler->method('run')->willReturn([
+            'success' => true,
+            'output' => 'JWT authentication refactoring',
+        ]);
+
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSuggestName();
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('JWT authentication refactoring', $result['name']);
+    }
+
+    public function testSuggestNameReturnsErrorForEmptyContent(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $this->mockJsonRequest(['content' => '']);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSuggestName();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Content is empty.', $result['error']);
+    }
+
+    public function testSuggestNameReturnsErrorForNonStringContent(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $this->mockJsonRequest(['content' => 123]);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSuggestName();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Content is empty.', $result['error']);
+    }
+
+    public function testSuggestNameReturnsErrorForInvalidJson(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $this->mockRawBody('not json');
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSuggestName();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Invalid JSON data.', $result['error']);
+    }
+
+    public function testSuggestNameReturnsErrorWhenAiOutputIsEmpty(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $this->mockJsonRequest(['content' => 'Help me refactor the authentication module']);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler->method('run')->willReturn([
+            'success' => true,
+            'output' => '   ',
+        ]);
+
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSuggestName();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Could not generate a name.', $result['error']);
+    }
+
     public function testLoadClaudeCommandsReturnsFlatListWithoutGroups(): void
     {
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
@@ -1044,13 +1122,31 @@ class ScratchPadControllerTest extends Unit
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $youtubeService = $this->createMock(YouTubeTranscriptService::class);
+        $claudeQuickHandler = $this->createMock(ClaudeQuickHandler::class);
 
         return new ScratchPadController(
             'scratch-pad',
             Yii::$app,
             $permissionService,
             $youtubeService,
-            $claudeService
+            $claudeService,
+            $claudeQuickHandler
+        );
+    }
+
+    private function createControllerWithQuickHandler(ClaudeQuickHandler $quickHandler): ScratchPadController
+    {
+        $permissionService = Yii::$container->get(EntityPermissionService::class);
+        $youtubeService = $this->createMock(YouTubeTranscriptService::class);
+        $claudeCliService = new ClaudeCliService();
+
+        return new ScratchPadController(
+            'scratch-pad',
+            Yii::$app,
+            $permissionService,
+            $youtubeService,
+            $claudeCliService,
+            $quickHandler
         );
     }
 

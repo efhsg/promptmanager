@@ -656,6 +656,12 @@ $js = <<<JS
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
                     if (copyBtn) self.handleCopyClick(copyBtn);
+
+                    var header = e.target.closest('.claude-message--claude .claude-message__header');
+                    if (header) {
+                        var msg = header.closest('.claude-message--claude');
+                        msg.classList.toggle('claude-message--collapsed');
+                    }
                 });
 
                 document.getElementById('claude-settings-badges').addEventListener('click', function() {
@@ -1654,7 +1660,24 @@ $js = <<<JS
 
                 var claudeHeader = document.createElement('div');
                 claudeHeader.className = 'claude-message__header';
-                claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
+
+                var headerIcon = document.createElement('i');
+                headerIcon.className = 'bi bi-terminal-fill';
+                claudeHeader.appendChild(headerIcon);
+                claudeHeader.appendChild(document.createTextNode(' Claude'));
+
+                var headerSummary = document.createElement('span');
+                headerSummary.className = 'claude-message__header-summary';
+                claudeHeader.appendChild(headerSummary);
+
+                var headerMeta = document.createElement('span');
+                headerMeta.className = 'claude-message__header-meta';
+                claudeHeader.appendChild(headerMeta);
+
+                var headerChevron = document.createElement('i');
+                headerChevron.className = 'bi bi-chevron-up claude-message__header-chevron';
+                claudeHeader.appendChild(headerChevron);
+
                 claudeDiv.appendChild(claudeHeader);
 
                 var claudeBody = document.createElement('div');
@@ -1662,17 +1685,21 @@ $js = <<<JS
                 claudeBody.setAttribute('data-quill-markdown', markdownContent);
                 claudeDiv.appendChild(claudeBody);
 
-                if (meta) {
-                    var metaDiv = document.createElement('div');
-                    metaDiv.className = 'claude-message__meta';
-                    metaDiv.textContent = this.formatMeta(meta);
-                    if (meta.tool_uses && meta.tool_uses.length)
-                        metaDiv.title = meta.tool_uses.join('\\n');
-                    claudeDiv.appendChild(metaDiv);
-                }
-
                 var copyBtn = this.createCopyButton(markdownContent);
                 claudeDiv.appendChild(copyBtn);
+
+                // Meta always visible in header bar
+                if (meta) {
+                    var metaText = this.formatMeta(meta);
+                    headerMeta.textContent = metaText;
+                    if (meta.tool_uses && meta.tool_uses.length)
+                        headerMeta.title = meta.tool_uses.join('\\n');
+                }
+
+                // Collapsed summary: content preview only
+                var preview = (markdownContent || '').replace(/[#*`_~>\[\]()!]/g, '').trim();
+                if (preview.length > 120) preview = preview.substring(0, 120) + '\u2026';
+                headerSummary.textContent = preview ? '\u2014 ' + preview : '';
 
                 return { div: claudeDiv, body: claudeBody };
             },

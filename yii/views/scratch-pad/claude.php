@@ -26,6 +26,7 @@ $cancelClaudeUrl = Url::to(['/scratch-pad/cancel-claude', 'id' => $model->id]);
 $summarizeUrl = Url::to(['/scratch-pad/summarize-session', 'id' => $model->id]);
 $summarizePromptUrl = Url::to(['/scratch-pad/summarize-prompt', 'id' => $model->id]);
 $saveUrl = Url::to(['/scratch-pad/save']);
+$suggestNameUrl = Url::to(['/scratch-pad/suggest-name']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
 $viewUrlTemplate = Url::to(['/scratch-pad/view', 'id' => '__ID__']);
@@ -322,8 +323,13 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                     <div class="alert alert-danger d-none" id="save-dialog-error-alert"></div>
                     <div class="mb-3">
                         <label for="save-dialog-name" class="form-label">Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="save-dialog-name" placeholder="Enter a name...">
-                        <div class="invalid-feedback" id="save-dialog-name-error"></div>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="save-dialog-name" placeholder="Enter a name...">
+                            <button type="button" class="btn btn-outline-secondary" id="suggest-name-btn" title="Suggest name based on content">
+                                <i class="bi bi-stars"></i> Suggest
+                            </button>
+                        </div>
+                        <div class="invalid-feedback d-block d-none" id="save-dialog-name-error"></div>
                     </div>
                     <div class="mb-3">
                         <label for="save-dialog-project" class="form-label">Project</label>
@@ -577,6 +583,7 @@ $js = <<<JS
                 document.getElementById('save-dialog-continue-btn').addEventListener('click', function() { self.saveDialogContinue(); });
                 document.getElementById('save-dialog-back-btn').addEventListener('click', function() { self.saveDialogBack(); });
                 document.getElementById('save-dialog-save-btn').addEventListener('click', function() { self.saveDialogSave(); });
+                document.getElementById('suggest-name-btn').addEventListener('click', function() { self.suggestName(); });
                 document.getElementById('claude-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
                 var historyAccordion = document.getElementById('claude-history-accordion');
                 historyAccordion.addEventListener('shown.bs.collapse', function() { self.updateToggleHistoryBtn(); });
@@ -621,6 +628,12 @@ $js = <<<JS
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
                     if (copyBtn) self.handleCopyClick(copyBtn);
+
+                    var header = e.target.closest('.claude-message--claude .claude-message__header');
+                    if (header) {
+                        var msg = header.closest('.claude-message--claude');
+                        msg.classList.toggle('claude-message--collapsed');
+                    }
                 });
 
                 document.getElementById('claude-settings-badges').addEventListener('click', function() {
@@ -1633,7 +1646,24 @@ $js = <<<JS
 
                 var claudeHeader = document.createElement('div');
                 claudeHeader.className = 'claude-message__header';
-                claudeHeader.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
+
+                var headerIcon = document.createElement('i');
+                headerIcon.className = 'bi bi-terminal-fill';
+                claudeHeader.appendChild(headerIcon);
+                claudeHeader.appendChild(document.createTextNode(' Claude'));
+
+                var headerSummary = document.createElement('span');
+                headerSummary.className = 'claude-message__header-summary';
+                claudeHeader.appendChild(headerSummary);
+
+                var headerMeta = document.createElement('span');
+                headerMeta.className = 'claude-message__header-meta';
+                claudeHeader.appendChild(headerMeta);
+
+                var headerChevron = document.createElement('i');
+                headerChevron.className = 'bi bi-chevron-up claude-message__header-chevron';
+                claudeHeader.appendChild(headerChevron);
+
                 claudeDiv.appendChild(claudeHeader);
 
                 var claudeBody = document.createElement('div');
@@ -1641,17 +1671,21 @@ $js = <<<JS
                 claudeBody.setAttribute('data-quill-markdown', markdownContent);
                 claudeDiv.appendChild(claudeBody);
 
-                if (meta) {
-                    var metaDiv = document.createElement('div');
-                    metaDiv.className = 'claude-message__meta';
-                    metaDiv.textContent = this.formatMeta(meta);
-                    if (meta.tool_uses && meta.tool_uses.length)
-                        metaDiv.title = meta.tool_uses.join('\\n');
-                    claudeDiv.appendChild(metaDiv);
-                }
-
                 var copyBtn = this.createCopyButton(markdownContent);
                 claudeDiv.appendChild(copyBtn);
+
+                // Meta always visible in header bar
+                if (meta) {
+                    var metaText = this.formatMeta(meta);
+                    headerMeta.textContent = metaText;
+                    if (meta.tool_uses && meta.tool_uses.length)
+                        headerMeta.title = meta.tool_uses.join('\\n');
+                }
+
+                // Collapsed summary: content preview only
+                var preview = (markdownContent || '').replace(/[#*`_~>\[\]()!]/g, '').trim();
+                if (preview.length > 120) preview = preview.substring(0, 120) + '\u2026';
+                headerSummary.textContent = preview ? '\u2014 ' + preview : '';
 
                 return { div: claudeDiv, body: claudeBody };
             },
@@ -2412,22 +2446,11 @@ $js = <<<JS
                 // Hide select modal, show save modal
                 bootstrap.Modal.getInstance(document.getElementById('saveDialogSelectModal')).hide();
 
-                // Suggest a name from the first user message
-                var suggestedName = '';
-                if (this.messages.length > 0 && this.messages[0].role === 'user') {
-                    suggestedName = this.messages[0].content
-                        .replace(/[#*_`>\[\]]/g, '')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-                    if (suggestedName.length > 80) {
-                        suggestedName = suggestedName.substring(0, 80).replace(/\s\S*$/, '') + '\u2026';
-                    }
-                }
-
                 // Reset save form
-                document.getElementById('save-dialog-name').value = suggestedName;
+                document.getElementById('save-dialog-name').value = '';
                 document.getElementById('save-dialog-name').classList.remove('is-invalid');
                 document.getElementById('save-dialog-name-error').textContent = '';
+                document.getElementById('save-dialog-name-error').classList.add('d-none');
                 document.getElementById('save-dialog-error-alert').classList.add('d-none');
 
                 var saveModal = new bootstrap.Modal(document.getElementById('saveDialogSaveModal'));
@@ -2452,10 +2475,12 @@ $js = <<<JS
                 if (!name) {
                     nameInput.classList.add('is-invalid');
                     nameError.textContent = 'Name is required.';
+                    nameError.classList.remove('d-none');
                     return;
                 }
                 nameInput.classList.remove('is-invalid');
                 nameError.textContent = '';
+                nameError.classList.add('d-none');
 
                 var projectId = document.getElementById('save-dialog-project').value || null;
 
@@ -2503,6 +2528,7 @@ $js = <<<JS
                             if (errs.name) {
                                 nameInput.classList.add('is-invalid');
                                 nameError.textContent = errs.name[0];
+                                nameError.classList.remove('d-none');
                             }
                             if (!errs.name) msg = Object.values(errs).flat().join(' ');
                         }
@@ -2522,6 +2548,64 @@ $js = <<<JS
                     errorAlert.textContent = error.message || 'An unexpected error occurred.';
                     errorAlert.classList.remove('d-none');
                     self.restoreSaveDialogButton();
+                });
+            },
+
+            suggestName: function() {
+                var self = this;
+                var btn = document.getElementById('suggest-name-btn');
+                var nameInput = document.getElementById('save-dialog-name');
+                var nameError = document.getElementById('save-dialog-name-error');
+
+                nameError.classList.add('d-none');
+
+                // Collect selected user messages from the save dialog checkboxes
+                var checkboxes = document.querySelectorAll('#save-dialog-message-list .save-dialog-msg-cb:checked');
+                var userParts = [];
+                for (var i = 0; i < checkboxes.length; i++) {
+                    var idx = parseInt(checkboxes[i].getAttribute('data-msg-index'), 10);
+                    var msg = self.messages[idx];
+                    if (msg && msg.role === 'user' && typeof msg.content === 'string')
+                        userParts.push(msg.content);
+                }
+                var content = userParts.join('\\n\\n').replace(/[#*_`>\\[\\]]/g, '').replace(/\\s+/g, ' ').trim();
+
+                if (!content) {
+                    nameError.textContent = 'Select at least one user message.';
+                    nameError.classList.remove('d-none');
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                fetch('$suggestNameUrl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': yii.getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ content: content })
+                })
+                .then(function(r) { return self.parseJsonResponse(r); })
+                .then(function(data) {
+                    if (data.success && data.name) {
+                        nameInput.value = data.name;
+                        nameInput.classList.remove('is-invalid');
+                        nameError.classList.add('d-none');
+                    } else {
+                        nameError.textContent = data.error || 'Could not generate name.';
+                        nameError.classList.remove('d-none');
+                    }
+                })
+                .catch(function() {
+                    nameError.textContent = 'Request failed.';
+                    nameError.classList.remove('d-none');
+                })
+                .finally(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-stars"></i> Suggest';
                 });
             },
 

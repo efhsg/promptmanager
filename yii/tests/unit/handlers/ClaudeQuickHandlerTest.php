@@ -127,6 +127,60 @@ class ClaudeQuickHandlerTest extends Unit
         $handler->run('prompt-title', str_repeat('x', 150));
     }
 
+    public function testRunScratchPadNameReturnsGeneratedName(): void
+    {
+        $client = $this->createMock(AiCompletionClient::class);
+        $client->method('complete')->willReturn([
+            'success' => true,
+            'output' => 'JWT authentication refactoring plan',
+        ]);
+
+        $handler = new ClaudeQuickHandler($client);
+        $result = $handler->run('scratch-pad-name', str_repeat('a', 30));
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('JWT authentication refactoring plan', $result['output']);
+    }
+
+    public function testRunScratchPadNameRespectsMinChars(): void
+    {
+        $client = $this->createMock(AiCompletionClient::class);
+        $client->expects($this->never())->method('complete');
+
+        $handler = new ClaudeQuickHandler($client);
+        $result = $handler->run('scratch-pad-name', 'short text');
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Prompt too short for summarization.', $result['error']);
+    }
+
+    public function testRunScratchPadNameTruncatesAtMaxChars(): void
+    {
+        $longPrompt = str_repeat('a', 3500);
+
+        $client = $this->createMock(AiCompletionClient::class);
+        $client->expects($this->once())
+            ->method('complete')
+            ->with(
+                $this->callback(function (string $p) {
+                    return str_starts_with($p, '<document>')
+                        && str_ends_with($p, '</document>')
+                        && mb_strlen($p) === 3000 + strlen('<document></document>');
+                }),
+                $this->callback(fn(string $f) => str_ends_with($f, '/scratch-pad-name/CLAUDE.md')),
+                $this->anything()
+            )
+            ->willReturn([
+                'success' => true,
+                'output' => 'Truncated name',
+            ]);
+
+        $handler = new ClaudeQuickHandler($client);
+        $result = $handler->run('scratch-pad-name', $longPrompt);
+
+        $this->assertTrue($result['success']);
+    }
+
     public function testRunTrimsOutputWhitespace(): void
     {
         $client = $this->createMock(AiCompletionClient::class);

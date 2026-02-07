@@ -77,13 +77,14 @@ class ScratchPadController extends Controller
                     'save' => ['POST'],
                     'summarize-session' => ['POST'],
                     'summarize-prompt' => ['POST'],
+                    'suggest-name' => ['POST'],
                 ],
             ],
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index', 'create', 'import-markdown', 'import-text', 'import-youtube', 'convert-format', 'save'],
+                        'actions' => ['index', 'create', 'import-markdown', 'import-text', 'import-youtube', 'convert-format', 'save', 'suggest-name'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -581,8 +582,9 @@ class ScratchPadController extends Controller
         $raw = $requestData['streamToken'] ?? null;
         $streamToken = $this->sanitizeStreamToken(is_string($raw) ? $raw : null);
 
-        if ($streamToken === null)
+        if ($streamToken === null) {
             return ['success' => true, 'cancelled' => false];
+        }
 
         $cancelled = $this->claudeCliService->cancelRunningProcess($streamToken);
 
@@ -769,6 +771,36 @@ class ScratchPadController extends Controller
         return $result['success']
             ? ['success' => true, 'title' => $result['output']]
             : $result;
+    }
+
+    public function actionSuggestName(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $data = json_decode(Yii::$app->request->rawBody, true);
+        if (!is_array($data)) {
+            return ['success' => false, 'error' => 'Invalid JSON data.'];
+        }
+
+        $content = $data['content'] ?? '';
+
+        if (!is_string($content) || trim($content) === '') {
+            return ['success' => false, 'error' => 'Content is empty.'];
+        }
+
+        $result = $this->claudeQuickHandler->run('scratch-pad-name', $content);
+
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $name = mb_substr(trim($result['output']), 0, 255);
+
+        if ($name === '') {
+            return ['success' => false, 'error' => 'Could not generate a name.'];
+        }
+
+        return ['success' => true, 'name' => $name];
     }
 
     private function buildSummarizerSystemPrompt(): string
