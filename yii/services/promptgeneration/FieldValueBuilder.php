@@ -31,6 +31,11 @@ class FieldValueBuilder
         }
 
         $ops = $this->buildFromJson($fieldValue);
+
+        if ($fieldType === 'select' && $labelOps !== []) {
+            $ops = $this->stripTrailingNewlineFromOps($ops);
+        }
+
         return $labelOps === [] ? $ops : array_merge($labelOps, $ops);
     }
 
@@ -44,14 +49,25 @@ class FieldValueBuilder
             return [];
         }
 
-        $labelTypes = ['text', 'select', 'multi-select', 'code', 'file', 'directory', 'string', 'number'];
-        if (!in_array($fieldType, $labelTypes, true)) {
+        $blockLabelTypes = ['text', 'multi-select', 'code', 'file', 'directory'];
+        $inlineLabelTypes = ['select', 'select-invert', 'string', 'number'];
+
+        if (!in_array($fieldType, $blockLabelTypes, true) && !in_array($fieldType, $inlineLabelTypes, true)) {
             return [];
         }
 
         $labelText = trim((string) ($field->label ?? ''));
         if ($labelText === '') {
             return [];
+        }
+
+        if (in_array($fieldType, $inlineLabelTypes, true)) {
+            return [
+                [
+                    'insert' => $labelText . ': ',
+                    'attributes' => ['bold' => true],
+                ],
+            ];
         }
 
         return [
@@ -181,6 +197,29 @@ class FieldValueBuilder
             return [];
         }
         return [['insert' => $value]];
+    }
+
+    private function stripTrailingNewlineFromOps(array $ops): array
+    {
+        if ($ops === []) {
+            return $ops;
+        }
+
+        $lastKey = array_key_last($ops);
+        $lastOp = $ops[$lastKey];
+
+        if (!isset($lastOp['insert']) || !is_string($lastOp['insert'])) {
+            return $ops;
+        }
+
+        $text = rtrim($lastOp['insert'], "\n");
+        if ($text === '') {
+            unset($ops[$lastKey]);
+            return array_values($ops);
+        }
+
+        $ops[$lastKey]['insert'] = $text;
+        return $ops;
     }
 
     private function buildSelectInvertOperations(mixed $selectedValue, ?object $field): array

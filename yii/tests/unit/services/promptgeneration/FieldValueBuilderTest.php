@@ -48,16 +48,18 @@ class FieldValueBuilderTest extends Unit
         $this->assertSame([['insert' => 'value']], $result);
     }
 
-    public function testBuildSkipsLabelForUnsupportedFieldType(): void
+    public function testBuildSelectInvertWithLabelAddsInlineBoldLabel(): void
     {
         $field = new stdClass();
         $field->render_label = true;
         $field->label = 'My Label';
+        $field->fieldOptions = [];
+        $field->content = '';
 
         $result = $this->builder->build('value', 'select-invert', $field);
 
-        // select-invert is not in the label types list
-        $this->assertNotSame(['header' => 2], $result[0]['attributes'] ?? null);
+        $this->assertSame('My Label: ', $result[0]['insert']);
+        $this->assertSame(['bold' => true], $result[0]['attributes']);
     }
 
     public function testBuildSkipsLabelWhenLabelEmpty(): void
@@ -391,7 +393,7 @@ class FieldValueBuilderTest extends Unit
         $this->assertSame([], $result);
     }
 
-    public function testBuildInlineStringWithLabelAddsHeader(): void
+    public function testBuildInlineStringWithLabelAddsBoldInlineLabel(): void
     {
         $field = new stdClass();
         $field->render_label = true;
@@ -400,12 +402,12 @@ class FieldValueBuilderTest extends Unit
         $result = $this->builder->build('Value', 'string', $field);
 
         $this->assertCount(2, $result);
-        $this->assertSame('My String', rtrim($result[0]['insert'], "\n"));
-        $this->assertSame(['header' => 2], $result[0]['attributes']);
+        $this->assertSame('My String: ', $result[0]['insert']);
+        $this->assertSame(['bold' => true], $result[0]['attributes']);
         $this->assertSame('Value', $result[1]['insert']);
     }
 
-    public function testBuildInlineNumberWithLabelAddsHeader(): void
+    public function testBuildInlineNumberWithLabelAddsBoldInlineLabel(): void
     {
         $field = new stdClass();
         $field->render_label = true;
@@ -414,9 +416,32 @@ class FieldValueBuilderTest extends Unit
         $result = $this->builder->build('123', 'number', $field);
 
         $this->assertCount(2, $result);
-        $this->assertSame('My Number', rtrim($result[0]['insert'], "\n"));
-        $this->assertSame(['header' => 2], $result[0]['attributes']);
+        $this->assertSame('My Number: ', $result[0]['insert']);
+        $this->assertSame(['bold' => true], $result[0]['attributes']);
         $this->assertSame('123', $result[1]['insert']);
+    }
+
+    public function testBuildSelectWithLabelAddsBoldInlineLabel(): void
+    {
+        $field = new stdClass();
+        $field->render_label = true;
+        $field->label = 'My Select';
+
+        $delta = '{"ops":[{"insert":"Option A\n"}]}';
+        $result = $this->builder->build($delta, 'select', $field);
+
+        $this->assertCount(2, $result);
+        $this->assertSame('My Select: ', $result[0]['insert']);
+        $this->assertSame(['bold' => true], $result[0]['attributes']);
+        $this->assertSame('Option A', $result[1]['insert']);
+    }
+
+    public function testBuildSelectWithoutLabelKeepsTrailingNewline(): void
+    {
+        $delta = '{"ops":[{"insert":"Option A\n"}]}';
+        $result = $this->builder->build($delta, 'select', null);
+
+        $this->assertSame([['insert' => "Option A\n"]], $result);
     }
 
     private function extractPlainText(array $ops): string
