@@ -38,6 +38,7 @@ $this->registerJsVar('quillUrlConfig', [
 $currentProject = (\Yii::$app->projectContext)->getCurrentProject();
 $projectCopyFormat = $currentProject?->getPromptInstanceCopyFormatEnum()->value ?? CopyType::MD->value;
 $claudeUrl = $currentProject ? Url::to(['/project/claude', 'id' => $currentProject->id]) : null;
+$suggestLabelUrl = Url::to(['/prompt-instance/suggest-label']);
 ?>
 
 <div class="prompt-instance-form focus-on-first-field">
@@ -172,12 +173,19 @@ echo $form->field($model, 'template_id')
         </div>
     </div>
     <div id="label-input-container" class="form-group mt-3 d-none">
-        <?= $form->field($model, 'label')->textInput([
-            'id' => 'prompt-instance-label',
-            'class' => 'form-control',
-            'maxlength' => 255,
-            'placeholder' => 'Enter a label',
-        ])->label('Label', ['class' => 'form-label']) ?>
+        <label class="form-label" for="prompt-instance-label">Label</label>
+        <div class="input-group">
+            <?= Html::activeTextInput($model, 'label', [
+                'id' => 'prompt-instance-label',
+                'class' => 'form-control',
+                'maxlength' => 255,
+                'placeholder' => 'Enter a label',
+            ]) ?>
+            <button type="button" class="btn btn-outline-secondary" id="suggest-label-btn" title="Suggest label based on prompt">
+                <i class="bi bi-stars"></i> Suggest
+            </button>
+        </div>
+        <div class="invalid-feedback d-block d-none" id="suggest-label-error"></div>
     </div>
     <div class="form-group mt-4 text-end">
         <?= Html::button('Previous', [
@@ -515,8 +523,67 @@ $script = <<<'JS'
                 sessionStorage.setItem('claudePromptContent', JSON.stringify(deltaObj));
                 window.location.href = claudeUrl;
             });
+
+            document.getElementById('suggest-label-btn').addEventListener('click', function() {
+                var btn = this;
+                var labelInput = document.getElementById('prompt-instance-label');
+                var errorDiv = document.getElementById('suggest-label-error');
+
+                var deltaObj = (typeof quillEditor !== 'undefined' && quillEditor)
+                    ? quillEditor.getContents()
+                    : $finalPromptContainer.data('deltaObj') || {};
+
+                var content = '';
+                if (deltaObj && deltaObj.ops) {
+                    deltaObj.ops.forEach(function(op) {
+                        if (typeof op.insert === 'string')
+                            content += op.insert;
+                    });
+                }
+                content = content.trim();
+
+                errorDiv.classList.add('d-none');
+
+                if (!content) {
+                    errorDiv.textContent = 'Generate a prompt first.';
+                    errorDiv.classList.remove('d-none');
+                    return;
+                }
+
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+                fetch(suggestLabelUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': yii.getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ content: content })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.label) {
+                        labelInput.value = data.label;
+                        $('#label-error').remove();
+                    } else {
+                        errorDiv.textContent = data.error || 'Could not generate label.';
+                        errorDiv.classList.remove('d-none');
+                    }
+                })
+                .catch(function() {
+                    errorDiv.textContent = 'Request failed.';
+                    errorDiv.classList.remove('d-none');
+                })
+                .finally(function() {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-stars"></i> Suggest';
+                });
+            });
             JS;
 $claudeUrlJs = json_encode($claudeUrl, JSON_UNESCAPED_SLASHES);
 $this->registerJs("var claudeUrl = $claudeUrlJs;", View::POS_HEAD);
+$this->registerJsVar('suggestLabelUrl', $suggestLabelUrl);
 $this->registerJs($script);
 ?>

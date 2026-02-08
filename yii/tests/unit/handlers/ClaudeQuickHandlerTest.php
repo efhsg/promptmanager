@@ -181,6 +181,52 @@ class ClaudeQuickHandlerTest extends Unit
         $this->assertTrue($result['success']);
     }
 
+    public function testRunPromptInstanceLabelReturnsGeneratedLabel(): void
+    {
+        $client = $this->createMock(AiCompletionClient::class);
+        $client->method('complete')->willReturn([
+            'success' => true,
+            'output' => 'Review authentication session handling',
+        ]);
+
+        $handler = new ClaudeQuickHandler($client);
+        $result = $handler->run('prompt-instance-label', str_repeat('a', 150));
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('Review authentication session handling', $result['output']);
+    }
+
+    public function testRunPromptInstanceLabelRespectsMinChars(): void
+    {
+        $client = $this->createMock(AiCompletionClient::class);
+        $client->expects($this->never())->method('complete');
+
+        $handler = new ClaudeQuickHandler($client);
+        $result = $handler->run('prompt-instance-label', 'short');
+
+        $this->assertFalse($result['success']);
+        $this->assertSame('Prompt too short for summarization.', $result['error']);
+    }
+
+    public function testRunPromptInstanceLabelPassesCorrectWorkdir(): void
+    {
+        $client = $this->createMock(AiCompletionClient::class);
+        $client->expects($this->once())
+            ->method('complete')
+            ->with(
+                $this->anything(),
+                $this->callback(fn(string $f) => str_ends_with($f, '/prompt-instance-label/CLAUDE.md')),
+                $this->callback(fn(array $opts) => $opts['model'] === 'sonnet')
+            )
+            ->willReturn([
+                'success' => true,
+                'output' => 'Test label',
+            ]);
+
+        $handler = new ClaudeQuickHandler($client);
+        $handler->run('prompt-instance-label', str_repeat('x', 150));
+    }
+
     public function testRunTrimsOutputWhitespace(): void
     {
         $client = $this->createMock(AiCompletionClient::class);

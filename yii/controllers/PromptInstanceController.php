@@ -7,6 +7,7 @@
 namespace app\controllers;
 
 use app\components\ProjectContext;
+use app\handlers\ClaudeQuickHandler;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
@@ -50,6 +51,7 @@ class PromptInstanceController extends Controller
         private readonly ContextService $contextService,
         private readonly PromptTransformationService $promptTransformationService,
         private readonly FileFieldProcessor $fileFieldProcessor,
+        private readonly ClaudeQuickHandler $claudeQuickHandler,
         PromptGenerationService $promptGenerationService,
         $config = []
     ) {
@@ -65,7 +67,7 @@ class PromptInstanceController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index'],
+                        'actions' => ['index', 'suggest-label'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -435,5 +437,35 @@ class PromptInstanceController extends Controller
         }
 
         return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];
+    }
+
+    public function actionSuggestLabel(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $data = json_decode(Yii::$app->request->rawBody, true);
+        if (!is_array($data)) {
+            return ['success' => false, 'error' => 'Invalid JSON data.'];
+        }
+
+        $content = $data['content'] ?? '';
+
+        if (!is_string($content) || trim($content) === '') {
+            return ['success' => false, 'error' => 'Content is empty.'];
+        }
+
+        $result = $this->claudeQuickHandler->run('prompt-instance-label', $content);
+
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $label = mb_substr(trim($result['output']), 0, 255);
+
+        if ($label === '') {
+            return ['success' => false, 'error' => 'Could not generate a label.'];
+        }
+
+        return ['success' => true, 'label' => $label];
     }
 }
