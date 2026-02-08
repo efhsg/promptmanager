@@ -20,14 +20,14 @@ class ClaudeQuickHandler
 
     private const USE_CASES = [
         'prompt-title' => [
-            'model' => 'haiku',
+            'model' => 'sonnet',
             'timeout' => 60,
             'workdir' => 'prompt-title',
             'minChars' => 120,
             'maxChars' => 3000,
         ],
         'scratch-pad-name' => [
-            'model' => 'haiku',
+            'model' => 'sonnet',
             'timeout' => 60,
             'workdir' => 'scratch-pad-name',
             'minChars' => 20,

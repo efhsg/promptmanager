@@ -114,7 +114,7 @@ class ClaudeQuickHandlerTest extends Unit
                 $this->callback(fn(string $p) => str_starts_with($p, '<document>') && str_ends_with($p, '</document>')),
                 $this->callback(fn(string $f) => str_ends_with($f, '/prompt-title/CLAUDE.md')),
                 $this->callback(function (array $opts) {
-                    return $opts['model'] === 'haiku'
+                    return $opts['model'] === 'sonnet'
                         && $opts['timeout'] === 60;
                 })
             )
