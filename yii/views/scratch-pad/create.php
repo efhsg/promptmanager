@@ -109,7 +109,7 @@ $copyTypes = CopyType::labels();
                             <i class="bi bi-stars"></i> Suggest
                         </button>
                     </div>
-                    <div class="invalid-feedback d-block d-none" id="scratch-pad-name-error"></div>
+                    <div class="text-danger small d-none" id="scratch-pad-name-error"></div>
                 </div>
                 <div class="mb-3">
                     <label for="scratch-pad-project" class="form-label">Project</label>

@@ -25,8 +25,13 @@ echo Nav::widget([
     'activateItems' => true,
     'items' => [
         [
-            'label' => 'Manage',
+            'label' => 'Prompts',
             'items' => [
+                [
+                    'label' => 'Generate',
+                    'url' => ['/prompt-instance/create'],
+                ],
+                '<hr class="dropdown-divider">',
                 [
                     'label' => 'Projects',
                     'url' => ['/project/index'],
@@ -49,10 +54,6 @@ echo Nav::widget([
                     'url' => ['/prompt-instance/index'],
                 ],
             ],
-        ],
-        [
-            'label' => 'Generate',
-            'url' => ['/prompt-instance/create'],
         ],
         [
             'label' => 'Scratch Pads',
