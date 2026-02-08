@@ -156,7 +156,7 @@ class ClaudeQuickHandlerTest extends Unit
 
     public function testRunScratchPadNameTruncatesAtMaxChars(): void
     {
-        $longPrompt = str_repeat('a', 3500);
+        $longPrompt = str_repeat('a', 5500);
 
         $client = $this->createMock(AiCompletionClient::class);
         $client->expects($this->once())
@@ -165,7 +165,7 @@ class ClaudeQuickHandlerTest extends Unit
                 $this->callback(function (string $p) {
                     return str_starts_with($p, '<document>')
                         && str_ends_with($p, '</document>')
-                        && mb_strlen($p) === 3000 + strlen('<document></document>');
+                        && mb_strlen($p) === 5000 + strlen('<document></document>');
                 }),
                 $this->callback(fn(string $f) => str_ends_with($f, '/scratch-pad-name/CLAUDE.md')),
                 $this->anything()

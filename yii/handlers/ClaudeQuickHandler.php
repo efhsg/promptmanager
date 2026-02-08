@@ -31,20 +31,21 @@ class ClaudeQuickHandler
             'timeout' => 60,
             'workdir' => 'scratch-pad-name',
             'minChars' => 20,
-            'maxChars' => 3000,
+            'maxChars' => 5000,
         ],
         'prompt-instance-label' => [
             'model' => 'sonnet',
             'timeout' => 60,
             'workdir' => 'prompt-instance-label',
             'minChars' => 120,
-            'maxChars' => 3000,
+            'maxChars' => 5000,
         ],
     ];
 
     public function __construct(
         private readonly AiCompletionClient $completionClient,
-    ) {}
+    ) {
+    }
 
     /**
      * @throws InvalidArgumentException

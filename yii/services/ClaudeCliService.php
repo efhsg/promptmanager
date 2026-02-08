@@ -400,17 +400,21 @@ class ClaudeCliService
         $outputFormat = $options['outputFormat'] ?? 'stream-json';
         $cmd = 'claude --output-format ' . escapeshellarg($outputFormat);
 
-        if (($options['verbose'] ?? true) !== false)
+        if (($options['verbose'] ?? true) !== false) {
             $cmd .= ' --verbose';
+        }
 
-        if (!empty($options['noSessionPersistence']))
+        if (!empty($options['noSessionPersistence'])) {
             $cmd .= ' --no-session-persistence';
+        }
 
-        if (array_key_exists('tools', $options))
+        if (array_key_exists('tools', $options)) {
             $cmd .= ' --tools ' . escapeshellarg($options['tools']);
+        }
 
-        if (!empty($options['settingSources']))
+        if (!empty($options['settingSources'])) {
             $cmd .= ' --setting-sources ' . escapeshellarg($options['settingSources']);
+        }
 
         if ($streaming) {
             $cmd .= ' --include-partial-messages';
@@ -420,8 +424,9 @@ class ClaudeCliService
             $cmd .= ' --resume ' . escapeshellarg($sessionId);
         }
 
-        if (!empty($options['permissionMode']))
+        if (!empty($options['permissionMode'])) {
             $cmd .= ' --permission-mode ' . escapeshellarg($options['permissionMode']);
+        }
 
         if (!empty($options['model'])) {
             $cmd .= ' --model ' . escapeshellarg($options['model']);
@@ -533,12 +538,14 @@ class ClaudeCliService
      */
     private function parseJsonOutput(string $output): array
     {
-        if ($output === '')
+        if ($output === '') {
             return [];
+        }
 
         $decoded = json_decode($output, true);
-        if (!is_array($decoded))
+        if (!is_array($decoded)) {
             return [];
+        }
 
         return [
             'result' => $decoded['result'] ?? null,

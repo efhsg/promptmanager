@@ -38,11 +38,12 @@ class ClaudeCliCompletionClient implements AiCompletionClient
         );
 
         $output = $result['output'] ?? '';
-        if (!$result['success'] || !is_string($output) || trim($output) === '')
+        if (!$result['success'] || !is_string($output) || trim($output) === '') {
             return [
                 'success' => false,
                 'error' => $result['error'] ?: 'AI returned empty output.',
             ];
+        }
 
         return [
             'success' => true,
@@ -68,12 +69,13 @@ class ClaudeCliCompletionClient implements AiCompletionClient
         // Check symlinks first to avoid following them into unrelated directories.
         foreach (['CLAUDE.md', '.claude'] as $artifact) {
             $target = $path . '/' . $artifact;
-            if (is_link($target))
+            if (is_link($target)) {
                 unlink($target);
-            elseif (is_file($target))
+            } elseif (is_file($target)) {
                 unlink($target);
-            elseif (is_dir($target))
+            } elseif (is_dir($target)) {
                 $this->removeDirectory($target);
+            }
         }
 
         return $path;
@@ -82,20 +84,23 @@ class ClaudeCliCompletionClient implements AiCompletionClient
     private function removeDirectory(string $dir): void
     {
         $items = scandir($dir);
-        if ($items === false)
+        if ($items === false) {
             return;
+        }
 
         foreach ($items as $item) {
-            if ($item === '.' || $item === '..')
+            if ($item === '.' || $item === '..') {
                 continue;
+            }
 
             $itemPath = $dir . '/' . $item;
-            if (is_link($itemPath))
+            if (is_link($itemPath)) {
                 unlink($itemPath);
-            elseif (is_dir($itemPath))
+            } elseif (is_dir($itemPath)) {
                 $this->removeDirectory($itemPath);
-            else
+            } else {
                 unlink($itemPath);
+            }
         }
 
         rmdir($dir);
