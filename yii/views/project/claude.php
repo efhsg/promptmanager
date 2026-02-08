@@ -520,6 +520,33 @@ $js = <<<JS
             checkConfigUrl: $checkConfigUrlJson,
             settingsState: 'collapsed',
             usageState: 'collapsed',
+
+            generateUUID: function() {
+                if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+                    return crypto.randomUUID();
+                return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, function(c) {
+                    return (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16);
+                });
+            },
+
+            copyText: function(text) {
+                if (navigator.clipboard && navigator.clipboard.writeText)
+                    return navigator.clipboard.writeText(text);
+                return new Promise(function(resolve, reject) {
+                    var textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy') ? resolve() : reject(new Error('execCommand failed'));
+                    } catch (err) {
+                        reject(err);
+                    }
+                    document.body.removeChild(textarea);
+                });
+            },
             usageUrl: $usageUrlJson,
             projectName: $projectNameJson,
             gitBranch: $gitBranchJson,
@@ -729,7 +756,7 @@ $js = <<<JS
                 var options = this.getOptions();
                 var sendBtn = document.getElementById('claude-send-btn');
 
-                this.streamToken = crypto.randomUUID();
+                this.streamToken = this.generateUUID();
                 options.streamToken = this.streamToken;
 
                 if (this.sessionId)
@@ -2195,7 +2222,7 @@ $js = <<<JS
             handleCopyClick: function(btn) {
                 var text = btn.getAttribute('data-copy-markdown');
                 if (!text) return;
-                navigator.clipboard.writeText(text).then(function() {
+                this.copyText(text).then(function() {
                     var orig = btn.innerHTML;
                     btn.innerHTML = '<i class="bi bi-check"></i>';
                     btn.style.color = '#0d6efd';
@@ -2209,13 +2236,14 @@ $js = <<<JS
             },
 
             copyConversation: function() {
+                var self = this;
                 var text = this.messages.map(function(m) {
                     var prefix = m.role === 'user' ? '## You' : '## Claude';
                     return prefix + '\\n\\n' + m.content;
                 }).join('\\n\\n---\\n\\n');
 
                 var btn = document.getElementById('claude-copy-all-btn');
-                navigator.clipboard.writeText(text).then(function() {
+                self.copyText(text).then(function() {
                     var orig = btn.innerHTML;
                     btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
                     btn.classList.remove('btn-outline-secondary');

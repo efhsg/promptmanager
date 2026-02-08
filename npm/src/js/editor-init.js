@@ -285,6 +285,25 @@ window.QuillToolbar = (function() {
         });
     };
 
+    const copyToClipboard = (text) => {
+        if (navigator.clipboard && navigator.clipboard.writeText)
+            return navigator.clipboard.writeText(text);
+        return new Promise((resolve, reject) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy') ? resolve() : reject(new Error('execCommand failed'));
+            } catch (err) {
+                reject(err);
+            }
+            document.body.removeChild(textarea);
+        });
+    };
+
     const DEFAULT_CONVERT_FORMAT_URL = '/scratch-pad/convert-format';
 
     /**
@@ -314,7 +333,7 @@ window.QuillToolbar = (function() {
 
             const data = await response.json();
             if (data.success && data.content !== undefined) {
-                await navigator.clipboard.writeText(data.content);
+                await copyToClipboard(data.content);
                 button.innerHTML = '<i class="bi bi-check"></i> Copied';
                 setTimeout(() => {
                     button.innerHTML = originalHtml;
@@ -387,7 +406,7 @@ window.QuillToolbar = (function() {
             const data = await response.json();
             if (data.success && data.content !== undefined) {
                 const cliCommand = template.replace('%s', "'" + escapeForShell(data.content) + "'");
-                await navigator.clipboard.writeText(cliCommand);
+                await copyToClipboard(cliCommand);
                 button.innerHTML = '<i class="bi bi-check"></i> Copied';
                 setTimeout(() => {
                     button.innerHTML = originalHtml;
