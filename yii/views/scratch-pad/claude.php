@@ -69,22 +69,27 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         </div>
     </div>
 
-    <!-- Subscription Usage (collapsed / expanded / silenced) -->
-    <div id="claude-subscription-usage" class="claude-subscription-usage mb-3">
-        <div id="claudeUsageCard" class="d-none">
+    <!-- Combined bar (settings badges | usage summary) — always on top -->
+    <div id="claude-combined-bar" class="claude-combined-bar claude-combined-bar--loading mb-3" role="button">
+        <div id="claude-combined-settings" class="claude-combined-bar__settings"></div>
+        <div class="claude-combined-bar__divider"></div>
+        <div id="claude-combined-usage" class="claude-combined-bar__usage">
+            <span class="claude-usage-summary__placeholder">Loading usage...</span>
+        </div>
+    </div>
+
+    <!-- Subscription Usage (expanded) -->
+    <div id="claude-subscription-usage" class="claude-subscription-usage mb-3 d-none">
+        <div id="claudeUsageCard">
             <div class="claude-usage-section" role="button" id="claude-usage-expanded">
                 <div id="claude-subscription-bars"></div>
             </div>
         </div>
-        <div id="claude-usage-summary" class="claude-usage-summary claude-usage-summary--loading" role="button">
-            <span class="claude-usage-summary__placeholder">Loading usage...</span>
-        </div>
-        <div id="claude-usage-silenced" class="claude-usage-silenced d-none" role="button"></div>
     </div>
 
-    <!-- Section 1: CLI Settings (expanded / collapsed) -->
-    <div class="card mb-4">
-        <div id="claudeSettingsCard" class="d-none">
+    <!-- Section 1: CLI Settings (expanded) -->
+    <div class="card mb-4 d-none" id="claudeSettingsCardWrapper">
+        <div id="claudeSettingsCard">
             <div class="card-body claude-settings-section">
                 <div class="claude-settings-badges-bar" id="claude-settings-badges" role="button" title="Collapse settings">
                     <?php if ($model->project): ?>
@@ -115,8 +120,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                 </div>
 
             </div>
-        </div>
-        <div id="claude-settings-summary" class="claude-collapsible-summary" role="button">
         </div>
     </div>
 
@@ -639,18 +642,16 @@ $js = <<<JS
                 document.getElementById('claude-settings-badges').addEventListener('click', function() {
                     self.collapseSettings();
                 });
-                document.getElementById('claude-settings-summary').addEventListener('click', function() {
-                    self.expandSettings();
+                document.getElementById('claude-combined-settings').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    self.toggleSettingsExpanded();
                 });
-
-                document.getElementById('claude-usage-summary').addEventListener('click', function() {
-                    self.cycleUsageState();
+                document.getElementById('claude-combined-usage').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    self.toggleUsageExpanded();
                 });
                 document.getElementById('claude-usage-expanded').addEventListener('click', function() {
-                    self.cycleUsageState();
-                });
-                document.getElementById('claude-usage-silenced').addEventListener('click', function() {
-                    self.cycleUsageState();
+                    self.toggleUsageExpanded();
                 });
 
                 var promptCard = document.getElementById('claudePromptCard');
@@ -1459,7 +1460,6 @@ $js = <<<JS
             },
 
             updateContextMeter: function(pctUsed, totalUsed) {
-                var wrapper = document.getElementById('claude-subscription-usage');
                 var bars = document.getElementById('claude-subscription-bars');
                 var colorClass = pctUsed < 60 ? 'green' : pctUsed < 80 ? 'orange' : 'red';
 
@@ -1504,7 +1504,7 @@ $js = <<<JS
                 pctLabel.textContent = pctUsed + '%';
                 pctLabel.title = tooltip;
 
-                wrapper.classList.remove('d-none');
+                this.updateUsageSummary();
                 this.updateSummarizeButtonColor(pctUsed);
             },
 
@@ -1536,23 +1536,15 @@ $js = <<<JS
             },
 
             fetchSubscriptionUsage: function() {
-                var wrapper = document.getElementById('claude-subscription-usage');
-                if (!this.usageUrl) {
-                    wrapper.classList.add('d-none');
-                    return;
-                }
+                if (!this.usageUrl) return;
                 var self = this;
                 fetch(this.usageUrl)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         if (data.success && data.data)
                             self.renderSubscriptionUsage(data.data);
-                        else
-                            wrapper.classList.add('d-none');
                     })
-                    .catch(function() {
-                        wrapper.classList.add('d-none');
-                    });
+                    .catch(function(err) { console.warn('Usage fetch failed:', err); });
             },
 
             renderSubscriptionUsage: function(data) {
@@ -1626,7 +1618,7 @@ $js = <<<JS
                 if (hasWarning) wrapper.classList.add('claude-subscription-usage--warning');
                 else wrapper.classList.remove('claude-subscription-usage--warning');
 
-                // Populate the collapsed summary view so widgets show at startup
+                // Populate the combined bar usage summary
                 this.updateUsageSummary();
             },
 
@@ -1937,6 +1929,9 @@ $js = <<<JS
                 this.summarizing = false;
 
                 this.expandSettings();
+                this.usageState = 'collapsed';
+                document.getElementById('claude-subscription-usage').classList.add('d-none');
+                this.syncCombinedBar();
                 this.expandPromptEditor();
                 this.expandEditor();
                 this.switchToQuill(initialDelta);
@@ -1945,8 +1940,9 @@ $js = <<<JS
             collapseSettings: function() {
                 if (this.settingsState === 'expanded') {
                     this.settingsState = 'collapsed';
-                    document.getElementById('claudeSettingsCard').classList.add('d-none');
+                    document.getElementById('claudeSettingsCardWrapper').classList.add('d-none');
                     this.updateSettingsSummary();
+                    this.syncCombinedBar();
                 }
             },
 
@@ -1987,13 +1983,13 @@ $js = <<<JS
             expandSettings: function() {
                 if (this.settingsState !== 'expanded') {
                     this.settingsState = 'expanded';
-                    document.getElementById('claude-settings-summary').classList.add('d-none');
-                    document.getElementById('claudeSettingsCard').classList.remove('d-none');
+                    document.getElementById('claudeSettingsCardWrapper').classList.remove('d-none');
+                    this.syncCombinedBar();
                 }
             },
 
             updateSettingsSummary: function() {
-                var summary = document.getElementById('claude-settings-summary');
+                var summary = document.getElementById('claude-combined-settings');
                 var modelEl = document.getElementById('claude-model');
                 var permEl = document.getElementById('claude-permission-mode');
 
@@ -2030,24 +2026,41 @@ $js = <<<JS
                     addBadge('bi-shield-check', permText.split(' (')[0], 'Permission mode', 'badge-setting');
                 else
                     addBadge('bi-shield-check', 'Default permissions', 'Permission mode', 'badge-setting');
-
-                summary.classList.remove('d-none');
             },
 
-            updateUsageSummary: function() {
-                var summary = document.getElementById('claude-usage-summary');
-                var rows = document.querySelectorAll('#claude-subscription-bars .claude-subscription-row');
+            syncCombinedBar: function() {
+                var bar = document.getElementById('claude-combined-bar');
+                var settingsPart = document.getElementById('claude-combined-settings');
+                var usagePart = document.getElementById('claude-combined-usage');
+                var divider = bar.querySelector('.claude-combined-bar__divider');
+                var settingsExpanded = this.settingsState === 'expanded';
+                var usageExpanded = this.usageState === 'expanded';
 
-                // Remove loading state
-                summary.classList.remove('claude-usage-summary--loading');
-
-                if (!rows.length) {
-                    summary.innerHTML = '';
-                    summary.classList.remove('d-none');
+                if (settingsExpanded && usageExpanded) {
+                    bar.classList.add('d-none');
                     return;
                 }
 
-                // Track highest utilization for silenced bar color
+                bar.classList.remove('d-none');
+
+                settingsPart.classList.toggle('d-none', settingsExpanded);
+                usagePart.classList.toggle('d-none', usageExpanded);
+                divider.classList.toggle('d-none', settingsExpanded || usageExpanded);
+            },
+
+            updateUsageSummary: function() {
+                var summary = document.getElementById('claude-combined-usage');
+                var combinedBar = document.getElementById('claude-combined-bar');
+                var rows = document.querySelectorAll('#claude-subscription-bars .claude-subscription-row');
+
+                // Remove loading state
+                combinedBar.classList.remove('claude-combined-bar--loading');
+
+                if (!rows.length) {
+                    summary.innerHTML = '';
+                    return;
+                }
+
                 var maxPct = 0;
 
                 summary.innerHTML = '';
@@ -2095,49 +2108,41 @@ $js = <<<JS
                     itemCount++;
                 });
 
-                // Propagate warning state to summary
-                var wrapper = document.getElementById('claude-subscription-usage');
+                // Propagate warning state to combined bar
                 if (maxPct >= 80)
-                    wrapper.classList.add('claude-subscription-usage--warning');
+                    combinedBar.classList.add('claude-combined-bar--warning');
                 else
-                    wrapper.classList.remove('claude-subscription-usage--warning');
+                    combinedBar.classList.remove('claude-combined-bar--warning');
 
-                // Store max utilization for silenced bar
                 this._maxUsagePct = maxPct;
-                this.updateSilencedBar();
-
-                summary.classList.remove('d-none');
             },
 
-            updateSilencedBar: function() {
-                var silenced = document.getElementById('claude-usage-silenced');
-                var pct = this._maxUsagePct || 0;
-                var color = pct < 60 ? '#198754' : pct < 80 ? '#fd7e14' : '#dc3545';
-                silenced.style.background = pct > 0 ? color : '';
-            },
-
-            cycleUsageState: function() {
-                var card = document.getElementById('claudeUsageCard');
-                var summary = document.getElementById('claude-usage-summary');
-                var silenced = document.getElementById('claude-usage-silenced');
+            toggleUsageExpanded: function() {
+                var wrapper = document.getElementById('claude-subscription-usage');
 
                 if (this.usageState === 'collapsed') {
                     this.usageState = 'expanded';
-                    summary.classList.add('d-none');
-                    silenced.classList.add('d-none');
-                    card.classList.remove('d-none');
-                } else if (this.usageState === 'expanded') {
-                    this.usageState = 'silenced';
-                    card.classList.add('d-none');
-                    summary.classList.add('d-none');
-                    this.updateSilencedBar();
-                    silenced.classList.remove('d-none');
+                    wrapper.classList.remove('d-none');
                 } else {
                     this.usageState = 'collapsed';
-                    silenced.classList.add('d-none');
-                    card.classList.add('d-none');
+                    wrapper.classList.add('d-none');
                     this.updateUsageSummary();
                 }
+                this.syncCombinedBar();
+            },
+
+            toggleSettingsExpanded: function() {
+                var wrapper = document.getElementById('claudeSettingsCardWrapper');
+
+                if (this.settingsState === 'collapsed') {
+                    this.settingsState = 'expanded';
+                    wrapper.classList.remove('d-none');
+                } else {
+                    this.settingsState = 'collapsed';
+                    wrapper.classList.add('d-none');
+                    this.updateSettingsSummary();
+                }
+                this.syncCombinedBar();
             },
 
             focusEditor: function() {

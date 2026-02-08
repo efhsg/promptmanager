@@ -16,6 +16,57 @@
     background: #e9ecef;
 }
 
+/* Combined status bar (settings + usage) */
+.claude-chat-page .claude-combined-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.claude-chat-page .claude-combined-bar__settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+}
+
+.claude-chat-page .claude-combined-bar__settings:hover .badge {
+    opacity: 0.8;
+}
+
+.claude-chat-page .claude-combined-bar__divider {
+    width: 1px;
+    min-height: 1rem;
+    align-self: stretch;
+    background: #ced4da;
+    flex-shrink: 0;
+}
+
+.claude-chat-page .claude-combined-bar__usage {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.claude-chat-page .claude-combined-bar__usage:hover {
+    opacity: 0.8;
+}
+
+.claude-chat-page .claude-combined-bar--warning {
+    background: #fff8f0;
+}
+
 .claude-chat-page .claude-settings-section {
     position: relative;
     width: 100%;
@@ -922,8 +973,24 @@
     }
 }
 
+.claude-chat-page .claude-combined-bar--loading .claude-combined-bar__usage {
+    color: #adb5bd;
+}
+
 .claude-chat-page .claude-usage-summary--loading {
     color: #adb5bd;
+}
+
+.claude-chat-page .claude-usage-silenced {
+    height: 3px;
+    background: #e9ecef;
+    border-radius: 1.5px;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+
+.claude-chat-page .claude-usage-silenced:hover {
+    opacity: 0.7;
 }
 
 .claude-chat-page .claude-usage-summary__placeholder {
@@ -939,17 +1006,6 @@
     background-color: #5a7bb5;
 }
 
-.claude-chat-page .claude-usage-silenced {
-    height: 3px;
-    background: #e9ecef;
-    border-radius: 1.5px;
-    cursor: pointer;
-    transition: background 0.15s, opacity 0.15s;
-}
-
-.claude-chat-page .claude-usage-silenced:hover {
-    opacity: 0.7;
-}
 
 .claude-chat-page #claude-summarize-warning-btn {
     vertical-align: baseline;
