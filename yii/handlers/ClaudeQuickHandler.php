@@ -24,7 +24,7 @@ class ClaudeQuickHandler
             'timeout' => 60,
             'workdir' => 'prompt-title',
             'minChars' => 120,
-            'maxChars' => 1000,
+            'maxChars' => 3000,
         ],
         'scratch-pad-name' => [
             'model' => 'haiku',
@@ -37,8 +37,7 @@ class ClaudeQuickHandler
 
     public function __construct(
         private readonly AiCompletionClient $completionClient,
-    ) {
-    }
+    ) {}
 
     /**
      * @throws InvalidArgumentException
