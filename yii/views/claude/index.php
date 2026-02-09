@@ -232,9 +232,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                         </a>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
-                        <button type="button" id="claude-goahead-btn" class="btn btn-outline-primary d-none" title="Approve and execute Claude's suggestion (Alt+G)">
-                            <i class="bi bi-check-lg"></i> Go!
-                        </button>
                         <div id="claude-summarize-group" class="btn-group d-none">
                             <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary"
                                     title="Summarize conversation and start a new session with the summary">
@@ -614,7 +611,6 @@ $js = <<<JS
             setupEventListeners: function() {
                 var self = this;
                 document.getElementById('claude-send-btn').addEventListener('click', function() { self.send(); });
-                document.getElementById('claude-goahead-btn').addEventListener('click', function() { self.sendFixedText('Proceed'); });
                 document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
                 document.getElementById('claude-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
                 document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
@@ -647,8 +643,11 @@ $js = <<<JS
                         self.send();
                     }
                     if (e.altKey && e.key.toLowerCase() === 'g') {
-                        e.preventDefault();
-                        self.sendFixedText('Proceed');
+                        var visibleGo = document.querySelector('.claude-message__go:not(.d-none)');
+                        if (visibleGo) {
+                            e.preventDefault();
+                            self.sendFixedText('Proceed');
+                        }
                     }
                     if (e.altKey && e.key.toLowerCase() === 'f') {
                         e.preventDefault();
@@ -661,9 +660,6 @@ $js = <<<JS
                 };
                 document.getElementById('claude-followup-textarea').addEventListener('keydown', handleEditorKeydown);
                 quill.root.addEventListener('keydown', handleEditorKeydown);
-
-                quill.on('text-change', function() { self.updateGoButton(); });
-                document.getElementById('claude-followup-textarea').addEventListener('input', function() { self.updateGoButton(); });
 
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
@@ -775,7 +771,6 @@ $js = <<<JS
                 }
 
                 sendBtn.disabled = true;
-                document.getElementById('claude-goahead-btn').disabled = true;
 
                 // Move the active response into its accordion item before starting a new exchange
                 this.moveActiveResponseToAccordion();
@@ -863,10 +858,10 @@ $js = <<<JS
                 return !document.getElementById('claude-followup-textarea').value.trim();
             },
 
-            updateGoButton: function() {
-                var btn = document.getElementById('claude-goahead-btn');
-                if (btn.classList.contains('d-none')) return;
-                btn.disabled = !this.isEditorEmpty();
+            needsApproval: function(text) {
+                if (!text) return false;
+                var tail = text.slice(-500).toLowerCase();
+                return /shall i |should i |do you want me to |would you like me to |ready to proceed|proceed\?|go ahead\?|may i |can i proceed|want me to /.test(tail);
             },
 
             sendFixedText: function(text) {
@@ -996,7 +991,6 @@ $js = <<<JS
              */
             cleanupStreamUI: function() {
                 document.getElementById('claude-send-btn').disabled = false;
-                this.updateGoButton();
                 this.removeStreamDots();
                 this.showCancelButton(false);
                 this.closeStreamModal();
@@ -1050,9 +1044,6 @@ $js = <<<JS
                     { role: 'user', content: userContent },
                     { role: 'claude', content: claudeContent, processContent: processContent || '' }
                 );
-
-                document.getElementById('claude-goahead-btn').classList.remove('d-none');
-                this.updateGoButton();
 
                 var pctUsed = Math.min(100, Math.round(contextUsed / this.maxContext * 100));
                 this.lastNumTurns = meta.num_turns || null;
@@ -1523,6 +1514,11 @@ $js = <<<JS
                 // Initialize Quill after element is in the DOM
                 this.renderToQuillViewer(msg.body, claudeContent);
 
+                // Show Go! button only when Claude asks for approval
+                var goBtn = msg.div.querySelector('.claude-message__go');
+                if (goBtn && this.needsApproval(claudeContent))
+                    goBtn.classList.remove('d-none');
+
                 // Fire-and-forget: summarize response into collapsed bar
                 this.summarizeResponseTitle(msg.div, claudeContent);
 
@@ -1755,6 +1751,15 @@ $js = <<<JS
 
                 var copyBtn = this.createCopyButton(markdownContent);
                 claudeDiv.appendChild(copyBtn);
+
+                var goBtn = document.createElement('button');
+                goBtn.type = 'button';
+                goBtn.className = 'claude-message__go d-none';
+                goBtn.title = 'Approve and execute (Alt+G)';
+                goBtn.innerHTML = '<i class="bi bi-check-lg"></i> Go!';
+                var self = this;
+                goBtn.addEventListener('click', function() { self.sendFixedText('Proceed'); });
+                claudeDiv.appendChild(goBtn);
 
                 // Meta always visible in header bar
                 if (meta) {
@@ -2013,7 +2018,6 @@ $js = <<<JS
                 activeResponseContainer.classList.add('d-none');
 
                 document.getElementById('claude-copy-all-wrapper').classList.add('d-none');
-                document.getElementById('claude-goahead-btn').classList.add('d-none');
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
                 document.getElementById('claude-summarize-group').classList.add('d-none');
                 this.updateSummarizeButtonColor(0);
@@ -2349,7 +2353,6 @@ $js = <<<JS
                 summarizeAutoBtn.disabled = true;
                 summarizeWarningBtn.disabled = true;
                 sendBtn.disabled = true;
-                document.getElementById('claude-goahead-btn').disabled = true;
                 summarizeAutoBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Summarizing…';
 
                 fetch('$summarizeUrl', {
@@ -2407,7 +2410,6 @@ $js = <<<JS
                 summarizeAutoBtn.disabled = false;
                 summarizeWarningBtn.disabled = false;
                 sendBtn.disabled = false;
-                this.updateGoButton();
                 summarizeAutoBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session';
             },
 
