@@ -26,6 +26,7 @@ $streamClaudeUrl = Url::to(array_merge(['/claude/stream'], $pParam));
 $cancelClaudeUrl = Url::to(array_merge(['/claude/cancel'], $pParam));
 $summarizeUrl = Url::to(array_merge(['/claude/summarize-session'], $pParam));
 $summarizePromptUrl = Url::to(array_merge(['/claude/summarize-prompt'], $pParam));
+$summarizeResponseUrl = Url::to(array_merge(['/claude/summarize-response'], $pParam));
 $saveUrl = Url::to(['/claude/save']);
 $suggestNameUrl = Url::to(['/claude/suggest-name']);
 $importTextUrl = Url::to(['/claude/import-text']);
@@ -1408,6 +1409,41 @@ $js = <<<JS
             },
 
             /**
+             * Request a short AI-generated summary for the collapsed response bar.
+             */
+            summarizeResponseTitle: function(messageDiv, responseText) {
+                fetch('$summarizeResponseUrl', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': yii.getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ response: responseText })
+                })
+                .then(function(r) {
+                    if (!r.ok) {
+                        console.warn('summarizeResponseTitle HTTP ' + r.status);
+                        return null;
+                    }
+                    return r.json();
+                })
+                .then(function(data) {
+                    if (!data) return;
+                    if (!data.success || !data.summary) {
+                        console.warn('summarizeResponseTitle response:', data);
+                        return;
+                    }
+                    var summaryEl = messageDiv.querySelector('.claude-message__header-summary');
+                    if (summaryEl) {
+                        summaryEl.textContent = '\u2014 ' + data.summary;
+                        summaryEl.classList.add('claude-message__header-summary--summarized');
+                    }
+                })
+                .catch(function(err) { console.warn('summarizeResponseTitle failed:', err); });
+            },
+
+            /**
              * Collapse the currently active accordion item (before creating a new one).
              */
             collapseActiveItem: function() {
@@ -1476,6 +1512,9 @@ $js = <<<JS
 
                 // Initialize Quill after element is in the DOM
                 this.renderToQuillViewer(msg.body, claudeContent);
+
+                // Fire-and-forget: summarize response into collapsed bar
+                this.summarizeResponseTitle(msg.div, claudeContent);
 
                 // Update accordion header meta
                 var zones = this.getActiveZones();

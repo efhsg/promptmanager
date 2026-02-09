@@ -40,6 +40,13 @@ class ClaudeQuickHandler
             'minChars' => 120,
             'maxChars' => 5000,
         ],
+        'response-summary' => [
+            'model' => 'sonnet',
+            'timeout' => 60,
+            'workdir' => 'response-summary',
+            'minChars' => 120,
+            'maxChars' => 5000,
+        ],
     ];
 
     public function __construct(

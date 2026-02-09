@@ -51,6 +51,7 @@ class ClaudeController extends Controller
                     'cancel' => ['POST'],
                     'summarize-session' => ['POST'],
                     'summarize-prompt' => ['POST'],
+                    'summarize-response' => ['POST'],
                     'suggest-name' => ['POST'],
                     'save' => ['POST'],
                     'import-text' => ['POST'],
@@ -69,7 +70,7 @@ class ClaudeController extends Controller
                         'actions' => [
                             'index', 'run', 'stream', 'cancel',
                             'usage', 'check-config',
-                            'summarize-session', 'summarize-prompt',
+                            'summarize-session', 'summarize-prompt', 'summarize-response',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -353,6 +354,32 @@ class ClaudeController extends Controller
 
         return $result['success']
             ? ['success' => true, 'title' => $result['output']]
+            : $result;
+    }
+
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionSummarizeResponse(int $p): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $this->findProject($p);
+
+        $requestData = json_decode(Yii::$app->request->rawBody, true) ?? [];
+        if (!is_array($requestData)) {
+            return ['success' => false, 'error' => 'Invalid request format.'];
+        }
+        $response = $requestData['response'] ?? '';
+
+        if (!is_string($response) || trim($response) === '') {
+            return ['success' => false, 'error' => 'Response text is empty.'];
+        }
+
+        $result = $this->claudeQuickHandler->run('response-summary', $response);
+
+        return $result['success']
+            ? ['success' => true, 'summary' => $result['output']]
             : $result;
     }
 

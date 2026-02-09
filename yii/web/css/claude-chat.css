@@ -304,6 +304,10 @@
     display: block;
 }
 
+.claude-chat-page .claude-message__header-summary--summarized {
+    font-style: italic;
+}
+
 .claude-chat-page .claude-message__header-meta {
     flex-shrink: 0;
     font-weight: 400;
