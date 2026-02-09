@@ -703,7 +703,6 @@ $js = <<<JS
                         self._skipSwapOnExpand = false;
                     } else {
                         self.swapEditorAboveResponse();
-                        self.collapseActiveResponse();
                     }
                 });
                 document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
@@ -2245,25 +2244,11 @@ $js = <<<JS
                     document.getElementById('claude-followup-textarea').focus();
             },
 
-            scrollToResponse: function() {
-                var container = document.getElementById('claude-active-response-container');
-                if (container && !container.classList.contains('d-none'))
-                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            },
-
             scrollToTopUnlessFocused: function() {
                 var editorHasFocus = quill.hasFocus()
                     || document.activeElement === document.getElementById('claude-followup-textarea');
                 if (!editorHasFocus)
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-            },
-
-            collapseActiveResponse: function() {
-                var container = document.getElementById('claude-active-response-container');
-                if (!container || container.classList.contains('d-none')) return;
-                var msg = container.querySelector('.claude-message--claude');
-                if (msg && !msg.classList.contains('claude-message--collapsed'))
-                    msg.classList.add('claude-message--collapsed');
             },
 
             _animateSwap: function(el) {

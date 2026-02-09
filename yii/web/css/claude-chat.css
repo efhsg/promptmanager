@@ -1150,7 +1150,7 @@
 @keyframes claude-swap-in {
     from {
         opacity: 0;
-        transform: translateY(-12px);
+        transform: translateY(-24px);
     }
     to {
         opacity: 1;
@@ -1159,7 +1159,13 @@
 }
 
 .claude-chat-page .claude-swap-animate {
-    animation: claude-swap-in 0.4s ease-out;
+    animation: claude-swap-in 0.55s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .claude-chat-page .claude-swap-animate {
+        animation: none;
+    }
 }
 
 /* Sticky prompt editor — stays below navbar while scrolling chat history */
