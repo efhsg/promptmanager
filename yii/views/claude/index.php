@@ -704,6 +704,7 @@ $js = <<<JS
                     } else {
                         self.swapEditorAboveResponse();
                     }
+                    self.focusEditor();
                 });
                 document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
                     self.collapsePromptEditor();
@@ -1092,7 +1093,6 @@ $js = <<<JS
                 }
                 this._skipSwapOnExpand = true;
                 this.expandPromptEditor();
-                this.focusEditor();
             },
 
             cancel: function() {
@@ -1142,7 +1142,6 @@ $js = <<<JS
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
                 this._skipSwapOnExpand = true;
                 this.expandPromptEditor();
-                this.focusEditor();
             },
 
             showCancelButton: function(visible) {
