@@ -860,8 +860,7 @@ $js = <<<JS
 
             needsApproval: function(text) {
                 if (!text) return false;
-                var tail = text.slice(-500).toLowerCase();
-                return /shall i |should i |do you want me to |would you like me to |ready to proceed|proceed\?|go ahead\?|may i |can i proceed|want me to /.test(tail);
+                return /\?\s*$/.test(text.trimEnd());
             },
 
             sendFixedText: function(text) {
