@@ -1146,6 +1146,22 @@
     font-size: 14px;
 }
 
+/* Swap animation — smooth transition when editor/response swap positions */
+@keyframes claude-swap-in {
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.claude-chat-page .claude-swap-animate {
+    animation: claude-swap-in 0.4s ease-out;
+}
+
 /* Sticky prompt editor — stays below navbar while scrolling chat history */
 .claude-chat-page .claude-prompt-card-sticky {
     position: sticky;

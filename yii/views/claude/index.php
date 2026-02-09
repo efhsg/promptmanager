@@ -1066,7 +1066,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                this.scrollToResponse();
+                this.scrollToTopUnlessFocused();
                 this.fetchSubscriptionUsage();
             },
 
@@ -2251,6 +2251,13 @@ $js = <<<JS
                     container.scrollIntoView({ behavior: 'smooth', block: 'start' });
             },
 
+            scrollToTopUnlessFocused: function() {
+                var editorHasFocus = quill.hasFocus()
+                    || document.activeElement === document.getElementById('claude-followup-textarea');
+                if (!editorHasFocus)
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
             collapseActiveResponse: function() {
                 var container = document.getElementById('claude-active-response-container');
                 if (!container || container.classList.contains('d-none')) return;
@@ -2259,12 +2266,22 @@ $js = <<<JS
                     msg.classList.add('claude-message--collapsed');
             },
 
+            _animateSwap: function(el) {
+                el.classList.remove('claude-swap-animate');
+                void el.offsetWidth;
+                el.classList.add('claude-swap-animate');
+                el.addEventListener('animationend', function() {
+                    el.classList.remove('claude-swap-animate');
+                }, {once: true});
+            },
+
             swapEditorAboveResponse: function() {
                 var response = document.getElementById('claude-active-response-container');
                 var promptCard = document.getElementById('claudePromptCard');
                 if (!response || !promptCard || response.classList.contains('d-none')) return;
                 var editor = promptCard.parentElement;
                 response.parentElement.insertBefore(editor, response);
+                this._animateSwap(editor);
             },
 
             swapResponseAboveEditor: function() {
@@ -2273,6 +2290,7 @@ $js = <<<JS
                 if (!response || !promptCard) return;
                 var editor = promptCard.parentElement;
                 response.parentElement.insertBefore(response, editor);
+                this._animateSwap(response);
             },
 
             createCopyButton: function(markdownText) {
