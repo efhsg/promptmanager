@@ -322,10 +322,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
-    display: none;
-}
-
-.claude-chat-page .claude-message--collapsed .claude-message__header-summary {
     display: block;
 }
 
