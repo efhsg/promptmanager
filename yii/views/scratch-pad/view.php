@@ -77,6 +77,7 @@ $this->params['breadcrumbs'][] = $model->name;
                                 'class' => 'btn btn-primary btn-sm text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
                                 'title' => $claudeTooltip ?: null,
                                 'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                                'data-delta' => 'content',
                                 'disabled' => !$canRunClaude,
                             ]) ?>
                         <div class="input-group input-group-sm" style="width: auto;">
@@ -115,6 +116,7 @@ $this->params['breadcrumbs'][] = $model->name;
                                 'class' => 'btn btn-primary btn-sm text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
                                 'title' => $claudeTooltip ?: null,
                                 'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                                'data-delta' => 'response',
                                 'disabled' => !$canRunClaude,
                             ]) ?>
                         <div class="input-group input-group-sm" style="width: auto;">
@@ -147,6 +149,7 @@ $this->params['breadcrumbs'][] = $model->name;
                         'class' => 'btn btn-primary btn-sm text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
                         'title' => $claudeTooltip ?: null,
                         'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                        'data-delta' => 'content',
                         'disabled' => !$canRunClaude,
                     ]) ?>
                 <div class="input-group input-group-sm" style="width: auto;">
@@ -179,10 +182,11 @@ $script = <<<JS
         window.QuillToolbar.setupCopyButton('copy-content-btn', 'content-copy-format-select', $contentDelta);
         window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', $responseDelta);
 
+        var deltas = {content: $contentDelta, response: $responseDelta};
         document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (this.disabled) return;
-                var content = $contentDelta;
+                var content = deltas[this.dataset.delta];
                 if (content) {
                     sessionStorage.setItem('claudePromptContent', typeof content === 'string' ? content : JSON.stringify(content));
                 }

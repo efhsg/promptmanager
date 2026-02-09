@@ -131,7 +131,24 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         </div>
     </div>
 
-    <!-- Section 2: Prompt Editor (collapsible) -->
+    <!-- Context Warning -->
+    <div id="claude-context-warning" class="alert alert-warning alert-dismissible d-none mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        <span id="claude-context-warning-text"></span>
+        <small class="ms-1">Consider starting a new session to avoid degraded performance.</small>
+        <button type="button" id="claude-summarize-warning-btn" class="btn btn-warning btn-sm ms-2">
+            <i class="bi bi-arrow-repeat"></i> Summarize &amp; Continue
+        </button>
+        <button type="button" class="btn-close" id="claude-context-warning-close" aria-label="Close"></button>
+    </div>
+
+    <!-- Streaming preview (lives above the prompt editor while Claude is working) -->
+    <div id="claude-stream-container" class="d-none mb-4"></div>
+
+    <!-- Active response (rendered here after stream ends, hidden when empty, moved into accordion on next send) -->
+    <div id="claude-active-response-container" class="d-none mb-4"></div>
+
+    <!-- Prompt Editor (collapsible) -->
     <div class="card mb-4 claude-prompt-card-sticky">
         <div class="collapse show" id="claudePromptCard">
             <div class="card-body claude-prompt-section">
@@ -258,23 +275,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
             <i class="bi bi-pencil-square me-1"></i> Prompt editor
         </div>
     </div>
-
-    <!-- Context Warning -->
-    <div id="claude-context-warning" class="alert alert-warning alert-dismissible d-none mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-        <span id="claude-context-warning-text"></span>
-        <small class="ms-1">Consider starting a new session to avoid degraded performance.</small>
-        <button type="button" id="claude-summarize-warning-btn" class="btn btn-warning btn-sm ms-2">
-            <i class="bi bi-arrow-repeat"></i> Summarize &amp; Continue
-        </button>
-        <button type="button" class="btn-close" id="claude-context-warning-close" aria-label="Close"></button>
-    </div>
-
-    <!-- Streaming preview (lives above the accordion while Claude is working) -->
-    <div id="claude-stream-container" class="d-none mb-4"></div>
-
-    <!-- Active response (rendered here after stream ends, moved into accordion on next send) -->
-    <div id="claude-active-response-container" class="d-none mb-4"></div>
 
     <!-- Exchange History Accordion (exchanges go here immediately on send) -->
     <div id="claude-history-wrapper" class="d-none mb-4">
@@ -1059,7 +1059,7 @@ $js = <<<JS
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
                 this.expandPromptEditor();
-                this.focusEditor();
+                this.scrollToResponse();
                 this.fetchSubscriptionUsage();
             },
 
@@ -2186,6 +2186,12 @@ $js = <<<JS
                     quill.focus();
                 else
                     document.getElementById('claude-followup-textarea').focus();
+            },
+
+            scrollToResponse: function() {
+                var container = document.getElementById('claude-active-response-container');
+                if (container && !container.classList.contains('d-none'))
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
             },
 
             createCopyButton: function(markdownText) {
