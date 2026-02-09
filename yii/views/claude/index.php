@@ -539,7 +539,6 @@ $js = <<<JS
             gitBranch: $gitBranchJson,
             maxContext: 200000,
             warningDismissed: false,
-            collapseResponseOnEditorExpand: false,
             summarizing: false,
 
             init: function() {
@@ -700,8 +699,10 @@ $js = <<<JS
                 promptCard.addEventListener('shown.bs.collapse', function() {
                     document.getElementById('claude-prompt-summary').classList.add('d-none');
                     self.setStreamPreviewTall(false);
-                    if (self.collapseResponseOnEditorExpand) {
-                        self.collapseResponseOnEditorExpand = false;
+                    if (self._skipSwapOnExpand) {
+                        self._skipSwapOnExpand = false;
+                    } else {
+                        self.swapEditorAboveResponse();
                         self.collapseActiveResponse();
                     }
                 });
@@ -798,6 +799,7 @@ $js = <<<JS
                 // Create new accordion item with user prompt + streaming placeholder
                 this.createActiveAccordionItem(pendingPrompt, pendingDelta);
                 this.showCancelButton(true);
+                this.swapResponseAboveEditor();
                 this.collapsePromptEditor();
 
                 fetch('$streamClaudeUrl', {
@@ -1064,7 +1066,6 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                this.collapseResponseOnEditorExpand = true;
                 this.scrollToResponse();
                 this.fetchSubscriptionUsage();
             },
@@ -1090,6 +1091,7 @@ $js = <<<JS
                 } else {
                     this.addErrorMessage(msg);
                 }
+                this._skipSwapOnExpand = true;
                 this.expandPromptEditor();
                 this.focusEditor();
             },
@@ -1139,6 +1141,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                this._skipSwapOnExpand = true;
                 this.expandPromptEditor();
                 this.focusEditor();
             },
@@ -1979,7 +1982,6 @@ $js = <<<JS
                 this.streamResultText = null;
                 this.maxContext = 200000;
                 this.warningDismissed = false;
-                this.collapseResponseOnEditorExpand = false;
                 if (this.renderTimer) {
                     clearTimeout(this.renderTimer);
                     this.renderTimer = null;
@@ -2245,6 +2247,20 @@ $js = <<<JS
                 var msg = container.querySelector('.claude-message--claude');
                 if (msg && !msg.classList.contains('claude-message--collapsed'))
                     msg.classList.add('claude-message--collapsed');
+            },
+
+            swapEditorAboveResponse: function() {
+                var response = document.getElementById('claude-active-response-container');
+                var editor = document.getElementById('claudePromptCard').parentElement;
+                if (!response || response.classList.contains('d-none')) return;
+                response.parentElement.insertBefore(editor, response);
+            },
+
+            swapResponseAboveEditor: function() {
+                var response = document.getElementById('claude-active-response-container');
+                var editor = document.getElementById('claudePromptCard').parentElement;
+                if (!response) return;
+                response.parentElement.insertBefore(response, editor);
             },
 
             createCopyButton: function(markdownText) {
