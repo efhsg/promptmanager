@@ -1182,9 +1182,18 @@ $js = <<<JS
                 // Render combined preview (thinking + text) into compact box
                 var previewContent = this.streamThinkingBuffer || this.streamBuffer;
                 this.updateStreamQuill(this.streamPreviewQuill, previewContent);
+
+                // Auto-scroll after Quill repaint
                 var previewBody = document.getElementById('claude-stream-body');
                 if (previewBody)
-                    previewBody.scrollTop = previewBody.scrollHeight;
+                    requestAnimationFrame(function() {
+                        previewBody.scrollTop = previewBody.scrollHeight;
+                    });
+                var modalBody = document.querySelector('#claudeStreamModal .modal-body');
+                if (modalBody)
+                    requestAnimationFrame(function() {
+                        modalBody.scrollTop = modalBody.scrollHeight;
+                    });
             },
 
             renderStreamingPlaceholderInto: function(responseEl) {
@@ -1982,6 +1991,7 @@ $js = <<<JS
                 this.streamResultText = null;
                 this.maxContext = 200000;
                 this.warningDismissed = false;
+                this._skipSwapOnExpand = false;
                 if (this.renderTimer) {
                     clearTimeout(this.renderTimer);
                     this.renderTimer = null;
@@ -2251,15 +2261,17 @@ $js = <<<JS
 
             swapEditorAboveResponse: function() {
                 var response = document.getElementById('claude-active-response-container');
-                var editor = document.getElementById('claudePromptCard').parentElement;
-                if (!response || response.classList.contains('d-none')) return;
+                var promptCard = document.getElementById('claudePromptCard');
+                if (!response || !promptCard || response.classList.contains('d-none')) return;
+                var editor = promptCard.parentElement;
                 response.parentElement.insertBefore(editor, response);
             },
 
             swapResponseAboveEditor: function() {
                 var response = document.getElementById('claude-active-response-container');
-                var editor = document.getElementById('claudePromptCard').parentElement;
-                if (!response) return;
+                var promptCard = document.getElementById('claudePromptCard');
+                if (!response || !promptCard) return;
+                var editor = promptCard.parentElement;
                 response.parentElement.insertBefore(response, editor);
             },
 
