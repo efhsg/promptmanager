@@ -144,7 +144,7 @@ $saveUrl = Url::to(['/scratch-pad/save']);
 $savedListUrl = Url::to(['/scratch-pad/index']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
-$suggestNameUrl = Url::to(['/scratch-pad/suggest-name']);
+$suggestNameUrl = Url::to(['/claude/suggest-name']);
 
 $script = <<<JS
     window.quill = new Quill('#editor', {

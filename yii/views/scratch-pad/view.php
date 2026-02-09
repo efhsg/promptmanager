@@ -11,6 +11,12 @@ use yii\widgets\DetailView;
 $copyTypes = CopyType::labels();
 $canRunClaude = $model->project_id !== null;
 $claudeTooltip = $canRunClaude ? 'Talk to Claude' : 'Project required';
+$claudeUrl = $canRunClaude
+    ? \yii\helpers\Url::to(['/claude/index', 'p' => $model->project_id, 'breadcrumbs' => json_encode([
+        ['label' => 'Saved Scratch Pads', 'url' => \yii\helpers\Url::to(['/scratch-pad/index'])],
+        ['label' => $model->name, 'url' => \yii\helpers\Url::to(['/scratch-pad/view', 'id' => $model->id])],
+    ])])
+    : '#';
 $this->title = $model->name;
 $this->params['breadcrumbs'][] = ['label' => 'Saved Scratch Pads', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $model->name;
@@ -67,12 +73,11 @@ $this->params['breadcrumbs'][] = $model->name;
                  data-bs-parent="#scratchPadViewAccordion">
                 <div class="accordion-body p-0">
                     <div class="d-flex justify-content-end p-2 border-bottom gap-2">
-                        <?= Html::a('<i class="bi bi-terminal-fill"></i> Claude',
-                            $canRunClaude ? ['claude', 'id' => $model->id] : '#',
-                            [
-                                'class' => 'btn btn-primary btn-sm text-nowrap' . (!$canRunClaude ? ' disabled' : ''),
+                        <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
+                                'class' => 'btn btn-primary btn-sm text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
                                 'title' => $claudeTooltip ?: null,
                                 'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                                'disabled' => !$canRunClaude,
                             ]) ?>
                         <div class="input-group input-group-sm" style="width: auto;">
                             <?= Html::dropDownList('contentCopyFormat', CopyType::MD->value, $copyTypes, [
@@ -106,12 +111,11 @@ $this->params['breadcrumbs'][] = $model->name;
                  data-bs-parent="#scratchPadViewAccordion">
                 <div class="accordion-body p-0">
                     <div class="d-flex justify-content-end p-2 border-bottom gap-2">
-                        <?= Html::a('<i class="bi bi-terminal-fill"></i> Claude',
-                            $canRunClaude ? ['claude', 'id' => $model->id] : '#',
-                            [
-                                'class' => 'btn btn-primary btn-sm text-nowrap' . (!$canRunClaude ? ' disabled' : ''),
+                        <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
+                                'class' => 'btn btn-primary btn-sm text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
                                 'title' => $claudeTooltip ?: null,
                                 'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                                'disabled' => !$canRunClaude,
                             ]) ?>
                         <div class="input-group input-group-sm" style="width: auto;">
                             <?= Html::dropDownList('responseCopyFormat', CopyType::MD->value, $copyTypes, [
@@ -139,12 +143,11 @@ $this->params['breadcrumbs'][] = $model->name;
         <div class="card-header d-flex justify-content-between align-items-center">
             <strong>Content</strong>
             <div class="d-flex gap-2">
-                <?= Html::a('<i class="bi bi-terminal-fill"></i> Claude',
-                    $canRunClaude ? ['claude', 'id' => $model->id] : '#',
-                    [
-                        'class' => 'btn btn-primary btn-sm text-nowrap' . (!$canRunClaude ? ' disabled' : ''),
+                <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
+                        'class' => 'btn btn-primary btn-sm text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
                         'title' => $claudeTooltip ?: null,
                         'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+                        'disabled' => !$canRunClaude,
                     ]) ?>
                 <div class="input-group input-group-sm" style="width: auto;">
                     <?= Html::dropDownList('contentCopyFormat', CopyType::MD->value, $copyTypes, [
@@ -171,9 +174,21 @@ $this->params['breadcrumbs'][] = $model->name;
 <?php
 $contentDelta = json_encode($model->content, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $responseDelta = json_encode($model->response, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$claudeUrlJs = json_encode($claudeUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $script = <<<JS
         window.QuillToolbar.setupCopyButton('copy-content-btn', 'content-copy-format-select', $contentDelta);
         window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', $responseDelta);
+
+        document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (this.disabled) return;
+                var content = $contentDelta;
+                if (content) {
+                    sessionStorage.setItem('claudePromptContent', typeof content === 'string' ? content : JSON.stringify(content));
+                }
+                window.location.href = $claudeUrlJs;
+            });
+        });
     JS;
 $this->registerJs($script);
 ?>

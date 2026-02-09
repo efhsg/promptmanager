@@ -146,7 +146,7 @@ $response = json_encode($model->response);
 $saveUrl = Url::to(['/scratch-pad/save']);
 $importTextUrl = Url::to(['/scratch-pad/import-text']);
 $importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
-$suggestNameUrl = Url::to(['/scratch-pad/suggest-name']);
+$suggestNameUrl = Url::to(['/claude/suggest-name']);
 $script = <<<JS
     var quill = new Quill('#scratch-pad-editor', {
         theme: 'snow',

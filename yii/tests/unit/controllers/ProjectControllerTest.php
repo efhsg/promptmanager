@@ -25,58 +25,6 @@ class ProjectControllerTest extends Unit
         Project::deleteAll(['user_id' => self::TEST_USER_ID]);
     }
 
-    public function testCheckClaudeConfigReturnsErrorWhenNoRootDirectory(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = new Project([
-            'user_id' => self::TEST_USER_ID,
-            'name' => 'Test Project',
-            'root_directory' => null,
-        ]);
-        $project->save(false);
-
-        $controller = $this->createController();
-
-        $result = $controller->actionCheckClaudeConfig($project->id);
-
-        $this->assertFalse($result['success']);
-        $this->assertSame('Project has no root directory configured.', $result['error']);
-    }
-
-    public function testCheckClaudeConfigReturnsConfigStatus(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = new Project([
-            'user_id' => self::TEST_USER_ID,
-            'name' => 'Test Project',
-            'root_directory' => '/some/path',
-        ]);
-        $project->save(false);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('checkClaudeConfigForPath')->willReturn([
-            'hasCLAUDE_MD' => true,
-            'hasClaudeDir' => false,
-            'hasAnyConfig' => true,
-            'pathStatus' => 'has_config',
-            'pathMapped' => false,
-            'requestedPath' => '/some/path',
-            'effectivePath' => '/some/path',
-        ]);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $result = $controller->actionCheckClaudeConfig($project->id);
-
-        $this->assertTrue($result['success']);
-        $this->assertTrue($result['hasCLAUDE_MD']);
-        $this->assertFalse($result['hasClaudeDir']);
-        $this->assertTrue($result['hasAnyConfig']);
-        $this->assertSame('has_config', $result['pathStatus']);
-    }
-
     public function testClaudeCommandsReturnsEmptyWhenNoRootDirectory(): void
     {
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
@@ -145,39 +93,6 @@ class ProjectControllerTest extends Unit
 
         $this->assertTrue($result['success']);
         $this->assertSame([], $result['commands']);
-    }
-
-    public function testCheckClaudeConfigIncludesPromptManagerContextStatus(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = new Project([
-            'user_id' => self::TEST_USER_ID,
-            'name' => 'Test Project',
-            'root_directory' => '/some/path',
-            'claude_context' => '## Custom Context',
-        ]);
-        $project->save(false);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('checkClaudeConfigForPath')->willReturn([
-            'hasCLAUDE_MD' => false,
-            'hasClaudeDir' => false,
-            'hasAnyConfig' => false,
-            'pathStatus' => 'no_config',
-            'pathMapped' => false,
-            'requestedPath' => '/some/path',
-            'effectivePath' => '/some/path',
-        ]);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $result = $controller->actionCheckClaudeConfig($project->id);
-
-        $this->assertTrue($result['success']);
-        $this->assertFalse($result['hasAnyConfig']);
-        $this->assertSame('no_config', $result['pathStatus']);
-        $this->assertTrue($result['hasPromptManagerContext']);
     }
 
     private function createController(): ProjectController

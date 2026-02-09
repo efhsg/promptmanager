@@ -36,15 +36,8 @@ return [
                 'update' => 'updateProject',
                 'delete' => 'deleteProject',
                 'setCurrent' => 'setCurrentProject',
-                'checkClaudeConfig' => 'viewProject',
                 'claudeCommands' => 'viewProject',
                 'claude' => 'viewProject',
-                'runClaude' => 'viewProject',
-                'streamClaude' => 'viewProject',
-                'cancelClaude' => 'viewProject',
-                'claudeUsage' => 'viewProject',
-                'summarizeSession' => 'viewProject',
-                'summarizePrompt' => 'viewProject',
             ],
             'permissions' => [
                 'createProject' => [
@@ -154,19 +147,26 @@ return [
                 ],
             ],
         ],
+        'claude' => [
+            'actionPermissionMap' => [
+                'index' => 'viewProject',
+                'run' => 'viewProject',
+                'stream' => 'viewProject',
+                'cancel' => 'viewProject',
+                'usage' => 'viewProject',
+                'checkConfig' => 'viewProject',
+                'summarizeSession' => 'viewProject',
+                'summarizePrompt' => 'viewProject',
+            ],
+            // Permissions are defined under 'project' entity — no additional permissions needed.
+        ],
         'scratchPad' => [
             'actionPermissionMap' => [
                 'create' => 'createScratchPad',
                 'view' => 'viewScratchPad',
                 'update' => 'updateScratchPad',
                 'delete' => 'deleteScratchPad',
-                'runClaude' => 'viewScratchPad',
-                'streamClaude' => 'viewScratchPad',
-                'cancelClaude' => 'viewScratchPad',
                 'claude' => 'viewScratchPad',
-                'claudeUsage' => 'viewScratchPad',
-                'summarizeSession' => 'viewScratchPad',
-                'summarizePrompt' => 'viewScratchPad',
             ],
             'permissions' => [
                 'createScratchPad' => [

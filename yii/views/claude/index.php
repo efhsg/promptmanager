@@ -2,17 +2,18 @@
 
 use app\assets\HighlightAsset;
 use app\assets\QuillAsset;
+use app\models\Project;
 use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\helpers\Url;
 use yii\web\View;
-use app\models\ScratchPad;
 
 /** @var View $this */
-/** @var ScratchPad $model */
+/** @var Project $project */
 /** @var array $projectList */
 /** @var array $claudeCommands */
 /** @var string|null $gitBranch */
+/** @var string|null $breadcrumbs */
 
 QuillAsset::register($this);
 HighlightAsset::register($this);
@@ -20,24 +21,24 @@ $this->registerJsFile('@web/js/marked.min.js', ['position' => View::POS_HEAD]);
 $this->registerJsFile('@web/js/purify.min.js', ['position' => View::POS_HEAD]);
 $this->registerCssFile('@web/css/claude-chat.css');
 
-$runClaudeUrl = Url::to(['/scratch-pad/run-claude', 'id' => $model->id]);
-$streamClaudeUrl = Url::to(['/scratch-pad/stream-claude', 'id' => $model->id]);
-$cancelClaudeUrl = Url::to(['/scratch-pad/cancel-claude', 'id' => $model->id]);
-$summarizeUrl = Url::to(['/scratch-pad/summarize-session', 'id' => $model->id]);
-$summarizePromptUrl = Url::to(['/scratch-pad/summarize-prompt', 'id' => $model->id]);
-$saveUrl = Url::to(['/scratch-pad/save']);
-$suggestNameUrl = Url::to(['/scratch-pad/suggest-name']);
-$importTextUrl = Url::to(['/scratch-pad/import-text']);
-$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$pParam = ['p' => $project->id];
+$streamClaudeUrl = Url::to(array_merge(['/claude/stream'], $pParam));
+$cancelClaudeUrl = Url::to(array_merge(['/claude/cancel'], $pParam));
+$summarizeUrl = Url::to(array_merge(['/claude/summarize-session'], $pParam));
+$summarizePromptUrl = Url::to(array_merge(['/claude/summarize-prompt'], $pParam));
+$saveUrl = Url::to(['/claude/save']);
+$suggestNameUrl = Url::to(['/claude/suggest-name']);
+$importTextUrl = Url::to(['/claude/import-text']);
+$importMarkdownUrl = Url::to(['/claude/import-markdown']);
 $viewUrlTemplate = Url::to(['/scratch-pad/view', 'id' => '__ID__']);
-$checkConfigUrl = $model->project ? Url::to(['/project/check-claude-config', 'id' => $model->project->id]) : null;
-$usageUrl = Url::to(['/scratch-pad/claude-usage', 'id' => $model->id]);
-$projectDefaults = $model->project ? $model->project->getClaudeOptions() : [];
+$checkConfigUrl = Url::to(array_merge(['/claude/check-config'], $pParam));
+$usageUrl = Url::to(array_merge(['/claude/usage'], $pParam));
+$projectDefaults = $project->getClaudeOptions();
 $projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $usageUrlJson = Json::encode($usageUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $gitBranchJson = Json::encode($gitBranch, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
-$projectNameJson = Json::encode($model->project ? $model->project->name : null, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$projectNameJson = Json::encode($project->name, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 $permissionModes = [
     '' => '(Use default)',
@@ -56,8 +57,17 @@ $models = [
 ];
 
 $this->title = 'Claude CLI';
-$this->params['breadcrumbs'][] = ['label' => 'Saved Scratch Pads', 'url' => ['index']];
-$this->params['breadcrumbs'][] = ['label' => Html::encode($model->name), 'url' => ['view', 'id' => $model->id]];
+if ($breadcrumbs !== null) {
+    foreach (json_decode($breadcrumbs, true) ?? [] as $crumb) {
+        if (isset($crumb['label'])) {
+            $crumb['label'] = Html::encode($crumb['label']);
+        }
+        $this->params['breadcrumbs'][] = $crumb;
+    }
+} else {
+    $this->params['breadcrumbs'][] = ['label' => 'Projects', 'url' => ['/project/index']];
+    $this->params['breadcrumbs'][] = ['label' => Html::encode($project->name), 'url' => ['/project/view', 'id' => $project->id]];
+}
 $this->params['breadcrumbs'][] = 'Claude CLI';
 ?>
 
@@ -92,9 +102,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <div id="claudeSettingsCard">
             <div class="card-body claude-settings-section">
                 <div class="claude-settings-badges-bar" id="claude-settings-badges" role="button" title="Collapse settings">
-                    <?php if ($model->project): ?>
-                    <span class="badge bg-secondary" title="Project"><i class="bi bi-folder2-open"></i> <?= Html::encode($model->project->name) ?></span>
-                    <?php endif; ?>
+                    <span class="badge bg-secondary" title="Project"><i class="bi bi-folder2-open"></i> <?= Html::encode($project->name) ?></span>
                     <?php if ($gitBranch): ?>
                     <span class="badge bg-secondary" title="Git branch"><i class="bi bi-signpost-split"></i> <?= Html::encode($gitBranch) ?></span>
                     <?php endif; ?>
@@ -336,7 +344,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                     </div>
                     <div class="mb-3">
                         <label for="save-dialog-project" class="form-label">Project</label>
-                        <?= Html::dropDownList('project_id', $model->project_id, $projectList, [
+                        <?= Html::dropDownList('project_id', $project->id, $projectList, [
                             'id' => 'save-dialog-project',
                             'class' => 'form-select',
                             'prompt' => 'No project',
@@ -384,7 +392,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 </div>
 
 <?php
-$contentJson = Json::encode($model->content ?? '{"ops":[]}', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $claudeCommandsJson = Json::encode($claudeCommands, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $js = <<<JS
     (function() {
@@ -455,7 +462,9 @@ $js = <<<JS
             }
         });
 
-        var initialDelta = JSON.parse($contentJson);
+        var storedContent = sessionStorage.getItem('claudePromptContent');
+        var initialDelta = storedContent ? JSON.parse(storedContent) : {"ops":[]};
+        sessionStorage.removeItem('claudePromptContent');
         quill.setContents(initialDelta);
 
         // Configure marked with custom renderer for code highlighting
