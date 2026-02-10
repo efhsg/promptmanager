@@ -261,7 +261,6 @@ class ProjectController extends Controller
         return $this->redirect(['/claude/index', 'p' => $id]);
     }
 
-
     /**
      * @throws NotFoundHttpException
      */

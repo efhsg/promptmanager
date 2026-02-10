@@ -425,7 +425,6 @@ class ScratchPadController extends Controller
         return $this->redirect(['/claude/index', 'p' => $model->project_id]);
     }
 
-
     /**
      * @throws NotFoundHttpException
      */
