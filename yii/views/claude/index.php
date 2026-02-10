@@ -259,8 +259,8 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <div class="d-flex align-items-center justify-content-end mb-2">
             <div id="claude-summarize-group" class="btn-group d-none me-2">
                 <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary btn-sm"
-                        title="Summarize conversation and start a new session with the summary">
-                    <i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session
+                        title="Summarize conversation for review before starting a new session">
+                    <i class="bi bi-pencil-square"></i> Summarize
                 </button>
                 <button type="button" id="claude-summarize-split-toggle"
                         class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-toggle-split"
@@ -270,8 +270,8 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
                         <a class="dropdown-item" href="#" id="claude-summarize-btn">
-                            <i class="bi bi-pencil-square me-1"></i> Summarize
-                            <small class="d-block text-muted">Review summary before sending</small>
+                            <i class="bi bi-arrow-repeat me-1"></i> Summarize &amp; New Session
+                            <small class="d-block text-muted">Summarize and start new session automatically</small>
                         </a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
@@ -740,10 +740,10 @@ $js = <<<JS
 
                 document.getElementById('claude-summarize-btn').addEventListener('click', function(e) {
                     e.preventDefault();
-                    self.summarizeAndContinue(false);
+                    self.summarizeAndContinue(true);
                 });
                 document.getElementById('claude-summarize-auto-btn').addEventListener('click', function() {
-                    self.summarizeAndContinue(true);
+                    self.summarizeAndContinue(false);
                 });
                 document.getElementById('claude-summarize-warning-btn').addEventListener('click', function() {
                     self.summarizeAndContinue(false);
@@ -2520,7 +2520,7 @@ $js = <<<JS
                 summarizeAutoBtn.disabled = false;
                 summarizeWarningBtn.disabled = false;
                 sendBtn.disabled = false;
-                summarizeAutoBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session';
+                summarizeAutoBtn.innerHTML = '<i class="bi bi-pencil-square"></i> Summarize';
             },
 
             openSaveDialogSelect: function() {

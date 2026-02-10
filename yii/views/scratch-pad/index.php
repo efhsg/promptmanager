@@ -94,7 +94,7 @@ $this->params['breadcrumbs'][] = $this->title;
                             }
                             $truncated = StringHelper::truncate($name, 50, '...');
                             $plain = StringHelper::truncate(
-                                PromptInstancePresenter::extractPlain($model->content),
+                                PromptInstancePresenter::extractPlain($model->content ?? ''),
                                 500,
                                 '...',
                             );
