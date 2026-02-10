@@ -271,6 +271,12 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <div id="claude-prompt-summary" class="claude-collapsible-summary d-none"
              data-bs-toggle="collapse" data-bs-target="#claudePromptCard" role="button">
             <i class="bi bi-pencil-square me-1"></i> Prompt editor
+            <button type="button" id="claude-summary-reply-btn"
+                    class="claude-collapsible-summary__reply d-none"
+                    title="Reply (Alt+R)">
+                <i class="bi bi-reply-fill"></i> Reply
+            </button>
+            <i class="bi bi-chevron-down claude-collapsible-summary__chevron"></i>
         </div>
     </div>
 
@@ -661,6 +667,17 @@ $js = <<<JS
                 document.getElementById('claude-followup-textarea').addEventListener('keydown', handleEditorKeydown);
                 quill.root.addEventListener('keydown', handleEditorKeydown);
 
+                // Alt+R must work even when the editor is collapsed and has no focus
+                document.addEventListener('keydown', function(e) {
+                    if (e.altKey && e.key.toLowerCase() === 'r') {
+                        var replyBtn = document.getElementById('claude-summary-reply-btn');
+                        if (replyBtn && !replyBtn.classList.contains('d-none')) {
+                            e.preventDefault();
+                            self.replyExpand();
+                        }
+                    }
+                });
+
                 document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
                     if (copyBtn) self.handleCopyClick(copyBtn);
@@ -695,15 +712,21 @@ $js = <<<JS
                 promptCard.addEventListener('shown.bs.collapse', function() {
                     var summary = document.getElementById('claude-prompt-summary');
                     summary.classList.add('d-none');
-                    summary.classList.remove('claude-collapsible-summary--attention');
                     self.setStreamPreviewTall(false);
-                    self.swapEditorAboveResponse();
-                    if (window.scrollY > 0)
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    if (self._replyExpand) {
+                        self._replyExpand = false;
+                        self.swapEditorAboveResponse();
+                        if (window.scrollY > 0)
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                     self.focusEditor();
                 });
                 document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
                     self.collapsePromptEditor();
+                });
+                document.getElementById('claude-summary-reply-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    self.replyExpand();
                 });
                 document.getElementById('claude-focus-toggle').addEventListener('click', function() {
                     self.toggleFocusMode();
@@ -1056,8 +1079,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                document.getElementById('claude-prompt-summary')
-                    .classList.add('claude-collapsible-summary--attention');
+                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
                 this.scrollToTopUnlessFocused();
                 this.fetchSubscriptionUsage();
             },
@@ -1084,6 +1106,7 @@ $js = <<<JS
                     this.addErrorMessage(msg);
                 }
 
+                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
                 this.expandPromptEditor();
             },
 
@@ -1132,6 +1155,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
 
                 this.expandPromptEditor();
             },
@@ -2062,6 +2086,7 @@ $js = <<<JS
                 this.streamResultText = null;
                 this.maxContext = 200000;
                 this.warningDismissed = false;
+                this._replyExpand = false;
                 if (this.renderTimer) {
                     clearTimeout(this.renderTimer);
                     this.renderTimer = null;
@@ -2087,6 +2112,7 @@ $js = <<<JS
                 document.getElementById('claude-copy-all-wrapper').classList.add('d-none');
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
                 document.getElementById('claude-summarize-group').classList.add('d-none');
+                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
                 this.updateSummarizeButtonColor(0);
                 this.summarizing = false;
 
@@ -2120,6 +2146,11 @@ $js = <<<JS
                 var bsCollapse = bootstrap.Collapse.getInstance(card);
                 if (bsCollapse) bsCollapse.show();
                 else new bootstrap.Collapse(card, { toggle: false }).show();
+            },
+
+            replyExpand: function() {
+                this._replyExpand = true;
+                this.expandPromptEditor();
             },
 
             compactEditor: function() {
@@ -2339,6 +2370,7 @@ $js = <<<JS
                 response.parentElement.insertBefore(editor, response);
                 if (!alreadyAbove)
                     this._animateSwap(editor);
+                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
             },
 
             swapResponseAboveEditor: function() {
