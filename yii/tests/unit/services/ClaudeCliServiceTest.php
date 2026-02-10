@@ -8,6 +8,7 @@ use ReflectionClass;
 use Yii;
 use RuntimeException;
 use app\services\ClaudeWorkspaceService;
+use TypeError;
 
 class ClaudeCliServiceTest extends Unit
 {
@@ -593,6 +594,36 @@ class ClaudeCliServiceTest extends Unit
         $this->assertStringNotContainsString("--system-prompt 'Inline", $command);
     }
 
+    public function testBuildCommandAlwaysAppendsNoQuestionsInstruction(): void
+    {
+        $service = new ClaudeCliService();
+        $reflection = new ReflectionClass($service);
+        $method = $reflection->getMethod('buildCommand');
+        $method->setAccessible(true);
+
+        // Without any system prompt options
+        $command = $method->invoke($service, [], null);
+        $this->assertStringContainsString('--append-system-prompt', $command);
+        $this->assertStringContainsString('Do not ask the user any questions', $command);
+
+        // With systemPromptFile — append-system-prompt should still be present
+        $command = $method->invoke($service, [
+            'systemPromptFile' => '/path/to/prompt.md',
+        ], null);
+        $this->assertStringContainsString('--system-prompt-file', $command);
+        $this->assertStringContainsString('--append-system-prompt', $command);
+        $this->assertStringContainsString('Do not ask the user any questions', $command);
+
+        // With user-provided appendSystemPrompt — both should be combined
+        $command = $method->invoke($service, [
+            'appendSystemPrompt' => 'Custom instruction here',
+        ], null);
+        $this->assertStringContainsString('Custom instruction here', $command);
+        $this->assertStringContainsString('Do not ask the user any questions', $command);
+        // Should be a single --append-system-prompt flag (combined)
+        $this->assertSame(1, substr_count($command, '--append-system-prompt'));
+    }
+
     public function testExecuteStreamingThrowsWhenDirectoryMissing(): void
     {
         $mockWorkspace = $this->createMock(ClaudeWorkspaceService::class);
@@ -614,7 +645,7 @@ class ClaudeCliServiceTest extends Unit
     public function testCancelRunningProcessThrowsTypeErrorWhenNoStreamToken(): void
     {
         $service = new ClaudeCliService();
-        $this->expectException(\TypeError::class);
+        $this->expectException(TypeError::class);
         $service->cancelRunningProcess(null);
     }
 
@@ -935,7 +966,7 @@ class ClaudeCliServiceTest extends Unit
         $tmpFile = tempnam(sys_get_temp_dir(), 'claude_credentials_');
         file_put_contents($tmpFile, json_encode(['claudeAiOauth' => ['accessToken' => 'token']]));
 
-        $service = new class extends ClaudeCliService {
+        $service = new class () extends ClaudeCliService {
             protected function fetchSubscriptionUsage(string $accessToken): array
             {
                 return ['success' => true, 'status' => 429, 'body' => 'Rate limit'];

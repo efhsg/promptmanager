@@ -12,6 +12,11 @@ use RuntimeException;
  */
 class ClaudeCliService
 {
+    /** Instructs Claude not to ask interactive questions (no TTY in -p mode). */
+    private const NO_INTERACTIVE_QUESTIONS_PROMPT =
+        'Do not ask the user any questions. If you need to make a choice, '
+        . 'pick the most pragmatic option and document your assumptions.';
+
     private CopyFormatConverter $formatConverter;
     private ClaudeWorkspaceService $workspaceService;
 
@@ -436,9 +441,14 @@ class ClaudeCliService
             $cmd .= ' --system-prompt-file ' . escapeshellarg($options['systemPromptFile']);
         } elseif (!empty($options['systemPrompt'])) {
             $cmd .= ' --system-prompt ' . escapeshellarg($options['systemPrompt']);
-        } elseif (!empty($options['appendSystemPrompt'])) {
-            $cmd .= ' --append-system-prompt ' . escapeshellarg($options['appendSystemPrompt']);
         }
+
+        // appendSystemPrompt is additive — works alongside systemPrompt/systemPromptFile.
+        // Always include the no-interactive-questions instruction (no TTY in -p mode).
+        $appendPrompt = trim(
+            ($options['appendSystemPrompt'] ?? '') . "\n\n" . self::NO_INTERACTIVE_QUESTIONS_PROMPT
+        );
+        $cmd .= ' --append-system-prompt ' . escapeshellarg($appendPrompt);
 
         if (!empty($options['maxTurns'])) {
             $cmd .= ' --max-turns ' . (int) $options['maxTurns'];
