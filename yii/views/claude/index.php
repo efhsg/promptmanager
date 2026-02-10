@@ -256,8 +256,8 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 
     <!-- Exchange History Accordion (exchanges go here immediately on send) -->
     <div id="claude-history-wrapper" class="d-none mb-4">
-        <div class="d-flex align-items-center mb-2">
-            <div id="claude-summarize-group" class="btn-group d-none">
+        <div class="d-flex align-items-center justify-content-end mb-2">
+            <div id="claude-summarize-group" class="btn-group d-none me-2">
                 <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary btn-sm"
                         title="Summarize conversation and start a new session with the summary">
                     <i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session
@@ -267,7 +267,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                         data-bs-toggle="dropdown" aria-expanded="false">
                     <span class="visually-hidden">Toggle Dropdown</span>
                 </button>
-                <ul class="dropdown-menu">
+                <ul class="dropdown-menu dropdown-menu-end">
                     <li>
                         <a class="dropdown-item" href="#" id="claude-summarize-btn">
                             <i class="bi bi-pencil-square me-1"></i> Summarize
@@ -283,7 +283,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                     </li>
                 </ul>
             </div>
-            <button type="button" id="claude-toggle-history-btn" class="btn btn-outline-secondary btn-sm ms-auto">
+            <button type="button" id="claude-toggle-history-btn" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrows-collapse"></i> Collapse All
             </button>
         </div>

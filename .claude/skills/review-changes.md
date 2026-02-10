@@ -212,4 +212,4 @@ Only run after Phase 1 issues are resolved:
 - Overall status reflects severity of findings
 - Phase 2 only runs when Phase 1 has no Critical/High/Medium issues
 - Output follows the required format
-- If status is **PASS** or **PASS WITH COMMENTS** (no Critical/High/Medium findings), end your response with: "Ready to finalize? Run `/finalize-changes` to lint, test, and prepare the commit."
+- If status is **PASS** or **PASS WITH COMMENTS** (no Critical/High/Medium findings), end your response with: "Run `/finalize-changes` to lint, test, and prepare the commit. Ready to finalize?"

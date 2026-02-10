@@ -49,7 +49,7 @@ Note: Screenshots in `.claude/screenshots/` are always unstaged - they are for r
 Suggest commit message per `.claude/rules/commits.md`. Ask user for confirmation.
 
 If linter passed and tests passed (no failures), end your response with:
-"Ready to commit? Run `/commit-push` to commit and push to origin."
+"Run `/commit-push` to commit and push to origin. Ready to commit?"
 
 ## Task
 
