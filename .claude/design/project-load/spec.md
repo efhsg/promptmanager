@@ -4,7 +4,7 @@
 
 | Eigenschap | Waarde |
 |------------|--------|
-| Versie | 1.5 |
+| Versie | 1.8 |
 | Status | Concept |
 | Datum | 2026-02-10 |
 
@@ -90,7 +90,7 @@ yii project-load/cleanup
 ### 3.2 Flow: `project-load/list`
 
 ```
-1. Valideer dump-bestand (bestaat, leesbaar, .sql extensie)
+1. Valideer dump-bestand (bestaat, leesbaar, .sql of .dump extensie)
 2. Maak tijdelijk MySQL-schema (yii_load_temp_{pid}, bijv. `yii_load_temp_12345`)
    - Unieke naam per process voorkomt race conditions bij parallel gebruik
    - Character set: `CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci` (zelfde als productie-schema)
@@ -100,6 +100,15 @@ yii project-load/cleanup
 5. Toon tabel met projecten en aantallen gerelateerde entiteiten
 6. Verwijder tijdelijk schema
 ```
+
+**Kolom-detectie voor de list-tabel:**
+
+De kolommen in de list-output worden **dynamisch** bepaald op basis van welke gerelateerde tabellen daadwerkelijk in het temp-schema bestaan. Dit voorkomt fouten bij dumps van oudere schema-versies die bepaalde tabellen niet bevatten.
+
+**Mechanisme:**
+1. Query `INFORMATION_SCHEMA.TABLES` voor het temp-schema
+2. Per gerelateerde entiteit: als de tabel bestaat, tel de records; anders toon `-`
+3. Minimaal vereiste tabel: `project` — als deze ontbreekt, foutmelding
 
 **Voorbeeld output:**
 
@@ -116,6 +125,34 @@ Totaal: 3 projecten
 ```
 
 Kolommen: Ctx = Contexts, Fld = Fields (project-gebonden), Tpl = Prompt Templates, Inst = Prompt Instances, SP = Scratch Pads, Links = Linked Projects.
+
+### 3.2.1 Flow: `project-load/cleanup`
+
+```
+1. Query alle schemas waarvan de naam begint met `yii_load_temp_`
+   (via INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME LIKE 'yii_load_temp_%')
+2. Voor elk gevonden schema:
+   a. Bepaal leeftijd via schema creation time (INFORMATION_SCHEMA.SCHEMATA.DEFAULT_CHARACTER_SET_NAME
+      is niet bruikbaar — gebruik in plaats daarvan een conventie: de PID in de schemanaam
+      checken tegen actieve processen, of een vaste drempel van 1 uur)
+   b. Als ouder dan 1 uur (of PID niet meer actief): DROP DATABASE
+   c. Toon verwijderd schema + leeftijd
+3. Toon samenvatting: X schemas verwijderd
+```
+
+**Leeftijdsbepaling:** `INFORMATION_SCHEMA.SCHEMATA` biedt geen creation-time. Gebruik als alternatief de `CREATE_TIME` van een willekeurige tabel in het schema (`INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = :schema LIMIT 1`). Dit werkt betrouwbaar voor InnoDB-tabellen (standaard storage engine in dit project). Als het schema leeg is (geen tabellen), is het sowieso orphaned en kan het verwijderd worden.
+
+**Voorbeeld output:**
+
+```
+Orphaned schemas opgeruimd:
+  yii_load_temp_12345 — verwijderd (2 uur oud)
+  yii_load_temp_67890 — verwijderd (1 dag oud)
+
+Totaal: 2 schemas verwijderd
+```
+
+Als er geen orphaned schemas zijn: `Geen orphaned schemas gevonden.`
 
 ### 3.3 Flow: `project-load/load`
 
@@ -138,9 +175,14 @@ Kolommen: Ctx = Contexts, Fld = Fields (project-gebonden), Tpl = Prompt Template
    b. mysql yii_load_temp < (gefilterde dump)
 
 4. Valideer schema-compatibiliteit
-   a. Vergelijk INFORMATION_SCHEMA.COLUMNS van temp-schema met productie-schema per entiteit
-   b. Waarschuwing per kolom die in productie-schema staat maar ontbreekt in dump
-      (zal NULL worden bij insert)
+   a. Vergelijk **kolomnamen** (niet types) van INFORMATION_SCHEMA.COLUMNS van temp-schema
+      met productie-schema per entiteit. Type-vergelijking is niet nodig — de dump bevat data
+      die oorspronkelijk correct was voor dat schema, en MySQL handelt type-conversie af bij insert.
+   b. Waarschuwing per kolom die in productie-schema staat maar ontbreekt in dump.
+      - Als de kolom NOT NULL is met een DEFAULT: gebruik de DEFAULT waarde
+      - Als de kolom NOT NULL is zonder DEFAULT: gebruik een veilige standaardwaarde
+        (lege string voor VARCHAR/TEXT, 0 voor INT) — zie §3.5.1 stap 4
+      - Als de kolom nullable is: gebruik NULL
    c. Fout bij ontbrekende primaire sleutel- of FK-kolommen
 
 5. Voor elk gevraagd project-ID:
@@ -156,8 +198,15 @@ Kolommen: Ctx = Contexts, Fld = Fields (project-gebonden), Tpl = Prompt Template
    f. Begin database-transactie
    g. Als lokaal project gevonden:
       - Bewaar het lokale project-ID voor hergebruik
-      - Verwijder prompt_instances (ON DELETE RESTRICT vereist expliciete delete)
-      - Verwijder lokaal project ($model->delete() — CASCADE verwijdert rest)
+      - Verwijder prompt_instances via raw SQL (ON DELETE RESTRICT vereist expliciete delete)
+      - Verwijder lokaal project via raw SQL DELETE (CASCADE verwijdert overige children)
+      - **Bewust geen ActiveRecord `$model->delete()`**: dit voorkomt dat
+        `Project::afterDelete()` → `claudeWorkspaceService->deleteWorkspace()` wordt
+        aangeroepen. Bij een project-vervanging (delete + insert met behouden ID) is de
+        workspace niet daadwerkelijk verwijderd — het project wordt direct opnieuw aangemaakt.
+        De workspace-configuratie (claude_options/claude_context) staat op NULL na load en
+        moet per machine opnieuw geconfigureerd worden, maar de workspace-directory zelf
+        hoeft niet verwijderd te worden.
    h. Insert project met behoud van lokaal ID (bij vervanging) of nieuw auto-increment ID
       (bij nieuw project)
       - Bij vervanging: expliciet het bewaarde lokale ID meegeven als kolomwaarde. Dit voorkomt
@@ -177,6 +226,8 @@ Kolommen: Ctx = Contexts, Fld = Fields (project-gebonden), Tpl = Prompt Template
         `created_at`/`updated_at` overschrijft in `beforeSave()`. Om dump-timestamps te
         behouden: gebruik raw inserts via `Yii::$app->db->createCommand()->insert()` i.p.v.
         ActiveRecord. Dit geldt voor alle entiteiten inclusief het project zelf (stap 5h).
+      - **Uitzondering: `template_field`** heeft geen timestamps en geen auto-increment PK.
+        Gebruik ook hier raw insert voor consistentie.
    j. Remap placeholder-IDs in template_body (§3.7)
    k. Commit transactie (of rollback bij fout)
 
@@ -199,6 +250,8 @@ Matching bepaalt welk lokaal project vervangen wordt door de dump-data. Projectn
    - **Geen match:** nieuw project aanmaken.
    - **Precies één match:** dat project wordt vervangen.
    - **Meerdere matches:** fout voor dit project. Toon de gevonden projecten (ID + naam) en instrueer de gebruiker om `--local-project-ids` te gebruiken.
+
+**Naamsmatching filtert soft-deleted projecten uit:** Alleen actieve projecten (`deleted_at IS NULL`) worden meegenomen bij de naamsmatching. Dit voorkomt dat een soft-deleted project als match verschijnt terwijl de gebruiker dat project bewust heeft verwijderd.
 
 **Voorbeeld foutmelding:**
 
@@ -272,12 +325,21 @@ Kolomlijsten worden **niet** hardcoded maar runtime bepaald via `INFORMATION_SCH
 ```
 Voor elke entiteit in de load-configuratie:
 1. Query INFORMATION_SCHEMA.COLUMNS van het productie-schema voor de tabelnaam
+   (inclusief IS_NULLABLE, COLUMN_DEFAULT en DATA_TYPE metadata)
 2. Filter:
    a. Verwijder auto-increment PK kolommen (EXTRA = 'auto_increment')
    b. Verwijder kolommen uit de exclude-lijst (§3.9)
+   NB: Tabellen zonder auto-increment PK (zoals template_field) worden niet
+   gefilterd — alle kolommen worden meegenomen.
 3. Resultaat = SELECT-kolomlijst voor temp-schema query + INSERT-kolomlijst voor productie
 4. Bij SELECT uit temp-schema: als een kolom niet bestaat in het temp-schema
-   (oudere dump), gebruik NULL als waarde
+   (oudere dump), gebruik een fallback-waarde:
+   a. Als de kolom nullable is: NULL
+   b. Als de kolom NOT NULL is met een COLUMN_DEFAULT: gebruik die default
+   c. Als de kolom NOT NULL is zonder default: gebruik een veilige
+      standaardwaarde (lege string voor string-types, 0 voor numerieke types,
+      NOW() voor datetime-types)
+   Dit voorkomt NOT NULL constraint violations bij oudere dumps.
 ```
 
 **Wat dynamisch is (kolomlijsten):**
@@ -303,10 +365,10 @@ Per entiteit wordt geconfigureerd: tabelnaam, bron-query, FK-relaties en special
 | field | `field` | `WHERE project_id = :projectId` | `project_id` → project, `user_id` → override | Project-gebonden velden. |
 | field_option | `field_option` | `WHERE field_id IN (:projectFieldIds)` | `field_id` → field | Opties van project-velden. |
 | prompt_template | `prompt_template` | `WHERE project_id = :projectId` | `project_id` → project | Template body = Quill Delta met placeholder-IDs. Na insert: placeholder-remapping (§3.7). |
-| template_field | `template_field` | `WHERE template_id IN (:projectTemplateIds)` | `template_id` → prompt_template, `field_id` → field | Pure pivot-tabel: composite PK, geen auto-increment, geen timestamps. |
+| template_field | `template_field` | `WHERE template_id IN (:projectTemplateIds)` | `template_id` → prompt_template, `field_id` → field | Pivot-tabel: geen PK, geen auto-increment, geen unique constraint, geen timestamps. Alleen `template_id` + `field_id` kolommen. |
 | prompt_instance | `prompt_instance` | `WHERE template_id IN (:projectTemplateIds)` | `template_id` → prompt_template | `final_prompt` is gerenderde output, geen remapping nodig (§3.7.1). |
 | scratch_pad | `scratch_pad` | `WHERE project_id = :projectId` | `project_id` → project, `user_id` → override | Inclusief `response` kolom (ontbrak in oude sync). Filtert impliciet globale scratch pads uit (project_id IS NULL). |
-| project_linked_project | `project_linked_project` | `WHERE project_id = :projectId` | `project_id` → project | Eenrichtings: alleen links vanuit dit project. Alleen als gelinkt project lokaal bestaat (§3.5.4). **Let op:** timestamps zijn integer (UNIX) i.p.v. string-format. |
+| project_linked_project | `project_linked_project` | `WHERE project_id = :projectId` | `project_id` → project | Eenrichtings: alleen links vanuit dit project. Alleen als gelinkt project lokaal bestaat (§3.5.4). Heeft timestamps (`created_at`, `updated_at` als DATETIME). |
 
 **Optioneel met `--include-global-fields`:**
 
@@ -317,7 +379,7 @@ Per entiteit wordt geconfigureerd: tabelnaam, bron-query, FK-relaties en special
 
 #### 3.5.3 Globale velden: match-en-hergebruik strategie
 
-Globale velden worden gematcht op `name + user_id`:
+Globale velden worden gematcht op `name WHERE project_id IS NULL AND user_id = :userId`. De database unique constraint is `UNIQUE(project_id, name)` — voor globale velden (project_id = NULL) garandeert MySQL hier geen echte uniciteit (meerdere NULL-rijen zijn toegestaan), maar de model-validatie `validateUniqueNameWithinProject()` handhaaft uniciteit op `name` binnen dezelfde `project_id`-scope (inclusief NULL) — **zonder** `user_id` filter. In combinatie met de single-user aanname (§9, aanname 4) is matching op `name + user_id` voldoende.
 
 - **Bestaat lokaal:** het **lokale veld behouden** en het lokale ID gebruiken voor remapping. Het globale veld wordt **niet** overschreven, omdat andere lokale projecten/templates ernaar kunnen verwijzen. Bestaande lokale globale velden behouden hun eigen `user_id`.
   - **Type verschilt:** waarschuwing in rapport met details (bijv. "Globaal veld 'Language' is lokaal type 'select' maar type 'text' in dump"). Het lokale veld wordt behouden — de gebruiker moet dit handmatig oplossen als het template ander gedrag verwacht.
@@ -334,6 +396,11 @@ Globale velden worden gematcht op `name + user_id`:
 **Laadvolgorde is relevant:** Als de dump projecten A en B bevat, en A linkt naar B, laad dan B vóór A (of beide in dezelfde run). Worden ze in aparte runs geladen, dan wordt de link vanuit A naar B pas correct als B al lokaal bestaat op het moment dat A geladen wordt.
 
 **Inkomende links vanuit andere lokale projecten:** Doordat het lokale project-ID behouden wordt bij vervanging (§3.3 stap 5h), blijven `project_linked_project`-records vanuit andere lokale projecten die naar dit project verwijzen intact. Dit is een belangrijk voordeel van ID-hergebruik.
+
+**Linked_project_id validatie:** Controleer of `linked_project_id` verwijst naar een bestaand lokaal project. Hierbij geldt:
+- Als het gelinkte project óók in dezelfde load-run zit: gebruik het (mogelijk nieuwe) lokale ID van dat project.
+- Als het gelinkte project niet in de load-run zit: zoek naar een bestaand lokaal project met dat ID.
+- Als niet gevonden: overslaan + waarschuwing.
 
 ### 3.6 Insert-volgorde
 
@@ -365,6 +432,25 @@ Entiteiten worden in afhankelijkheidsvolgorde geïnserteerd (ouders voor kindere
 | `GEN:{{id}}` | Globaal veld | Als geladen (--include-global-fields): gebruik mapping. Anders: zoek lokaal veld met zelfde naam, gebruik lokaal ID. Als niet gevonden: bewaar origineel ID + waarschuwing |
 | `EXT:{{id}}` | Veld uit ander project | Zoek veld in temp schema → bepaal veldnaam + bronproject → zoek lokaal project via `label + user_id` (uniek per user, database constraint). Fallback: `name + user_id` (alleen bij precies één match). → zoek lokaal veld (`name + project_id` — uniek per project via model validatie) → gebruik lokaal ID. Als project niet gevonden, label ontbreekt in dump of lokaal, of meerdere name-matches: bewaar origineel ID + waarschuwing |
 
+**EXT-remapping pseudocode:**
+
+```
+function remapExtPlaceholder(dumpFieldId, tempSchema, localUserId):
+  1. Haal veld op uit temp-schema: SELECT name, project_id FROM field WHERE id = dumpFieldId
+  2. Haal bronproject op: SELECT label, name FROM project WHERE id = field.project_id
+  3. Zoek lokaal project:
+     a. Als bronproject.label niet NULL:
+        zoek op label + user_id (unique constraint garandeert max 1 match)
+     b. Als geen match op label, of label is NULL:
+        zoek op name + user_id
+        - 0 matches: return origineel ID + waarschuwing
+        - 1 match: gebruik die
+        - >1 matches: return origineel ID + waarschuwing
+  4. Zoek lokaal veld: SELECT id FROM field WHERE name = :name AND project_id = :localProjectId
+     - Gevonden: return lokaal veld-ID
+     - Niet gevonden: return origineel ID + waarschuwing
+```
+
 **Remapping-implementatie (conform bestaand patroon):**
 
 De codebase past placeholder-regex altijd toe op individuele Quill Delta ops, niet op de ruwe JSON-string. De remapping moet dit patroon volgen:
@@ -374,6 +460,7 @@ De codebase past placeholder-regex altijd toe op individuele Quill Delta ops, ni
 3. Regex: `/(GEN|PRJ|EXT):\{\{(\d+)\}\}/`
 4. Vervang gematchte IDs via de ID-mapping
 5. Re-encode naar JSON
+6. Update `template_body` via raw SQL UPDATE (niet opnieuw een volledige insert)
 
 **Referentie-implementatie:** `PromptTemplateService::convertPlaceholdersToIds()` (`yii/services/PromptTemplateService.php:116-143`) volgt exact dit patroon.
 
@@ -412,6 +499,8 @@ Deze kolommen worden op `NULL` gezet bij het laden. Als het project al lokaal be
 
 **Let op:** `project.root_directory` is machine-specifiek en moet na het laden opnieuw geconfigureerd worden. Bij de dry-run wordt dit als melding getoond.
 
+**Bewust niet geëxcludeerd:** `project.allowed_file_extensions`, `project.blacklisted_directories`, `project.prompt_instance_copy_format`. Hoewel `allowed_file_extensions` en `blacklisted_directories` gekoppeld zijn aan `root_directory`, worden ze meegeladen zonder interpretatie — de load-service neemt data over, niet semantiek. De gebruiker kan ze na load aanpassen indien nodig.
+
 **Configuratie:** De exclude-lijst wordt op één plek gedefinieerd (constante of configuratie-array in de service). Bij wijzigingen hoeft alleen deze lijst bijgewerkt te worden — de dynamische kolom-detectie (§3.5.1) past de rest automatisch aan.
 
 ---
@@ -420,14 +509,14 @@ Deze kolommen worden op `NULL` gezet bij het laden. Als het project al lokaal be
 
 | Component | Pad | Relevantie |
 |-----------|-----|------------|
-| `EntityDefinitions` | `yii/services/sync/EntityDefinitions.php` | Kolom-definities per entiteit. **Niet hergebruikt** — vervangen door dynamische kolom-detectie (§3.5.1). Laat zien welk probleem (verouderde lijsten: ontbreekt `scratch_pad.response`, `project.claude_options`, `project.claude_context`) de dynamische aanpak voorkomt. |
+| `EntityDefinitions` | `yii/services/sync/EntityDefinitions.php` | Kolom-definities per entiteit. **Niet hergebruikt** — vervangen door dynamische kolom-detectie (§3.5.1). Laat zien welk probleem (verouderde lijsten) de dynamische aanpak voorkomt: ontbreekt `scratch_pad.response`, `project.claude_options`, `project.claude_context`, `project_linked_project.created_at/updated_at`. |
 | `RecordFetcher` | `yii/services/sync/RecordFetcher.php` | Query-patronen per entiteit met user-scoping. Conceptueel herbruikbaar voor het ophalen uit temp schema, maar scoping is anders (per project-ID, niet per user). |
 | `EntitySyncer` | `yii/services/sync/EntitySyncer.php` | FK remapping via `mapForeignKeys()` en `SyncReport.idMappings`. Concept herbruikbaar, maar implementatie te verweven met bidirectionele sync-logica. |
 | `SyncReport` | `yii/services/sync/SyncReport.php` | ID mapping opslag + rapportage. Concept herbruikbaar voor nieuwe `LoadReport`. |
 | `SyncController` | `yii/commands/SyncController.php` | CLI output formatting (kleuren, statistieken). Pattern voor nieuwe controller. |
-| `Project::afterDelete()` | `yii/models/Project.php:584` | Ruimt Claude workspace op via `claudeWorkspaceService->deleteWorkspace()`. Wordt automatisch aangeroepen bij `$model->delete()`. **Bij project-vervanging:** de workspace van het oude project wordt verwijderd. Dit is gewenst — het nieuwe project krijgt toch `claude_options`/`claude_context` op NULL (§3.9), dus de workspace moet per machine opnieuw geconfigureerd worden. |
+| `Project::afterDelete()` | `yii/models/Project.php:584` | Ruimt Claude workspace op via `claudeWorkspaceService->deleteWorkspace()`. Wordt automatisch aangeroepen bij ActiveRecord `$model->delete()`. **Bij project-vervanging:** wordt **niet** getriggerd — de delete gaat via raw SQL (§3.3 stap 5g). Dit is gewenst: de workspace hoeft niet verwijderd te worden bij een vervanging, omdat het project direct opnieuw wordt aangemaakt met hetzelfde ID. |
 | `Project::afterSave()` | `yii/models/Project.php:560` | Synct Claude workspace config bij insert of relevante field changes. Wordt NIET aangeroepen bij raw insert (wat wij doen). Na insert moet `claudeWorkspaceService->syncConfig()` apart aangeroepen worden als dit gewenst is. Omdat `claude_options` en `claude_context` op NULL staan na load, is workspace-sync optioneel (er is niets te syncen). |
-| `TimestampTrait` | `yii/models/traits/TimestampTrait.php` | Timestamp-afhandeling. Niet relevant — we kopiëren timestamps uit de dump via raw inserts. |
+| `TimestampTrait` | `yii/models/traits/TimestampTrait.php` | Timestamp-afhandeling via `date('Y-m-d H:i:s')` (DATETIME strings, niet integers). Niet relevant — we kopiëren timestamps uit de dump via raw inserts. |
 
 ---
 
@@ -442,6 +531,8 @@ Deze kolommen worden op `NULL` gezet bij het laden. Als het project al lokaal be
 ### 5.1 Dump-import: implementatie-keuze
 
 De dump wordt geïmporteerd via de `mysql` CLI binary (`proc_open()`). Dit is efficiënter dan PHP-gebaseerde import (PDO statement-voor-statement) voor grote bestanden, en de `mysql` binary is standaard beschikbaar in de Docker-container.
+
+**Referentie:** `ClaudeCliService` (`yii/services/ClaudeCliService.php:104`) gebruikt dezelfde `proc_open()`-aanpak voor CLI execution met streaming I/O en process management.
 
 **Alternatief (PDO):** Voor kleine dumps (<10MB) zou Yii's `Yii::$app->db->createCommand($sql)->execute()` volstaan, zonder shell-afhankelijkheden. Dit is een implementatie-keuze voor de architect.
 
@@ -467,8 +558,8 @@ Het dump-bestandspad wordt als argument aan een shell-commando doorgegeven (`mys
 | Project-ID niet gevonden in dump | Waarschuwing per ID, ga door met overige IDs. |
 | Project in dump heeft `deleted_at` gevuld | Waarschuwing ("project is soft-deleted in dump"), overslaan. |
 | Lokaal project met zelfde naam bestaat niet | Nieuw project aanmaken (geen delete). |
-| Lokaal project met zelfde naam bestaat wel (één match) | Delete prompt_instances, dan delete project (CASCADE), dan insert. |
-| Lokaal project is soft-deleted (deleted_at IS NOT NULL) | Waarschuwing in dry-run rapport: "Lokaal project is soft-deleted. Na load wordt het opnieuw actief." Load gaat door — de dump is de bron van waarheid. |
+| Lokaal project met zelfde naam bestaat wel (één match) | Delete prompt_instances via raw SQL, dan delete project via raw SQL (CASCADE), dan insert. |
+| Lokaal project is soft-deleted (deleted_at IS NOT NULL) | Uitgefilterd bij naamsmatching — wordt niet als match beschouwd (§3.3.1). Bij expliciete `--local-project-ids`: waarschuwing "Lokaal project is soft-deleted. Na load wordt het opnieuw actief." Load gaat door — de dump is de bron van waarheid. |
 | Meerdere lokale projecten met zelfde naam (zonder `--local-project-ids`) | Fout voor dit project. Toon gevonden projecten, instrueer gebruiker om `--local-project-ids` te gebruiken. |
 | `--local-project-ids` opgegeven maar aantallen kloppen niet met `--project-ids` | Validatiefout, stop. |
 | `prompt_instance` delete faalt | Rollback transactie voor dit project, fout rapporteren, ga door. |
@@ -480,13 +571,18 @@ Het dump-bestandspad wordt als argument aan een shell-commando doorgegeven (`mys
 | Dump bevat `USE`, `CREATE DATABASE` of `DROP DATABASE` statements | Alle drie worden gestript voor import (§3.3 stap 3a). |
 | Meerdere projecten in dump met dezelfde naam | Geen conflict — selectie is op ID, niet op naam. |
 | Geladen project heeft zelfde naam als een ANDER lokaal project (niet de match) | Kan voorkomen als de gebruiker lokaal een project hernoemd heeft. Bij expliciete matching (`--local-project-ids`) is dit geen probleem. Bij naamsmatching kan dit leiden tot meerdere projecten met dezelfde naam — dat is acceptabel. |
-| Dump is van een oudere schema-versie (ontbrekende kolommen) | Schema-validatie in stap 4 detecteert dit. Ontbrekende kolommen worden NULL, waarschuwing getoond. Dynamische kolom-detectie handelt dit automatisch af. |
+| Dump is van een oudere schema-versie (ontbrekende kolommen) | Schema-validatie in stap 4 detecteert dit. Ontbrekende kolommen krijgen een fallback-waarde: NULL (nullable), COLUMN_DEFAULT (NOT NULL met default), of veilige standaardwaarde (NOT NULL zonder default, zie §3.5.1 stap 4). Waarschuwing getoond. |
 | Groot dump-bestand (>100MB) | Waarschuwing getoond. Performance hangt af van MySQL import-snelheid. Geen specifieke optimalisatie nodig voor v1. |
 | `prompt_instance.final_prompt` bevat machine-specifieke bestandspaden | Bekende beperking. Prompt instances zijn snapshots — paden uit file/directory velden zijn al ingevuld en verwijzen mogelijk naar paden die lokaal niet bestaan. Geen actie nodig. |
 | Globale scratch pads (`project_id = NULL`) in de dump | Worden **niet** geladen — alleen project-gebonden scratch pads. Globale scratch pads zijn niet project-scoped. |
-| Process crash na aanmaken temp schema | Orphaned schemas worden opgeruimd bij volgende run (>1 uur oud) of via `project-load/cleanup`. |
+| Process crash na aanmaken temp schema | Orphaned schemas worden opgeruimd bij volgende run (>1 uur oud) of via `project-load/cleanup`. Het temp-schema is read-only tijdens de load — een crash laat geen gedeeltelijke data achter in productie (transactie wordt automatisch teruggedraaid). |
 | EXT-placeholder verwijst naar project waarvan label ontbreekt (NULL) in dump of lokaal | Fallback naar `name + user_id` matching. Als meerdere matches of geen match: bewaar origineel ID + waarschuwing. |
 | Gedeeltelijk succes (project A OK, project B faalt) | Eindrapport vermeldt expliciet welke projecten succesvol en welke gefaald. Gebruiker wordt gewaarschuwd. |
+| `project.label` conflict met ander lokaal project | Als het geladen project een `label` heeft dat al in gebruik is door een ANDER lokaal project van dezelfde user (unique constraint `user_id + label`): stel label NULL bij insert + waarschuwing in rapport ("Label 'X' is al in gebruik door lokaal project ID Y — label niet overgenomen"). Bij dry-run: toon als prominente waarschuwing. |
+| Globaal veld bestaat lokaal als project-veld (of vice versa) | Dezelfde behandeling als §3.5.3: matching is op `name WHERE project_id IS NULL AND user_id = :userId`. Een project-veld met dezelfde naam als een globaal veld is een ander record (andere `project_id`). Geen conflict — de velden bestaan naast elkaar. De placeholder-type (GEN vs PRJ) bepaalt welk veld bedoeld is. |
+| `field.label` conflict bij globale velden | Globale velden hebben unique constraint op `['project_id', 'label', 'user_id']`. Bij nieuw aanmaken van een globaal veld (§3.5.3, bestaat niet lokaal): als het label al in gebruik is door een ander lokaal globaal veld, stel label NULL + waarschuwing. |
+| Dump bevat tabellen die niet in productie-schema bestaan | Negeren — alleen configureerde entiteiten (§3.5.2) worden verwerkt. |
+| `--local-project-ids` verwijst naar project van andere user | Validatiefout: project moet bestaan én van de opgegeven `--user-id` zijn. |
 
 ---
 
@@ -566,6 +662,10 @@ public function testOverrideColumnsExistInSchema(): void
 public function testForeignKeyColumnsExistInSchema(): void
 // Verifieert dat alle FK-kolommen uit de entiteiten-configuratie (§3.5.2)
 // bestaan in het productie-schema.
+
+public function testEntityTablesExistInSchema(): void
+// Verifieert dat alle tabellen uit de entiteiten-configuratie (§3.5.2)
+// bestaan in het productie-schema. Vangt hernoemde/verwijderde tabellen op.
 ```
 
 **Rationale:** De dynamische aanpak elimineert verouderde kolomlijsten, maar de excludes, overrides en FK-configuratie zijn nog steeds handmatig. Deze tests vangen fouten op als die configuratie niet meer klopt na een migratie.
@@ -584,6 +684,12 @@ public function testForeignKeyColumnsExistInSchema(): void
 | Dry-run | Geen data-wijzigingen, rapport correct |
 | Soft-deleted project in dump | Overgeslagen met waarschuwing |
 | Meerdere naam-matches | Foutmelding met instructie voor `--local-project-ids` |
-| Ontbrekende kolom in dump (oudere versie) | NULL voor ontbrekende kolom, waarschuwing |
+| Ontbrekende kolom in dump (oudere versie) | Fallback-waarde gebruikt, waarschuwing |
 | Gelinkt project bestaat niet lokaal | Link overgeslagen, waarschuwing |
 | Transactie-rollback bij insert-fout | Geen gedeeltelijke data, volgend project wordt wél geprobeerd |
+| Label-conflict bij project load | Label op NULL gezet, waarschuwing in rapport |
+| Globaal veld type-mismatch | Lokaal veld behouden, waarschuwing getoond |
+| Meerdere projecten in één run met onderlinge links | Links correct geresolved via tussentijdse ID-mapping |
+| Cleanup verwijdert orphaned schemas | Schemas ouder dan 1 uur worden verwijderd, recente schemas behouden |
+| Cleanup zonder orphaned schemas | Melding "Geen orphaned schemas gevonden" |
+| List met dump van oudere schema-versie | Ontbrekende tabellen tonen `-`, geen crash |
