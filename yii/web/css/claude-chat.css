@@ -1,5 +1,11 @@
 /* Claude Chat Page — scoped styles */
 
+/* Container padding — replaces Bootstrap py-4 for mobile control */
+.claude-chat-page.container {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+}
+
 .claude-chat-page .claude-collapsible-summary {
     display: flex;
     flex-wrap: wrap;
@@ -1453,8 +1459,9 @@
         margin-bottom: 0.5rem;
     }
 
-    /* Reduce padding on container */
+    /* Reduce padding on container — flush against navbar */
     .claude-chat-page.container {
+        padding-top: 0;
         padding-left: 0.75rem;
         padding-right: 0.75rem;
     }

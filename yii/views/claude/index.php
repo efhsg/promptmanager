@@ -72,9 +72,9 @@ if ($breadcrumbs !== null) {
 $this->params['breadcrumbs'][] = 'Claude CLI';
 ?>
 
-<div class="claude-chat-page container py-4">
+<div class="claude-chat-page container">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-none d-md-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h3 mb-0"><i class="bi bi-terminal-fill me-2"></i>Claude CLI</h1>
         </div>
