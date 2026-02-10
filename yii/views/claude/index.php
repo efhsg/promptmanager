@@ -1795,6 +1795,15 @@ $js = <<<JS
                 var actions = document.createElement('div');
                 actions.className = 'claude-message__actions';
 
+                var goBtn = document.createElement('button');
+                goBtn.type = 'button';
+                goBtn.className = 'claude-message__go d-none';
+                goBtn.title = 'Approve and execute (Alt+G)';
+                goBtn.innerHTML = '<i class="bi bi-check-lg"></i> Go!';
+                var self = this;
+                goBtn.addEventListener('click', function() { self.sendFixedText('Proceed'); });
+                actions.appendChild(goBtn);
+
                 var expandBtn = document.createElement('button');
                 expandBtn.type = 'button';
                 expandBtn.className = 'claude-message__expand d-none';
@@ -1822,15 +1831,6 @@ $js = <<<JS
                     }
                 });
                 actions.appendChild(viewProcessBtn);
-
-                var goBtn = document.createElement('button');
-                goBtn.type = 'button';
-                goBtn.className = 'claude-message__go d-none';
-                goBtn.title = 'Approve and execute (Alt+G)';
-                goBtn.innerHTML = '<i class="bi bi-check-lg"></i> Go!';
-                var self = this;
-                goBtn.addEventListener('click', function() { self.sendFixedText('Proceed'); });
-                actions.appendChild(goBtn);
 
                 var copyBtn = this.createCopyButton(markdownContent);
                 actions.appendChild(copyBtn);
