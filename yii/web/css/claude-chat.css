@@ -1380,3 +1380,108 @@
 .claude-chat-page:not(.claude-focus-mode) .claude-focus-toggle .bi-fullscreen-exit {
     display: none;
 }
+
+/* ===================================================================
+   MOBILE OPTIMIZATIONS (< 768px — Bootstrap md breakpoint)
+   =================================================================== */
+@media (max-width: 767.98px) {
+    /* Page header: compact */
+    .claude-chat-page .h3 {
+        font-size: 1.1rem;
+    }
+
+    /* Toolbar: hide indent, header-select, align, and clean groups */
+    .claude-chat-page #claude-quill-toolbar > .ql-formats:nth-child(4),
+    .claude-chat-page #claude-quill-toolbar > .ql-formats:nth-child(5),
+    .claude-chat-page #claude-quill-toolbar > .ql-formats:nth-child(6),
+    .claude-chat-page #claude-quill-toolbar > .ql-formats:nth-child(7) {
+        display: none;
+    }
+
+    /* Editor: smaller default height */
+    .claude-chat-page .claude-prompt-card-sticky .resizable-editor-container {
+        max-height: 40vh;
+    }
+    .claude-chat-page .claude-prompt-card-sticky .resizable-editor {
+        min-height: 6em;
+    }
+
+    /* Sticky offset: mobile navbar is shorter */
+    .claude-chat-page .claude-prompt-card-sticky {
+        top: 56px;
+    }
+
+    /* Focus mode: safe area for iOS virtual keyboard */
+    .claude-chat-page.claude-focus-mode .claude-prompt-card-sticky {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    /* Action buttons: wrap and fill width */
+    .claude-chat-page .claude-prompt-section > .mt-3 {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    .claude-chat-page #claude-send-btn {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    /* Follow-up textarea: slightly shorter */
+    .claude-chat-page .claude-followup-textarea {
+        min-height: 3em;
+    }
+
+    /* Combined bar: stack settings above usage on mobile */
+    .claude-chat-page .claude-combined-bar {
+        font-size: 0.8rem;
+        gap: 0.25rem;
+        padding: 0.35rem 0.5rem;
+        flex-wrap: wrap;
+    }
+    .claude-chat-page .claude-combined-bar__divider {
+        display: none;
+    }
+    .claude-chat-page .claude-combined-bar__settings {
+        flex-basis: 100%;
+    }
+    .claude-chat-page .claude-combined-bar__usage {
+        flex-basis: 100%;
+    }
+
+    /* Settings card: stack model/permission vertically */
+    .claude-chat-page .claude-settings-section .row .col-md-6 {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Reduce padding on container */
+    .claude-chat-page.container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    /* History items: compact headers */
+    .claude-chat-page .claude-history-item__header {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .claude-chat-page .claude-history-item__meta {
+        font-size: 0.7rem;
+    }
+
+    /* Message actions: ensure touch-friendly sizes (min 44px) */
+    .claude-chat-page .claude-message__copy,
+    .claude-chat-page .claude-message__go,
+    .claude-chat-page .claude-message__expand,
+    .claude-chat-page .claude-message__view-process {
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Stream preview: taller on mobile since editor is collapsed */
+    .claude-chat-page .claude-stream-preview__body {
+        max-height: 200px;
+    }
+}

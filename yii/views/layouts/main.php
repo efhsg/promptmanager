@@ -132,7 +132,9 @@ if (!Yii::$app->user->isGuest) {
     <main id="main" class="flex-shrink-0" role="main">
         <div class="container mt-5 pt-5">
             <?php if (!empty($this->params['breadcrumbs'])): ?>
-                <?= Breadcrumbs::widget(['links' => $this->params['breadcrumbs']]) ?>
+                <div class="d-none d-md-block">
+                    <?= Breadcrumbs::widget(['links' => $this->params['breadcrumbs']]) ?>
+                </div>
             <?php endif ?>
             <?= Alert::widget() ?>
             <?= $content ?>

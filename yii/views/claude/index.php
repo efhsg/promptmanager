@@ -551,6 +551,8 @@ $js = <<<JS
                 this.updateSettingsSummary();
                 this.setupEventListeners();
                 this.startUsageAutoRefresh();
+                if (window.matchMedia('(max-width: 767.98px)').matches && this.inputMode === 'quill')
+                    this.switchToTextareaNoConfirm();
             },
 
             prefillFromDefaults: function() {
@@ -2054,6 +2056,10 @@ $js = <<<JS
                     if (!confirm('Switching to plain text will discard all formatting (bold, headers, lists, etc.). Continue?'))
                         return;
                 }
+                this.switchToTextareaNoConfirm();
+            },
+
+            switchToTextareaNoConfirm: function() {
                 var text = quill.getText().replace(/\\n$/, '');
                 document.getElementById('claude-quill-wrapper').classList.add('d-none');
                 document.getElementById('claude-textarea-wrapper').classList.remove('d-none');
@@ -2126,7 +2132,12 @@ $js = <<<JS
                 this.syncCombinedBar();
                 this.expandPromptEditor();
                 this.expandEditor();
-                this.switchToQuill(initialDelta);
+                if (window.matchMedia('(max-width: 767.98px)').matches) {
+                    quill.setContents(initialDelta);
+                    this.switchToTextareaNoConfirm();
+                } else {
+                    this.switchToQuill(initialDelta);
+                }
             },
 
             collapseSettings: function() {
