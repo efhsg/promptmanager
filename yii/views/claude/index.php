@@ -693,14 +693,13 @@ $js = <<<JS
                     self.setStreamPreviewTall(true);
                 });
                 promptCard.addEventListener('shown.bs.collapse', function() {
-                    document.getElementById('claude-prompt-summary').classList.add('d-none');
+                    var summary = document.getElementById('claude-prompt-summary');
+                    summary.classList.add('d-none');
+                    summary.classList.remove('claude-collapsible-summary--attention');
                     self.setStreamPreviewTall(false);
-                    if (self._skipSwapOnExpand) {
-                        self._skipSwapOnExpand = false;
-                    } else {
-                        self.swapEditorAboveResponse();
-                    }
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    self.swapEditorAboveResponse();
+                    if (window.scrollY > 0)
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     self.focusEditor();
                 });
                 document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
@@ -1057,6 +1056,8 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                document.getElementById('claude-prompt-summary')
+                    .classList.add('claude-collapsible-summary--attention');
                 this.scrollToTopUnlessFocused();
                 this.fetchSubscriptionUsage();
             },
@@ -1082,7 +1083,7 @@ $js = <<<JS
                 } else {
                     this.addErrorMessage(msg);
                 }
-                this._skipSwapOnExpand = true;
+
                 this.expandPromptEditor();
             },
 
@@ -1131,7 +1132,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                this._skipSwapOnExpand = true;
+
                 this.expandPromptEditor();
             },
 
@@ -1272,6 +1273,19 @@ $js = <<<JS
 
                 details.appendChild(body);
                 return details;
+            },
+
+            /**
+             * Attach a hidden process block to a response container and wire its gear toggle.
+             */
+            attachProcessBlock: function(container, msgDiv, thinkingContent, processContent) {
+                if (!thinkingContent && !processContent) return;
+                var details = this.createProcessBlock(thinkingContent, processContent);
+                details.classList.add('d-none');
+                container.appendChild(details);
+                msgDiv._processBlock = details;
+                var vpBtn = msgDiv.querySelector('.claude-message__view-process');
+                if (vpBtn) vpBtn.classList.remove('d-none');
             },
 
             removeStreamDots: function() {
@@ -1475,6 +1489,7 @@ $js = <<<JS
                     while (container.firstChild)
                         zones.response.appendChild(container.firstChild);
                     this.reinitQuillViewers(zones.response);
+                    this.checkExpandOverflowAll(zones.response);
                 }
 
                 container.innerHTML = '';
@@ -1505,19 +1520,18 @@ $js = <<<JS
                 var msg = this.createClaudeMessageDiv(claudeContent, meta);
                 container.appendChild(msg.div);
 
+                // Brief border glow to signal inference completed
+                msg.div.classList.add('claude-message--flash');
+                msg.div.addEventListener('animationend', function() {
+                    msg.div.classList.remove('claude-message--flash');
+                }, {once: true});
+
                 // Collapsible process section (thinking + intermediate reasoning)
-                // Hidden by default; toggled via the gear button inside the message.
-                if (this.streamThinkingBuffer || processContent) {
-                    var details = this.createProcessBlock(this.streamThinkingBuffer, processContent);
-                    details.classList.add('d-none');
-                    container.appendChild(details);
-                    msg.div._processBlock = details;
-                    var vpBtn = msg.div.querySelector('.claude-message__view-process');
-                    if (vpBtn) vpBtn.classList.remove('d-none');
-                }
+                this.attachProcessBlock(container, msg.div, this.streamThinkingBuffer, processContent);
 
                 // Initialize Quill after element is in the DOM
                 this.renderToQuillViewer(msg.body, claudeContent);
+                this.checkExpandOverflow(msg.div);
 
                 // Show Go! button only when Claude asks for approval
                 var goBtn = msg.div.querySelector('.claude-message__go');
@@ -1757,6 +1771,19 @@ $js = <<<JS
                 var actions = document.createElement('div');
                 actions.className = 'claude-message__actions';
 
+                var expandBtn = document.createElement('button');
+                expandBtn.type = 'button';
+                expandBtn.className = 'claude-message__expand d-none';
+                expandBtn.title = 'Expand / collapse response';
+                expandBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
+                expandBtn.addEventListener('click', function() {
+                    var expanded = claudeBody.classList.toggle('claude-message__body--expanded');
+                    expandBtn.innerHTML = expanded
+                        ? '<i class="bi bi-arrows-angle-contract"></i>'
+                        : '<i class="bi bi-arrows-angle-expand"></i>';
+                });
+                actions.appendChild(expandBtn);
+
                 var viewProcessBtn = document.createElement('button');
                 viewProcessBtn.type = 'button';
                 viewProcessBtn.className = 'claude-message__view-process d-none';
@@ -1815,15 +1842,9 @@ $js = <<<JS
                 var msg = this.createClaudeMessageDiv(markdownContent, null);
                 container.appendChild(msg.div);
                 this.renderToQuillViewer(msg.body, markdownContent);
+                this.checkExpandOverflow(msg.div);
 
-                if (this.streamThinkingBuffer) {
-                    var details = this.createProcessBlock(this.streamThinkingBuffer, '');
-                    details.classList.add('d-none');
-                    container.appendChild(details);
-                    msg.div._processBlock = details;
-                    var vpBtn = msg.div.querySelector('.claude-message__view-process');
-                    if (vpBtn) vpBtn.classList.remove('d-none');
-                }
+                this.attachProcessBlock(container, msg.div, this.streamThinkingBuffer, '');
                 return msg.body;
             },
 
@@ -1970,6 +1991,24 @@ $js = <<<JS
                 });
             },
 
+            checkExpandOverflow: function(msgDiv) {
+                requestAnimationFrame(function() {
+                    var body = msgDiv.querySelector('.claude-message__body');
+                    var btn = msgDiv.querySelector('.claude-message__expand');
+                    if (!body || !btn) return;
+                    if (body.scrollHeight > body.clientHeight + 2)
+                        btn.classList.remove('d-none');
+                    else
+                        btn.classList.add('d-none');
+                });
+            },
+
+            checkExpandOverflowAll: function(container) {
+                var self = this;
+                var msgs = container.querySelectorAll('.claude-message--claude');
+                msgs.forEach(function(msgDiv) { self.checkExpandOverflow(msgDiv); });
+            },
+
             hasFormatting: function() {
                 var ops = quill.getContents().ops || [];
                 for (var i = 0; i < ops.length; i++) {
@@ -2023,7 +2062,6 @@ $js = <<<JS
                 this.streamResultText = null;
                 this.maxContext = 200000;
                 this.warningDismissed = false;
-                this._skipSwapOnExpand = false;
                 if (this.renderTimer) {
                     clearTimeout(this.renderTimer);
                     this.renderTimer = null;
@@ -2279,7 +2317,7 @@ $js = <<<JS
             scrollToTopUnlessFocused: function() {
                 var editorHasFocus = quill.hasFocus()
                     || document.activeElement === document.getElementById('claude-followup-textarea');
-                if (!editorHasFocus)
+                if (!editorHasFocus && window.scrollY > 0)
                     window.scrollTo({ top: 0, behavior: 'smooth' });
             },
 
@@ -2297,8 +2335,10 @@ $js = <<<JS
                 var promptCard = document.getElementById('claudePromptCard');
                 if (!response || !promptCard || response.classList.contains('d-none')) return;
                 var editor = promptCard.parentElement;
+                var alreadyAbove = editor.compareDocumentPosition(response) & Node.DOCUMENT_POSITION_FOLLOWING;
                 response.parentElement.insertBefore(editor, response);
-                this._animateSwap(editor);
+                if (!alreadyAbove)
+                    this._animateSwap(editor);
             },
 
             swapResponseAboveEditor: function() {
@@ -2306,8 +2346,10 @@ $js = <<<JS
                 var promptCard = document.getElementById('claudePromptCard');
                 if (!response || !promptCard) return;
                 var editor = promptCard.parentElement;
+                var alreadyAbove = response.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING;
                 response.parentElement.insertBefore(response, editor);
-                this._animateSwap(response);
+                if (!alreadyAbove)
+                    this._animateSwap(response);
             },
 
             createCopyButton: function(markdownText) {
