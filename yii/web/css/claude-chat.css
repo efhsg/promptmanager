@@ -377,9 +377,15 @@
     margin-bottom: 0;
 }
 
+.claude-chat-page .claude-stream-preview__body .ql-container {
+    height: auto;
+}
+
 .claude-chat-page .claude-stream-preview__body .ql-editor {
     padding: 0;
     line-height: inherit;
+    overflow: visible;
+    height: auto;
 }
 
 .claude-chat-page .claude-message__body .ql-editor > *:first-child,
@@ -711,6 +717,7 @@
 /* Stream process modal */
 #claudeStreamModal .modal-body {
     max-height: 70vh;
+    overflow-y: auto;
 }
 
 #claudeStreamModal .claude-thinking-block {
