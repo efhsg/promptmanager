@@ -4,7 +4,7 @@
 
 | Eigenschap | Waarde |
 |------------|--------|
-| Versie | 1.1 |
+| Versie | 1.4 |
 | Status | Concept |
 | Datum | 2026-02-10 |
 
@@ -88,7 +88,9 @@ yii project-load/load <dump-bestand> --project-ids=5,8,12 --user-id=2
 
 ```
 1. Valideer dump-bestand (bestaat, leesbaar, .sql extensie)
-2. Maak tijdelijk MySQL-schema (yii_load_temp)
+2. Maak tijdelijk MySQL-schema (yii_load_temp_{pid}, bijv. `yii_load_temp_12345`)
+   - Unieke naam per process voorkomt race conditions bij parallel gebruik
+   - Character set: `CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci` (zelfde als productie-schema)
 3. Importeer dump (strip USE-statements voor veiligheid)
 4. Query projecten uit tijdelijk schema
 5. Toon tabel met projecten en aantallen gerelateerde entiteiten
@@ -120,10 +122,12 @@ Kolommen: Ctx = Contexts, Fld = Fields (project-gebonden), Tpl = Prompt Template
    c. --user-id verwijst naar bestaande user
    d. Als --local-project-ids opgegeven: zelfde aantal als --project-ids, geldige integers, verwijzen naar bestaande projecten van user
 
-2. Maak tijdelijk MySQL-schema (yii_load_temp)
+2. Maak tijdelijk MySQL-schema (yii_load_temp_{pid})
+   - Unieke naam per process voorkomt race conditions bij parallel gebruik
+   - `CREATE DATABASE yii_load_temp_{pid} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
 
 3. Importeer dump in tijdelijk schema
-   a. Strip "USE ..." regels uit dump (voorkom schrijven naar productie-schema)
+   a. Strip `USE`, `CREATE DATABASE` en `DROP DATABASE` regels uit dump (voorkom schrijven naar of aanmaken van onbedoelde schema's)
    b. mysql yii_load_temp < (gefilterde dump)
 
 4. Voor elk gevraagd project-ID:
@@ -138,10 +142,23 @@ Kolommen: Ctx = Contexts, Fld = Fields (project-gebonden), Tpl = Prompt Template
    e. Als --dry-run: genereer rapport (§3.4), ga door met volgend ID
    f. Begin database-transactie
    g. Als lokaal project gevonden:
+      - Bewaar het lokale project-ID voor hergebruik
       - Verwijder prompt_instances (ON DELETE RESTRICT vereist expliciete delete)
       - Verwijder lokaal project ($model->delete() — CASCADE verwijdert rest)
-   h. Insert project met nieuwe auto-increment ID
+   h. Insert project met behoud van lokaal ID (bij vervanging) of nieuw auto-increment ID (bij nieuw project)
+      - Bij vervanging: expliciet het bewaarde lokale ID meegeven als kolomwaarde. Dit voorkomt gebroken referenties vanuit andere projecten (project_linked_project), sessie-data (ProjectContext), en browser-bookmarks.
+      - **Gebruik raw insert** (`Yii::$app->db->createCommand()->insert()`) voor het project-record.
+        Dit is noodzakelijk omdat:
+        1. `Project` gebruikt `TimestampTrait` — ActiveRecord `save()` overschrijft `created_at`/`updated_at`
+        2. `Project::afterSave()` triggert `claudeWorkspaceService->syncConfig()` op een half-geladen project (children zijn nog niet geïnserteerd)
+        3. Consistentie met de raw-insert aanpak voor children (stap 4i)
+      - Bij nieuw project: laat `id` weg uit de insert, MySQL auto-increment bepaalt het ID.
+        Haal het nieuwe ID op via `Yii::$app->db->getLastInsertID()`.
    i. Insert children in afhankelijkheidsvolgorde (§3.6), remap FK-referenties
+      - **Let op: TimestampTrait.** Alle entiteiten gebruiken `TimestampTrait`, dat `created_at`/`updated_at`
+        overschrijft in `beforeSave()`. Om dump-timestamps te behouden: gebruik raw inserts via
+        `Yii::$app->db->createCommand()->insert()` i.p.v. ActiveRecord.
+        Dit geldt voor alle entiteiten inclusief het project zelf (stap 4h).
    j. Remap placeholder-IDs in template_body (§3.7)
    k. Commit transactie (of rollback bij fout)
 
@@ -202,6 +219,8 @@ Lokale match: "MyApp" (ID: 12) → WORDT VERWIJDERD
       dat lokaal niet bestaat. Gebruik --include-global-fields om mee te laden.
     ℹ root_directory, claude_options, claude_context worden niet geladen
       (machine-specifiek) — configureer na het laden.
+    ℹ Lokaal project is soft-deleted (deleted_at = 2026-01-15). Na load wordt
+      het opnieuw actief.
 
 ═══════════════════════════════════════════════════════
 Project: "NewProject" (dump ID: 8)
@@ -225,12 +244,12 @@ Entiteiten die geladen worden voor elk project, met expliciete kolomlijsten. All
 
 | Entiteit | Bron-query (temp schema) | Kolommen | Opmerkingen |
 |----------|--------------------------|----------|-------------|
-| `project` | `WHERE id = :projectId` | name, description, allowed_file_extensions, blacklisted_directories, prompt_instance_copy_format, label, deleted_at, created_at, updated_at | Root entiteit. Kolommen uit §3.9 worden NULL. |
+| `project` | `WHERE id = :projectId` | user_id, name, description, allowed_file_extensions, blacklisted_directories, prompt_instance_copy_format, label, deleted_at, created_at, updated_at | Root entiteit. `user_id` wordt overschreven met `--user-id` (§3.8). Kolommen uit §3.9 worden NULL. `description` = Quill Delta JSON (niet plain text). |
 | `context` | `WHERE project_id = :projectId` | project_id, name, content, is_default, share, order, created_at, updated_at | Quill Delta content. Alle attributen inclusief volgorde en share-status. |
 | `field` | `WHERE project_id = :projectId` | user_id, project_id, name, type, content, share, label, render_label, created_at, updated_at | Project-gebonden velden met alle presentatie-attributen. |
 | `field_option` | `WHERE field_id IN (:projectFieldIds)` | field_id, value, label, selected_by_default, order, created_at, updated_at | Opties van project-velden inclusief volgorde en defaults. |
 | `prompt_template` | `WHERE project_id = :projectId` | project_id, name, template_body, created_at, updated_at | Template body = Quill Delta met placeholder-IDs. |
-| `template_field` | `WHERE template_id IN (:projectTemplateIds)` | template_id, field_id, order, override_label, created_at, updated_at | Pivot tabel inclusief volgorde en label-overschrijvingen. |
+| `template_field` | `WHERE template_id IN (:projectTemplateIds)` | template_id, field_id | Pivot tabel met alleen FK-paar. **NB:** `order`, `override_label` en timestamps zijn verwijderd in migratie `m230101_000002_simplify_template_field`. |
 | `prompt_instance` | `WHERE template_id IN (:projectTemplateIds)` | template_id, label, final_prompt, created_at, updated_at | Gegenereerde prompts. `final_prompt` is gerenderde output, geen remapping nodig (§3.7.1). |
 | `scratch_pad` | `WHERE project_id = :projectId` | user_id, project_id, name, content, response, created_at, updated_at | Inclusief response kolom (ontbrak in oude sync). |
 | `project_linked_project` | `WHERE project_id = :projectId` | project_id, linked_project_id, created_at, updated_at | Eenrichtings: alleen links vanuit dit project. Alleen als gelinkt project lokaal bestaat (§3.5.1). |
@@ -246,7 +265,10 @@ Entiteiten die geladen worden voor elk project, met expliciete kolomlijsten. All
 
 Globale velden worden gematcht op `name + user_id`:
 
-- **Bestaat lokaal:** het **lokale veld behouden** en het lokale ID gebruiken voor remapping. Het globale veld wordt **niet** overschreven, omdat andere lokale projecten/templates ernaar kunnen verwijzen. Waarschuwing in rapport als type of aantal opties verschilt.
+- **Bestaat lokaal:** het **lokale veld behouden** en het lokale ID gebruiken voor remapping. Het globale veld wordt **niet** overschreven, omdat andere lokale projecten/templates ernaar kunnen verwijzen.
+  - **Type verschilt:** waarschuwing in rapport met details (bijv. "Globaal veld 'Language' is lokaal type 'select' maar type 'text' in dump"). Het lokale veld wordt behouden — de gebruiker moet dit handmatig oplossen als het template ander gedrag verwacht.
+  - **Aantal opties verschilt:** waarschuwing in rapport. Geen actie — het lokale veld heeft mogelijk andere opties die door andere projecten worden gebruikt.
+  - In de dry-run worden type-verschillen als **prominente waarschuwing** getoond (niet als informatiemelding), omdat ze functioneel gedrag beïnvloeden.
 - **Bestaat niet lokaal:** nieuw aanmaken met data uit de dump.
 
 **Rationale:** Globale velden zijn per definitie gedeeld tussen projecten. Overschrijven met dump-data kan onbedoeld content wijzigen die door andere lokale projecten wordt gebruikt.
@@ -254,6 +276,10 @@ Globale velden worden gematcht op `name + user_id`:
 ### 3.5.2 Project links: eenrichtingsmodel
 
 `project_linked_project` is een eenrichtingsrelatie: een record `(project_id=A, linked_project_id=B)` betekent dat project A linkt naar project B. Er wordt **geen** omgekeerd record `(B, A)` aangemaakt. Bij het laden worden alleen links **vanuit** het geladen project meegenomen.
+
+**Laadvolgorde is relevant:** Als de dump projecten A en B bevat, en A linkt naar B, laad dan B vóór A (of beide in dezelfde run). Worden ze in aparte runs geladen, dan wordt de link vanuit A naar B pas correct als B al lokaal bestaat op het moment dat A geladen wordt.
+
+**Inkomende links vanuit andere lokale projecten:** Doordat het lokale project-ID behouden wordt bij vervanging (§3.3 stap 4h), blijven `project_linked_project`-records vanuit andere lokale projecten die naar dit project verwijzen intact. Dit is een belangrijk voordeel van ID-hergebruik.
 
 ### 3.6 Insert-volgorde
 
@@ -271,7 +297,7 @@ Entiteiten worden in afhankelijkheidsvolgorde geïnserteerd (ouders voor kindere
 9. project_linked_project (alleen als gelinkt project lokaal bestaat)
 ```
 
-`template_field` moet na zowel `prompt_template` als `field` omdat het naar beide verwijst.
+`field_option` moet na `field` (FK `field_id → field`). `template_field` moet na zowel `prompt_template` als `field` omdat het naar beide verwijst (`template_id → prompt_template`, `field_id → field`).
 
 ### 3.7 Placeholder-ID remapping
 
@@ -283,13 +309,21 @@ Entiteiten worden in afhankelijkheidsvolgorde geïnserteerd (ouders voor kindere
 |------|------|-----------|
 | `PRJ:{{id}}` | Project-veld, mee geladen | Gebruik ID mapping van geladen velden |
 | `GEN:{{id}}` | Globaal veld | Als geladen (--include-global-fields): gebruik mapping. Anders: zoek lokaal veld met zelfde naam, gebruik lokaal ID. Als niet gevonden: bewaar origineel ID + waarschuwing |
-| `EXT:{{id}}` | Veld uit ander project | Zoek veld in temp schema → bepaal naam + project → zoek lokaal project (naam+user_id) → zoek lokaal veld (naam+project_id) → gebruik lokaal ID. Als niet gevonden: bewaar origineel ID + waarschuwing |
+| `EXT:{{id}}` | Veld uit ander project | Zoek veld in temp schema → bepaal veldnaam + bronproject → zoek lokaal project via `label + user_id` (uniek per user, database constraint). Fallback: `name + user_id` (alleen bij precies één match). → zoek lokaal veld (`name + project_id`) → gebruik lokaal ID. Als project niet gevonden of meerdere name-matches: bewaar origineel ID + waarschuwing |
 
-**Regex voor remapping:**
+**Remapping-implementatie (conform bestaand patroon):**
 
-```
-/(GEN|PRJ|EXT):\{\{(\d+)\}\}/
-```
+De codebase past placeholder-regex altijd toe op individuele Quill Delta ops, niet op de ruwe JSON-string. De remapping moet dit patroon volgen:
+
+1. Parse `template_body` als JSON → `$delta['ops']` array
+2. Itereer over elke op: als `$op['insert']` een string is, pas regex toe
+3. Regex: `/(GEN|PRJ|EXT):\{\{(\d+)\}\}/`
+4. Vervang gematchte IDs via de ID-mapping
+5. Re-encode naar JSON
+
+**Referentie-implementatie:** `PromptTemplateService::convertPlaceholdersToIds()` (`yii/services/PromptTemplateService.php:116-143`) volgt exact dit patroon.
+
+**Waarom niet op de ruwe JSON-string?** Regex op de ruwe string riskeert false positives in JSON-attributen en wijkt af van het gevestigde codebase-patroon.
 
 Dit lost ook de bestaande sync-bug op (placeholder-IDs werden niet geremapped).
 
@@ -300,9 +334,9 @@ Dit lost ook de bestaande sync-bug op (placeholder-IDs werden niet geremapped).
 **`template_field` records:**
 
 Template_field records koppelen template_id aan field_id. Na remapping van beide IDs:
-- Als field_id verwijst naar een geladen project-veld: gebruik geremapte ID
-- Als field_id verwijst naar een globaal veld: gebruik geremapte of lokale ID
-- Als field_id verwijst naar een extern veld: zoek lokaal ID
+- Als field_id voorkomt in de ID-mapping van geladen project-velden: gebruik geremapte ID
+- Als field_id voorkomt in de ID-mapping van geladen globale velden: gebruik geremapte of lokale ID
+- Als field_id in **geen van beide** mappings voorkomt: behandel als extern veld (EXT) — zoek lokaal ID via dezelfde strategie als EXT-placeholder remapping in §3.7 (label + user_id → veldnaam + project_id)
 - Als veld niet gevonden: template_field record overslaan + waarschuwing
 
 ### 3.8 User-ID afhandeling
@@ -348,7 +382,13 @@ Deze kolommen worden op `NULL` gezet bij het laden. Als het project al lokaal be
 - Bestandstoegang: dump-bestand moet leesbaar zijn voor de PHP-procesuser
 - MySQL-user moet `CREATE DATABASE` en `DROP DATABASE` rechten hebben voor het tijdelijk schema
 
-### 5.1 Bestandspad-sanitization
+### 5.1 Dump-import: implementatie-keuze
+
+De dump wordt geïmporteerd via de `mysql` CLI binary (`proc_open()`). Dit is efficiënter dan PHP-gebaseerde import (PDO statement-voor-statement) voor grote bestanden, en de `mysql` binary is standaard beschikbaar in de Docker-container.
+
+**Alternatief (PDO):** Voor kleine dumps (<10MB) zou Yii's `Yii::$app->db->createCommand($sql)->execute()` volstaan, zonder shell-afhankelijkheden. Dit is een implementatie-keuze voor de architect.
+
+### 5.2 Bestandspad-sanitization
 
 Het dump-bestandspad wordt als argument aan een shell-commando doorgegeven (`mysql ... < bestand`). Om shell injection te voorkomen:
 
@@ -356,7 +396,7 @@ Het dump-bestandspad wordt als argument aan een shell-commando doorgegeven (`mys
 - Valideer extensie (`.sql` of `.dump`)
 - Gebruik `escapeshellarg()` voor het pad in het shell-commando
 - Voer mysql uit via `proc_open()` of Yii2's `Process`, **niet** via `shell_exec()` of backticks
-- Geen user-input in de SQL die naar het temp-schema gestuurd wordt (schema-naam is hardcoded)
+- Geen user-input in de SQL die naar het temp-schema gestuurd wordt (schema-naam is per-process gegenereerd, niet door gebruiker bepaald)
 
 ---
 
@@ -371,6 +411,7 @@ Het dump-bestandspad wordt als argument aan een shell-commando doorgegeven (`mys
 | Project in dump heeft `deleted_at` gevuld | Waarschuwing ("project is soft-deleted in dump"), overslaan. |
 | Lokaal project met zelfde naam bestaat niet | Nieuw project aanmaken (geen delete). |
 | Lokaal project met zelfde naam bestaat wel (één match) | Delete prompt_instances, dan delete project (CASCADE), dan insert. |
+| Lokaal project is soft-deleted (deleted_at IS NOT NULL) | Waarschuwing in dry-run rapport: "Lokaal project is soft-deleted. Na load wordt het opnieuw actief." Load gaat door — de dump is de bron van waarheid. |
 | Meerdere lokale projecten met zelfde naam (zonder `--local-project-ids`) | Fout voor dit project. Toon gevonden projecten, instrueer gebruiker om `--local-project-ids` te gebruiken. |
 | `--local-project-ids` opgegeven maar aantallen kloppen niet met `--project-ids` | Validatiefout, stop. |
 | `prompt_instance` delete faalt | Rollback transactie voor dit project, fout rapporteren, ga door. |
@@ -378,12 +419,14 @@ Het dump-bestandspad wordt als argument aan een shell-commando doorgegeven (`mys
 | Gelinkt project bestaat niet lokaal | `project_linked_project` record overslaan, waarschuwing in rapport. |
 | Template refereert globaal veld dat niet lokaal bestaat (zonder `--include-global-fields`) | Waarschuwing. Template wordt geladen maar placeholder verwijst naar niet-bestaand veld. |
 | Template refereert extern veld (EXT) dat niet lokaal bestaat | Waarschuwing. Placeholder behouden met dump-ID. |
-| Temp schema `yii_load_temp` bestaat al | Droppen en opnieuw aanmaken. |
-| Dump bevat `USE` of `CREATE DATABASE` statements | `USE`-statements worden gestript voor import. `CREATE DATABASE` genegeerd (schema al aangemaakt). |
+| Temp schema met zelfde PID bestaat al (onwaarschijnlijk) | Droppen en opnieuw aanmaken. |
+| Dump bevat `USE`, `CREATE DATABASE` of `DROP DATABASE` statements | Alle drie worden gestript voor import (§3.3 stap 3a). |
 | Meerdere projecten in dump met dezelfde naam | Geen conflict — selectie is op ID, niet op naam. |
 | Geladen project heeft zelfde naam als een ANDER lokaal project (niet de match) | Kan voorkomen als de gebruiker lokaal een project hernoemd heeft. Bij expliciete matching (`--local-project-ids`) is dit geen probleem. Bij naamsmatching kan dit leiden tot meerdere projecten met dezelfde naam — dat is acceptabel. |
 | Dump is van een oudere schema-versie (ontbrekende kolommen) | Ontbrekende kolommen worden NULL. Waarschuwing als verwachte kolommen ontbreken. |
 | Groot dump-bestand (>100MB) | Performance hangt af van MySQL import-snelheid. Geen specifieke optimalisatie nodig voor v1. |
+| `prompt_instance.final_prompt` bevat machine-specifieke bestandspaden | Bekende beperking. Prompt instances zijn snapshots — paden uit file/directory velden zijn al ingevuld en verwijzen mogelijk naar paden die lokaal niet bestaan. Geen actie nodig. |
+| Globale scratch pads (`project_id = NULL`) in de dump | Worden **niet** geladen — alleen project-gebonden scratch pads. Globale scratch pads zijn niet project-scoped. |
 
 ---
 
@@ -413,6 +456,8 @@ Het dump-bestandspad wordt als argument aan een shell-commando doorgegeven (`mys
 Implementeer `ProjectLoadController` en bijbehorende services.
 
 ### Stap 2: Sync-code verwijdering (apart)
+**Criterium:** Verwijdering is veilig nadat de project-load functionaliteit succesvol is gebruikt voor minimaal 2 load-cycli (heen en terug tussen omgevingen) zonder dataloss.
+
 De volgende bestanden en configuratie worden verwijderd:
 
 | Bestand | Reden |
@@ -434,9 +479,9 @@ De `sync`-configuratie in `params.php` (`remoteHost`, `remoteUser`, etc.) kan oo
 
 | # | Aanname | Impact als onjuist |
 |---|---------|---------------------|
-| 1 | Dump-formaat is standaard `mysqldump` output (SQL met CREATE TABLE + INSERT) | Import naar temp schema mislukt |
+| 1 | Dump-formaat is standaard `mysqldump` output (SQL met CREATE TABLE + INSERT). Verwacht commando: `mysqldump --no-create-db --skip-add-locks --skip-lock-tables yii > dump.sql` | Import naar temp schema mislukt |
 | 2 | MySQL-user heeft `CREATE DATABASE` / `DROP DATABASE` rechten | Temp schema kan niet aangemaakt worden |
 | 3 | `mysqldump` is uitgevoerd **zonder** `--databases` flag (geen USE-statements) | USE-statements worden gestript, maar CREATE DATABASE-statements kunnen tot verwarring leiden |
 | 4 | Enkele gebruiker per machine (`--user-id` is consistent) | Data wordt aan verkeerde gebruiker gekoppeld |
 | 5 | Projectnamen zijn **niet** uniek per gebruiker (geen DB constraint, geen model validatie). Matching-strategie in §3.3.1 houdt hier rekening mee. | N.v.t. — opgelost door matching-strategie met `--local-project-ids` fallback |
-| 6 | `prompt_instance.template_id` FK is ON DELETE RESTRICT. **NB:** De initiele migratie (`m230101_000001`) zet deze FK als RESTRICT, maar migratie `m250610_000002` probeert een CASCADE FK toe te voegen. Op bestaande databases is deze migratie een no-op omdat de FK al bestaat. **Verifieer in de doelomgeving met `SHOW CREATE TABLE prompt_instance`.** | Als FK toch CASCADE is, zijn de expliciete deletes in §3.3 stap 4g overbodig maar niet schadelijk. Veiligheidshalve altijd expliciet verwijderen. |
+| 6 | `prompt_instance.template_id` FK is ON DELETE RESTRICT. **NB:** De initiële migratie (`m230101_000001`) maakt FK `fk_prompt_instance_template` aan met RESTRICT. Migratie `m250610_000002` controleert via `INFORMATION_SCHEMA` of er al een FK op `template_id → prompt_template` bestaat — zo ja, slaat de migratie het aanmaken over (idempotent). Op bestaande databases is het resultaat daarom altijd RESTRICT. **Verifieer in de doelomgeving met `SHOW CREATE TABLE prompt_instance`.** | Als FK toch CASCADE is, zijn de expliciete deletes in §3.3 stap 4g overbodig maar niet schadelijk. Veiligheidshalve altijd expliciet verwijderen. |
