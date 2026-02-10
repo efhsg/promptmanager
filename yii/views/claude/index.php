@@ -700,6 +700,7 @@ $js = <<<JS
                     } else {
                         self.swapEditorAboveResponse();
                     }
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                     self.focusEditor();
                 });
                 document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
