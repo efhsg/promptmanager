@@ -1506,9 +1506,14 @@ $js = <<<JS
                 container.appendChild(msg.div);
 
                 // Collapsible process section (thinking + intermediate reasoning)
+                // Hidden by default; toggled via the gear button inside the message.
                 if (this.streamThinkingBuffer || processContent) {
                     var details = this.createProcessBlock(this.streamThinkingBuffer, processContent);
+                    details.classList.add('d-none');
                     container.appendChild(details);
+                    msg.div._processBlock = details;
+                    var vpBtn = msg.div.querySelector('.claude-message__view-process');
+                    if (vpBtn) vpBtn.classList.remove('d-none');
                 }
 
                 // Initialize Quill after element is in the DOM
@@ -1749,8 +1754,23 @@ $js = <<<JS
                 claudeBody.setAttribute('data-quill-markdown', markdownContent);
                 claudeDiv.appendChild(claudeBody);
 
-                var copyBtn = this.createCopyButton(markdownContent);
-                claudeDiv.appendChild(copyBtn);
+                var actions = document.createElement('div');
+                actions.className = 'claude-message__actions';
+
+                var viewProcessBtn = document.createElement('button');
+                viewProcessBtn.type = 'button';
+                viewProcessBtn.className = 'claude-message__view-process d-none';
+                viewProcessBtn.title = 'View process';
+                viewProcessBtn.innerHTML = '<i class="bi bi-gear-fill"></i>';
+                viewProcessBtn.addEventListener('click', function() {
+                    var block = claudeDiv._processBlock;
+                    if (block) {
+                        var hidden = block.classList.toggle('d-none');
+                        viewProcessBtn.classList.toggle('active');
+                        if (!hidden) block.open = true;
+                    }
+                });
+                actions.appendChild(viewProcessBtn);
 
                 var goBtn = document.createElement('button');
                 goBtn.type = 'button';
@@ -1759,7 +1779,12 @@ $js = <<<JS
                 goBtn.innerHTML = '<i class="bi bi-check-lg"></i> Go!';
                 var self = this;
                 goBtn.addEventListener('click', function() { self.sendFixedText('Proceed'); });
-                claudeDiv.appendChild(goBtn);
+                actions.appendChild(goBtn);
+
+                var copyBtn = this.createCopyButton(markdownContent);
+                actions.appendChild(copyBtn);
+
+                claudeDiv.appendChild(actions);
 
                 // Meta always visible in header bar
                 if (meta) {
@@ -1793,7 +1818,11 @@ $js = <<<JS
 
                 if (this.streamThinkingBuffer) {
                     var details = this.createProcessBlock(this.streamThinkingBuffer, '');
+                    details.classList.add('d-none');
                     container.appendChild(details);
+                    msg.div._processBlock = details;
+                    var vpBtn = msg.div.querySelector('.claude-message__view-process');
+                    if (vpBtn) vpBtn.classList.remove('d-none');
                 }
                 return msg.body;
             },
