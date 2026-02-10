@@ -204,11 +204,6 @@ Only run after Phase 1 issues are resolved:
 
 **Note:** If Phase 1 has Critical/High/Medium findings, do not proceed to Phase 2. Report Phase 1 findings and recommend fixes first.
 
-## Next Step
-
-If the review status is **PASS** or **PASS WITH COMMENTS** (no Critical/High/Medium findings):
-- Suggest: "Ready to finalize? Run `/finalize-changes` to lint, test, and prepare the commit."
-
 ## Definition of Done
 
 - All changed files reviewed against Phase 1 checklist
@@ -217,3 +212,4 @@ If the review status is **PASS** or **PASS WITH COMMENTS** (no Critical/High/Med
 - Overall status reflects severity of findings
 - Phase 2 only runs when Phase 1 has no Critical/High/Medium issues
 - Output follows the required format
+- If status is **PASS** or **PASS WITH COMMENTS** (no Critical/High/Medium findings), end your response with: "Ready to finalize? Run `/finalize-changes` to lint, test, and prepare the commit."
