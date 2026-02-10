@@ -123,6 +123,7 @@ return [
                 'generate-prompt-form' => 'generatePrompt',
                 'generate-final-prompt' => 'generatePrompt',
                 'save-final-prompt' => 'generatePrompt',
+                'fetchContent' => 'viewPromptInstance',
             ],
             'permissions' => [
                 'createPromptInstance' => [
@@ -167,6 +168,7 @@ return [
                 'update' => 'updateScratchPad',
                 'delete' => 'deleteScratchPad',
                 'claude' => 'viewScratchPad',
+                'fetchContent' => 'viewScratchPad',
             ],
             'permissions' => [
                 'createScratchPad' => [

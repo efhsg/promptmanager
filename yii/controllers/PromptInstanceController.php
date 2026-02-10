@@ -439,6 +439,21 @@ class PromptInstanceController extends Controller
         return ['success' => true, 'redirectUrl' => Url::to(['view', 'id' => $model->id])];
     }
 
+    /**
+     * @throws NotFoundHttpException
+     */
+    public function actionFetchContent(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = $this->promptInstanceService->findModelWithOwner($id, Yii::$app->user->id);
+
+        return [
+            'success' => true,
+            'content' => $model->final_prompt,
+            'projectId' => $model->template?->project_id,
+        ];
+    }
+
     public function actionSuggestLabel(): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;

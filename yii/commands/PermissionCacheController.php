@@ -24,6 +24,8 @@ class PermissionCacheController extends Controller
      */
     public function actionWarm(): int
     {
+        EntityPermissionService::invalidatePermissionCache();
+        $this->stdout("Permission cache invalidated.\n");
         $this->stdout("Warming permission cache...\n");
 
         $entities = Yii::$app->params['rbac']['entities'] ?? [];

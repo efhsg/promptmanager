@@ -6,6 +6,7 @@ use app\models\PromptInstance;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\StringHelper;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
@@ -126,11 +127,66 @@ echo $this->render('_breadcrumbs', [
                             $id = is_array($model) ? $model['id'] : $model->id;
                             return Url::toRoute([$action, 'id' => $id]);
                         },
-                        'template' => '{update} {delete}',
+                        'template' => '{claude} {update} {delete}',
                         'buttonOptions' => ['data-confirm' => false],
+                        'buttons' => [
+                            'claude' => function ($url, PromptInstance $model) {
+                                $projectId = $model->template?->project_id;
+                                $disabled = $projectId === null;
+                                $tooltip = $disabled ? 'Project required' : 'Talk to Claude';
+                                $claudeUrl = $disabled ? '#' : Url::to(['/claude/index', 'p' => $projectId, 'breadcrumbs' => Json::encode([
+                                    ['label' => 'Prompt Instances', 'url' => Url::to(['/prompt-instance/index'])],
+                                    ['label' => $model->label ?: 'Instance #' . $model->id, 'url' => Url::to(['/prompt-instance/view', 'id' => $model->id])],
+                                ])]);
+                                return Html::button('<i class="bi bi-terminal-fill"></i>', [
+                                    'class' => 'btn btn-link p-0 claude-launch-btn' . ($disabled ? ' disabled text-muted' : ''),
+                                    'title' => $tooltip,
+                                    'data-bs-toggle' => 'tooltip',
+                                    'data-id' => $model->id,
+                                    'data-claude-url' => $claudeUrl,
+                                    'disabled' => $disabled,
+                                ]);
+                            },
+                        ],
                     ],
                 ],
             ]); ?>
         </div>
     </div>
 </div>
+
+<?php
+$fetchUrl = Json::encode(Url::to(['/prompt-instance/fetch-content']));
+$script = <<<JS
+    document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (this.disabled) return;
+
+            var id = this.dataset.id;
+            var claudeUrl = this.dataset.claudeUrl;
+            var button = this;
+            button.disabled = true;
+
+            var sep = {$fetchUrl}.indexOf('?') === -1 ? '?' : '&';
+            fetch({$fetchUrl} + sep + 'id=' + id, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.content) {
+                    sessionStorage.setItem('claudePromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
+                }
+                window.location.href = claudeUrl;
+            })
+            .catch(function() {
+                window.location.href = claudeUrl;
+            })
+            .finally(function() {
+                button.disabled = false;
+            });
+        });
+    });
+JS;
+$this->registerJs($script);
+?>

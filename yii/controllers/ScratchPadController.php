@@ -411,6 +411,21 @@ class ScratchPadController extends Controller
     }
 
     /**
+     * @throws NotFoundHttpException
+     */
+    public function actionFetchContent(int $id): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = $this->findModel($id);
+
+        return [
+            'success' => true,
+            'content' => $model->content,
+            'projectId' => $model->project_id,
+        ];
+    }
+
+    /**
      * @deprecated Use ClaudeController::actionIndex instead. Redirects for backward compatibility.
      * @throws NotFoundHttpException
      */

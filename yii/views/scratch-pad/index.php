@@ -5,6 +5,7 @@ use app\models\ScratchPadSearch;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
+use yii\helpers\Json;
 use yii\helpers\Url;
 
 /** @var yii\web\View $this */
@@ -94,8 +95,26 @@ $this->params['breadcrumbs'][] = $this->title;
                     [
                         'class' => ActionColumn::class,
                         'urlCreator' => fn($action, $model) => Url::toRoute([$action, 'id' => $model->id]),
-                        'template' => '{update} {delete}',
+                        'template' => '{claude} {update} {delete}',
                         'buttonOptions' => ['data-confirm' => false],
+                        'buttons' => [
+                            'claude' => function ($url, ScratchPad $model) {
+                                $disabled = $model->project_id === null;
+                                $tooltip = $disabled ? 'Project required' : 'Talk to Claude';
+                                $claudeUrl = $disabled ? '#' : Url::to(['/claude/index', 'p' => $model->project_id, 'breadcrumbs' => Json::encode([
+                                    ['label' => 'Saved Scratch Pads', 'url' => Url::to(['/scratch-pad/index'])],
+                                    ['label' => $model->name, 'url' => Url::to(['/scratch-pad/view', 'id' => $model->id])],
+                                ])]);
+                                return Html::button('<i class="bi bi-terminal-fill"></i>', [
+                                    'class' => 'btn btn-link p-0 claude-launch-btn' . ($disabled ? ' disabled text-muted' : ''),
+                                    'title' => $tooltip,
+                                    'data-bs-toggle' => 'tooltip',
+                                    'data-id' => $model->id,
+                                    'data-claude-url' => $claudeUrl,
+                                    'disabled' => $disabled,
+                                ]);
+                            },
+                        ],
                     ],
                 ],
             ]); ?>
@@ -109,3 +128,39 @@ $this->params['breadcrumbs'][] = $this->title;
 ]) ?>
 
 <?= $this->render('_import-modal') ?>
+
+<?php
+$fetchUrl = Json::encode(Url::to(['/scratch-pad/fetch-content']));
+$script = <<<JS
+    document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (this.disabled) return;
+
+            var id = this.dataset.id;
+            var claudeUrl = this.dataset.claudeUrl;
+            var button = this;
+            button.disabled = true;
+
+            var sep = {$fetchUrl}.indexOf('?') === -1 ? '?' : '&';
+            fetch({$fetchUrl} + sep + 'id=' + id, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success && data.content) {
+                    sessionStorage.setItem('claudePromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
+                }
+                window.location.href = claudeUrl;
+            })
+            .catch(function() {
+                window.location.href = claudeUrl;
+            })
+            .finally(function() {
+                button.disabled = false;
+            });
+        });
+    });
+JS;
+$this->registerJs($script);
+?>
