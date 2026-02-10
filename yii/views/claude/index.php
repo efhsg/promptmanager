@@ -232,32 +232,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                         </a>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
-                        <div id="claude-summarize-group" class="btn-group d-none">
-                            <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary"
-                                    title="Summarize conversation and start a new session with the summary">
-                                <i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session
-                            </button>
-                            <button type="button" id="claude-summarize-split-toggle"
-                                    class="btn btn-outline-secondary dropdown-toggle dropdown-toggle-split"
-                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                <span class="visually-hidden">Toggle Dropdown</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="#" id="claude-summarize-btn">
-                                        <i class="bi bi-pencil-square me-1"></i> Summarize
-                                        <small class="d-block text-muted">Review summary before sending</small>
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item" href="#" id="claude-new-session-btn">
-                                        <i class="bi bi-x-circle me-1"></i> New Session
-                                        <small class="d-block text-muted">Discard context and start fresh</small>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
                         <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
                             <i class="bi bi-arrow-counterclockwise"></i> Last prompt
                         </button>
@@ -282,8 +256,34 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 
     <!-- Exchange History Accordion (exchanges go here immediately on send) -->
     <div id="claude-history-wrapper" class="d-none mb-4">
-        <div class="d-flex justify-content-end mb-2">
-            <button type="button" id="claude-toggle-history-btn" class="btn btn-outline-secondary btn-sm">
+        <div class="d-flex align-items-center mb-2">
+            <div id="claude-summarize-group" class="btn-group d-none">
+                <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary btn-sm"
+                        title="Summarize conversation and start a new session with the summary">
+                    <i class="bi bi-arrow-repeat"></i> Summarize &amp; New Session
+                </button>
+                <button type="button" id="claude-summarize-split-toggle"
+                        class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-toggle-split"
+                        data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">Toggle Dropdown</span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li>
+                        <a class="dropdown-item" href="#" id="claude-summarize-btn">
+                            <i class="bi bi-pencil-square me-1"></i> Summarize
+                            <small class="d-block text-muted">Review summary before sending</small>
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" href="#" id="claude-new-session-btn">
+                            <i class="bi bi-x-circle me-1"></i> New Session
+                            <small class="d-block text-muted">Discard context and start fresh</small>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <button type="button" id="claude-toggle-history-btn" class="btn btn-outline-secondary btn-sm ms-auto">
                 <i class="bi bi-arrows-collapse"></i> Collapse All
             </button>
         </div>
@@ -652,6 +652,7 @@ $js = <<<JS
                         var visibleGo = document.querySelector('.claude-message__go:not(.d-none)');
                         if (visibleGo) {
                             e.preventDefault();
+                            document.getElementById('claude-summary-reply-btn').classList.add('d-none');
                             self.sendFixedText('Proceed');
                         }
                     }
@@ -1801,7 +1802,10 @@ $js = <<<JS
                 goBtn.title = 'Approve and execute (Alt+G)';
                 goBtn.innerHTML = '<i class="bi bi-check-lg"></i> Go!';
                 var self = this;
-                goBtn.addEventListener('click', function() { self.sendFixedText('Proceed'); });
+                goBtn.addEventListener('click', function() {
+                    document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                    self.sendFixedText('Proceed');
+                });
                 actions.appendChild(goBtn);
 
                 var expandBtn = document.createElement('button');
@@ -2149,6 +2153,9 @@ $js = <<<JS
             },
 
             replyExpand: function() {
+                var container = document.getElementById('claude-active-response-container');
+                var goBtn = container ? container.querySelector('.claude-message__go') : null;
+                if (goBtn) goBtn.classList.add('d-none');
                 this._replyExpand = true;
                 this.expandPromptEditor();
             },
