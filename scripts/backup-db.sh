@@ -9,8 +9,10 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Load database credentials from .env
-source "$PROJECT_DIR/.env"
+# Load only needed database credentials from .env
+DB_NAME=$(grep '^DB_DATABASE=' "$PROJECT_DIR/.env" | cut -d= -f2-)
+DB_USER=$(grep '^DB_USER=' "$PROJECT_DIR/.env" | cut -d= -f2-)
+DB_PASSWORD=$(grep '^DB_PASSWORD=' "$PROJECT_DIR/.env" | cut -d= -f2-)
 
 # Configuration
 BACKUP_DIR="/tmp/promptmanager_backups"
@@ -19,9 +21,6 @@ RETENTION_MONTHLY=365 # Monthly backups (1st of month): keep 1 year
 
 # Google Drive folder ID (find via: right-click folder in Drive > Get link > extract ID from URL)
 GDRIVE_FOLDER_ID="1OKY3B49FWW16dBMOUsDyKVnPuLkXmXOC"
-
-# Map .env variable names
-DB_NAME="$DB_DATABASE"
 
 # Timestamp and backup type (monthly on 1st of month, daily otherwise)
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
