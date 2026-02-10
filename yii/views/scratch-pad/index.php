@@ -2,10 +2,12 @@
 
 use app\models\ScratchPad;
 use app\models\ScratchPadSearch;
+use app\presenters\PromptInstancePresenter;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\Json;
+use yii\helpers\StringHelper;
 use yii\helpers\Url;
 
 /** @var yii\web\View $this */
@@ -82,7 +84,27 @@ $this->params['breadcrumbs'][] = $this->title;
                     'style' => 'cursor: pointer;',
                 ],
                 'columns' => [
-                    'name',
+                    [
+                        'attribute' => 'name',
+                        'format' => 'raw',
+                        'value' => static function (ScratchPad $model): string {
+                            $name = $model->name;
+                            if ($name === null || $name === '') {
+                                $name = 'N/A';
+                            }
+                            $truncated = StringHelper::truncate($name, 50, '...');
+                            $plain = StringHelper::truncate(
+                                PromptInstancePresenter::extractPlain($model->content),
+                                500,
+                                '...',
+                            );
+                            return Html::tag('span', Html::encode($truncated), [
+                                'title' => $plain,
+                                'data-bs-toggle' => 'tooltip',
+                                'data-bs-placement' => 'bottom',
+                            ]);
+                        },
+                    ],
                     [
                         'attribute' => 'project_id',
                         'label' => 'Scope',

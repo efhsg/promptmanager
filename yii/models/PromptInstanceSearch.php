@@ -78,7 +78,7 @@ class PromptInstanceSearch extends PromptInstance
         ];
 
         $dataProvider->sort->defaultOrder = [
-            'label' => SORT_ASC,
+            'updated_at' => SORT_DESC,
         ];
 
         $dataProvider->sort->attributes['projectName'] = [

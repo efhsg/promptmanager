@@ -94,9 +94,23 @@ echo $this->render('_breadcrumbs', [
                     [
                         'attribute' => 'label',
                         'label' => 'Label',
+                        'format' => 'raw',
                         'value' => static function (PromptInstance $model): string {
                             $label = $model->label;
-                            return $label === null || $label === '' ? 'N/A' : $label;
+                            if ($label === null || $label === '') {
+                                $label = 'N/A';
+                            }
+                            $truncated = StringHelper::truncate($label, 50, '...');
+                            $plain = StringHelper::truncate(
+                                PromptInstancePresenter::extractPlain($model->final_prompt),
+                                500,
+                                '...',
+                            );
+                            return Html::tag('span', Html::encode($truncated), [
+                                'title' => $plain,
+                                'data-bs-toggle' => 'tooltip',
+                                'data-bs-placement' => 'bottom',
+                            ]);
                         },
                     ],
                     [
@@ -105,15 +119,6 @@ echo $this->render('_breadcrumbs', [
                         'enableSorting' => true,
                         'value' => static function (PromptInstance $model): string {
                             return $model->template ? $model->template->name : 'N/A';
-                        },
-                    ],
-                    [
-                        'attribute' => 'final_prompt',
-                        'label' => 'Final Prompt',
-                        'format' => 'ntext',
-                        'value' => static function (PromptInstance $model): string {
-                            $plain = PromptInstancePresenter::extractPlain($model->final_prompt);
-                            return StringHelper::truncate($plain, 100, '...');
                         },
                     ],
                     [
