@@ -434,7 +434,7 @@
 .claude-chat-page .claude-message__body {
     font-size: 0.95rem;
     line-height: 1.6;
-    max-height: 15em;
+    max-height: 23em;
     overflow-y: auto;
 }
 

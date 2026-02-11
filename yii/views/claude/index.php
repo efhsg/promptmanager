@@ -935,7 +935,7 @@ $js = <<<JS
             /**
              * Render choice buttons into the message actions area.
              */
-            renderChoiceButtons: function(messageDiv, options, claudeContent) {
+            renderChoiceButtons: function(messageDiv, options) {
                 var actions = messageDiv.querySelector('.claude-message__actions');
                 if (!actions) return;
 
@@ -952,9 +952,9 @@ $js = <<<JS
 
                         if (opt.action === 'edit') {
                             btn.classList.add('claude-choice-btn--edit');
-                            btn.title = 'Open editor with response';
+                            btn.title = 'Open editor';
                             btn.addEventListener('click', function() {
-                                self.choiceEdit(claudeContent);
+                                self.choiceEdit();
                             });
                         } else {
                             btn.addEventListener('click', function() {
@@ -978,25 +978,10 @@ $js = <<<JS
             },
 
             /**
-             * Choice action: load Claude's response (minus the choice line) into the editor.
+             * Choice action: open the prompt editor (empty) for the user to type.
              */
-            choiceEdit: function(claudeContent) {
+            choiceEdit: function() {
                 document.getElementById('claude-summary-reply-btn').classList.add('d-none');
-                // Strip the last line (the choice question) from the response
-                var lines = claudeContent.trimEnd().split('\\n');
-                for (var i = lines.length - 1; i >= 0; i--) {
-                    if (lines[i].trim()) { lines.splice(i, 1); break; }
-                }
-                var content = lines.join('\\n').trimEnd();
-
-                // Load into editor
-                if (this.inputMode === 'quill') {
-                    var delta = quill.clipboard.convert({ html: this.renderMarkdown(content) });
-                    quill.setContents(delta);
-                } else {
-                    document.getElementById('claude-followup-textarea').value = content;
-                }
-
                 this.replyExpand();
             },
 
@@ -1674,7 +1659,7 @@ $js = <<<JS
                 // Show choice buttons or Go! button depending on response pattern
                 var choiceOptions = this.parseChoiceOptions(claudeContent);
                 if (choiceOptions) {
-                    this.renderChoiceButtons(msg.div, choiceOptions, claudeContent);
+                    this.renderChoiceButtons(msg.div, choiceOptions);
                 } else {
                     var goBtn = msg.div.querySelector('.claude-message__go');
                     if (goBtn && this.needsApproval(claudeContent))
