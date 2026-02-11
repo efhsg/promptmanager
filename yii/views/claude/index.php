@@ -373,11 +373,12 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="claudeStreamModalLabel">
-                        <i class="bi bi-terminal-fill me-1"></i> Claude Process
-                        <span id="claude-modal-dots" class="claude-thinking-dots">
-                            <span></span><span></span><span></span>
+                        <i class="bi bi-terminal-fill me-1"></i>
+                        <span id="claude-modal-status-label" class="claude-stream-status">Claude thinking
+                            <span id="claude-modal-dots" class="claude-thinking-dots"><span></span><span></span><span></span></span>
                         </span>
                     </h5>
+                    <span id="claude-modal-timer" class="claude-stream-timer me-2"></span>
                     <button type="button" id="claude-modal-cancel-btn" class="claude-cancel-btn claude-cancel-btn--modal d-none" title="Cancel inference">
                         <i class="bi bi-stop-fill"></i> Stop
                     </button>
@@ -813,6 +814,7 @@ $js = <<<JS
                 this.streamMeta = {};
                 this.streamPromptMarkdown = null;
                 this.streamReceivedText = false;
+                this.streamLabelSwitched = false;
                 this.activeReader = null;
                 this.streamPreviewQuill = null;
                 this.streamModalQuill = null;
@@ -915,7 +917,7 @@ $js = <<<JS
                     choicePart = parenMatch[1].trim();
 
                 // Strip trailing punctuation and whitespace
-                var cleaned = choicePart.replace(/\)?\??\s*$/, '').trim();
+                var cleaned = choicePart.replace(/\??\s*$/, '').trim();
                 var parts = cleaned.split(' / ');
 
                 // Need 2-4 options, each reasonable length (max 30 chars, non-empty)
@@ -1050,10 +1052,15 @@ $js = <<<JS
                         this.streamReceivedText = true;
                         this.scheduleStreamRender();
                     } else if (delta && delta.type === 'text_delta' && delta.text) {
-                        if (this.streamCurrentBlockType === 'thinking')
+                        if (this.streamCurrentBlockType === 'thinking') {
                             this.streamThinkingBuffer += delta.text;
-                        else
+                        } else {
                             this.streamBuffer += delta.text;
+                            if (!this.streamLabelSwitched) {
+                                this.streamLabelSwitched = true;
+                                this.updateStreamStatusLabel('responding');
+                            }
+                        }
                         this.streamReceivedText = true;
                         this.scheduleStreamRender();
                     }
@@ -1128,6 +1135,19 @@ $js = <<<JS
                     clearTimeout(this.renderTimer);
                     this.renderTimer = null;
                 }
+                // Stop elapsed timer
+                if (this.streamTimerInterval) {
+                    clearInterval(this.streamTimerInterval);
+                    this.streamTimerInterval = null;
+                }
+                // Remove pulse-ring
+                var preview = document.getElementById('claude-stream-preview');
+                if (preview) preview.classList.remove('claude-stream-preview--active');
+                // Reset modal status label and timer for next stream
+                var modalLabel = document.getElementById('claude-modal-status-label');
+                if (modalLabel) modalLabel.firstChild.textContent = 'Claude thinking';
+                var modalTimer = document.getElementById('claude-modal-timer');
+                if (modalTimer) modalTimer.textContent = '';
             },
 
             onStreamEnd: function() {
@@ -1327,15 +1347,20 @@ $js = <<<JS
                 preview.title = 'Click to view full process';
                 preview.innerHTML =
                     '<div class="claude-stream-preview__header">' +
-                        '<i class="bi bi-terminal-fill"></i> Claude ' +
-                        '<span id="claude-stream-dots" class="claude-thinking-dots">' +
-                        '<span></span><span></span><span></span></span>' +
+                        '<i class="bi bi-terminal-fill"></i>' +
+                        '<span id="claude-stream-status-label" class="claude-stream-status">Claude thinking' +
+                            '<span id="claude-stream-dots" class="claude-thinking-dots">' +
+                                '<span></span><span></span><span></span>' +
+                            '</span>' +
+                        '</span>' +
+                        '<span id="claude-stream-timer" class="claude-stream-timer"></span>' +
                         '<button type="button" id="claude-cancel-btn" class="claude-cancel-btn d-none" title="Cancel inference">' +
                             '<i class="bi bi-stop-fill"></i> Stop' +
                         '</button>' +
                         '<i class="bi bi-arrows-fullscreen claude-stream-preview__expand"></i>' +
                     '</div>' +
                     '<div id="claude-stream-body" class="claude-stream-preview__body"></div>';
+                preview.classList.add('claude-stream-preview--active');
                 preview.addEventListener('click', function(e) {
                     if (e.target.closest('.claude-cancel-btn')) return;
                     self.openStreamModal();
@@ -1347,6 +1372,22 @@ $js = <<<JS
 
                 // Initialize persistent Quill viewer for preview
                 this.streamPreviewQuill = this.createStreamQuill('claude-stream-body');
+
+                // Start elapsed timer (updates both preview and modal)
+                if (this.streamTimerInterval) clearInterval(this.streamTimerInterval);
+                this.streamTimerStart = Date.now();
+                var timerEl = document.getElementById('claude-stream-timer');
+                var modalTimerEl = document.getElementById('claude-modal-timer');
+                if (timerEl) timerEl.textContent = '0:00';
+                if (modalTimerEl) modalTimerEl.textContent = '0:00';
+                this.streamTimerInterval = setInterval(function() {
+                    var elapsed = Math.floor((Date.now() - self.streamTimerStart) / 1000);
+                    var mins = Math.floor(elapsed / 60);
+                    var secs = elapsed % 60;
+                    var formatted = mins + ':' + (secs < 10 ? '0' : '') + secs;
+                    if (timerEl) timerEl.textContent = formatted;
+                    if (modalTimerEl) modalTimerEl.textContent = formatted;
+                }, 1000);
 
                 // Reset modal content and initialize Quill viewers
                 var modalThinking = document.getElementById('claude-modal-thinking');
@@ -1415,6 +1456,14 @@ $js = <<<JS
                 msgDiv._processBlock = details;
                 var vpBtn = msgDiv.querySelector('.claude-message__view-process');
                 if (vpBtn) vpBtn.classList.remove('d-none');
+            },
+
+            updateStreamStatusLabel: function(status) {
+                var text = 'Claude ' + status;
+                var previewLabel = document.getElementById('claude-stream-status-label');
+                var modalLabel = document.getElementById('claude-modal-status-label');
+                if (previewLabel) previewLabel.firstChild.textContent = text;
+                if (modalLabel) modalLabel.firstChild.textContent = text;
             },
 
             removeStreamDots: function() {

@@ -797,7 +797,7 @@
     margin-right: 0.2rem;
 }
 
-.claude-chat-page .claude-stream-preview__header .claude-thinking-dots {
+.claude-chat-page .claude-stream-preview__header .claude-stream-status {
     flex: 1;
 }
 
@@ -810,6 +810,31 @@
 
 .claude-chat-page .claude-stream-preview:hover .claude-stream-preview__expand {
     color: #0d6efd;
+}
+
+/* Elapsed timer */
+.claude-chat-page .claude-stream-timer {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: #adb5bd;
+    white-space: nowrap;
+}
+
+/* Pulse ring on active stream preview */
+.claude-chat-page .claude-stream-preview--active {
+    animation: claude-stream-pulse 2.5s infinite ease-in-out;
+}
+
+@keyframes claude-stream-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(13, 110, 253, 0); }
+    50% { box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .claude-chat-page .claude-stream-preview--active {
+        animation: none;
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12);
+    }
 }
 
 .claude-chat-page .claude-stream-preview__body {
@@ -849,7 +874,7 @@
     flex: 1;
 }
 
-#claudeStreamModal .modal-title .claude-thinking-dots {
+#claudeStreamModal .modal-title .claude-stream-status {
     flex: 1;
 }
 
@@ -863,10 +888,10 @@
 }
 
 .claude-thinking-dots span {
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    background: #6c757d;
+    background: #0d6efd;
     animation: claude-dot-pulse 1.4s infinite ease-in-out both;
 }
 
@@ -880,6 +905,13 @@
 
 .claude-thinking-dots span:nth-child(3) {
     animation-delay: 0.4s;
+}
+
+/* Status text ("Claude thinking" / "Claude responding") */
+.claude-chat-page .claude-stream-status {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #495057;
 }
 
 @keyframes claude-dot-pulse {
