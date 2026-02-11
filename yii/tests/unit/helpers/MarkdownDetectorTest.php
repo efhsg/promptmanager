@@ -114,6 +114,23 @@ class MarkdownDetectorTest extends Unit
         $this->assertFalse(MarkdownDetector::isMarkdown($text));
     }
 
+    public function testReturnsTrueForHeadersWithLeadingSpaces(): void
+    {
+        $text = " ## Review Summary\n\n- Files reviewed: 11\n\n- Status: NEEDS CHANGES";
+        $this->assertTrue(MarkdownDetector::isMarkdown($text));
+    }
+
+    public function testReturnsFalseForFourSpaceIndentedHeader(): void
+    {
+        $this->assertFalse(MarkdownDetector::isMarkdown('    ## Not a header'));
+    }
+
+    public function testReturnsFalseForFourSpaceIndentedList(): void
+    {
+        $text = "    - item 1\n    - item 2\n    - item 3";
+        $this->assertFalse(MarkdownDetector::isMarkdown($text));
+    }
+
     public function testReturnsTrueForReviewOutput(): void
     {
         $text = "### Critical\n\n- None.\n\n### High\n\n- Save result is ignored.\n- Update result is ignored.\n\n### Medium\n\n- Archive flow is incomplete.";
@@ -165,6 +182,12 @@ class MarkdownDetectorTest extends Unit
 
             pages.
             MD;
+        $this->assertTrue(MarkdownDetector::isMarkdown($text));
+    }
+
+    public function testReturnsTrueForIndentedListItems(): void
+    {
+        $text = "  ## Review Summary\n\n  - Files reviewed: 11\n\n  - Docs conformity (mandatory):\n\n  - Status: NEEDS CHANGES";
         $this->assertTrue(MarkdownDetector::isMarkdown($text));
     }
 

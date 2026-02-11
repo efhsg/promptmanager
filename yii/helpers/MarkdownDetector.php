@@ -13,17 +13,17 @@ class MarkdownDetector
 
     private const STRUCTURAL_PATTERNS = [
         'header' => [
-            'pattern' => '/^#{1,6}\s/m',
+            'pattern' => '/^\s{0,3}#{1,6}\s/m',
             'weight' => 2,
             'max' => 0, // 0 = unlimited
         ],
         'unordered_list' => [
-            'pattern' => '/^[\-\*\+]\s+\S/m',
+            'pattern' => '/^\s{0,3}[\-\*\+]\s+\S/m',
             'weight' => 1,
             'max' => 3,
         ],
         'ordered_list' => [
-            'pattern' => '/^\d+\.\s+\S/m',
+            'pattern' => '/^\s{0,3}\d+\.\s+\S/m',
             'weight' => 1,
             'max' => 3,
         ],
