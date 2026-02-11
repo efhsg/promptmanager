@@ -3,23 +3,74 @@
 namespace app\helpers;
 
 /**
- * Detects if text content is markdown formatted.
+ * Detects if text content is markdown formatted using weighted scoring.
+ * Structural patterns (headers, lists) score higher per occurrence;
+ * inline patterns (bold, italic) are capped to prevent false positives.
  */
 class MarkdownDetector
 {
-    private const PATTERNS = [
-        'header' => '/^#{1,6}\s/m',
-        'bold' => '/\*\*.+?\*\*/s',
-        'italic' => '/(?<!\*)\*(?!\*)[^*\n]+(?<!\*)\*(?!\*)/s',
-        'unordered_list' => '/^[\-\*\+]\s+\S/m',
-        'ordered_list' => '/^\d+\.\s+\S/m',
-        'code_block' => '/```/',
-        'inline_code' => '/`[^`\n]+`/',
-        'link' => '/\[.+?\]\(.+?\)/',
-        'blockquote' => '/^>\s/m',
+    private const SCORE_THRESHOLD = 3;
+
+    private const STRUCTURAL_PATTERNS = [
+        'header' => [
+            'pattern' => '/^#{1,6}\s/m',
+            'weight' => 2,
+            'max' => 0, // 0 = unlimited
+        ],
+        'unordered_list' => [
+            'pattern' => '/^[\-\*\+]\s+\S/m',
+            'weight' => 1,
+            'max' => 3,
+        ],
+        'ordered_list' => [
+            'pattern' => '/^\d+\.\s+\S/m',
+            'weight' => 1,
+            'max' => 3,
+        ],
+        'code_block' => [
+            'pattern' => '/```/',
+            'weight' => 3,
+            'max' => 1,
+        ],
+        'blockquote' => [
+            'pattern' => '/^>\s/m',
+            'weight' => 2,
+            'max' => 0,
+        ],
+        'horizontal_rule' => [
+            'pattern' => '/^(?:---+|\*\*\*+|___+)\s*$/m',
+            'weight' => 2,
+            'max' => 0,
+        ],
     ];
 
-    private const MIN_MATCHES = 2;
+    private const INLINE_PATTERNS = [
+        'bold' => [
+            'pattern' => '/\*\*.+?\*\*/s',
+            'weight' => 1,
+            'max' => 2,
+        ],
+        'italic' => [
+            'pattern' => '/(?<!\*)\*(?!\*)[^*\n]+(?<!\*)\*(?!\*)/s',
+            'weight' => 1,
+            'max' => 2,
+        ],
+        'inline_code' => [
+            'pattern' => '/`[^`\n]+`/',
+            'weight' => 1,
+            'max' => 2,
+        ],
+        'link' => [
+            'pattern' => '/\[.+?\]\(.+?\)/',
+            'weight' => 2,
+            'max' => 2,
+        ],
+        'strikethrough' => [
+            'pattern' => '/~~.+?~~/s',
+            'weight' => 1,
+            'max' => 2,
+        ],
+    ];
 
     public static function isMarkdown(string $text): bool
     {
@@ -27,14 +78,20 @@ class MarkdownDetector
             return false;
         }
 
-        $matchCount = 0;
+        $score = 0;
+        $allPatterns = array_merge(self::STRUCTURAL_PATTERNS, self::INLINE_PATTERNS);
 
-        foreach (self::PATTERNS as $pattern) {
-            if (preg_match($pattern, $text)) {
-                $matchCount++;
-                if ($matchCount >= self::MIN_MATCHES) {
-                    return true;
-                }
+        foreach ($allPatterns as $config) {
+            $count = preg_match_all($config['pattern'], $text);
+            if ($count === 0) {
+                continue;
+            }
+
+            $effective = $config['max'] > 0 ? min($count, $config['max']) : $count;
+            $score += $effective * $config['weight'];
+
+            if ($score >= self::SCORE_THRESHOLD) {
+                return true;
             }
         }
 

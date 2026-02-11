@@ -11,11 +11,12 @@ class MarkdownParser
     private const UNCHECKED_LIST_PATTERN = '/^(\s*)[-*+]\s+\[\s?]\s+(.+)$/';
     private const BLOCKQUOTE_PATTERN = '/^>\s?(.*)$/';
     private const CODE_FENCE_PATTERN = '/^```(\w*)$/';
+    private const HORIZONTAL_RULE_PATTERN = '/^(?:---+|\*\*\*+|___+)\s*$/';
 
     public function parse(string $markdown): array
     {
         $markdown = str_replace(["\r\n", "\r"], "\n", $markdown);
-        $lines = explode("\n", $markdown);
+        $lines = $this->joinWrappedLines(explode("\n", $markdown));
         $blocks = [];
         $inCodeBlock = false;
         $codeLang = '';
@@ -58,6 +59,72 @@ class MarkdownParser
         }
 
         return $this->collapseBlankLinesAfterHeaders($blocks);
+    }
+
+    /**
+     * Rejoins lines that were split by clipboard copy/paste wrapping.
+     * A non-empty line that has no markdown structure is appended to the
+     * preceding list item (skipping intermediate blank lines).
+     */
+    private function joinWrappedLines(array $lines): array
+    {
+        $result = [];
+        $lastListIndex = null;
+        $blanksSinceList = 0;
+
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                $result[] = $line;
+                if ($lastListIndex !== null) {
+                    $blanksSinceList++;
+                }
+                continue;
+            }
+
+            if ($this->isStructuralLine($line)) {
+                $result[] = $line;
+                $lastListIndex = $this->isListLine($line) ? array_key_last($result) : null;
+                $blanksSinceList = 0;
+                continue;
+            }
+
+            // Plain text line — append to previous list item if one exists
+            if ($lastListIndex !== null) {
+                $result[$lastListIndex] .= ' ' . trim($line);
+                // Remove blank lines between the list item and this continuation
+                for ($i = 0; $i < $blanksSinceList; $i++) {
+                    array_pop($result);
+                }
+                $blanksSinceList = 0;
+                continue;
+            }
+
+            $result[] = $line;
+            $lastListIndex = null;
+            $blanksSinceList = 0;
+        }
+
+        return array_values($result);
+    }
+
+    private function isStructuralLine(string $line): bool
+    {
+        return (bool) (preg_match(self::HEADER_PATTERN, $line)
+            || preg_match(self::UNORDERED_LIST_PATTERN, $line)
+            || preg_match(self::ORDERED_LIST_PATTERN, $line)
+            || preg_match(self::CHECKED_LIST_PATTERN, $line)
+            || preg_match(self::UNCHECKED_LIST_PATTERN, $line)
+            || preg_match(self::BLOCKQUOTE_PATTERN, $line)
+            || preg_match(self::CODE_FENCE_PATTERN, $line)
+            || preg_match(self::HORIZONTAL_RULE_PATTERN, $line));
+    }
+
+    private function isListLine(string $line): bool
+    {
+        return (bool) (preg_match(self::UNORDERED_LIST_PATTERN, $line)
+            || preg_match(self::ORDERED_LIST_PATTERN, $line)
+            || preg_match(self::CHECKED_LIST_PATTERN, $line)
+            || preg_match(self::UNCHECKED_LIST_PATTERN, $line));
     }
 
     private function collapseBlankLinesAfterHeaders(array $blocks): array

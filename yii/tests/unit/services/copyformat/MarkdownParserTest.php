@@ -588,4 +588,106 @@ class MarkdownParserTest extends Unit
         $this->assertSame('', $blocks[2]['segments'][0]['text']);
         $this->assertSame('Content', $blocks[3]['segments'][0]['text']);
     }
+
+    public function testJoinsWrappedListItemLines(): void
+    {
+        $md = "- Long item that wraps\n\nover here";
+        $blocks = $this->parser->parse($md);
+
+        $listBlocks = array_filter($blocks, fn($b) => isset($b['attrs']['list']));
+        $this->assertCount(1, $listBlocks);
+        $listBlock = reset($listBlocks);
+        $text = implode('', array_map(fn($s) => $s['text'], $listBlock['segments']));
+        $this->assertSame('Long item that wraps over here', $text);
+    }
+
+    public function testJoinsMultipleWrappedFragments(): void
+    {
+        $md = "- First item wraps\n\nend.\n\n- Second item";
+        $blocks = $this->parser->parse($md);
+
+        $listBlocks = array_values(array_filter($blocks, fn($b) => isset($b['attrs']['list'])));
+        $this->assertCount(2, $listBlocks);
+
+        $firstText = implode('', array_map(fn($s) => $s['text'], $listBlocks[0]['segments']));
+        $this->assertSame('First item wraps end.', $firstText);
+        $this->assertSame('Second item', $listBlocks[1]['segments'][0]['text']);
+    }
+
+    public function testDoesNotJoinStructuralLineToList(): void
+    {
+        $md = "- Item one\n\n## Header";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertSame(['list' => 'bullet'], $blocks[0]['attrs']);
+        $this->assertSame('Item one', $blocks[0]['segments'][0]['text']);
+
+        $headerBlocks = array_filter($blocks, fn($b) => isset($b['attrs']['header']));
+        $this->assertCount(1, $headerBlocks);
+    }
+
+    public function testJoinsWrappedLineWithoutBlankLineBetween(): void
+    {
+        $md = "- Item continues\non next line";
+        $blocks = $this->parser->parse($md);
+
+        $this->assertCount(1, $blocks);
+        $this->assertSame(['list' => 'bullet'], $blocks[0]['attrs']);
+        $text = implode('', array_map(fn($s) => $s['text'], $blocks[0]['segments']));
+        $this->assertSame('Item continues on next line', $text);
+    }
+
+    public function testJoinsWrappedReviewOutput(): void
+    {
+        $md = "### High\n\n- file.php:80 — long description that\n\nwraps here.\n\n### Medium\n\n- other.php:12 — another long\n\nline.";
+        $blocks = $this->parser->parse($md);
+
+        $listBlocks = array_values(array_filter($blocks, fn($b) => isset($b['attrs']['list'])));
+        $this->assertCount(2, $listBlocks);
+
+        $firstText = implode('', array_map(fn($s) => $s['text'], $listBlocks[0]['segments']));
+        $this->assertStringContainsString('wraps here.', $firstText);
+
+        $secondText = implode('', array_map(fn($s) => $s['text'], $listBlocks[1]['segments']));
+        $this->assertStringContainsString('line.', $secondText);
+    }
+
+    public function testJoinsWrappedReviewOutputWithMultipleSections(): void
+    {
+        $md = <<<'MD'
+            ### Critical
+
+            - None.
+
+            ### High
+
+            - application/modules/admin/controllers/TestPackController.php:80 — saveToModel() result is ignored in actionCreate(), so a failed save still shows success flash + redirect.
+
+            - application/modules/admin/controllers/TestPackController.php:114 — updateAttributes() result is ignored in actionArchive(), so archive failure still shows success flash.
+
+            ### Medium
+
+            - application/modules/admin/views/test-pack/index.php:12 — archive flow is incomplete/inconsistent with existing patterns: index is always "active only", and there is no archive toggle.
+
+            sticky.
+
+            - application/modules/admin/views/test-pack/index.php:37 — testDefinitionCount in grid triggers per-row counting via application/models/TestPack.php:73, causing N+1 queries on list
+
+            pages.
+            MD;
+        $blocks = $this->parser->parse($md);
+
+        $listBlocks = array_values(array_filter($blocks, fn($b) => isset($b['attrs']['list'])));
+        $this->assertCount(5, $listBlocks);
+
+        // "sticky." should be joined to the preceding list item
+        $mediumFirst = implode('', array_map(fn($s) => $s['text'], $listBlocks[3]['segments']));
+        $this->assertStringContainsString('sticky.', $mediumFirst);
+        $this->assertStringContainsString('archive toggle.', $mediumFirst);
+
+        // "pages." should be joined to the preceding list item
+        $mediumSecond = implode('', array_map(fn($s) => $s['text'], $listBlocks[4]['segments']));
+        $this->assertStringContainsString('pages.', $mediumSecond);
+        $this->assertStringContainsString('N+1 queries', $mediumSecond);
+    }
 }
