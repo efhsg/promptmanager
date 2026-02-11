@@ -111,7 +111,7 @@ class PlaceholderRemapperTest extends Unit
         )->execute();
 
         // Find the local 'codeBlock' global field ID
-        $localCodeBlockId = (int)Yii::$app->db->createCommand(
+        $localCodeBlockId = (int) Yii::$app->db->createCommand(
             "SELECT id FROM `{$this->productionSchema}`.`field`
              WHERE name = 'codeBlock' AND project_id IS NULL AND user_id = 1"
         )->queryScalar();
@@ -162,6 +162,37 @@ class PlaceholderRemapperTest extends Unit
         $remapper->setGlobalFieldMap([60 => 160]);
 
         $this->assertEquals(160, $remapper->remapFieldId(60));
+    }
+
+    public function testRemapFieldIdResolvesGlobalFieldByNameWhenNotInMapping(): void
+    {
+        // Insert a global field in temp schema that matches a local global field
+        Yii::$app->db->createCommand()->insert(
+            "`{$this->tempSchema}`.`field`",
+            [
+                'id' => 888,
+                'user_id' => 99,
+                'project_id' => null,
+                'name' => 'codeBlock',
+                'type' => 'text',
+                'share' => 0,
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
+            ]
+        )->execute();
+
+        // Find the local 'codeBlock' global field ID
+        $localCodeBlockId = (int) Yii::$app->db->createCommand(
+            "SELECT id FROM `{$this->productionSchema}`.`field`
+             WHERE name = 'codeBlock' AND project_id IS NULL AND user_id = 1"
+        )->queryScalar();
+        $this->assertGreaterThan(0, $localCodeBlockId);
+
+        $remapper = new PlaceholderRemapper(Yii::$app->db, $this->tempSchema, 1);
+        $remapper->setProjectFieldMap([]);
+        $remapper->setGlobalFieldMap([]); // Not in mapping
+
+        $this->assertEquals($localCodeBlockId, $remapper->remapFieldId(888));
     }
 
     public function testRemapFieldIdReturnsNullWhenNotFound(): void
@@ -224,7 +255,7 @@ class PlaceholderRemapperTest extends Unit
 
     private function ensureUserExists(int $id, string $username): void
     {
-        $exists = (int)Yii::$app->db->createCommand(
+        $exists = (int) Yii::$app->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`user` WHERE id = :id",
             [':id' => $id]
         )->queryScalar();
@@ -245,7 +276,7 @@ class PlaceholderRemapperTest extends Unit
 
     private function ensureGlobalFieldExists(int $userId, string $name, string $type): void
     {
-        $exists = (int)Yii::$app->db->createCommand(
+        $exists = (int) Yii::$app->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`field`
              WHERE name = :name AND project_id IS NULL AND user_id = :userId",
             [':name' => $name, ':userId' => $userId]

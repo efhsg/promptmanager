@@ -52,7 +52,7 @@ class ProjectLoadServiceTest extends Unit
 
         $this->tempDir = sys_get_temp_dir() . '/projectload_service_test_' . getmypid();
         if (!is_dir($this->tempDir)) {
-            mkdir($this->tempDir, 0777, true);
+            mkdir($this->tempDir, 0o777, true);
         }
 
         // Create temp schema for dump data
@@ -103,7 +103,7 @@ class ProjectLoadServiceTest extends Unit
 
     private function ensureUserExists(int $id, string $username): void
     {
-        $exists = (int)$this->db->createCommand(
+        $exists = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`user` WHERE id = :id",
             [':id' => $id]
         )->queryScalar();
@@ -124,7 +124,7 @@ class ProjectLoadServiceTest extends Unit
 
     private function ensureGlobalFieldExists(int $userId, string $name, string $type): void
     {
-        $exists = (int)$this->db->createCommand(
+        $exists = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`field`
              WHERE name = :name AND project_id IS NULL AND user_id = :userId",
             [':name' => $name, ':userId' => $userId]
@@ -187,24 +187,24 @@ class ProjectLoadServiceTest extends Unit
         )->queryOne();
         $this->assertNotFalse($project);
         $this->assertEquals('DumpProject', $project['name']);
-        $this->assertEquals(1, (int)$project['user_id']);
+        $this->assertEquals(1, (int) $project['user_id']);
         $this->assertNull($project['root_directory']);
         $this->assertNull($project['claude_options']);
 
         // Verify children
-        $contextCount = (int)$this->db->createCommand(
+        $contextCount = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`context` WHERE project_id = :id",
             [':id' => $newProjectId]
         )->queryScalar();
         $this->assertEquals(1, $contextCount);
 
-        $fieldCount = (int)$this->db->createCommand(
+        $fieldCount = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`field` WHERE project_id = :id",
             [':id' => $newProjectId]
         )->queryScalar();
         $this->assertGreaterThanOrEqual(1, $fieldCount);
 
-        $templateCount = (int)$this->db->createCommand(
+        $templateCount = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`prompt_template` WHERE project_id = :id",
             [':id' => $newProjectId]
         )->queryScalar();
@@ -240,7 +240,7 @@ class ProjectLoadServiceTest extends Unit
         )->queryOne();
         $this->assertNotFalse($project);
         $this->assertEquals('ReplacableProject', $project['name']);
-        $this->assertEquals(1, (int)$project['user_id']);
+        $this->assertEquals(1, (int) $project['user_id']);
 
         // New context should be present
         $contexts = $this->db->createCommand(
@@ -286,13 +286,13 @@ class ProjectLoadServiceTest extends Unit
         $this->skipIfMysqlCliMissing();
         $dumpFile = $this->createDumpFileFromTempSchema();
 
-        $countBefore = (int)$this->db->createCommand(
+        $countBefore = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`project`"
         )->queryScalar();
 
         $report = $this->service->load($dumpFile, [500], 1, true);
 
-        $countAfter = (int)$this->db->createCommand(
+        $countAfter = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`project`"
         )->queryScalar();
 
@@ -406,12 +406,100 @@ class ProjectLoadServiceTest extends Unit
         )->execute();
     }
 
+    public function testLoadWithIncludeGlobalFieldsDiscoverFromTemplateField(): void
+    {
+        $this->skipIfMysqlCliMissing();
+
+        // Insert a global field in the dump that is NOT referenced in template body GEN:{{}} placeholders,
+        // but IS referenced in the template_field junction table
+        $globalFieldName = 'uniqueGlobalTfTestField_' . getmypid();
+        $this->insertDumpField(810, null, $globalFieldName, 'text', 99);
+        $this->insertDumpTemplate(510, 500, 'TemplateWithGlobalTf', '{"ops":[{"insert":"no placeholders\\n"}]}');
+        $this->db->createCommand()->insert(
+            "`{$this->tempSchema}`.`template_field`",
+            [
+                'template_id' => 510,
+                'field_id' => 810,
+            ]
+        )->execute();
+        $dumpFile = $this->createDumpFileFromTempSchema();
+
+        $report = $this->service->load($dumpFile, [500], 1, false, true);
+
+        $this->assertEquals(1, $report->getSuccessCount());
+
+        $newProjectId = $report->getMappedId('project', 500);
+        $this->createdProjectIds[] = $newProjectId;
+
+        // Verify the global field was created
+        $globalField = $this->db->createCommand(
+            "SELECT * FROM `{$this->productionSchema}`.`field`
+             WHERE name = :name AND project_id IS NULL AND user_id = 1",
+            [':name' => $globalFieldName]
+        )->queryOne();
+        $this->assertNotFalse($globalField);
+        $this->createdFieldIds[] = (int) $globalField['id'];
+
+        // Verify the template_field was inserted (not skipped)
+        $newTemplateId = $report->getMappedId('prompt_template', 510);
+        $this->assertNotNull($newTemplateId);
+
+        $tfCount = (int) $this->db->createCommand(
+            "SELECT COUNT(*) FROM `{$this->productionSchema}`.`template_field`
+             WHERE template_id = :tid AND field_id = :fid",
+            [':tid' => $newTemplateId, ':fid' => $globalField['id']]
+        )->queryScalar();
+        $this->assertEquals(1, $tfCount);
+    }
+
+    public function testLoadWithoutIncludeGlobalFieldsResolvesExistingGlobalFieldInTemplateField(): void
+    {
+        $this->skipIfMysqlCliMissing();
+
+        // Insert a global field in the dump that maps to existing local 'codeBlock'
+        $this->insertDumpField(820, null, 'codeBlock', 'text', 99);
+        $this->insertDumpTemplate(520, 500, 'TemplateWithExistingGlobalTf', '{"ops":[{"insert":"no placeholders\\n"}]}');
+        $this->db->createCommand()->insert(
+            "`{$this->tempSchema}`.`template_field`",
+            [
+                'template_id' => 520,
+                'field_id' => 820,
+            ]
+        )->execute();
+        $dumpFile = $this->createDumpFileFromTempSchema();
+
+        // Load WITHOUT --include-global-fields — remapFieldId should still resolve by name
+        $report = $this->service->load($dumpFile, [500], 1, false, false);
+
+        $this->assertEquals(1, $report->getSuccessCount());
+
+        $newProjectId = $report->getMappedId('project', 500);
+        $this->createdProjectIds[] = $newProjectId;
+
+        // Find local codeBlock field
+        $localCodeBlockId = (int) $this->db->createCommand(
+            "SELECT id FROM `{$this->productionSchema}`.`field`
+             WHERE name = 'codeBlock' AND project_id IS NULL AND user_id = 1"
+        )->queryScalar();
+
+        // Verify the template_field was inserted with the local field ID (not skipped)
+        $newTemplateId = $report->getMappedId('prompt_template', 520);
+        $this->assertNotNull($newTemplateId);
+
+        $tfCount = (int) $this->db->createCommand(
+            "SELECT COUNT(*) FROM `{$this->productionSchema}`.`template_field`
+             WHERE template_id = :tid AND field_id = :fid",
+            [':tid' => $newTemplateId, ':fid' => $localCodeBlockId]
+        )->queryScalar();
+        $this->assertEquals(1, $tfCount);
+    }
+
     public function testLoadWithIncludeGlobalFieldsReusesExistingField(): void
     {
         $this->skipIfMysqlCliMissing();
 
         // Find the local 'codeBlock' global field ID (ensured in _before)
-        $localCodeBlockId = (int)$this->db->createCommand(
+        $localCodeBlockId = (int) $this->db->createCommand(
             "SELECT id FROM `{$this->productionSchema}`.`field`
              WHERE name = 'codeBlock' AND project_id IS NULL AND user_id = 1"
         )->queryScalar();
@@ -542,7 +630,7 @@ class ProjectLoadServiceTest extends Unit
             "SELECT user_id FROM `{$this->productionSchema}`.`project` WHERE id = :id",
             [':id' => $newProjectId]
         )->queryOne();
-        $this->assertEquals(100, (int)$project['user_id']);
+        $this->assertEquals(100, (int) $project['user_id']);
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -672,7 +760,7 @@ class ProjectLoadServiceTest extends Unit
             $data
         )->execute();
 
-        return (int)$this->db->getLastInsertID();
+        return (int) $this->db->getLastInsertID();
     }
 
     private function copyTableStructures(): void

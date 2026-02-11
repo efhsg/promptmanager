@@ -64,7 +64,7 @@ class ProjectLoadService
             // Count related entities per project
             $entityCounts = [];
             foreach ($projects as $project) {
-                $projectId = (int)$project['id'];
+                $projectId = (int) $project['id'];
                 $counts = [];
 
                 foreach ($listColumns as $entity => $label) {
@@ -78,12 +78,12 @@ class ProjectLoadService
 
                     $parentColumn = $config['parentKey'];
                     if ($parentColumn === 'project_id') {
-                        $counts[$entity] = (int)$this->db->createCommand(
+                        $counts[$entity] = (int) $this->db->createCommand(
                             "SELECT COUNT(*) FROM `{$tempSchema}`.`{$table}` WHERE project_id = :id",
                             [':id' => $projectId]
                         )->queryScalar();
                     } elseif ($entity === 'prompt_instance') {
-                        $counts[$entity] = (int)$this->db->createCommand(
+                        $counts[$entity] = (int) $this->db->createCommand(
                             "SELECT COUNT(*) FROM `{$tempSchema}`.`{$table}`
                              WHERE template_id IN (SELECT id FROM `{$tempSchema}`.`prompt_template` WHERE project_id = :id)",
                             [':id' => $projectId]
@@ -277,7 +277,7 @@ class ProjectLoadService
         int $userId,
         array $explicitMapping,
         LoadReport $report
-    ): int|null|false {
+    ): int|false|null {
         // Explicit mapping via --local-project-ids
         if (isset($explicitMapping[$dumpProjectId])) {
             $localId = $explicitMapping[$dumpProjectId];
@@ -292,7 +292,7 @@ class ProjectLoadService
                 $report->setProjectError($dumpProjectId, "Lokaal project ID {$localId} niet gevonden");
                 return false;
             }
-            if ((int)$local['user_id'] !== $userId) {
+            if ((int) $local['user_id'] !== $userId) {
                 $report->setProjectError($dumpProjectId, "Lokaal project ID {$localId} behoort niet tot user {$userId}");
                 return false;
             }
@@ -316,7 +316,7 @@ class ProjectLoadService
         }
 
         if (count($matches) === 1) {
-            return (int)$matches[0]['id'];
+            return (int) $matches[0]['id'];
         }
 
         // Multiple matches — error
@@ -509,8 +509,8 @@ class ProjectLoadService
 
             $tfInserted = 0;
             foreach ($dumpTemplateFields as $tf) {
-                $remappedTemplateId = $entityLoader->getMappedId('prompt_template', (int)$tf['template_id']);
-                $remappedFieldId = $placeholderRemapper->remapFieldId((int)$tf['field_id']);
+                $remappedTemplateId = $entityLoader->getMappedId('prompt_template', (int) $tf['template_id']);
+                $remappedFieldId = $placeholderRemapper->remapFieldId((int) $tf['field_id']);
 
                 if ($remappedTemplateId === null || $remappedFieldId === null) {
                     $report->addWarning($dumpProjectId, "template_field overgeslagen: template_id={$tf['template_id']}, field_id={$tf['field_id']} — niet gevonden");
@@ -612,7 +612,7 @@ class ProjectLoadService
         array $tempColumnsByEntity,
         int $userId
     ): array {
-        // Find global field IDs referenced in templates
+        // Find global field IDs referenced in template bodies (GEN:{{id}} placeholders)
         $dumpTemplates = $this->db->createCommand(
             "SELECT template_body FROM `{$tempSchema}`.`prompt_template` WHERE project_id = :id",
             [':id' => $dumpProjectId]
@@ -622,8 +622,36 @@ class ProjectLoadService
         foreach ($dumpTemplates as $body) {
             if (preg_match_all('/GEN:\{\{(\d+)\}\}/', $body, $matches)) {
                 foreach ($matches[1] as $id) {
-                    $referencedGlobalIds[(int)$id] = true;
+                    $referencedGlobalIds[(int) $id] = true;
                 }
+            }
+        }
+
+        // Also find global field IDs referenced in template_field records
+        $dumpTemplateIds = $this->db->createCommand(
+            "SELECT id FROM `{$tempSchema}`.`prompt_template` WHERE project_id = :id",
+            [':id' => $dumpProjectId]
+        )->queryColumn();
+
+        if (!empty($dumpTemplateIds) && $this->schemaInspector->tableExists($tempSchema, 'template_field')) {
+            $tfPlaceholders = [];
+            $tfParams = [];
+            foreach (array_values($dumpTemplateIds) as $i => $tid) {
+                $key = ":tid{$i}";
+                $tfPlaceholders[] = $key;
+                $tfParams[$key] = $tid;
+            }
+
+            $tfFieldIds = $this->db->createCommand(
+                "SELECT DISTINCT tf.field_id FROM `{$tempSchema}`.`template_field` tf
+                 INNER JOIN `{$tempSchema}`.`field` f ON f.id = tf.field_id
+                 WHERE tf.template_id IN (" . implode(',', $tfPlaceholders) . ")
+                 AND f.project_id IS NULL",
+                $tfParams
+            )->queryColumn();
+
+            foreach ($tfFieldIds as $id) {
+                $referencedGlobalIds[(int) $id] = true;
             }
         }
 
@@ -649,7 +677,7 @@ class ProjectLoadService
         $globalFieldMap = [];
 
         foreach ($dumpGlobalFields as $dumpField) {
-            $dumpId = (int)$dumpField['id'];
+            $dumpId = (int) $dumpField['id'];
             $fieldName = $dumpField['name'];
 
             // Check if exists locally
@@ -661,8 +689,8 @@ class ProjectLoadService
 
             if ($localField) {
                 // Use existing local field
-                $globalFieldMap[$dumpId] = (int)$localField['id'];
-                $entityLoader->addIdMapping('field', $dumpId, (int)$localField['id']);
+                $globalFieldMap[$dumpId] = (int) $localField['id'];
+                $entityLoader->addIdMapping('field', $dumpId, (int) $localField['id']);
 
                 // Warn on type mismatch
                 if ($localField['type'] !== $dumpField['type']) {
@@ -695,7 +723,7 @@ class ProjectLoadService
                         // Check label conflict for global fields
                         $label = $gfRecord[$column] ?? null;
                         if ($label !== null) {
-                            $conflict = (int)$this->db->createCommand(
+                            $conflict = (int) $this->db->createCommand(
                                 "SELECT COUNT(*) FROM `{$productionSchema}`.`field`
                                  WHERE label = :label AND project_id IS NULL AND user_id = :userId",
                                 [':label' => $label, ':userId' => $userId]
@@ -739,14 +767,14 @@ class ProjectLoadService
         $inserted = 0;
 
         foreach ($dumpLinks as $link) {
-            $linkedDumpId = (int)$link['linked_project_id'];
+            $linkedDumpId = (int) $link['linked_project_id'];
 
             // Check if linked project was loaded in this run
             $localLinkedId = $entityLoader->getMappedId('project', $linkedDumpId);
 
             // If not loaded in this run, check if exists locally
             if ($localLinkedId === null) {
-                $exists = (int)$this->db->createCommand(
+                $exists = (int) $this->db->createCommand(
                     "SELECT COUNT(*) FROM `{$productionSchema}`.`project` WHERE id = :id AND deleted_at IS NULL",
                     [':id' => $linkedDumpId]
                 )->queryScalar();
@@ -910,7 +938,7 @@ class ProjectLoadService
                     continue;
                 }
 
-                $localExists = (int)$this->db->createCommand(
+                $localExists = (int) $this->db->createCommand(
                     "SELECT COUNT(*) FROM `{$productionSchema}`.`field`
                      WHERE name = :name AND project_id IS NULL AND user_id = :userId",
                     [':name' => $fieldName, ':userId' => $userId]
@@ -944,11 +972,11 @@ class ProjectLoadService
         )->queryAll();
 
         foreach ($links as $link) {
-            $linkedId = (int)$link['linked_project_id'];
+            $linkedId = (int) $link['linked_project_id'];
             $localExists = $entityLoader->getMappedId('project', $linkedId);
 
             if ($localExists === null) {
-                $exists = (int)$this->db->createCommand(
+                $exists = (int) $this->db->createCommand(
                     "SELECT COUNT(*) FROM `{$productionSchema}`.`project` WHERE id = :id AND deleted_at IS NULL",
                     [':id' => $linkedId]
                 )->queryScalar();
@@ -986,7 +1014,7 @@ class ProjectLoadService
 
         // Validate user exists
         $schema = $this->productionSchema;
-        $userExists = (int)$this->db->createCommand(
+        $userExists = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`user` WHERE id = :id",
             [':id' => $userId]
         )->queryScalar();
@@ -1023,7 +1051,7 @@ class ProjectLoadService
         }
 
         $schema = $this->productionSchema;
-        return (int)$this->db->createCommand(
+        return (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`field`
              WHERE id = :id AND project_id IS NULL",
             [':id' => $localId]

@@ -2,14 +2,14 @@
 
 namespace app\services\projectload;
 
+use PDO;
+use PDOException;
 use RuntimeException;
 use Yii;
 use yii\db\Connection;
 
 /**
  * Handles dump file validation, temp schema creation, and dump import.
- *
- * Uses proc_open() for mysql CLI import (consistent with ClaudeCliService pattern).
  */
 class DumpImporter
 {
@@ -81,7 +81,7 @@ class DumpImporter
     }
 
     /**
-     * Imports a dump file into the temporary schema via mysql CLI.
+     * Imports a dump file into the temporary schema via PDO.
      *
      * @throws RuntimeException
      */
@@ -90,36 +90,21 @@ class DumpImporter
         $filteredContent = $this->filterDumpContent($filePath);
 
         $dsn = $this->parseDsn();
-        $command = sprintf(
-            'mysql --host=%s --port=%s --user=%s --password=%s %s',
-            escapeshellarg($dsn['host']),
-            escapeshellarg($dsn['port']),
-            escapeshellarg($this->db->username),
-            escapeshellarg($this->db->password),
-            escapeshellarg($tempSchema)
-        );
+        $pdoDsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $dsn['host'], $dsn['port'], $tempSchema);
 
-        $descriptorSpec = [
-            0 => ['pipe', 'r'], // stdin
-            1 => ['pipe', 'w'], // stdout
-            2 => ['pipe', 'w'], // stderr
-        ];
-
-        $process = proc_open($command, $descriptorSpec, $pipes);
-        if (!is_resource($process)) {
-            throw new RuntimeException('Kan mysql proces niet starten');
-        }
-
-        fwrite($pipes[0], $filteredContent);
-        fclose($pipes[0]);
-
-        $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
-
-        $exitCode = proc_close($process);
-        if ($exitCode !== 0) {
-            throw new RuntimeException("MySQL import mislukt (exit code {$exitCode}): {$stderr}");
+        try {
+            $pdo = new PDO(
+                $pdoDsn,
+                $this->db->username,
+                $this->db->password,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::MYSQL_ATTR_LOCAL_INFILE => false,
+                ]
+            );
+            $pdo->exec($filteredContent);
+        } catch (PDOException $e) {
+            throw new RuntimeException("MySQL import mislukt: " . $e->getMessage());
         }
     }
 

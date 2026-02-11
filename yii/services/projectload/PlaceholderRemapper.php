@@ -70,7 +70,7 @@ class PlaceholderRemapper
                     '/(GEN|PRJ|EXT):\{\{(\d+)\}\}/',
                     function (array $matches): string {
                         $type = $matches[1];
-                        $dumpId = (int)$matches[2];
+                        $dumpId = (int) $matches[2];
 
                         return match ($type) {
                             'PRJ' => $this->remapPrj($dumpId, $matches[0]),
@@ -170,6 +170,26 @@ class PlaceholderRemapper
     }
 
     /**
+     * Resolves a global field ID from dump to a local field ID by name matching.
+     */
+    private function resolveGlobalFieldId(int $dumpFieldId): ?int
+    {
+        $fieldName = $this->getFieldNameFromTemp($dumpFieldId);
+        if ($fieldName === null) {
+            return null;
+        }
+
+        $productionSchema = $this->productionSchema;
+        $localId = $this->db->createCommand(
+            "SELECT id FROM `{$productionSchema}`.`field`
+             WHERE name = :name AND project_id IS NULL AND user_id = :userId",
+            [':name' => $fieldName, ':userId' => $this->userId]
+        )->queryScalar();
+
+        return $localId !== false ? (int) $localId : null;
+    }
+
+    /**
      * Resolves an external field ID from dump to a local field ID.
      *
      * Strategy: dump field → field name + project → local project (via label or name) → local field
@@ -182,9 +202,14 @@ class PlaceholderRemapper
             [':id' => $dumpFieldId]
         )->queryOne();
 
-        if (!$field || $field['project_id'] === null) {
-            $this->warnings[] = "EXT veld-ID {$dumpFieldId} niet gevonden in dump of is globaal";
+        if (!$field) {
+            $this->warnings[] = "EXT veld-ID {$dumpFieldId} niet gevonden in dump";
             return null;
+        }
+
+        // Global field — resolve by name
+        if ($field['project_id'] === null) {
+            return $this->resolveGlobalFieldId($dumpFieldId);
         }
 
         // Get source project info
@@ -240,7 +265,7 @@ class PlaceholderRemapper
         )->queryScalar();
 
         if ($localFieldId !== false) {
-            return (int)$localFieldId;
+            return (int) $localFieldId;
         }
 
         $this->warnings[] = "EXT veld \"{$field['name']}\" uit project \"{$sourceProject['name']}\" "

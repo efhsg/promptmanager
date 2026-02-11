@@ -21,7 +21,7 @@ class DumpImporterTest extends Unit
         $this->importer = new DumpImporter($db, $inspector);
         $this->tempDir = sys_get_temp_dir() . '/projectload_test_' . getmypid();
         if (!is_dir($this->tempDir)) {
-            mkdir($this->tempDir, 0777, true);
+            mkdir($this->tempDir, 0o777, true);
         }
     }
 
@@ -78,7 +78,7 @@ class DumpImporterTest extends Unit
             $this->assertStringStartsWith('yii_load_temp_', $schema);
 
             // Verify schema exists
-            $exists = (int)Yii::$app->db->createCommand(
+            $exists = (int) Yii::$app->db->createCommand(
                 'SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :name',
                 [':name' => $schema]
             )->queryScalar();
@@ -88,7 +88,7 @@ class DumpImporterTest extends Unit
         }
 
         // Verify schema removed
-        $exists = (int)Yii::$app->db->createCommand(
+        $exists = (int) Yii::$app->db->createCommand(
             'SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :name',
             [':name' => $schema]
         )->queryScalar();
@@ -97,7 +97,6 @@ class DumpImporterTest extends Unit
 
     public function testImportDumpWithSimpleSql(): void
     {
-        $this->skipIfMysqlCliMissing();
         $schema = $this->importer->createTempSchema();
 
         try {
@@ -119,7 +118,6 @@ class DumpImporterTest extends Unit
 
     public function testImportDumpStripsUseStatements(): void
     {
-        $this->skipIfMysqlCliMissing();
         $schema = $this->importer->createTempSchema();
 
         try {
@@ -134,7 +132,7 @@ class DumpImporterTest extends Unit
                 "SELECT COUNT(*) FROM `{$schema}`.`test_table2`"
             )->queryScalar();
 
-            $this->assertEquals(1, (int)$result);
+            $this->assertEquals(1, (int) $result);
         } finally {
             $this->importer->dropSchema($schema);
         }
@@ -154,7 +152,7 @@ class DumpImporterTest extends Unit
         $this->assertArrayHasKey($schemaName, $cleaned);
 
         // Verify it's gone
-        $exists = (int)Yii::$app->db->createCommand(
+        $exists = (int) Yii::$app->db->createCommand(
             'SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = :name',
             [':name' => $schemaName]
         )->queryScalar();
@@ -164,13 +162,5 @@ class DumpImporterTest extends Unit
     public function testGetTempSchemaPrefix(): void
     {
         $this->assertEquals('yii_load_temp_', $this->importer->getTempSchemaPrefix());
-    }
-
-    private function skipIfMysqlCliMissing(): void
-    {
-        exec('which mysql 2>/dev/null', $output, $exitCode);
-        if ($exitCode !== 0) {
-            $this->markTestSkipped('mysql CLI binary not available');
-        }
     }
 }
