@@ -919,9 +919,18 @@ $js = <<<JS
                 }
 
                 var editWords = ['bewerk', 'edit', 'aanpassen', 'modify', 'adjust'];
+                var stripMd = function(s) {
+                    return s.replace(/\*\*(.+?)\*\*/g, '$1')
+                            .replace(/__(.+?)__/g, '$1')
+                            .replace(/\*(.+?)\*/g, '$1')
+                            .replace(/_(.+?)_/g, '$1')
+                            .replace(/`(.+?)`/g, '$1')
+                            .trim();
+                };
                 var options = [];
                 for (var k = 0; k < parts.length; k++) {
-                    var label = parts[k];
+                    var label = stripMd(parts[k]);
+                    if (!label) return null;
                     var action = editWords.indexOf(label.toLowerCase()) !== -1 ? 'edit' : 'send';
                     options.push({ label: label, action: action });
                 }
