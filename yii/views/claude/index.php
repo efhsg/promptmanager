@@ -908,8 +908,14 @@ $js = <<<JS
                 // Must contain at least one " / " separator
                 if (lastLine.indexOf(' / ') === -1) return null;
 
-                // Strip trailing question mark and whitespace
-                var cleaned = lastLine.replace(/\??\s*$/, '');
+                // Extract from parentheses if present: "question? (A / B / C)"
+                var choicePart = lastLine;
+                var parenMatch = lastLine.match(/\(([^)]*\/[^)]*)\)/);
+                if (parenMatch)
+                    choicePart = parenMatch[1].trim();
+
+                // Strip trailing punctuation and whitespace
+                var cleaned = choicePart.replace(/\)?\??\s*$/, '').trim();
                 var parts = cleaned.split(' / ');
 
                 // Need 2-4 options, each reasonable length (max 30 chars, non-empty)
