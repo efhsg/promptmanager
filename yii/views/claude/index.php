@@ -901,7 +901,7 @@ $js = <<<JS
              */
             parseChoiceOptions: function(text) {
                 if (!text) return null;
-                var lines = text.trimEnd().split('\n');
+                var lines = text.trimEnd().split('\\n');
                 var lastLine = '';
                 for (var i = lines.length - 1; i >= 0; i--) {
                     var trimmed = lines[i].trim();
@@ -983,11 +983,11 @@ $js = <<<JS
              */
             choiceEdit: function(claudeContent) {
                 // Strip the last line (the choice question) from the response
-                var lines = claudeContent.trimEnd().split('\n');
+                var lines = claudeContent.trimEnd().split('\\n');
                 for (var i = lines.length - 1; i >= 0; i--) {
                     if (lines[i].trim()) { lines.splice(i, 1); break; }
                 }
-                var content = lines.join('\n').trimEnd();
+                var content = lines.join('\\n').trimEnd();
 
                 // Load into editor
                 if (this.inputMode === 'quill') {
