@@ -1477,7 +1477,6 @@
 
     /* Message actions: ensure touch-friendly sizes (min 44px) */
     .claude-chat-page .claude-message__copy,
-    .claude-chat-page .claude-message__go,
     .claude-chat-page .claude-message__expand,
     .claude-chat-page .claude-message__view-process {
         min-width: 44px;
@@ -1485,6 +1484,10 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
+    }
+    .claude-chat-page .claude-message__go {
+        padding: 0.15rem 0.5rem;
+        font-size: 0.75rem;
     }
 
     /* Stream preview: taller on mobile since editor is collapsed */
