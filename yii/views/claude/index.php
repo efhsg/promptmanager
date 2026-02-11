@@ -920,12 +920,7 @@ $js = <<<JS
 
                 var editWords = ['bewerk', 'edit', 'aanpassen', 'modify', 'adjust'];
                 var stripMd = function(s) {
-                    return s.replace(/\*\*(.+?)\*\*/g, '$1')
-                            .replace(/__(.+?)__/g, '$1')
-                            .replace(/\*(.+?)\*/g, '$1')
-                            .replace(/_(.+?)_/g, '$1')
-                            .replace(/`(.+?)`/g, '$1')
-                            .trim();
+                    return s.replace(/[*_`~]/g, '').trim();
                 };
                 var options = [];
                 for (var k = 0; k < parts.length; k++) {
