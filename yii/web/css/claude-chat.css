@@ -1459,9 +1459,9 @@
         margin-bottom: 0.5rem;
     }
 
-    /* Reduce padding on container — flush against navbar */
+    /* Reduce padding on container — small gap below navbar */
     .claude-chat-page.container {
-        padding-top: 0;
+        padding-top: 0.5rem;
         padding-left: 0.75rem;
         padding-right: 0.75rem;
     }
@@ -1486,8 +1486,12 @@
         justify-content: center;
     }
     .claude-chat-page .claude-message__go {
-        padding: 0.15rem 0.5rem;
-        font-size: 0.75rem;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.7rem;
+        line-height: 1.2;
     }
 
     /* Stream preview: taller on mobile since editor is collapsed */
