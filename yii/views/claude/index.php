@@ -973,6 +973,7 @@ $js = <<<JS
              * Choice action: send the label as a fixed reply.
              */
             choiceSend: function(label) {
+                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
                 this.sendFixedText(label);
             },
 
@@ -980,6 +981,7 @@ $js = <<<JS
              * Choice action: load Claude's response (minus the choice line) into the editor.
              */
             choiceEdit: function(claudeContent) {
+                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
                 // Strip the last line (the choice question) from the response
                 var lines = claudeContent.trimEnd().split('\\n');
                 for (var i = lines.length - 1; i >= 0; i--) {
