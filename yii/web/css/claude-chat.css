@@ -55,17 +55,6 @@
     color: #495057;
 }
 
-/* Choice buttons in summary bar */
-.claude-chat-page .claude-summary-choices {
-    display: inline-flex;
-    gap: 0.35rem;
-    margin-left: auto;
-}
-
-.claude-chat-page .claude-summary-choices + .claude-collapsible-summary__chevron {
-    margin-left: 0.5rem;
-}
-
 /* Choice buttons on the response message */
 .claude-chat-page .claude-choice-buttons {
     display: inline-flex;
@@ -89,14 +78,12 @@
     color: #fff;
 }
 
-.claude-chat-page .claude-choice-btn--edit,
-.claude-chat-page .claude-collapsible-summary__reply.claude-choice-btn--edit {
+.claude-chat-page .claude-choice-btn--edit {
     border-color: #6f42c1;
     color: #6f42c1;
 }
 
-.claude-chat-page .claude-choice-btn--edit:hover,
-.claude-chat-page .claude-collapsible-summary__reply.claude-choice-btn--edit:hover {
+.claude-chat-page .claude-choice-btn--edit:hover {
     background: #6f42c1;
     color: #fff;
 }

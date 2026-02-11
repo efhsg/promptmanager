@@ -655,7 +655,6 @@ $js = <<<JS
                         if (visibleGo) {
                             e.preventDefault();
                             document.getElementById('claude-summary-reply-btn').classList.add('d-none');
-                            self.clearChoiceButtonsFromSummary();
                             self.sendFixedText('Proceed');
                         }
                     }
@@ -799,9 +798,6 @@ $js = <<<JS
                 }
 
                 sendBtn.disabled = true;
-
-                // Clean up smart choice buttons from previous response
-                this.clearChoiceButtonsFromSummary();
 
                 // Move the active response into its accordion item before starting a new exchange
                 this.moveActiveResponseToAccordion();
@@ -973,8 +969,6 @@ $js = <<<JS
              * Choice action: send the label as a fixed reply.
              */
             choiceSend: function(label) {
-                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
-                this.clearChoiceButtonsFromSummary();
                 this.sendFixedText(label);
             },
 
@@ -997,57 +991,7 @@ $js = <<<JS
                     document.getElementById('claude-followup-textarea').value = content;
                 }
 
-                this.clearChoiceButtonsFromSummary();
                 this.replyExpand();
-            },
-
-            /**
-             * Remove choice buttons from summary bar.
-             */
-            clearChoiceButtonsFromSummary: function() {
-                var strip = document.getElementById('claude-summary-choices');
-                if (strip) strip.remove();
-                this._activeChoiceOptions = null;
-            },
-
-            /**
-             * Render choice buttons in the collapsed summary bar.
-             */
-            renderSummaryChoiceButtons: function(options, claudeContent) {
-                this.clearChoiceButtonsFromSummary();
-
-                var summary = document.getElementById('claude-prompt-summary');
-                var chevron = summary.querySelector('.claude-collapsible-summary__chevron');
-                var self = this;
-
-                var strip = document.createElement('span');
-                strip.id = 'claude-summary-choices';
-                strip.className = 'claude-summary-choices';
-
-                for (var i = 0; i < options.length; i++) {
-                    (function(opt) {
-                        var btn = document.createElement('button');
-                        btn.type = 'button';
-                        btn.className = 'claude-collapsible-summary__reply';
-                        btn.textContent = opt.label;
-
-                        if (opt.action === 'edit') {
-                            btn.classList.add('claude-choice-btn--edit');
-                            btn.title = 'Open editor with response';
-                        }
-
-                        btn.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            if (opt.action === 'edit')
-                                self.choiceEdit(claudeContent);
-                            else
-                                self.choiceSend(opt.label);
-                        });
-                        strip.appendChild(btn);
-                    })(options[i]);
-                }
-
-                summary.insertBefore(strip, chevron);
             },
 
             sendFixedText: function(text) {
@@ -1243,12 +1187,7 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                if (this._activeChoiceOptions) {
-                    document.getElementById('claude-summary-reply-btn').classList.add('d-none');
-                    this.renderSummaryChoiceButtons(this._activeChoiceOptions, claudeContent);
-                } else {
-                    document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
-                }
+                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
                 this.scrollToTopUnlessFocused();
                 this.fetchSubscriptionUsage();
             },
@@ -1729,10 +1668,8 @@ $js = <<<JS
                 // Show choice buttons or Go! button depending on response pattern
                 var choiceOptions = this.parseChoiceOptions(claudeContent);
                 if (choiceOptions) {
-                    this._activeChoiceOptions = choiceOptions;
                     this.renderChoiceButtons(msg.div, choiceOptions, claudeContent);
                 } else {
-                    this._activeChoiceOptions = null;
                     var goBtn = msg.div.querySelector('.claude-message__go');
                     if (goBtn && this.needsApproval(claudeContent))
                         goBtn.classList.remove('d-none');
@@ -1979,7 +1916,6 @@ $js = <<<JS
                 var self = this;
                 goBtn.addEventListener('click', function() {
                     document.getElementById('claude-summary-reply-btn').classList.add('d-none');
-                    self.clearChoiceButtonsFromSummary();
                     self.sendFixedText('Proceed');
                 });
                 actions.appendChild(goBtn);
@@ -2297,7 +2233,6 @@ $js = <<<JS
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
                 document.getElementById('claude-summarize-group').classList.add('d-none');
                 document.getElementById('claude-summary-reply-btn').classList.add('d-none');
-                this.clearChoiceButtonsFromSummary();
                 this.updateSummarizeButtonColor(0);
                 this.summarizing = false;
 
@@ -2574,7 +2509,6 @@ $js = <<<JS
                 if (!alreadyAbove)
                     this._animateSwap(editor);
                 document.getElementById('claude-summary-reply-btn').classList.add('d-none');
-                this.clearChoiceButtonsFromSummary();
             },
 
             swapResponseAboveEditor: function() {
