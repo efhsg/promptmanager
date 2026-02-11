@@ -655,6 +655,7 @@ $js = <<<JS
                         if (visibleGo) {
                             e.preventDefault();
                             document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                            self.clearChoiceButtonsFromSummary();
                             self.sendFixedText('Proceed');
                         }
                     }
@@ -799,6 +800,9 @@ $js = <<<JS
 
                 sendBtn.disabled = true;
 
+                // Clean up smart choice buttons from previous response
+                this.clearChoiceButtonsFromSummary();
+
                 // Move the active response into its accordion item before starting a new exchange
                 this.moveActiveResponseToAccordion();
 
@@ -888,6 +892,162 @@ $js = <<<JS
             needsApproval: function(text) {
                 if (!text) return false;
                 return /\?\s*$/.test(text.trimEnd());
+            },
+
+            /**
+             * Parse the last non-empty line of a response for slash-separated
+             * choice options like "Post / Bewerk / Skip?" or "Yes / No?".
+             * Returns an array of {label, action} objects, or null if no pattern found.
+             */
+            parseChoiceOptions: function(text) {
+                if (!text) return null;
+                var lines = text.trimEnd().split('\n');
+                var lastLine = '';
+                for (var i = lines.length - 1; i >= 0; i--) {
+                    var trimmed = lines[i].trim();
+                    if (trimmed) { lastLine = trimmed; break; }
+                }
+                if (!lastLine) return null;
+
+                // Must contain at least one " / " separator
+                if (lastLine.indexOf(' / ') === -1) return null;
+
+                // Strip trailing question mark and whitespace
+                var cleaned = lastLine.replace(/\??\s*$/, '');
+                var parts = cleaned.split(' / ');
+
+                // Need 2-4 options, each reasonable length (max 30 chars, non-empty)
+                if (parts.length < 2 || parts.length > 4) return null;
+                for (var j = 0; j < parts.length; j++) {
+                    if (!parts[j] || parts[j].length > 30) return null;
+                }
+
+                var editWords = ['bewerk', 'edit', 'aanpassen', 'modify', 'adjust'];
+                var options = [];
+                for (var k = 0; k < parts.length; k++) {
+                    var label = parts[k];
+                    var action = editWords.indexOf(label.toLowerCase()) !== -1 ? 'edit' : 'send';
+                    options.push({ label: label, action: action });
+                }
+                return options;
+            },
+
+            /**
+             * Render choice buttons into the message actions area.
+             */
+            renderChoiceButtons: function(messageDiv, options, claudeContent) {
+                var actions = messageDiv.querySelector('.claude-message__actions');
+                if (!actions) return;
+
+                var self = this;
+                var strip = document.createElement('div');
+                strip.className = 'claude-choice-buttons';
+
+                for (var i = 0; i < options.length; i++) {
+                    (function(opt) {
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'claude-choice-btn';
+                        btn.textContent = opt.label;
+
+                        if (opt.action === 'edit') {
+                            btn.classList.add('claude-choice-btn--edit');
+                            btn.title = 'Open editor with response';
+                            btn.addEventListener('click', function() {
+                                self.choiceEdit(claudeContent);
+                            });
+                        } else {
+                            btn.addEventListener('click', function() {
+                                self.choiceSend(opt.label);
+                            });
+                        }
+                        strip.appendChild(btn);
+                    })(options[i]);
+                }
+
+                // Insert before existing action buttons
+                actions.insertBefore(strip, actions.firstChild);
+            },
+
+            /**
+             * Choice action: send the label as a fixed reply.
+             */
+            choiceSend: function(label) {
+                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                this.clearChoiceButtonsFromSummary();
+                this.sendFixedText(label);
+            },
+
+            /**
+             * Choice action: load Claude's response (minus the choice line) into the editor.
+             */
+            choiceEdit: function(claudeContent) {
+                // Strip the last line (the choice question) from the response
+                var lines = claudeContent.trimEnd().split('\n');
+                for (var i = lines.length - 1; i >= 0; i--) {
+                    if (lines[i].trim()) { lines.splice(i, 1); break; }
+                }
+                var content = lines.join('\n').trimEnd();
+
+                // Load into editor
+                if (this.inputMode === 'quill') {
+                    var delta = quill.clipboard.convert({ html: this.renderMarkdown(content) });
+                    quill.setContents(delta);
+                } else {
+                    document.getElementById('claude-followup-textarea').value = content;
+                }
+
+                this.clearChoiceButtonsFromSummary();
+                this.replyExpand();
+            },
+
+            /**
+             * Remove choice buttons from summary bar.
+             */
+            clearChoiceButtonsFromSummary: function() {
+                var strip = document.getElementById('claude-summary-choices');
+                if (strip) strip.remove();
+                this._activeChoiceOptions = null;
+            },
+
+            /**
+             * Render choice buttons in the collapsed summary bar.
+             */
+            renderSummaryChoiceButtons: function(options, claudeContent) {
+                this.clearChoiceButtonsFromSummary();
+
+                var summary = document.getElementById('claude-prompt-summary');
+                var chevron = summary.querySelector('.claude-collapsible-summary__chevron');
+                var self = this;
+
+                var strip = document.createElement('span');
+                strip.id = 'claude-summary-choices';
+                strip.className = 'claude-summary-choices';
+
+                for (var i = 0; i < options.length; i++) {
+                    (function(opt) {
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'claude-collapsible-summary__reply';
+                        btn.textContent = opt.label;
+
+                        if (opt.action === 'edit') {
+                            btn.classList.add('claude-choice-btn--edit');
+                            btn.title = 'Open editor with response';
+                        }
+
+                        btn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            if (opt.action === 'edit')
+                                self.choiceEdit(claudeContent);
+                            else
+                                self.choiceSend(opt.label);
+                        });
+                        strip.appendChild(btn);
+                    })(options[i]);
+                }
+
+                summary.insertBefore(strip, chevron);
             },
 
             sendFixedText: function(text) {
@@ -1083,7 +1243,12 @@ $js = <<<JS
                     document.getElementById('claude-summarize-group').classList.remove('d-none');
                 }
                 document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
+                if (this._activeChoiceOptions) {
+                    document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                    this.renderSummaryChoiceButtons(this._activeChoiceOptions, claudeContent);
+                } else {
+                    document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
+                }
                 this.scrollToTopUnlessFocused();
                 this.fetchSubscriptionUsage();
             },
@@ -1561,10 +1726,17 @@ $js = <<<JS
                 this.renderToQuillViewer(msg.body, claudeContent);
                 this.checkExpandOverflow(msg.div);
 
-                // Show Go! button only when Claude asks for approval
-                var goBtn = msg.div.querySelector('.claude-message__go');
-                if (goBtn && this.needsApproval(claudeContent))
-                    goBtn.classList.remove('d-none');
+                // Show choice buttons or Go! button depending on response pattern
+                var choiceOptions = this.parseChoiceOptions(claudeContent);
+                if (choiceOptions) {
+                    this._activeChoiceOptions = choiceOptions;
+                    this.renderChoiceButtons(msg.div, choiceOptions, claudeContent);
+                } else {
+                    this._activeChoiceOptions = null;
+                    var goBtn = msg.div.querySelector('.claude-message__go');
+                    if (goBtn && this.needsApproval(claudeContent))
+                        goBtn.classList.remove('d-none');
+                }
 
                 // Fire-and-forget: summarize response into collapsed bar
                 this.summarizeResponseTitle(msg.div, claudeContent);
@@ -1807,6 +1979,7 @@ $js = <<<JS
                 var self = this;
                 goBtn.addEventListener('click', function() {
                     document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                    self.clearChoiceButtonsFromSummary();
                     self.sendFixedText('Proceed');
                 });
                 actions.appendChild(goBtn);
@@ -2124,6 +2297,7 @@ $js = <<<JS
                 document.getElementById('claude-reuse-btn').classList.add('d-none');
                 document.getElementById('claude-summarize-group').classList.add('d-none');
                 document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                this.clearChoiceButtonsFromSummary();
                 this.updateSummarizeButtonColor(0);
                 this.summarizing = false;
 
@@ -2400,6 +2574,7 @@ $js = <<<JS
                 if (!alreadyAbove)
                     this._animateSwap(editor);
                 document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                this.clearChoiceButtonsFromSummary();
             },
 
             swapResponseAboveEditor: function() {
