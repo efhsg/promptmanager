@@ -719,6 +719,7 @@ $js = <<<JS
                     if (self._replyExpand) {
                         self._replyExpand = false;
                         self.swapEditorAboveResponse();
+                        self.expandActiveResponse();
                         if (window.scrollY > 0)
                             window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
@@ -2169,6 +2170,16 @@ $js = <<<JS
                 if (goBtn) goBtn.classList.add('d-none');
                 this._replyExpand = true;
                 this.expandPromptEditor();
+            },
+
+            expandActiveResponse: function() {
+                var container = document.getElementById('claude-active-response-container');
+                if (!container) return;
+                var body = container.querySelector('.claude-message__body');
+                if (!body || body.classList.contains('claude-message__body--expanded')) return;
+                body.classList.add('claude-message__body--expanded');
+                var btn = container.querySelector('.claude-message__expand');
+                if (btn) btn.innerHTML = '<i class="bi bi-arrows-angle-contract"></i>';
             },
 
             compactEditor: function() {
