@@ -139,12 +139,13 @@ window.QuillToolbar = (function() {
             btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'ql-smartPaste';
-            btn.title = 'Smart Paste (auto-detects markdown)';
+            btn.title = 'Smart Paste — auto-detects markdown (Alt+P)';
             btn.innerHTML = SMART_PASTE_SVG;
             el.replaceWith(btn);
         }
 
-        btn.addEventListener('click', async () => {
+        const doSmartPaste = async () => {
+            if (btn.disabled) return;
             const originalHtml = btn.innerHTML;
             try {
                 const text = await navigator.clipboard.readText();
@@ -195,6 +196,15 @@ window.QuillToolbar = (function() {
             } finally {
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+            }
+        };
+
+        btn.addEventListener('click', doSmartPaste);
+
+        quill.root.addEventListener('keydown', (e) => {
+            if (e.altKey && e.key.toLowerCase() === 'p') {
+                e.preventDefault();
+                doSmartPaste();
             }
         });
     };
