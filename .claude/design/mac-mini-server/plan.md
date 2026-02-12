@@ -1,205 +1,328 @@
-# Mac Mini Server — PRD & DEV op macOS
+# Mac Mini Server — DEV Environment Setup
 
 | | |
 |---|---|
 | Status | Draft |
-| Datum | 2026-02-07 |
-| Platform | Mac Mini (macOS 13+) |
+| Date | 2026-02-12 |
+| Platform | Mac Mini (macOS) |
+| Scope | DEV environment only |
 
-## Wat
+## Goal
 
-Twee geïsoleerde Docker stacks (PRD + DEV) op één Mac Mini, bereikbaar via Tailscale VPN.
+Set up a single DEV Docker stack on a Mac Mini, accessible via Tailscale VPN.
 
 ```
 Mac Mini (macOS)
-├── /opt/promptmanager/prd   → :8502 (productie)
-├── /opt/promptmanager/dev   → :8503 (ontwikkeling)
-└── /opt/promptmanager/scripts → backup & health check
+└── /opt/promptmanager/dev   → :8503 (development)
 ```
 
-Beide stacks gebruiken de bestaande `docker-compose.yml` + een `docker-compose.override.yml` per omgeving. Isolatie via `COMPOSE_PROJECT_NAME` en unieke poorten.
+## Starting Point
 
-## Poorten
+| Item | Status |
+|------|--------|
+| `/opt/promptmanager/dev` | Created |
+| Git (SSH) | Working |
+| Repo cloned | `git@github.com:efhsg/promptmanager.git` pulled into `/opt/promptmanager/dev` |
+| Docker / Docker Compose | NOT installed |
+| Tailscale | Assumed configured |
 
-| Service | PRD | DEV | Binding |
-|---------|-----|-----|---------|
-| NGINX | 8502 | 8503 | `127.0.0.1` + Tailscale IP |
-| MySQL (host) | 3307 | 3308 | `127.0.0.1` |
-| PHP-FPM | 9001 | 9002 | intern |
+## Ports
 
-## Vereisten
-
-- macOS 13+, 8 GB RAM, 50 GB vrij
-- Docker Desktop (`brew install --cask docker`), "Start on login" aan
-- Tailscale (reeds geconfigureerd)
-- `brew install git jq rclone`
+| Service | Port | Binding |
+|---------|------|---------|
+| NGINX | 8503 | `127.0.0.1` + Tailscale IP |
+| MySQL (host) | 3307 | `127.0.0.1` |
+| PHP-FPM | 9001 | internal (container-to-container) |
 
 ---
 
-## Stap 1: Directories & repo
+## Step 1 — Install Homebrew (if missing)
 
 ```bash
-sudo mkdir -p /opt/promptmanager/{prd,dev,scripts,backups}
-sudo chown -R $(whoami):staff /opt/promptmanager
-
-git clone <repository-url> /opt/promptmanager/prd
-git clone <repository-url> /opt/promptmanager/dev
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-## Stap 2: PRD configureren
-
-### .env
+After install, follow the printed instructions to add Homebrew to your PATH. On Apple Silicon:
 
 ```bash
-cd /opt/promptmanager/prd && cp .env.example .env
+echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+eval "$(/opt/homebrew/bin/brew shellenv)"
 ```
 
-Wijzig:
+Verify:
+
+```bash
+brew --version
+```
+
+## Step 2 — Install Docker Desktop
+
+```bash
+brew install --cask docker
+```
+
+After install:
+
+1. Open Docker Desktop from Applications (or Spotlight: `Cmd+Space` → "Docker")
+2. Accept the license agreement and complete the setup wizard
+3. Wait for Docker Desktop to finish starting (whale icon in menu bar stops animating)
+4. Enable auto-start: Docker Desktop → Settings → General → **"Start Docker Desktop when you sign in"** → On
+
+Verify:
+
+```bash
+docker --version
+docker compose version
+docker info
+```
+
+All three commands should succeed without errors.
+
+## Step 3 — Install required tools
+
+```bash
+brew install jq rclone
+```
+
+- `jq` — used inside the PHP container (already baked into the Dockerfile), but useful on the host for debugging
+- `rclone` — used by `scripts/backup-db.sh` to upload backups to Google Drive
+
+Verify:
+
+```bash
+jq --version
+rclone --version
+```
+
+## Step 4 — Determine macOS user ID
+
+Docker containers run as a non-root user with a matching UID. Find your macOS UID:
+
+```bash
+id -u
+```
+
+On macOS, the first user is typically `501`. Note this value for the `.env` file.
+
+## Step 5 — Create the `.env` file
+
+```bash
+cd /opt/promptmanager/dev
+cp .env.example .env
+```
+
+Edit `.env` with these values:
 
 ```env
-COMPOSE_PROJECT_NAME=prd
 USER_ID=501
-DB_ROOT_PASSWORD=<sterk-prd>
-DB_HOST=prd_mysql
-DB_PASSWORD=<sterk-prd>
-DB_PORT=3307
-NGINX_PORT=8502
-PHP_FPM_PORT=9001
-TAILSCALE_IP=<mac-mini-tailscale-ip>
-XDEBUG_MODE=off
-XDEBUG_START_WITH_REQUEST=no
-IDENTITY_DISABLE_CAPTCHA=FALSE
-INCLUDED_TEST_MODULES=[]
-PROJECTS_ROOT=/Users/<username>/projects
-PATH_MAPPINGS={"/Users/<username>/projects": "/projects"}
-```
+USER_NAME=appuser
+TIMEZONE=Europe/Amsterdam
 
-### docker-compose.override.yml
+# Database
+DB_ROOT_PASSWORD=<generate-strong-password>
+DB_HOST=pma_mysql
+DB_DATABASE=promptmanager
+DB_DATABASE_TEST=promptmanager_test
+DB_USER=promptmanager
+DB_PASSWORD=<generate-strong-password>
+DB_APP_PORT=3306
+COMPOSE_PROFILES=local
 
-```yaml
-services:
-  pma_yii:
-    container_name: prd_yii
-  pma_nginx:
-    container_name: prd_nginx
-  pma_mysql:
-    container_name: prd_mysql
-  pma_npm:
-    container_name: prd_npm
-```
-
-> De base `docker-compose.yml` heeft al `restart: always` en de juiste volume mounts. Override alleen container names.
-
-### YII_ENV
-
-Maak PRD-specifiek `index.php` zonder debug:
-
-```bash
-# Comment YII_DEBUG en YII_ENV regels uit in yii/web/index.php
-```
-
-> **TODO:** Beter: lees `YII_ENV` uit een environment variable zodat `git pull` het niet overschrijft. Eenmalige refactor.
-
-### Starten
-
-```bash
-cd /opt/promptmanager/prd
-docker compose up -d --build
-docker exec prd_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8502
-```
-
-> Geen `yii_test migrate` op PRD — niet nodig.
-
-## Stap 3: DEV configureren
-
-### .env
-
-```bash
-cd /opt/promptmanager/dev && cp .env.example .env
-```
-
-Wijzig (verschil met PRD: **project name, poorten, xdebug aan, captcha uit**):
-
-```env
-COMPOSE_PROJECT_NAME=dev
-USER_ID=501
-DB_ROOT_PASSWORD=<sterk-dev>
-DB_HOST=dev_mysql
-DB_PASSWORD=<sterk-dev>
-DB_PORT=3308
+# Ports
 NGINX_PORT=8503
-PHP_FPM_PORT=9002
-TAILSCALE_IP=<mac-mini-tailscale-ip>
+DB_PORT=3307
+PHP_FPM_PORT=9001
+
+# Xdebug — enabled for DEV
 XDEBUG_MODE=debug,develop
 XDEBUG_START_WITH_REQUEST=trigger
+XDEBUG_CLIENT_HOST=host.docker.internal
+XDEBUG_PORT=9003
+
+# Auth
 IDENTITY_DISABLE_CAPTCHA=TRUE
+
+# Tests
 INCLUDED_TEST_MODULES=["modules/identity/tests"]
+
+# Tailscale — NGINX binds to this IP, container won't start if invalid
+# Find your IP with: tailscale ip -4
+TAILSCALE_IP=<mac-mini-tailscale-ip>
+
+# YouTube Transcript Import (keep defaults unless you use this feature)
+YTX_PATH=./ytx
+YTX_PYTHON_PATH=/usr/bin/python3
+YTX_SCRIPT_PATH=/opt/ytx/ytx.py
+
+# Claude CLI Integration
+# Absolute host path to projects directory (mounted as /projects in container)
 PROJECTS_ROOT=/Users/<username>/projects
 PATH_MAPPINGS={"/Users/<username>/projects": "/projects"}
 ```
 
-### docker-compose.override.yml
+> Replace `<username>` with your macOS username. Replace `<generate-strong-password>` with actual strong passwords (use `openssl rand -base64 24` to generate).
 
-```yaml
-services:
-  pma_yii:
-    container_name: dev_yii
-  pma_nginx:
-    container_name: dev_nginx
-  pma_mysql:
-    container_name: dev_mysql
-  pma_npm:
-    container_name: dev_npm
+### Optional: create the ytx directory if it doesn't exist
+
+The `YTX_PATH=./ytx` volume mount will fail if the directory doesn't exist:
+
+```bash
+mkdir -p /opt/promptmanager/dev/ytx
 ```
 
-### Starten
+## Step 6 — Prepare host volume mounts
+
+The `docker-compose.yml` mounts several host directories into the PHP container. These must exist before starting:
+
+```bash
+# Projects directory (for Claude CLI integration)
+mkdir -p /Users/<username>/projects
+
+# Claude CLI config (if not already present)
+mkdir -p ~/.claude
+touch ~/.claude.json
+
+# Local bins and share (if not already present)
+mkdir -p ~/.local/bin
+mkdir -p ~/.local/share
+
+# GitHub CLI config (if not already present)
+mkdir -p ~/.config/gh
+```
+
+Verify SSH and git config exist (these are mounted read-only):
+
+```bash
+ls ~/.ssh/id_ed25519 || ls ~/.ssh/id_rsa   # At least one SSH key
+ls ~/.gitconfig                             # Git config
+```
+
+## Step 7 — Build and start the stack
 
 ```bash
 cd /opt/promptmanager/dev
 docker compose up -d --build
-docker exec dev_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-docker exec dev_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8503
 ```
 
-## Stap 4: Data migratie
+This builds and starts four containers:
 
-Vanaf de canonieke bron:
+| Container | Image | Purpose |
+|-----------|-------|---------|
+| `pma_yii` | Custom (PHP 8.2-FPM) | PHP application server |
+| `pma_nginx` | nginx:latest | Web server, reverse proxy |
+| `pma_mysql` | mysql:8.0 | Database (via `local` profile) |
+| `pma_npm` | Custom (Node 20) | Frontend build (runs once, then exits) |
+
+The first build takes several minutes (PHP extensions, Composer, Node.js install).
+
+Verify all services are running:
 
 ```bash
-# Export
-docker exec -e MYSQL_PWD="$DB_PASSWORD" pma_mysql mysqldump \
-    -u"$DB_USER" --single-transaction --routines --triggers \
+docker compose ps
+```
+
+Expected: `pma_yii`, `pma_nginx`, `pma_mysql` should show `running`. `pma_npm` will show `exited (0)` — this is normal (it runs the build and stops).
+
+## Step 8 — Run database migrations
+
+```bash
+# Application schema
+docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+
+# Test schema
+docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+```
+
+Both should complete with `Migrated up successfully`.
+
+## Step 9 — Verify the application
+
+```bash
+# HTTP health check
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8503
+# Expected: 200 (or 302 redirect to login)
+
+# Tailscale access (from another Tailscale device)
+curl -s -o /dev/null -w "%{http_code}" http://<mac-mini-tailscale-ip>:8503
+```
+
+Open in browser: `http://localhost:8503` or `http://<mac-mini-tailscale-ip>:8503`
+
+## Step 10 — Run tests
+
+```bash
+docker exec pma_yii vendor/bin/codecept run unit
+```
+
+All tests should pass. This confirms the application, database, and test database are all working correctly.
+
+## Step 11 — Register a user
+
+The application requires authentication. With `IDENTITY_DISABLE_CAPTCHA=TRUE`, you can register directly through the web interface:
+
+1. Open `http://localhost:8503`
+2. Click "Sign Up" / register
+3. Fill in email, username, password
+4. Log in
+
+---
+
+## Post-Setup: macOS Hardening
+
+These settings ensure the Mac Mini stays running as a server:
+
+```bash
+# Disable sleep (display, disk, system)
+sudo pmset -a sleep 0 disksleep 0 displaysleep 0
+
+# Auto-restart after power failure
+sudo pmset -a autorestart 1
+
+# Enable firewall
+sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
+```
+
+## Post-Setup: Data Migration (optional)
+
+If you have an existing database to import:
+
+```bash
+# On the source machine — export
+docker exec -e MYSQL_PWD="<source-db-password>" pma_mysql mysqldump \
+    -u promptmanager --single-transaction --routines --triggers \
     promptmanager | gzip > /tmp/promptmanager.sql.gz
 
-# Kopieer naar Mac Mini
-scp /tmp/promptmanager.sql.gz <user>@<tailscale-ip>:/tmp/
+# Copy to Mac Mini via Tailscale
+scp /tmp/promptmanager.sql.gz <user>@<mac-mini-tailscale-ip>:/tmp/
 
-# Import in PRD
+# On Mac Mini — import
 gunzip -c /tmp/promptmanager.sql.gz | \
-    docker exec -i prd_mysql mysql -u root -p"<PRD_ROOT_PASSWORD>" promptmanager
+    docker exec -i -e MYSQL_PWD="<dev-db-password>" pma_mysql mysql \
+    -u promptmanager promptmanager
 ```
 
-## Stap 5: Backups
+## Post-Setup: Backups (optional)
 
-### backup-db.sh aanpassen
+The existing `scripts/backup-db.sh` uploads database dumps to Google Drive via `rclone`.
 
-Het bestaande script hardcodet `pma_mysql`. Maak de container name configureerbaar:
+### Configure rclone for Google Drive
 
 ```bash
-# In backup-db.sh, vervang:
-#   docker exec -e MYSQL_PWD="$DB_PASSWORD" pma_mysql mysqldump ...
-# Door:
-MYSQL_CONTAINER="${MYSQL_CONTAINER:-pma_mysql}"
-docker exec -e MYSQL_PWD="$DB_PASSWORD" "$MYSQL_CONTAINER" mysqldump ...
+rclone config
+# Follow the interactive wizard to add a remote named "gdrive"
+# Or copy an existing ~/.config/rclone/rclone.conf from another machine
 ```
 
-Zelfde fix in `restore-db.sh`.
+### Test a manual backup
 
-### launchd backup (dagelijks 02:00)
+```bash
+cd /opt/promptmanager/dev
+./scripts/backup-db.sh
+```
 
-`~/Library/LaunchAgents/com.promptmanager.backup.plist`:
+### Automate with launchd (daily at 02:00)
+
+Create `~/Library/LaunchAgents/com.promptmanager.backup.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -211,7 +334,7 @@ Zelfde fix in `restore-db.sh`.
     <string>com.promptmanager.backup</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/promptmanager/prd/scripts/backup-db.sh</string>
+        <string>/opt/promptmanager/dev/scripts/backup-db.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -221,15 +344,13 @@ Zelfde fix in `restore-db.sh`.
         <integer>0</integer>
     </dict>
     <key>StandardOutPath</key>
-    <string>/opt/promptmanager/backups/backup.log</string>
+    <string>/opt/promptmanager/dev/data/backup.log</string>
     <key>StandardErrorPath</key>
-    <string>/opt/promptmanager/backups/backup-error.log</string>
+    <string>/opt/promptmanager/dev/data/backup-error.log</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
         <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
-        <key>MYSQL_CONTAINER</key>
-        <string>prd_mysql</string>
     </dict>
 </dict>
 </plist>
@@ -239,90 +360,82 @@ Zelfde fix in `restore-db.sh`.
 launchctl load ~/Library/LaunchAgents/com.promptmanager.backup.plist
 ```
 
-> rclone config: kopieer bestaande `~/.config/rclone/rclone.conf` naar Mac Mini.
+## Post-Setup: Deployment Workflow
 
-## Stap 6: Health check
-
-`/opt/promptmanager/scripts/healthcheck.sh`:
+To update the DEV environment after pushing changes:
 
 ```bash
-#!/bin/bash
-# Geen set -e: we willen alle checks doorlopen, ook bij failures
-ERRORS=0
-
-check() {
-    if eval "$1" &>/dev/null; then
-        echo "[$(date '+%H:%M:%S')] OK: $2"
-    else
-        echo "[$(date '+%H:%M:%S')] FAIL: $2"
-        ERRORS=$((ERRORS + 1))
-    fi
-}
-
-check "docker info" "Docker"
-check "tailscale status" "Tailscale"
-
-for c in prd_yii prd_nginx prd_mysql dev_yii dev_nginx dev_mysql; do
-    check "docker ps --format '{{.Names}}' | grep -q '^${c}$'" "$c"
-done
-
-for port in 8502 8503; do
-    check "curl -sf -o /dev/null http://localhost:${port}" "HTTP :${port}"
-done
-
-DISK=$(df -h / | awk 'NR==2{print $5}' | tr -d '%')
-[ "$DISK" -gt 90 ] && echo "[$(date '+%H:%M:%S')] WARN: Disk ${DISK}%" && ERRORS=$((ERRORS + 1))
-
-echo "[$(date '+%H:%M:%S')] Done: ${ERRORS} errors"
-exit $ERRORS
-```
-
-launchd plist: zelfde structuur als backup, maar met `<key>StartInterval</key><integer>300</integer>`.
-
-## Stap 7: macOS hardening
-
-```bash
-# Geen slaapstand
-sudo pmset -a sleep 0 disksleep 0 displaysleep 0
-
-# Herstart na stroomuitval
-sudo pmset -a autorestart 1
-
-# Firewall aan
-sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate on
-```
-
-Docker Desktop → Settings → "Start Docker Desktop when you sign in" → Aan.
-
-## Stap 8: Deployment
-
-```bash
-# PRD
-cd /opt/promptmanager/prd && git pull origin main
+cd /opt/promptmanager/dev
+git pull origin <branch>
 docker compose up -d --build pma_yii pma_nginx
-docker exec prd_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-
-# DEV
-cd /opt/promptmanager/dev && git pull origin <branch>
-docker compose up -d --build pma_yii pma_nginx
-docker exec dev_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
 ```
 
 ---
 
-## Bekende issues
+## Troubleshooting
 
-| Issue | Actie |
-|-------|-------|
-| `backup-db.sh` / `restore-db.sh` hardcoden `pma_mysql` | Maak container name configureerbaar via `MYSQL_CONTAINER` env var |
-| Docker Desktop for Mac bindt niet aan specifieke host IPs zoals Linux | Valideer of `TAILSCALE_IP:port` binding werkt; zo niet, bind `0.0.0.0` en vertrouw op Tailscale ACLs |
-| `yii/web/index.php` YII_DEBUG wordt overschreven bij `git pull` | Refactor naar env var check |
-| Health check logt zonder rotatie | Voeg newsyslog config toe of truncate in script |
+### Docker Desktop won't start
 
-## Open vragen
+```bash
+# Check if Docker socket exists
+ls /var/run/docker.sock
 
-| Vraag | Impact |
-|-------|--------|
-| Git repository URL? | Clone commando |
-| macOS versie op Mac Mini? | Compatibiliteit |
-| rclone al geconfigureerd? | Backup setup |
+# Reset Docker Desktop (last resort)
+# Docker Desktop → Troubleshoot → Reset to factory defaults
+```
+
+### NGINX fails to start (Tailscale IP binding)
+
+Docker Desktop for Mac may not bind to specific host IPs the same way Linux does. If `pma_nginx` fails to start:
+
+1. Check logs: `docker compose logs pma_nginx`
+2. Verify Tailscale IP: `tailscale ip -4`
+3. If binding fails, the `TAILSCALE_IP` in `.env` may be incorrect or Tailscale may not be running
+
+### Container can't resolve host.docker.internal
+
+This is handled by `extra_hosts` in `docker-compose.yml`. If it still fails:
+
+```bash
+# Verify from inside the container
+docker exec pma_yii ping -c1 host.docker.internal
+```
+
+### Permission errors on mounted volumes
+
+macOS UID mismatch. Verify `USER_ID` in `.env` matches your macOS UID:
+
+```bash
+id -u   # Should match USER_ID in .env
+```
+
+### MySQL init script doesn't run
+
+The init script in `docker/init-scripts/` only runs on first container start (empty data directory). If MySQL was already initialized:
+
+```bash
+# Remove data and restart (destroys all data!)
+rm -rf /opt/promptmanager/dev/data/db/mysql
+docker compose up -d --build pma_mysql
+```
+
+---
+
+## Checklist
+
+- [ ] Homebrew installed
+- [ ] Docker Desktop installed and auto-start enabled
+- [ ] `jq` and `rclone` installed
+- [ ] `.env` created with correct values (USER_ID, passwords, TAILSCALE_IP, PROJECTS_ROOT)
+- [ ] Host directories exist for volume mounts (~/.claude, ~/.ssh, etc.)
+- [ ] `docker compose up -d --build` succeeds
+- [ ] All containers running (`docker compose ps`)
+- [ ] Migrations run on both schemas
+- [ ] `http://localhost:8503` returns 200/302
+- [ ] Tailscale access works from remote device
+- [ ] Tests pass (`codecept run unit`)
+- [ ] User registered and can log in
+- [ ] macOS hardening applied (sleep, autorestart, firewall)
+- [ ] Backups configured (optional)
