@@ -15,9 +15,9 @@ class ContentViewerWidget extends Widget
     public array $copyButtonOptions = [];
     public string $copyButtonLabel = '<i class="bi bi-clipboard"> </i>';
     public string $copyFormat = 'text';
-    public array $cliCopyButtonOptions = [];
+    public array $cssOptions = [];
 
-    public array $cssOptions = [
+    private const DEFAULT_CSS = [
         'min-height' => '100px',
         'border' => '1px solid #e0e0e0',
         'border-radius' => '4px',
@@ -31,6 +31,7 @@ class ContentViewerWidget extends Widget
     public function init(): void
     {
         parent::init();
+        $this->cssOptions = array_merge(self::DEFAULT_CSS, $this->cssOptions);
         $this->processContent();
 
         if (isset($this->copyButtonOptions['copyFormat'])) {
@@ -113,26 +114,7 @@ class ContentViewerWidget extends Widget
             $copyBtnHtml = Html::tag('div', $btn, ['class' => 'copy-button-container']);
         }
 
-        $cliBtnHtml = '';
-        if ($this->enableCopy && !empty($this->cliCopyButtonOptions)) {
-            $defaultCliBtn = [
-                'class' => 'btn btn-sm btn-outline-secondary',
-                'title' => 'Copy as Claude CLI command',
-                'aria-label' => 'Copy as Claude CLI command',
-            ];
-            $cliButtonOptions = array_merge($defaultCliBtn, $this->cliCopyButtonOptions);
-            $cliBtn = CopyToClipboardWidget::widget([
-                'targetSelector' => "#$hiddenId",
-                'copyFormat' => $this->copyFormat,
-                'copyContent' => $copyContent,
-                'buttonOptions' => $cliButtonOptions,
-                'label' => '<i class="bi bi-terminal"></i>',
-                'cliCommandTemplate' => 'claude --permission-mode plan -p %s',
-            ]);
-            $cliBtnHtml = Html::tag('div', $cliBtn, ['class' => 'cli-copy-button-container']);
-        }
-
-        return Html::tag('div', $hidden . $viewerHtml . $cliBtnHtml . $copyBtnHtml, [
+        return Html::tag('div', $hidden . $viewerHtml . $copyBtnHtml, [
             'class' => 'position-relative',
         ]);
     }
