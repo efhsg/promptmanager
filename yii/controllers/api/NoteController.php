@@ -2,7 +2,7 @@
 
 namespace app\controllers\api;
 
-use app\models\ScratchPad;
+use app\models\Note;
 use app\services\copyformat\DeltaParser;
 use app\services\copyformat\MarkdownParser;
 use app\services\copyformat\QuillDeltaWriter;
@@ -13,7 +13,7 @@ use yii\filters\ContentNegotiator;
 use yii\rest\Controller;
 use yii\web\Response;
 
-class ScratchPadController extends Controller
+class NoteController extends Controller
 {
     private DeltaParser $deltaParser;
     private ProjectService $projectService;
@@ -53,7 +53,7 @@ class ScratchPadController extends Controller
         $name = $request->post('name');
         $content = $request->post('content');
         $projectName = $request->post('project_name');
-        $format = $request->post('format', 'text'); // 'text', 'delta', or 'md'
+        $format = $request->post('format', 'text');
 
         // Validate format parameter
         if (!in_array($format, ['text', 'delta', 'md'], true)) {
@@ -81,20 +81,20 @@ class ScratchPadController extends Controller
             return ['success' => false, 'errors' => ['project_name' => $projectResult]];
         }
 
-        $scratchPad = new ScratchPad([
+        $note = new Note([
             'user_id' => $user->id,
             'project_id' => $projectResult,
             'name' => $name,
             'content' => $deltaContent,
         ]);
 
-        if ($scratchPad->save()) {
+        if ($note->save()) {
             Yii::$app->response->statusCode = 201;
-            return ['success' => true, 'id' => $scratchPad->id];
+            return ['success' => true, 'id' => $note->id];
         }
 
         Yii::$app->response->statusCode = 422;
-        return ['success' => false, 'errors' => $scratchPad->getErrors()];
+        return ['success' => false, 'errors' => $note->getErrors()];
     }
 
     /**
@@ -111,16 +111,13 @@ class ScratchPadController extends Controller
         }
 
         if ($format === 'delta') {
-            // Content can be array (JSON object) or string (JSON string)
             if (is_array($content)) {
-                // Validate structure
                 if (!isset($content['ops']) || !is_array($content['ops'])) {
                     return false;
                 }
                 return $this->deltaParser->encode($content);
             }
 
-            // String: validate it's proper Delta JSON
             $decoded = $this->deltaParser->decode($content);
             if ($decoded === null) {
                 return false;

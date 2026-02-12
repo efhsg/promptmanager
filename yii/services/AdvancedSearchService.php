@@ -4,9 +4,9 @@ namespace app\services;
 
 use app\models\Context;
 use app\models\Field;
+use app\models\Note;
 use app\models\PromptInstance;
 use app\models\PromptTemplate;
-use app\models\ScratchPad;
 use common\enums\SearchMode;
 use yii\base\Component;
 use yii\helpers\Url;
@@ -23,14 +23,14 @@ class AdvancedSearchService extends Component
     public const TYPE_FIELDS = 'fields';
     public const TYPE_TEMPLATES = 'templates';
     public const TYPE_INSTANCES = 'instances';
-    public const TYPE_SCRATCH_PADS = 'scratchPads';
+    public const TYPE_NOTES = 'notes';
 
     public const ALL_TYPES = [
         self::TYPE_CONTEXTS,
         self::TYPE_FIELDS,
         self::TYPE_TEMPLATES,
         self::TYPE_INSTANCES,
-        self::TYPE_SCRATCH_PADS,
+        self::TYPE_NOTES,
     ];
 
     public static function typeLabels(): array
@@ -40,7 +40,7 @@ class AdvancedSearchService extends Component
             self::TYPE_FIELDS => 'Fields',
             self::TYPE_TEMPLATES => 'Templates',
             self::TYPE_INSTANCES => 'Generated Prompts',
-            self::TYPE_SCRATCH_PADS => 'Scratch Pads',
+            self::TYPE_NOTES => 'Notes',
         ];
     }
 
@@ -73,8 +73,8 @@ class AdvancedSearchService extends Component
             'instances' => in_array(self::TYPE_INSTANCES, $searchTypes, true)
                 ? $this->searchInstances($term, $keywords, $userId, $mode, $limit)
                 : [],
-            'scratchPads' => in_array(self::TYPE_SCRATCH_PADS, $searchTypes, true)
-                ? $this->searchScratchPads($term, $keywords, $userId, $mode, $limit)
+            'notes' => in_array(self::TYPE_NOTES, $searchTypes, true)
+                ? $this->searchNotes($term, $keywords, $userId, $mode, $limit)
                 : [],
         ];
     }
@@ -197,9 +197,9 @@ class AdvancedSearchService extends Component
      * @param string[] $keywords
      * @return array<int, array{id: int, type: string, name: string, subtitle: string, url: string}>
      */
-    private function searchScratchPads(string $term, array $keywords, int $userId, SearchMode $mode, int $limit): array
+    private function searchNotes(string $term, array $keywords, int $userId, SearchMode $mode, int $limit): array
     {
-        $query = ScratchPad::find()
+        $query = Note::find()
             ->forUser($userId)
             ->limit($limit);
 
@@ -210,17 +210,19 @@ class AdvancedSearchService extends Component
         }
         $query->prioritizeNameMatch($term);
 
-        return array_map(fn(ScratchPad $pad) => [
-            'id' => $pad->id,
-            'type' => 'scratchPad',
-            'name' => $pad->name,
-            'subtitle' => $pad->project->name ?? 'No project',
-            'url' => Url::to(['/scratch-pad/view', 'id' => $pad->id, 'p' => $pad->project_id]),
+        return array_map(fn(Note $note) => [
+            'id' => $note->id,
+            'type' => 'note',
+            'name' => $note->name,
+            'subtitle' => $note->project->name ?? 'No project',
+            'url' => $note->parent_id
+                ? Url::to(['/note/view', 'id' => $note->parent_id, 'p' => $note->project_id])
+                : Url::to(['/note/view', 'id' => $note->id, 'p' => $note->project_id]),
         ], $query->all());
     }
 
     /**
-     * @return array{contexts: array, fields: array, templates: array, instances: array, scratchPads: array}
+     * @return array{contexts: array, fields: array, templates: array, instances: array, notes: array}
      */
     private function emptyResults(): array
     {
@@ -229,7 +231,7 @@ class AdvancedSearchService extends Component
             'fields' => [],
             'templates' => [],
             'instances' => [],
-            'scratchPads' => [],
+            'notes' => [],
         ];
     }
 }

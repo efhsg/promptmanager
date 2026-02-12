@@ -56,9 +56,9 @@ echo Nav::widget([
             ],
         ],
         [
-            'label' => 'Scratch Pads',
-            'url' => ['/scratch-pad/index'],
-            'options' => ['id' => 'nav-scratch-pads'],
+            'label' => 'Notes',
+            'url' => ['/note/index'],
+            'options' => ['id' => 'nav-notes'],
         ],
     ],
 ]);
@@ -177,9 +177,9 @@ if (!Yii::$app->user->isGuest) {
 
         const isDesktop = window.innerWidth >= 1200; // Bootstrap xl breakpoint
         if (isDesktop) {
-            const scratchPadsLink = document.querySelector('#nav-scratch-pads a');
-            if (scratchPadsLink) {
-                const linkRect = scratchPadsLink.getBoundingClientRect();
+            const notesLink = document.querySelector('#nav-notes a');
+            if (notesLink) {
+                const linkRect = notesLink.getBoundingClientRect();
                 const wrapperHeight = wrapper.offsetHeight;
                 const linkCenterY = linkRect.top + (linkRect.height / 2);
                 wrapper.style.left = (linkRect.right + 20) + 'px';

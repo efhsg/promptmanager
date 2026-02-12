@@ -3,16 +3,17 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\ScratchPad $model */
+/** @var app\models\Note $model */
 /** @var array $projectList */
+/** @var app\models\Note[] $children */
 
 $this->title = 'Update: ' . $model->name;
-$this->params['breadcrumbs'][] = ['label' => 'Saved Scratch Pads', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Notes', 'url' => ['index']];
 $this->params['breadcrumbs'][] = ['label' => $model->name, 'url' => ['view', 'id' => $model->id]];
 $this->params['breadcrumbs'][] = 'Update';
 ?>
 
-<div class="scratch-pad-update container py-4">
+<div class="note-update container py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-md-10 col-lg-10">
             <div class="border rounded p-4 shadow bg-white">
@@ -21,6 +22,7 @@ $this->params['breadcrumbs'][] = 'Update';
                 <?= $this->render('_form', [
                     'model' => $model,
                     'projectList' => $projectList,
+                    'children' => $children,
                 ]) ?>
             </div>
         </div>

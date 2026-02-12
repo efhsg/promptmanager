@@ -209,7 +209,7 @@ class ProjectLoadController extends Controller
 
         // Rows
         foreach ($projects as $project) {
-            $id = (int)$project['id'];
+            $id = (int) $project['id'];
             $name = mb_substr($project['name'], 0, 20);
             $softDeleted = $project['deleted_at'] !== null;
 
@@ -328,7 +328,7 @@ class ProjectLoadController extends Controller
             if ($part === '' || !ctype_digit($part)) {
                 return null;
             }
-            $ids[] = (int)$part;
+            $ids[] = (int) $part;
         }
 
         return $ids;

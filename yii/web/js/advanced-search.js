@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function() {
     fields: "Fields",
     templates: "Templates",
     instances: "Generated Prompts",
-    scratchPads: "Scratch Pads"
+    notes: "Notes"
   };
 
   function escapeHtml(text) {

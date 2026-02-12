@@ -127,7 +127,7 @@ class ClaudeQuickHandlerTest extends Unit
         $handler->run('prompt-title', str_repeat('x', 150));
     }
 
-    public function testRunScratchPadNameReturnsGeneratedName(): void
+    public function testRunNoteNameReturnsGeneratedName(): void
     {
         $client = $this->createMock(AiCompletionClient::class);
         $client->method('complete')->willReturn([
@@ -136,25 +136,25 @@ class ClaudeQuickHandlerTest extends Unit
         ]);
 
         $handler = new ClaudeQuickHandler($client);
-        $result = $handler->run('scratch-pad-name', str_repeat('a', 30));
+        $result = $handler->run('note-name', str_repeat('a', 30));
 
         $this->assertTrue($result['success']);
         $this->assertSame('JWT authentication refactoring plan', $result['output']);
     }
 
-    public function testRunScratchPadNameRespectsMinChars(): void
+    public function testRunNoteNameRespectsMinChars(): void
     {
         $client = $this->createMock(AiCompletionClient::class);
         $client->expects($this->never())->method('complete');
 
         $handler = new ClaudeQuickHandler($client);
-        $result = $handler->run('scratch-pad-name', 'short text');
+        $result = $handler->run('note-name', 'short text');
 
         $this->assertFalse($result['success']);
         $this->assertSame('Prompt too short for summarization.', $result['error']);
     }
 
-    public function testRunScratchPadNameTruncatesAtMaxChars(): void
+    public function testRunNoteNameTruncatesAtMaxChars(): void
     {
         $longPrompt = str_repeat('a', 5500);
 
@@ -167,7 +167,7 @@ class ClaudeQuickHandlerTest extends Unit
                         && str_ends_with($p, '</document>')
                         && mb_strlen($p) === 5000 + strlen('<document></document>');
                 }),
-                $this->callback(fn(string $f) => str_ends_with($f, '/scratch-pad-name/CLAUDE.md')),
+                $this->callback(fn(string $f) => str_ends_with($f, '/note-name/CLAUDE.md')),
                 $this->anything()
             )
             ->willReturn([
@@ -176,7 +176,7 @@ class ClaudeQuickHandlerTest extends Unit
             ]);
 
         $handler = new ClaudeQuickHandler($client);
-        $result = $handler->run('scratch-pad-name', $longPrompt);
+        $result = $handler->run('note-name', $longPrompt);
 
         $this->assertTrue($result['success']);
     }

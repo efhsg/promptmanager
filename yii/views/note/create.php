@@ -13,12 +13,12 @@ use yii\helpers\Url;
 
 QuillAsset::register($this);
 
-$this->title = 'Scratch Pad';
+$this->title = 'Note';
 $this->params['breadcrumbs'][] = $this->title;
 $copyTypes = CopyType::labels();
 ?>
 
-<div class="scratch-pad-create container py-4">
+<div class="note-create container py-4">
     <div class="row justify-content-center">
         <div class="col-12 col-md-11 col-lg-10">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -39,7 +39,7 @@ $copyTypes = CopyType::labels();
                     </button>
                 </div>
             </div>
-            <div class="accordion" id="scratchPadAccordion">
+            <div class="accordion" id="noteAccordion">
                 <div class="accordion-item">
                     <h2 class="accordion-header" id="headingContent">
                         <button class="accordion-button" type="button" data-bs-toggle="collapse"
@@ -48,39 +48,10 @@ $copyTypes = CopyType::labels();
                         </button>
                     </h2>
                     <div id="collapseContent" class="accordion-collapse collapse show" aria-labelledby="headingContent"
-                         data-bs-parent="#scratchPadAccordion">
+                         data-bs-parent="#noteAccordion">
                         <div class="accordion-body p-0">
                             <div class="resizable-editor-container">
                                 <div id="editor" class="resizable-editor" style="min-height: 300px;"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingResponse">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#collapseResponse" aria-expanded="false" aria-controls="collapseResponse">
-                            Response
-                        </button>
-                    </h2>
-                    <div id="collapseResponse" class="accordion-collapse collapse" aria-labelledby="headingResponse"
-                         data-bs-parent="#scratchPadAccordion">
-                        <div class="accordion-body p-0">
-                            <div class="d-flex justify-content-end p-2 border-bottom">
-                                <div class="input-group input-group-sm" style="width: auto;">
-                                    <?= Html::dropDownList('responseCopyFormat', CopyType::MD->value, $copyTypes, [
-                                        'id' => 'response-copy-format-select',
-                                        'class' => 'form-select',
-                                        'style' => 'width: auto;',
-                                    ]) ?>
-                                    <button type="button" id="copy-response-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
-                                        <i class="bi bi-clipboard"></i> Copy
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="resizable-editor-container">
-                                <div id="response-editor" class="resizable-editor" style="min-height: 200px;"></div>
                             </div>
                         </div>
                     </div>
@@ -96,25 +67,25 @@ $copyTypes = CopyType::labels();
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="saveModalLabel">Save Scratch Pad</h5>
+                <h5 class="modal-title" id="saveModalLabel">Save Note</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-danger d-none" id="save-error-alert"></div>
                 <div class="mb-3">
-                    <label for="scratch-pad-name" class="form-label">Name <span class="text-danger">*</span></label>
+                    <label for="note-name" class="form-label">Name <span class="text-danger">*</span></label>
                     <div class="input-group">
-                        <input type="text" class="form-control" id="scratch-pad-name" placeholder="Enter a name...">
+                        <input type="text" class="form-control" id="note-name" placeholder="Enter a name...">
                         <button type="button" class="btn btn-outline-secondary" id="suggest-name-btn" title="Suggest name based on content">
                             <i class="bi bi-stars"></i> Suggest
                         </button>
                     </div>
-                    <div class="text-danger small d-none" id="scratch-pad-name-error"></div>
+                    <div class="text-danger small d-none" id="note-name-error"></div>
                 </div>
                 <div class="mb-3">
-                    <label for="scratch-pad-project" class="form-label">Project</label>
+                    <label for="note-project" class="form-label">Project</label>
                     <?= Html::dropDownList('project_id', $currentProject?->id, $projectList, [
-                        'id' => 'scratch-pad-project',
+                        'id' => 'note-project',
                         'class' => 'form-select',
                         'prompt' => 'No project',
                     ]) ?>
@@ -140,10 +111,10 @@ $copyTypes = CopyType::labels();
 </div>
 
 <?php
-$saveUrl = Url::to(['/scratch-pad/save']);
-$savedListUrl = Url::to(['/scratch-pad/index']);
-$importTextUrl = Url::to(['/scratch-pad/import-text']);
-$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$saveUrl = Url::to(['/note/save']);
+$savedListUrl = Url::to(['/note/index']);
+$importTextUrl = Url::to(['/note/import-text']);
+$importMarkdownUrl = Url::to(['/note/import-markdown']);
 $suggestNameUrl = Url::to(['/claude/suggest-name']);
 
 $script = <<<JS
@@ -173,31 +144,8 @@ $script = <<<JS
     window.QuillToolbar.setupSmartPaste(window.quill, null, urlConfig);
     window.QuillToolbar.setupLoadMd(window.quill, null, urlConfig);
 
-    // Response Quill editor
-    window.responseQuill = new Quill('#response-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline', 'strike', 'code'],
-                ['blockquote', 'code-block'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'indent': '-1' }, { 'indent': '+1' }],
-                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                [{ 'align': [] }],
-                ['clean'],
-                [{ 'clearEditor': [] }],
-                [{ 'smartPaste': [] }],
-                [{ 'loadMd': [] }]
-            ]
-        }
-    });
-
-    window.QuillToolbar.setupClearEditor(window.responseQuill, null);
-    window.QuillToolbar.setupSmartPaste(window.responseQuill, null, urlConfig);
-    window.QuillToolbar.setupLoadMd(window.responseQuill, null, urlConfig);
-
     // Check for imported data in localStorage
-    const importedData = localStorage.getItem('scratchPadContent');
+    const importedData = localStorage.getItem('noteContent');
     if (importedData) {
         try {
             const parsed = JSON.parse(importedData);
@@ -205,7 +153,7 @@ $script = <<<JS
                 const delta = typeof parsed.content === 'string' ? JSON.parse(parsed.content) : parsed.content;
                 window.quill.setContents(delta);
             }
-            localStorage.removeItem('scratchPadContent');
+            localStorage.removeItem('noteContent');
         } catch (e) {
             console.error('Failed to parse imported data:', e);
         }
@@ -213,38 +161,36 @@ $script = <<<JS
 
     // Setup copy buttons
     window.QuillToolbar.setupCopyButton('copy-content-btn', 'copy-format-select', () => JSON.stringify(window.quill.getContents()));
-    window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', () => JSON.stringify(window.responseQuill.getContents()));
 
     // Save functionality
     document.getElementById('save-content-btn').addEventListener('click', function() {
         const modal = new bootstrap.Modal(document.getElementById('saveModal'));
-        document.getElementById('scratch-pad-name').value = '';
+        document.getElementById('note-name').value = '';
         document.getElementById('save-error-alert').classList.add('d-none');
-        document.getElementById('scratch-pad-name').classList.remove('is-invalid');
-        document.getElementById('scratch-pad-name-error').classList.add('d-none');
+        document.getElementById('note-name').classList.remove('is-invalid');
+        document.getElementById('note-name-error').classList.add('d-none');
         modal.show();
     });
 
     document.getElementById('save-confirm-btn').addEventListener('click', function() {
-        const nameInput = document.getElementById('scratch-pad-name');
+        const nameInput = document.getElementById('note-name');
         const name = nameInput.value.trim();
         const errorAlert = document.getElementById('save-error-alert');
 
         errorAlert.classList.add('d-none');
         nameInput.classList.remove('is-invalid');
-        document.getElementById('scratch-pad-name-error').classList.add('d-none');
+        document.getElementById('note-name-error').classList.add('d-none');
 
         if (!name) {
             nameInput.classList.add('is-invalid');
-            document.getElementById('scratch-pad-name-error').textContent = 'Name is required.';
-            document.getElementById('scratch-pad-name-error').classList.remove('d-none');
+            document.getElementById('note-name-error').textContent = 'Name is required.';
+            document.getElementById('note-name-error').classList.remove('d-none');
             return;
         }
 
-        const projectSelect = document.getElementById('scratch-pad-project');
+        const projectSelect = document.getElementById('note-project');
         const projectId = projectSelect.value || null;
         const deltaContent = JSON.stringify(window.quill.getContents());
-        const responseContent = JSON.stringify(window.responseQuill.getContents());
 
         fetch('$saveUrl', {
             method: 'POST',
@@ -256,7 +202,6 @@ $script = <<<JS
             body: JSON.stringify({
                 name: name,
                 content: deltaContent,
-                response: responseContent,
                 project_id: projectId
             })
         })
@@ -286,8 +231,8 @@ $script = <<<JS
 
     document.getElementById('suggest-name-btn').addEventListener('click', function() {
         const btn = this;
-        const nameInput = document.getElementById('scratch-pad-name');
-        const errorDiv = document.getElementById('scratch-pad-name-error');
+        const nameInput = document.getElementById('note-name');
+        const errorDiv = document.getElementById('note-name-error');
         const content = window.quill.getText().trim();
 
         errorDiv.classList.add('d-none');

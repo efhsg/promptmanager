@@ -74,7 +74,7 @@ docker exec pma_yii vendor/bin/codecept run unit          # Run tests
 
 ## Domain Essentials
 
-- **Entities**: Project → { Context, Field, PromptTemplate, ScratchPad } → PromptInstance
+- **Entities**: Project → { Context, Field, PromptTemplate, Note } → PromptInstance
 - **Placeholders**: `GEN:{{name}}` (global), `PRJ:{{name}}` (project), `EXT:{{label:name}}` (linked)
 - **Rich text**: All content stored as Quill Delta JSON
 - **File fields**: Path validated at selection, content read at prompt generation

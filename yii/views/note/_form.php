@@ -3,21 +3,24 @@
 
 use app\assets\QuillAsset;
 use common\enums\CopyType;
+use common\enums\NoteType;
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
-/** @var app\models\ScratchPad $model */
+/** @var app\models\Note $model */
 /** @var array $projectList */
+/** @var app\models\Note[] $children */
 
 QuillAsset::register($this);
 $copyTypes = CopyType::labels();
 $isUpdate = !$model->isNewRecord;
+$children ??= [];
 ?>
 
-<div class="scratch-pad-form focus-on-first-field">
-    <?php $form = ActiveForm::begin(['id' => 'scratch-pad-form']); ?>
+<div class="note-form focus-on-first-field">
+    <?php $form = ActiveForm::begin(['id' => 'note-form']); ?>
 
     <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
 
@@ -26,10 +29,9 @@ $isUpdate = !$model->isNewRecord;
         ['prompt' => '(not set)']
     )->label('Project') ?>
 
-    <?= $form->field($model, 'content')->hiddenInput(['id' => 'scratch-pad-content'])->label(false) ?>
-    <?= $form->field($model, 'response')->hiddenInput(['id' => 'scratch-pad-response'])->label(false) ?>
+    <?= $form->field($model, 'content')->hiddenInput(['id' => 'note-content'])->label(false) ?>
 
-    <div class="accordion mb-3" id="scratchPadAccordion">
+    <div class="accordion mb-3" id="noteAccordion">
         <div class="accordion-item">
             <h2 class="accordion-header" id="headingContent">
                 <button class="accordion-button" type="button" data-bs-toggle="collapse"
@@ -38,7 +40,7 @@ $isUpdate = !$model->isNewRecord;
                 </button>
             </h2>
             <div id="collapseContent" class="accordion-collapse collapse show" aria-labelledby="headingContent"
-                 data-bs-parent="#scratchPadAccordion">
+                 data-bs-parent="#noteAccordion">
                 <div class="accordion-body p-0">
                     <div class="d-flex justify-content-end p-2 border-bottom">
                         <div class="input-group input-group-sm" style="width: auto;">
@@ -53,41 +55,33 @@ $isUpdate = !$model->isNewRecord;
                         </div>
                     </div>
                     <div class="resizable-editor-container">
-                        <div id="scratch-pad-editor" class="resizable-editor" style="min-height: 300px;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingResponse">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapseResponse" aria-expanded="false" aria-controls="collapseResponse">
-                    Response
-                </button>
-            </h2>
-            <div id="collapseResponse" class="accordion-collapse collapse" aria-labelledby="headingResponse"
-                 data-bs-parent="#scratchPadAccordion">
-                <div class="accordion-body p-0">
-                    <div class="d-flex justify-content-end p-2 border-bottom">
-                        <div class="input-group input-group-sm" style="width: auto;">
-                            <?= Html::dropDownList('responseCopyFormat', CopyType::MD->value, $copyTypes, [
-                                'id' => 'response-copy-format-select',
-                                'class' => 'form-select',
-                                'style' => 'width: auto;',
-                            ]) ?>
-                            <button type="button" id="copy-response-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
-                                <i class="bi bi-clipboard"></i> Copy
-                            </button>
-                        </div>
-                    </div>
-                    <div class="resizable-editor-container">
-                        <div id="scratch-pad-response-editor" class="resizable-editor" style="min-height: 200px;"></div>
+                        <div id="note-editor" class="resizable-editor" style="min-height: 300px;"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <?php if ($isUpdate && !empty($children)): ?>
+    <div class="card mb-3">
+        <div class="card-header"><strong>Children</strong></div>
+        <div class="card-body">
+            <?php foreach ($children as $child):
+                $childType = NoteType::resolve($child->type);
+                ?>
+            <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                <div>
+                    <span class="badge bg-<?= $childType === NoteType::SUMMATION ? 'info' : ($childType === NoteType::IMPORT ? 'warning text-dark' : 'secondary') ?> me-2">
+                        <?= Html::encode($childType?->label() ?? $child->type) ?>
+                    </span>
+                    <?= Html::a(Html::encode($child->name), ['/note/update', 'id' => $child->id]) ?>
+                </div>
+                <small class="text-muted"><?= Yii::$app->formatter->asDatetime($child->updated_at, 'php:Y-m-d H:i') ?></small>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <div class="form-group mt-4 text-end">
         <?= Html::a('Cancel', Yii::$app->request->referrer ?: ['index'], ['class' => 'btn btn-secondary me-2']) ?>
@@ -142,13 +136,13 @@ $isUpdate = !$model->isNewRecord;
 
 <?php
 $content = json_encode($model->content);
-$response = json_encode($model->response);
-$saveUrl = Url::to(['/scratch-pad/save']);
-$importTextUrl = Url::to(['/scratch-pad/import-text']);
-$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$saveUrl = Url::to(['/note/save']);
+$updateUrlTemplate = Url::to(['/note/update', 'id' => '__ID__']);
+$importTextUrl = Url::to(['/note/import-text']);
+$importMarkdownUrl = Url::to(['/note/import-markdown']);
 $suggestNameUrl = Url::to(['/claude/suggest-name']);
 $script = <<<JS
-    var quill = new Quill('#scratch-pad-editor', {
+    var quill = new Quill('#note-editor', {
         theme: 'snow',
         modules: {
             toolbar: [
@@ -166,7 +160,7 @@ $script = <<<JS
         }
     });
 
-    var hidden = document.getElementById('scratch-pad-content');
+    var hidden = document.getElementById('note-content');
     var urlConfig = {
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
@@ -176,7 +170,7 @@ $script = <<<JS
     window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 
     // Enable sticky/fixed toolbar on page scroll
-    var contentContainer = document.querySelector('#scratch-pad-editor').closest('.resizable-editor-container');
+    var contentContainer = document.querySelector('#note-editor').closest('.resizable-editor-container');
     if (contentContainer && window.QuillToolbar.setupFixedToolbar)
         window.QuillToolbar.setupFixedToolbar(contentContainer);
 
@@ -190,48 +184,8 @@ $script = <<<JS
         hidden.value = JSON.stringify(quill.getContents());
     });
 
-    // Response Quill editor
-    var responseQuill = new Quill('#scratch-pad-response-editor', {
-        theme: 'snow',
-        modules: {
-            toolbar: [
-                ['bold', 'italic', 'underline', 'strike', 'code'],
-                ['blockquote', 'code-block'],
-                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-                [{ 'indent': '-1' }, { 'indent': '+1' }],
-                [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                [{ 'align': [] }],
-                ['clean'],
-                [{ 'clearEditor': [] }],
-                [{ 'smartPaste': [] }],
-                [{ 'loadMd': [] }]
-            ]
-        }
-    });
-
-    var responseHidden = document.getElementById('scratch-pad-response');
-    window.QuillToolbar.setupClearEditor(responseQuill, responseHidden);
-    window.QuillToolbar.setupSmartPaste(responseQuill, responseHidden, urlConfig);
-    window.QuillToolbar.setupLoadMd(responseQuill, responseHidden, urlConfig);
-
-    // Enable sticky/fixed toolbar on page scroll
-    var responseContainer = document.querySelector('#scratch-pad-response-editor').closest('.resizable-editor-container');
-    if (responseContainer && window.QuillToolbar.setupFixedToolbar)
-        window.QuillToolbar.setupFixedToolbar(responseContainer);
-
-    try {
-        responseQuill.setContents(JSON.parse($response))
-    } catch (error) {
-        console.error('Error loading response content:', error);
-    }
-
-    responseQuill.on('text-change', function() {
-        responseHidden.value = JSON.stringify(responseQuill.getContents());
-    });
-
     // Setup copy buttons
     window.QuillToolbar.setupCopyButton('copy-content-btn', 'copy-format-select', () => JSON.stringify(quill.getContents()));
-    window.QuillToolbar.setupCopyButton('copy-response-btn', 'response-copy-format-select', () => JSON.stringify(responseQuill.getContents()));
 
     // Save As functionality
     const saveAsBtn = document.getElementById('save-as-btn');
@@ -261,7 +215,6 @@ $script = <<<JS
             }
 
             const deltaContent = JSON.stringify(quill.getContents());
-            const responseContent = JSON.stringify(responseQuill.getContents());
 
             fetch('$saveUrl', {
                 method: 'POST',
@@ -273,15 +226,14 @@ $script = <<<JS
                 body: JSON.stringify({
                     name: name,
                     content: deltaContent,
-                    response: responseContent,
-                    project_id: document.getElementById('scratchpad-project_id')?.value || null
+                    project_id: document.getElementById('note-project_id')?.value || null
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     bootstrap.Modal.getInstance(document.getElementById('saveAsModal')).hide();
-                    window.location.href = '/scratch-pad/update?id=' + data.id;
+                    window.location.href = '$updateUrlTemplate'.replace('__ID__', data.id);
                 } else {
                     if (data.errors) {
                         Object.entries(data.errors).forEach(([, messages]) => {

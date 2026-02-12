@@ -13,8 +13,8 @@ use RuntimeException;
 class ClaudeCliService
 {
     /** Instructs Claude not to ask interactive questions (no TTY in -p mode). */
-    private const NO_INTERACTIVE_QUESTIONS_PROMPT =
-        'Do not ask the user any questions. If you need to make a choice, '
+    private const NO_INTERACTIVE_QUESTIONS_PROMPT
+        = 'Do not ask the user any questions. If you need to make a choice, '
         . 'pick the most pragmatic option and document your assumptions.';
 
     private CopyFormatConverter $formatConverter;
@@ -354,7 +354,7 @@ class ClaudeCliService
      * Priority:
      * 1. Project's own root_directory IF it has Claude config
      * 2. Managed workspace for project
-     * 3. Default workspace (for scratch pads without project)
+     * 3. Default workspace (for notes without project)
      */
     private function determineWorkingDirectory(string $requestedDir, ?Project $project): string
     {

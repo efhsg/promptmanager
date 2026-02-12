@@ -54,8 +54,8 @@ use yii\helpers\Url;
 </div>
 
 <?php
-$importUrl = Url::to(['/scratch-pad/import-youtube']);
-$viewUrlBase = '/scratch-pad/view';
+$importUrl = Url::to(['/note/import-youtube']);
+$viewUrlBase = '/note/view';
 $js = <<<JS
     document.getElementById('youtube-import-form').addEventListener('submit', function(e) {
         e.preventDefault();

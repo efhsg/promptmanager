@@ -4,7 +4,7 @@ namespace tests\unit\services;
 
 use app\models\Context;
 use app\models\PromptInstance;
-use app\models\ScratchPad;
+use app\models\Note;
 use app\services\QuickSearchService;
 use Codeception\Test\Unit;
 use tests\fixtures\ContextFixture;
@@ -44,7 +44,7 @@ class QuickSearchServiceTest extends Unit
         $this->assertSame([], $result['fields']);
         $this->assertSame([], $result['templates']);
         $this->assertSame([], $result['instances']);
-        $this->assertSame([], $result['scratchPads']);
+        $this->assertSame([], $result['notes']);
     }
 
     public function testSearchReturnsEmptyResultsWhenQueryIsEmpty(): void
@@ -55,7 +55,7 @@ class QuickSearchServiceTest extends Unit
         $this->assertSame([], $result['fields']);
         $this->assertSame([], $result['templates']);
         $this->assertSame([], $result['instances']);
-        $this->assertSame([], $result['scratchPads']);
+        $this->assertSame([], $result['notes']);
     }
 
     public function testSearchFindsContextsByName(): void
@@ -143,52 +143,52 @@ class QuickSearchServiceTest extends Unit
         $this->assertNotEmpty($result['instances']);
     }
 
-    public function testSearchFindsScratchPadsByName(): void
+    public function testSearchFindsNotesByName(): void
     {
-        $scratchPad = new ScratchPad();
-        $scratchPad->user_id = 100;
-        $scratchPad->name = 'My Searchable Pad';
-        $scratchPad->content = 'Some content here';
-        $scratchPad->save(false);
+        $note = new Note();
+        $note->user_id = 100;
+        $note->name = 'My Searchable Note';
+        $note->content = 'Some content here';
+        $note->save(false);
 
-        $result = $this->service->search('Searchable Pad', 100);
+        $result = $this->service->search('Searchable Note', 100);
 
-        $this->assertNotEmpty($result['scratchPads']);
-        $this->assertSame('My Searchable Pad', $result['scratchPads'][0]['name']);
-        $this->assertSame('scratchPad', $result['scratchPads'][0]['type']);
+        $this->assertNotEmpty($result['notes']);
+        $this->assertSame('My Searchable Note', $result['notes'][0]['name']);
+        $this->assertSame('note', $result['notes'][0]['type']);
 
-        $scratchPad->delete();
+        $note->delete();
     }
 
-    public function testSearchFindsScratchPadsByContent(): void
+    public function testSearchFindsNotesByContent(): void
     {
-        $scratchPad = new ScratchPad();
-        $scratchPad->user_id = 100;
-        $scratchPad->name = 'Content Test Pad';
-        $scratchPad->content = 'Unique searchable content here';
-        $scratchPad->save(false);
+        $note = new Note();
+        $note->user_id = 100;
+        $note->name = 'Content Test Note';
+        $note->content = 'Unique searchable content here';
+        $note->save(false);
 
         $result = $this->service->search('Unique searchable', 100);
 
-        $this->assertNotEmpty($result['scratchPads']);
-        $this->assertSame('Content Test Pad', $result['scratchPads'][0]['name']);
+        $this->assertNotEmpty($result['notes']);
+        $this->assertSame('Content Test Note', $result['notes'][0]['name']);
 
-        $scratchPad->delete();
+        $note->delete();
     }
 
-    public function testSearchOnlyReturnsUserOwnedScratchPads(): void
+    public function testSearchOnlyReturnsUserOwnedNotes(): void
     {
-        $scratchPad = new ScratchPad();
-        $scratchPad->user_id = 1;
-        $scratchPad->name = 'Other User Pad';
-        $scratchPad->content = 'Should not appear';
-        $scratchPad->save(false);
+        $note = new Note();
+        $note->user_id = 1;
+        $note->name = 'Other User Note';
+        $note->content = 'Should not appear';
+        $note->save(false);
 
-        $result = $this->service->search('Other User Pad', 100);
+        $result = $this->service->search('Other User Note', 100);
 
-        $this->assertEmpty($result['scratchPads']);
+        $this->assertEmpty($result['notes']);
 
-        $scratchPad->delete();
+        $note->delete();
     }
 
     public function testSearchRespectsLimit(): void
@@ -232,25 +232,25 @@ class QuickSearchServiceTest extends Unit
 
     public function testSearchPrioritizesNameMatchesOverContentMatches(): void
     {
-        $contentMatchPad = new ScratchPad();
-        $contentMatchPad->user_id = 100;
-        $contentMatchPad->name = 'First Pad';
-        $contentMatchPad->content = 'Contains PRIORITY keyword in content';
-        $contentMatchPad->save(false);
+        $contentMatchNote = new Note();
+        $contentMatchNote->user_id = 100;
+        $contentMatchNote->name = 'First Note';
+        $contentMatchNote->content = 'Contains PRIORITY keyword in content';
+        $contentMatchNote->save(false);
 
-        $nameMatchPad = new ScratchPad();
-        $nameMatchPad->user_id = 100;
-        $nameMatchPad->name = 'PRIORITY Match in Name';
-        $nameMatchPad->content = 'No keyword here';
-        $nameMatchPad->save(false);
+        $nameMatchNote = new Note();
+        $nameMatchNote->user_id = 100;
+        $nameMatchNote->name = 'PRIORITY Match in Name';
+        $nameMatchNote->content = 'No keyword here';
+        $nameMatchNote->save(false);
 
         $result = $this->service->search('PRIORITY', 100, 5);
 
-        $this->assertCount(2, $result['scratchPads']);
-        $this->assertSame('PRIORITY Match in Name', $result['scratchPads'][0]['name']);
-        $this->assertSame('First Pad', $result['scratchPads'][1]['name']);
+        $this->assertCount(2, $result['notes']);
+        $this->assertSame('PRIORITY Match in Name', $result['notes'][0]['name']);
+        $this->assertSame('First Note', $result['notes'][1]['name']);
 
-        $contentMatchPad->delete();
-        $nameMatchPad->delete();
+        $contentMatchNote->delete();
+        $nameMatchNote->delete();
     }
 }

@@ -20,7 +20,7 @@ class EntityConfig
     public const COLUMN_OVERRIDES = [
         'project' => ['user_id'],
         'field' => ['user_id'],
-        'scratch_pad' => ['user_id'],
+        'note' => ['user_id'],
     ];
 
     /**
@@ -69,9 +69,9 @@ class EntityConfig
                 'foreignKeys' => ['template_id' => 'prompt_template'],
                 'parentKey' => 'template_id',
             ],
-            'scratch_pad' => [
-                'table' => 'scratch_pad',
-                'foreignKeys' => ['project_id' => 'project'],
+            'note' => [
+                'table' => 'note',
+                'foreignKeys' => ['project_id' => 'project', 'parent_id' => 'note'],
                 'parentKey' => 'project_id',
             ],
             'project_linked_project' => [
@@ -96,7 +96,7 @@ class EntityConfig
             'context',
             'prompt_template',
             'template_field',
-            'scratch_pad',
+            'note',
             'prompt_instance',
             'project_linked_project',
         ];
@@ -117,7 +117,7 @@ class EntityConfig
             'field_option',
             'prompt_template',
             'prompt_instance',
-            'scratch_pad',
+            'note',
         ];
     }
 
@@ -133,7 +133,7 @@ class EntityConfig
             'field' => 'Fld',
             'prompt_template' => 'Tpl',
             'prompt_instance' => 'Inst',
-            'scratch_pad' => 'SP',
+            'note' => 'Nt',
             'project_linked_project' => 'Links',
         ];
     }

@@ -2,26 +2,24 @@
 
 namespace tests\unit\controllers\api;
 
-use app\controllers\api\ScratchPadController;
+use app\controllers\api\NoteController;
+use app\models\Note;
 use app\models\Project;
-use app\models\ScratchPad;
 use app\modules\identity\models\User;
 use Codeception\Test\Unit;
 use Yii;
 
-class ScratchPadControllerTest extends Unit
+class NoteControllerTest extends Unit
 {
     protected function _before(): void
     {
-        // Clean up test data
-        ScratchPad::deleteAll(['user_id' => 999]);
+        Note::deleteAll(['user_id' => 999]);
         Project::deleteAll(['user_id' => 999, 'name' => ['Auto Created Project', 'Existing Test Project']]);
     }
 
     protected function _after(): void
     {
-        // Clean up test data
-        ScratchPad::deleteAll(['user_id' => 999]);
+        Note::deleteAll(['user_id' => 999]);
         Project::deleteAll(['user_id' => 999]);
     }
 
@@ -29,12 +27,12 @@ class ScratchPadControllerTest extends Unit
     {
         $this->mockAuthenticatedUser();
         $this->mockPostData([
-            'name' => 'Test ScratchPad',
+            'name' => 'Test Note',
             'content' => 'Hello World',
             'format' => 'text',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
@@ -42,12 +40,11 @@ class ScratchPadControllerTest extends Unit
         self::assertArrayHasKey('id', $result);
         self::assertSame(201, Yii::$app->response->statusCode);
 
-        // Verify the scratch pad was created with delta format
-        $scratchPad = ScratchPad::findOne($result['id']);
-        self::assertNotNull($scratchPad);
-        self::assertSame('Test ScratchPad', $scratchPad->name);
-        self::assertStringContainsString('"ops":', $scratchPad->content);
-        self::assertStringContainsString('Hello World', $scratchPad->content);
+        $note = Note::findOne($result['id']);
+        self::assertNotNull($note);
+        self::assertSame('Test Note', $note->name);
+        self::assertStringContainsString('"ops":', $note->content);
+        self::assertStringContainsString('Hello World', $note->content);
     }
 
     public function testCreateWithDeltaObjectFormat(): void
@@ -59,16 +56,16 @@ class ScratchPadControllerTest extends Unit
             'format' => 'delta',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
         self::assertTrue($result['success']);
         self::assertSame(201, Yii::$app->response->statusCode);
 
-        $scratchPad = ScratchPad::findOne($result['id']);
-        self::assertNotNull($scratchPad);
-        self::assertStringContainsString('bold', $scratchPad->content);
+        $note = Note::findOne($result['id']);
+        self::assertNotNull($note);
+        self::assertStringContainsString('bold', $note->content);
     }
 
     public function testCreateWithInvalidDeltaReturns400(): void
@@ -80,7 +77,7 @@ class ScratchPadControllerTest extends Unit
             'format' => 'delta',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
@@ -99,7 +96,7 @@ class ScratchPadControllerTest extends Unit
             'format' => 'invalid',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
@@ -117,7 +114,7 @@ class ScratchPadControllerTest extends Unit
             'format' => 'text',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
@@ -137,26 +134,23 @@ class ScratchPadControllerTest extends Unit
             'project_name' => 'Auto Created Project',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
         self::assertTrue($result['success']);
 
-        // Verify project was created
         $project = Project::find()->forUser(999)->withName('Auto Created Project')->one();
         self::assertNotNull($project);
 
-        // Verify scratch pad is linked to project
-        $scratchPad = ScratchPad::findOne($result['id']);
-        self::assertSame($project->id, $scratchPad->project_id);
+        $note = Note::findOne($result['id']);
+        self::assertSame($project->id, $note->project_id);
     }
 
     public function testCreateWithExistingProjectUsesIt(): void
     {
         $this->mockAuthenticatedUser();
 
-        // Create existing project
         $existingProject = new Project([
             'user_id' => 999,
             'name' => 'Existing Test Project',
@@ -170,18 +164,17 @@ class ScratchPadControllerTest extends Unit
             'project_name' => 'Existing Test Project',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
         self::assertTrue($result['success']);
 
-        // Verify scratch pad is linked to existing project
-        $scratchPad = ScratchPad::findOne($result['id']);
-        self::assertSame($existingProject->id, $scratchPad->project_id);
+        $note = Note::findOne($result['id']);
+        self::assertSame($existingProject->id, $note->project_id);
     }
 
-    public function testCreateWithoutProjectNameCreatesUnlinkedScratchPad(): void
+    public function testCreateWithoutProjectNameCreatesUnlinkedNote(): void
     {
         $this->mockAuthenticatedUser();
         $this->mockPostData([
@@ -190,14 +183,14 @@ class ScratchPadControllerTest extends Unit
             'format' => 'text',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
         self::assertTrue($result['success']);
 
-        $scratchPad = ScratchPad::findOne($result['id']);
-        self::assertNull($scratchPad->project_id);
+        $note = Note::findOne($result['id']);
+        self::assertNull($note->project_id);
     }
 
     public function testCreateWithMarkdownFormatConvertsToQuillDelta(): void
@@ -209,7 +202,7 @@ class ScratchPadControllerTest extends Unit
             'format' => 'md',
         ]);
 
-        $controller = new ScratchPadController('scratch-pad', Yii::$app);
+        $controller = new NoteController('note', Yii::$app);
 
         $result = $controller->actionCreate();
 
@@ -217,20 +210,18 @@ class ScratchPadControllerTest extends Unit
         self::assertArrayHasKey('id', $result);
         self::assertSame(201, Yii::$app->response->statusCode);
 
-        // Verify the scratch pad was created with delta format containing proper formatting
-        $scratchPad = ScratchPad::findOne($result['id']);
-        self::assertNotNull($scratchPad);
-        self::assertSame('Markdown Note', $scratchPad->name);
-        self::assertStringContainsString('"ops":', $scratchPad->content);
-        self::assertStringContainsString('Hello', $scratchPad->content);
-        self::assertStringContainsString('"header":1', $scratchPad->content);
-        self::assertStringContainsString('"bold":true', $scratchPad->content);
-        self::assertStringContainsString('"italic":true', $scratchPad->content);
+        $note = Note::findOne($result['id']);
+        self::assertNotNull($note);
+        self::assertSame('Markdown Note', $note->name);
+        self::assertStringContainsString('"ops":', $note->content);
+        self::assertStringContainsString('Hello', $note->content);
+        self::assertStringContainsString('"header":1', $note->content);
+        self::assertStringContainsString('"bold":true', $note->content);
+        self::assertStringContainsString('"italic":true', $note->content);
     }
 
     private function mockAuthenticatedUser(): void
     {
-        // Create test user with ID 999 if doesn't exist
         $user = User::findOne(999);
         if (!$user) {
             Yii::$app->db->createCommand()->insert('user', [

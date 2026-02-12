@@ -161,31 +161,31 @@ return [
             ],
             // Permissions are defined under 'project' entity — no additional permissions needed.
         ],
-        'scratchPad' => [
+        'note' => [
             'actionPermissionMap' => [
-                'create' => 'createScratchPad',
-                'view' => 'viewScratchPad',
-                'update' => 'updateScratchPad',
-                'delete' => 'deleteScratchPad',
-                'claude' => 'viewScratchPad',
-                'fetchContent' => 'viewScratchPad',
+                'create' => 'createNote',
+                'view' => 'viewNote',
+                'update' => 'updateNote',
+                'delete' => 'deleteNote',
+                'claude' => 'viewNote',
+                'fetchContent' => 'viewNote',
             ],
             'permissions' => [
-                'createScratchPad' => [
-                    'description' => 'Create a Scratch Pad',
+                'createNote' => [
+                    'description' => 'Create a Note',
                     'rule' => null,
                 ],
-                'viewScratchPad' => [
-                    'description' => 'View a Scratch Pad',
-                    'rule' => 'app\rbac\ScratchPadOwnerRule',
+                'viewNote' => [
+                    'description' => 'View a Note',
+                    'rule' => 'app\rbac\NoteOwnerRule',
                 ],
-                'updateScratchPad' => [
-                    'description' => 'Update a Scratch Pad',
-                    'rule' => 'app\rbac\ScratchPadOwnerRule',
+                'updateNote' => [
+                    'description' => 'Update a Note',
+                    'rule' => 'app\rbac\NoteOwnerRule',
                 ],
-                'deleteScratchPad' => [
-                    'description' => 'Delete a Scratch Pad',
-                    'rule' => 'app\rbac\ScratchPadOwnerRule',
+                'deleteNote' => [
+                    'description' => 'Delete a Note',
+                    'rule' => 'app\rbac\NoteOwnerRule',
                 ],
             ],
         ],
@@ -215,10 +215,10 @@ return [
                 'updatePromptInstance',
                 'deletePromptInstance',
                 'generatePrompt',
-                'createScratchPad',
-                'viewScratchPad',
-                'updateScratchPad',
-                'deleteScratchPad',
+                'createNote',
+                'viewNote',
+                'updateNote',
+                'deleteNote',
             ],
             'children' => [],
         ],

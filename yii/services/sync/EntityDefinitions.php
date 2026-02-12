@@ -57,12 +57,12 @@ class EntityDefinitions
                     'created_at', 'updated_at',
                 ],
             ],
-            'scratch_pad' => [
-                'table' => 'scratch_pad',
+            'note' => [
+                'table' => 'note',
                 'naturalKeys' => ['name', 'user_id'],
-                'foreignKeys' => ['project_id' => 'project'],
+                'foreignKeys' => ['project_id' => 'project', 'parent_id' => 'note'],
                 'columns' => [
-                    'user_id', 'project_id', 'name', 'content',
+                    'user_id', 'project_id', 'parent_id', 'name', 'type', 'content',
                     'created_at', 'updated_at',
                 ],
             ],
@@ -106,7 +106,7 @@ class EntityDefinitions
             'field_option',
             'prompt_template',
             'template_field',
-            'scratch_pad',
+            'note',
             'prompt_instance',
         ];
     }

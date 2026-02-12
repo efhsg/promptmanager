@@ -3,7 +3,7 @@
 namespace tests\unit\services;
 
 use app\models\Context;
-use app\models\ScratchPad;
+use app\models\Note;
 use app\services\AdvancedSearchService;
 use Codeception\Test\Unit;
 use common\enums\SearchMode;
@@ -44,7 +44,7 @@ class AdvancedSearchServiceTest extends Unit
         $this->assertSame([], $result['fields']);
         $this->assertSame([], $result['templates']);
         $this->assertSame([], $result['instances']);
-        $this->assertSame([], $result['scratchPads']);
+        $this->assertSame([], $result['notes']);
     }
 
     public function testSearchAllEntitiesWhenNoTypesSpecified(): void
@@ -62,7 +62,7 @@ class AdvancedSearchServiceTest extends Unit
         $this->assertEmpty($result['fields']);
         $this->assertEmpty($result['templates']);
         $this->assertEmpty($result['instances']);
-        $this->assertEmpty($result['scratchPads']);
+        $this->assertEmpty($result['notes']);
     }
 
     public function testSearchExcludesUnspecifiedTypes(): void
@@ -134,7 +134,7 @@ class AdvancedSearchServiceTest extends Unit
         $this->assertNotEmpty($result['contexts']);
         $this->assertEmpty($result['fields']);
         $this->assertEmpty($result['instances']);
-        $this->assertEmpty($result['scratchPads']);
+        $this->assertEmpty($result['notes']);
     }
 
     public function testKeywordModeIgnoresShortKeywords(): void
@@ -153,20 +153,20 @@ class AdvancedSearchServiceTest extends Unit
         $context->delete();
     }
 
-    public function testSearchScratchPads(): void
+    public function testSearchNotes(): void
     {
-        $scratchPad = new ScratchPad();
-        $scratchPad->user_id = 100;
-        $scratchPad->name = 'Advanced Search Pad';
-        $scratchPad->content = 'Test content';
-        $scratchPad->save(false);
+        $note = new Note();
+        $note->user_id = 100;
+        $note->name = 'Advanced Search Note';
+        $note->content = 'Test content';
+        $note->save(false);
 
-        $result = $this->service->search('Advanced Search', 100, [AdvancedSearchService::TYPE_SCRATCH_PADS]);
+        $result = $this->service->search('Advanced Search', 100, [AdvancedSearchService::TYPE_NOTES]);
 
-        $this->assertNotEmpty($result['scratchPads']);
-        $this->assertSame('Advanced Search Pad', $result['scratchPads'][0]['name']);
+        $this->assertNotEmpty($result['notes']);
+        $this->assertSame('Advanced Search Note', $result['notes'][0]['name']);
 
-        $scratchPad->delete();
+        $note->delete();
     }
 
     public function testTypeLabelsReturnsAllTypes(): void
@@ -177,6 +177,6 @@ class AdvancedSearchServiceTest extends Unit
         $this->assertArrayHasKey(AdvancedSearchService::TYPE_FIELDS, $labels);
         $this->assertArrayHasKey(AdvancedSearchService::TYPE_TEMPLATES, $labels);
         $this->assertArrayHasKey(AdvancedSearchService::TYPE_INSTANCES, $labels);
-        $this->assertArrayHasKey(AdvancedSearchService::TYPE_SCRATCH_PADS, $labels);
+        $this->assertArrayHasKey(AdvancedSearchService::TYPE_NOTES, $labels);
     }
 }

@@ -12,8 +12,7 @@ class ClaudeCliCompletionClient implements AiCompletionClient
 {
     public function __construct(
         private readonly ClaudeCliService $claudeCliService,
-    ) {
-    }
+    ) {}
 
     public function complete(string $prompt, string $systemPromptFile, array $options = []): array
     {

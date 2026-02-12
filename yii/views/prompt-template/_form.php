@@ -47,8 +47,8 @@ QuillAsset::register($this);
 $generalFieldsJson = json_encode($generalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $projectFieldsJson = json_encode($projectFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $externalFieldsJson = json_encode($externalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-$importTextUrl = Url::to(['/scratch-pad/import-text']);
-$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$importTextUrl = Url::to(['/note/import-text']);
+$importMarkdownUrl = Url::to(['/note/import-markdown']);
 
 $script = <<<JS
     window.quill = new Quill('#editor', {

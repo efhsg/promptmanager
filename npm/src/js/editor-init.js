@@ -60,8 +60,8 @@ window.QuillToolbar = (function() {
         }
     };
 
-    const DEFAULT_IMPORT_TEXT_URL = '/scratch-pad/import-text';
-    const DEFAULT_IMPORT_MARKDOWN_URL = '/scratch-pad/import-markdown';
+    const DEFAULT_IMPORT_TEXT_URL = '/note/import-text';
+    const DEFAULT_IMPORT_MARKDOWN_URL = '/note/import-markdown';
 
     const setupClearEditor = (quill, hidden) => {
         const toolbar = quill.getModule('toolbar');
@@ -304,7 +304,7 @@ window.QuillToolbar = (function() {
         });
     };
 
-    const DEFAULT_CONVERT_FORMAT_URL = '/scratch-pad/convert-format';
+    const DEFAULT_CONVERT_FORMAT_URL = '/note/convert-format';
 
     /**
      * Copy content with format conversion
@@ -501,7 +501,7 @@ const setupFixedToolbar = container => {
     window.addEventListener('resize', apply, { passive: true });
 };
 
-// Expose immediately for inline-initialized editors (prompt-template, scratch-pad, etc.)
+// Expose immediately for inline-initialized editors (prompt-template, note, etc.)
 window.QuillToolbar.setupFixedToolbar = setupFixedToolbar;
 
 document.addEventListener('DOMContentLoaded', () => {

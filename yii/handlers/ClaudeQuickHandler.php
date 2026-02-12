@@ -26,10 +26,10 @@ class ClaudeQuickHandler
             'minChars' => 120,
             'maxChars' => 3000,
         ],
-        'scratch-pad-name' => [
+        'note-name' => [
             'model' => 'sonnet',
             'timeout' => 60,
-            'workdir' => 'scratch-pad-name',
+            'workdir' => 'note-name',
             'minChars' => 20,
             'maxChars' => 5000,
         ],
@@ -51,8 +51,7 @@ class ClaudeQuickHandler
 
     public function __construct(
         private readonly AiCompletionClient $completionClient,
-    ) {
-    }
+    ) {}
 
     /**
      * @throws InvalidArgumentException

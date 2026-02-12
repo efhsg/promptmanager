@@ -31,8 +31,8 @@ $templateTooltipTexts = TooltipHelper::prepareTexts($templatesDescription, $maxC
 $this->registerJsVar('contextTooltipTexts', $contextTooltipTexts);
 $this->registerJsVar('templateTooltipTexts', $templateTooltipTexts);
 $this->registerJsVar('quillUrlConfig', [
-    'importTextUrl' => Url::to(['/scratch-pad/import-text']),
-    'importMarkdownUrl' => Url::to(['/scratch-pad/import-markdown']),
+    'importTextUrl' => Url::to(['/note/import-text']),
+    'importMarkdownUrl' => Url::to(['/note/import-markdown']),
 ]);
 
 $currentProject = (\Yii::$app->projectContext)->getCurrentProject();

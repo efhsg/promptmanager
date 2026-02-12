@@ -766,7 +766,7 @@ class ProjectLoadServiceTest extends Unit
     private function copyTableStructures(): void
     {
         $tables = ['project', 'context', 'field', 'field_option', 'prompt_template',
-            'template_field', 'prompt_instance', 'scratch_pad', 'project_linked_project'];
+            'template_field', 'prompt_instance', 'note', 'project_linked_project'];
 
         foreach ($tables as $table) {
             $this->db->createCommand(

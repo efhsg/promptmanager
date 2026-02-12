@@ -75,7 +75,7 @@ $config = [
             'enablePrettyUrl' => true,
             'showScriptName' => false,
             'rules' => [
-                'POST api/scratch-pad' => 'api/scratch-pad/create',
+                'POST api/note' => 'api/note/create',
             ],
         ],
         'assetManager' => [

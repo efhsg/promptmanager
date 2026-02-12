@@ -535,21 +535,21 @@ class ProjectLoadService
             $report->addInserted($dumpProjectId, 'template_field', $tfInserted);
         }
 
-        // 8. Load scratch_pads
-        $dumpScratchPads = $entityLoader->fetchFromTemp('scratch_pad', 'project_id', $dumpProjectId);
-        $spResult = $entityLoader->loadEntityRecords(
-            'scratch_pad',
-            'scratch_pad',
-            $dumpScratchPads,
-            $insertColumnsByEntity['scratch_pad'],
-            $productionColumnInfo['scratch_pad'],
-            $tempColumnsByEntity['scratch_pad'],
+        // 8. Load notes
+        $dumpNotes = $entityLoader->fetchFromTemp('note', 'project_id', $dumpProjectId);
+        $noteResult = $entityLoader->loadEntityRecords(
+            'note',
+            'note',
+            $dumpNotes,
+            $insertColumnsByEntity['note'],
+            $productionColumnInfo['note'],
+            $tempColumnsByEntity['note'],
             [],
-            EntityConfig::getOverrideColumns('scratch_pad'),
-            $entities['scratch_pad']['foreignKeys'],
+            EntityConfig::getOverrideColumns('note'),
+            $entities['note']['foreignKeys'],
             true
         );
-        $report->addInserted($dumpProjectId, 'scratch_pad', $spResult['inserted']);
+        $report->addInserted($dumpProjectId, 'note', $noteResult['inserted']);
 
         // 9. Load prompt_instances
         if (!empty($dumpTemplateIds)) {

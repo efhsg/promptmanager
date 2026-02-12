@@ -51,14 +51,14 @@ class LoadReport
 
     public function addInserted(int $dumpProjectId, string $entity, int $count = 1): void
     {
-        $this->projects[$dumpProjectId]['inserted'][$entity] =
-            ($this->projects[$dumpProjectId]['inserted'][$entity] ?? 0) + $count;
+        $this->projects[$dumpProjectId]['inserted'][$entity]
+            = ($this->projects[$dumpProjectId]['inserted'][$entity] ?? 0) + $count;
     }
 
     public function addDeleted(int $dumpProjectId, string $entity, int $count = 1): void
     {
-        $this->projects[$dumpProjectId]['deleted'][$entity] =
-            ($this->projects[$dumpProjectId]['deleted'][$entity] ?? 0) + $count;
+        $this->projects[$dumpProjectId]['deleted'][$entity]
+            = ($this->projects[$dumpProjectId]['deleted'][$entity] ?? 0) + $count;
     }
 
     public function addWarning(int $dumpProjectId, string $message): void

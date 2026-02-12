@@ -28,7 +28,7 @@ class ClaudeWorkspaceService
     }
 
     /**
-     * Gets the default workspace path for scratch pads without a project.
+     * Gets the default workspace path for notes without a project.
      */
     public function getDefaultWorkspacePath(): string
     {
@@ -178,11 +178,11 @@ class ClaudeWorkspaceService
     }
 
     /**
-     * Generates default CLAUDE.md for scratch pads without a project.
+     * Generates default CLAUDE.md for notes without a project.
      */
     private function generateDefaultClaudeMd(): string
     {
-        return "# Default Workspace\n\nGeneral purpose workspace for scratch pads without a project assignment.\n";
+        return "# Default Workspace\n\nGeneral purpose workspace for notes without a project assignment.\n";
     }
 
     /**

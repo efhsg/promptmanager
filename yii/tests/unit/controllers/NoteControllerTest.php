@@ -2,35 +2,36 @@
 
 namespace tests\unit\controllers;
 
-use app\controllers\ScratchPadController;
+use app\controllers\NoteController;
+use app\models\Note;
 use app\models\Project;
-use app\models\ScratchPad;
 use app\modules\identity\models\User;
 use app\services\EntityPermissionService;
+use app\services\NoteService;
 use app\services\YouTubeTranscriptService;
 use Codeception\Test\Unit;
 use RuntimeException;
 use Yii;
 use ReflectionClass;
 
-class ScratchPadControllerTest extends Unit
+class NoteControllerTest extends Unit
 {
     private const TEST_USER_ID = 998;
     private const OTHER_USER_ID = 997;
 
     protected function _before(): void
     {
-        ScratchPad::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
+        Note::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
         Project::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
     }
 
     protected function _after(): void
     {
-        ScratchPad::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
+        Note::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
         Project::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
     }
 
-    public function testImportYoutubeCreatesScratcPadSuccessfully(): void
+    public function testImportYoutubeCreatesNoteSuccessfully(): void
     {
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
         $this->mockJsonRequest(['videoId' => 'dQw4w9WgXcQ']);
@@ -51,10 +52,10 @@ class ScratchPadControllerTest extends Unit
         $this->assertTrue($result['success']);
         $this->assertArrayHasKey('id', $result);
 
-        $scratchPad = ScratchPad::findOne($result['id']);
-        $this->assertNotNull($scratchPad);
-        $this->assertSame('Test Video', $scratchPad->name);
-        $this->assertSame(self::TEST_USER_ID, $scratchPad->user_id);
+        $note = Note::findOne($result['id']);
+        $this->assertNotNull($note);
+        $this->assertSame('Test Video', $note->name);
+        $this->assertSame(self::TEST_USER_ID, $note->user_id);
     }
 
     public function testImportYoutubeWithOwnedProjectSucceeds(): void
@@ -83,8 +84,8 @@ class ScratchPadControllerTest extends Unit
 
         $this->assertTrue($result['success']);
 
-        $scratchPad = ScratchPad::findOne($result['id']);
-        $this->assertSame($project->id, $scratchPad->project_id);
+        $note = Note::findOne($result['id']);
+        $this->assertSame($project->id, $note->project_id);
     }
 
     public function testImportYoutubeRejectsUnownedProject(): void
@@ -164,15 +165,17 @@ class ScratchPadControllerTest extends Unit
         $this->assertSame('Transcripts are disabled for this video.', $result['message']);
     }
 
-    private function createController(YouTubeTranscriptService $youtubeService): ScratchPadController
+    private function createController(YouTubeTranscriptService $youtubeService): NoteController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
+        $noteService = new NoteService();
 
-        return new ScratchPadController(
-            'scratch-pad',
+        return new NoteController(
+            'note',
             Yii::$app,
             $permissionService,
-            $youtubeService
+            $youtubeService,
+            $noteService
         );
     }
 

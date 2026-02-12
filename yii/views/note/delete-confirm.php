@@ -3,14 +3,14 @@
 use yii\helpers\Html;
 
 /** @var yii\web\View $this */
-/** @var app\models\ScratchPad $model */
+/** @var app\models\Note $model */
 
 $this->title = 'Delete ' . $model->name;
-$this->params['breadcrumbs'][] = ['label' => 'Saved Scratch Pads', 'url' => ['index']];
+$this->params['breadcrumbs'][] = ['label' => 'Notes', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 
-<div class="scratch-pad-delete-confirm container py-4">
+<div class="note-delete-confirm container py-4">
     <div class="card">
         <div class="card-header">
             <strong>Are you sure you want to delete: <?= Html::encode($model->name) ?>?</strong>

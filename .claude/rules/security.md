@@ -28,7 +28,7 @@
   - `FieldOwnerRule`
   - `PromptTemplateOwnerRule`
   - `PromptInstanceOwnerRule`
-  - `ScratchPadOwnerRule`
+  - `NoteOwnerRule`
 
 ## File System Access
 

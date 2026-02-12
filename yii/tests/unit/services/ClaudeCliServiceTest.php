@@ -966,7 +966,7 @@ class ClaudeCliServiceTest extends Unit
         $tmpFile = tempnam(sys_get_temp_dir(), 'claude_credentials_');
         file_put_contents($tmpFile, json_encode(['claudeAiOauth' => ['accessToken' => 'token']]));
 
-        $service = new class () extends ClaudeCliService {
+        $service = new class extends ClaudeCliService {
             protected function fetchSubscriptionUsage(string $accessToken): array
             {
                 return ['success' => true, 'status' => 429, 'body' => 'Rate limit'];

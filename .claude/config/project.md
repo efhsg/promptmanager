@@ -126,7 +126,7 @@ Source files map to test files by mirroring the directory structure:
 | Field | Variable placeholder (global, project, or external) |
 | PromptTemplate | Template with placeholders for generating prompts |
 | PromptInstance | Generated prompt from a template |
-| ScratchPad | Workspace for prompt composition and editing |
+| Note | Workspace for prompt composition and editing (supports parent/child hierarchy) |
 
 ## Field Types
 
@@ -149,4 +149,4 @@ Defined in `FieldConstants::TYPES` (`yii/common/constants/FieldConstants.php`).
 | `FieldOwnerRule` | User owns the field's project |
 | `PromptTemplateOwnerRule` | User owns the template's project |
 | `PromptInstanceOwnerRule` | User owns the instance's project |
-| `ScratchPadOwnerRule` | User owns the scratch pad's project |
+| `NoteOwnerRule` | User owns the note's project |

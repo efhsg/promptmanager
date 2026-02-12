@@ -163,35 +163,35 @@ echo $this->render('_breadcrumbs', [
 <?php
 $fetchUrl = Json::encode(Url::to(['/prompt-instance/fetch-content']));
 $script = <<<JS
-    document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (this.disabled) return;
+        document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (this.disabled) return;
 
-            var id = this.dataset.id;
-            var claudeUrl = this.dataset.claudeUrl;
-            var button = this;
-            button.disabled = true;
+                var id = this.dataset.id;
+                var claudeUrl = this.dataset.claudeUrl;
+                var button = this;
+                button.disabled = true;
 
-            var sep = {$fetchUrl}.indexOf('?') === -1 ? '?' : '&';
-            fetch({$fetchUrl} + sep + 'id=' + id, {
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                if (data.success && data.content) {
-                    sessionStorage.setItem('claudePromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
-                }
-                window.location.href = claudeUrl;
-            })
-            .catch(function() {
-                window.location.href = claudeUrl;
-            })
-            .finally(function() {
-                button.disabled = false;
+                var sep = {$fetchUrl}.indexOf('?') === -1 ? '?' : '&';
+                fetch({$fetchUrl} + sep + 'id=' + id, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.success && data.content) {
+                        sessionStorage.setItem('claudePromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
+                    }
+                    window.location.href = claudeUrl;
+                })
+                .catch(function() {
+                    window.location.href = claudeUrl;
+                })
+                .finally(function() {
+                    button.disabled = false;
+                });
             });
         });
-    });
-JS;
+    JS;
 $this->registerJs($script);
 ?>

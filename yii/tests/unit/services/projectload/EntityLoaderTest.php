@@ -42,7 +42,7 @@ class EntityLoaderTest extends Unit
         )->execute();
 
         $tables = ['project', 'context', 'field', 'field_option', 'prompt_template',
-            'template_field', 'prompt_instance', 'scratch_pad', 'project_linked_project'];
+            'template_field', 'prompt_instance', 'note', 'project_linked_project'];
 
         foreach ($tables as $table) {
             $this->db->createCommand(
@@ -73,7 +73,7 @@ class EntityLoaderTest extends Unit
 
     private function ensureUserExists(int $id, string $username): void
     {
-        $exists = (int)$this->db->createCommand(
+        $exists = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`user` WHERE id = :id",
             [':id' => $id]
         )->queryScalar();
@@ -204,7 +204,7 @@ class EntityLoaderTest extends Unit
                 'updated_at' => date('Y-m-d H:i:s'),
             ]
         )->execute();
-        $projectId = (int)$this->db->getLastInsertID();
+        $projectId = (int) $this->db->getLastInsertID();
 
         $this->db->createCommand()->insert(
             "`{$this->productionSchema}`.`context`",
@@ -223,13 +223,13 @@ class EntityLoaderTest extends Unit
         $loader = $this->createLoader();
         $loader->deleteLocalProject($projectId);
 
-        $exists = (int)$this->db->createCommand(
+        $exists = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`project` WHERE id = :id",
             [':id' => $projectId]
         )->queryScalar();
         $this->assertEquals(0, $exists);
 
-        $ctxExists = (int)$this->db->createCommand(
+        $ctxExists = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->productionSchema}`.`context` WHERE project_id = :id",
             [':id' => $projectId]
         )->queryScalar();
@@ -279,7 +279,7 @@ class EntityLoaderTest extends Unit
             [':id' => $newId]
         )->queryOne();
         $this->assertEquals('NewAutoProject', $project['name']);
-        $this->assertEquals(1, (int)$project['user_id']); // user_id overridden
+        $this->assertEquals(1, (int) $project['user_id']); // user_id overridden
     }
 
     private function createLoader(): EntityLoader

@@ -230,10 +230,8 @@ class FileFieldProcessorTest extends Unit
 
     private function createTemplate(?object $project, array $fields): PromptTemplate
     {
-        $template = new class () extends PromptTemplate {
-            public function init(): void
-            {
-            }
+        $template = new class extends PromptTemplate {
+            public function init(): void {}
 
             public function attributes(): array
             {

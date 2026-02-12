@@ -56,8 +56,8 @@ echo $this->render('_breadcrumbs', [
     </div>
 </div>
 <?php
-$importTextUrl = Url::to(['/scratch-pad/import-text']);
-$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$importTextUrl = Url::to(['/note/import-text']);
+$importMarkdownUrl = Url::to(['/note/import-markdown']);
 $script = <<<JS
     var quill = new Quill('#editor', {
         theme: 'snow',

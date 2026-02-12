@@ -26,7 +26,7 @@ class EntityConfigIntegrityTest extends Unit
 
         foreach ($entities as $entityName => $config) {
             $table = $config['table'];
-            $exists = (int)Yii::$app->db->createCommand(
+            $exists = (int) Yii::$app->db->createCommand(
                 'SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
                  WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table',
                 [':schema' => $this->schema, ':table' => $table]

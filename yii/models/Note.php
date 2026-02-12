@@ -2,50 +2,60 @@
 
 namespace app\models;
 
-use app\models\query\ScratchPadQuery;
+use app\models\query\NoteQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
+use common\enums\NoteType;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
- * This is the model class for table "scratch_pad".
+ * This is the model class for table "note".
  *
  * @property int $id
  * @property int $user_id
  * @property int|null $project_id
+ * @property int|null $parent_id
  * @property string $name
+ * @property string $type
  * @property string|null $content Quill Delta JSON
- * @property string|null $response Quill Delta JSON
  * @property string $created_at
  * @property string $updated_at
  *
  * @property User $user
  * @property Project|null $project
+ * @property Note|null $parent
+ * @property Note[] $children
  */
-class ScratchPad extends ActiveRecord
+class Note extends ActiveRecord
 {
     use TimestampTrait;
 
+    /** Virtual column populated by {@see NoteQuery::withChildCount()} */
+    public ?int $child_count = null;
+
     public static function tableName(): string
     {
-        return 'scratch_pad';
+        return 'note';
     }
 
-    public static function find(): ScratchPadQuery
+    public static function find(): NoteQuery
     {
-        return new ScratchPadQuery(static::class);
+        return new NoteQuery(static::class);
     }
 
     public function rules(): array
     {
         return [
             [['name', 'user_id'], 'required'],
-            [['user_id', 'project_id'], 'integer'],
+            [['user_id', 'project_id', 'parent_id'], 'integer'],
             [['created_at', 'updated_at'], 'string'],
-            [['content', 'response'], 'string'],
+            [['content'], 'string'],
             [['name'], 'string', 'max' => 255],
+            [['type'], 'string', 'max' => 50],
+            [['type'], 'in', 'range' => NoteType::values()],
+            [['type'], 'default', 'value' => NoteType::NOTE->value],
             [
                 ['user_id'],
                 'exist',
@@ -61,6 +71,14 @@ class ScratchPad extends ActiveRecord
                 'targetAttribute' => ['project_id' => 'id'],
                 'when' => fn($model) => $model->project_id !== null,
             ],
+            [
+                ['parent_id'],
+                'exist',
+                'skipOnError' => true,
+                'targetClass' => self::class,
+                'targetAttribute' => ['parent_id' => 'id'],
+                'when' => fn($model) => $model->parent_id !== null,
+            ],
         ];
     }
 
@@ -70,9 +88,10 @@ class ScratchPad extends ActiveRecord
             'id' => 'ID',
             'user_id' => 'User',
             'project_id' => 'Project',
+            'parent_id' => 'Parent',
             'name' => 'Name',
+            'type' => 'Type',
             'content' => 'Content',
-            'response' => 'Response',
             'created_at' => 'Created',
             'updated_at' => 'Updated',
         ];
@@ -88,12 +107,27 @@ class ScratchPad extends ActiveRecord
         return $this->hasOne(Project::class, ['id' => 'project_id']);
     }
 
+    public function getParent(): ActiveQuery
+    {
+        return $this->hasOne(self::class, ['id' => 'parent_id']);
+    }
+
+    public function getChildren(): ActiveQuery
+    {
+        return $this->hasMany(self::class, ['parent_id' => 'id']);
+    }
+
     public function init(): void
     {
         parent::init();
 
-        if ($this->isNewRecord && $this->user_id === null) {
-            $this->user_id = Yii::$app->user->id;
+        if ($this->isNewRecord) {
+            if ($this->user_id === null) {
+                $this->user_id = Yii::$app->user->id;
+            }
+            if ($this->type === null) {
+                $this->type = NoteType::NOTE->value;
+            }
         }
     }
 

@@ -31,7 +31,7 @@ $saveUrl = Url::to(['/claude/save']);
 $suggestNameUrl = Url::to(['/claude/suggest-name']);
 $importTextUrl = Url::to(['/claude/import-text']);
 $importMarkdownUrl = Url::to(['/claude/import-markdown']);
-$viewUrlTemplate = Url::to(['/scratch-pad/view', 'id' => '__ID__']);
+$viewUrlTemplate = Url::to(['/note/view', 'id' => '__ID__']);
 $checkConfigUrl = Url::to(array_merge(['/claude/check-config'], $pParam));
 $usageUrl = Url::to(array_merge(['/claude/usage'], $pParam));
 $projectDefaults = $project->getClaudeOptions();
@@ -331,7 +331,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="saveDialogSaveLabel">Save Scratch Pad</h5>
+                    <h5 class="modal-title" id="saveDialogSaveLabel">Save Note</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -2904,38 +2904,44 @@ $js = <<<JS
 
                 var projectId = document.getElementById('save-dialog-project').value || null;
 
-                // Build markdown from individually selected messages
+                // Separate user and response messages from selected checkboxes
                 var checkboxes = document.querySelectorAll('#save-dialog-message-list .save-dialog-msg-cb:checked');
-                var selectedParts = [];
+                var userParts = [];
+                var responseParts = [];
                 checkboxes.forEach(function(cb) {
                     var idx = parseInt(cb.getAttribute('data-msg-index'), 10);
                     var msg = self.messages[idx];
                     if (!msg) return;
-                    var role = (idx % 2 === 0) ? 'You' : 'Claude';
-                    selectedParts.push('## ' + role + '\\n\\n' + msg.content);
+                    var isUser = (idx % 2 === 0);
+                    var role = isUser ? 'You' : 'Claude';
+                    var part = '## ' + role + '\\n\\n' + msg.content;
+                    if (isUser)
+                        userParts.push(part);
+                    else
+                        responseParts.push(part);
                 });
-                var markdown = selectedParts.join('\\n\\n---\\n\\n');
 
-                // Convert markdown to Quill Delta client-side
-                var deltaJson = self.markdownToDelta(markdown);
+                var userMarkdown = userParts.join('\\n\\n---\\n\\n');
+                var userDelta = self.markdownToDelta(userMarkdown);
 
                 // Disable save button
                 var saveBtn = document.getElementById('save-dialog-save-btn');
                 saveBtn.disabled = true;
                 saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving\u2026';
 
-                // Save as new scratch pad
+                var saveHeaders = {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': yii.getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+
+                // Step 1: Save parent note with user content
                 fetch('$saveUrl', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': yii.getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
+                    headers: saveHeaders,
                     body: JSON.stringify({
                         name: name,
-                        content: deltaJson,
-                        response: '',
+                        content: userDelta,
                         project_id: projectId
                     })
                 })
@@ -2960,8 +2966,36 @@ $js = <<<JS
                         return;
                     }
 
-                    // Success — redirect to view
-                    var viewUrl = '$viewUrlTemplate'.replace('__ID__', saveData.id);
+                    var parentId = saveData.id;
+
+                    // Step 2: If response content exists, save child note with type='summation'
+                    if (responseParts.length > 0) {
+                        var responseMarkdown = responseParts.join('\\n\\n---\\n\\n');
+                        var responseDelta = self.markdownToDelta(responseMarkdown);
+
+                        return fetch('$saveUrl', {
+                            method: 'POST',
+                            headers: saveHeaders,
+                            body: JSON.stringify({
+                                name: name,
+                                content: responseDelta,
+                                project_id: projectId,
+                                type: 'summation',
+                                parent_id: parentId
+                            })
+                        })
+                        .then(function(r) { return self.parseJsonResponse(r); })
+                        .then(function(childData) {
+                            if (!childData.success) {
+                                console.warn('Child note save failed:', childData.message || childData.errors);
+                            }
+                            var viewUrl = '$viewUrlTemplate'.replace('__ID__', parentId);
+                            window.location.href = viewUrl;
+                        });
+                    }
+
+                    // No response content — redirect to parent note
+                    var viewUrl = '$viewUrlTemplate'.replace('__ID__', parentId);
                     window.location.href = viewUrl;
                 })
                 .catch(function(error) {

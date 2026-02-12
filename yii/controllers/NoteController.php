@@ -6,16 +6,19 @@ namespace app\controllers;
 
 use app\components\ProjectContext;
 use app\helpers\MarkdownDetector;
+use app\models\Note;
+use app\models\NoteSearch;
 use app\models\Project;
-use app\models\ScratchPad;
-use app\models\ScratchPadSearch;
 use app\models\YouTubeImportForm;
 use app\services\CopyFormatConverter;
 use app\services\copyformat\MarkdownParser;
 use app\services\copyformat\QuillDeltaWriter;
 use app\services\EntityPermissionService;
+use app\services\NoteService;
 use app\services\YouTubeTranscriptService;
 use common\enums\CopyType;
+use common\enums\NoteType;
+use RuntimeException;
 use Throwable;
 use Yii;
 use yii\db\ActiveRecord;
@@ -26,26 +29,28 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 use yii\web\UploadedFile;
-use RuntimeException;
 
-class ScratchPadController extends Controller
+class NoteController extends Controller
 {
     private ProjectContext $projectContext;
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
     private readonly YouTubeTranscriptService $youtubeService;
+    private readonly NoteService $noteService;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
         YouTubeTranscriptService $youtubeService,
+        NoteService $noteService = new NoteService(),
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->youtubeService = $youtubeService;
-        $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('scratchPad');
+        $this->noteService = $noteService;
+        $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('note');
     }
 
     public function init(): void
@@ -80,7 +85,7 @@ class ScratchPadController extends Controller
                             $callback = $this->permissionService->isModelBasedAction($action->id)
                                 ? fn() => $this->findModel((int) Yii::$app->request->get('id'))
                                 : null;
-                            return $this->permissionService->hasActionPermission('scratchPad', $action->id, $callback);
+                            return $this->permissionService->hasActionPermission('note', $action->id, $callback);
                         },
                     ],
                 ],
@@ -90,14 +95,16 @@ class ScratchPadController extends Controller
 
     public function actionIndex(): string
     {
-        $searchModel = new ScratchPadSearch();
+        $searchModel = new NoteSearch();
         $currentProject = $this->projectContext->getCurrentProject();
         $isAllProjects = $this->projectContext->isAllProjectsContext();
+        $showChildren = (bool) Yii::$app->request->get('show_all', 0);
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             Yii::$app->user->id,
             $currentProject?->id,
-            $isAllProjects
+            $isAllProjects,
+            $showChildren
         );
 
         return $this->render('index', [
@@ -106,6 +113,7 @@ class ScratchPadController extends Controller
             'currentProject' => $currentProject,
             'isAllProjects' => $isAllProjects,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
+            'showChildren' => $showChildren,
         ]);
     }
 
@@ -125,8 +133,10 @@ class ScratchPadController extends Controller
     public function actionView(int $id): string
     {
         $model = $this->findModel($id);
+        $children = $model->getChildren()->orderBy(['created_at' => SORT_ASC])->all();
         return $this->render('view', [
             'model' => $model,
+            'children' => $children,
         ]);
     }
 
@@ -138,14 +148,17 @@ class ScratchPadController extends Controller
     {
         $model = $this->findModel($id);
 
-        /** @var ScratchPad $model */
+        /** @var Note $model */
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post()) && $model->save()) {
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
+        $children = $model->getChildren()->orderBy(['created_at' => SORT_ASC])->all();
+
         return $this->render('update', [
             'model' => $model,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
+            'children' => $children,
         ]);
     }
 
@@ -164,10 +177,10 @@ class ScratchPadController extends Controller
 
         try {
             $model->delete();
-            Yii::$app->session->setFlash('success', "Scratch pad '$model->name' deleted successfully.");
+            Yii::$app->session->setFlash('success', "Note '$model->name' deleted successfully.");
         } catch (Throwable $e) {
             Yii::error($e->getMessage(), 'database');
-            Yii::$app->session->setFlash('error', 'Unable to delete the scratch pad. Please try again later.');
+            Yii::$app->session->setFlash('error', 'Unable to delete the note. Please try again later.');
         }
         return $this->redirect(['index']);
     }
@@ -184,54 +197,16 @@ class ScratchPadController extends Controller
             return ['success' => false, 'message' => 'Invalid JSON data.'];
         }
 
-        $id = $data['id'] ?? null;
-        $name = trim($data['name'] ?? '');
-        $content = $data['content'] ?? '';
-        $response = $data['response'] ?? '';
-        $projectId = $data['project_id'] ?? null;
-
-        if ($name === '') {
-            return ['success' => false, 'errors' => ['name' => ['Name is required.']]];
-        }
-
-        if ($projectId !== null) {
-            $projectExists = Project::find()
-                ->forUser(Yii::$app->user->id)
-                ->andWhere(['id' => $projectId])
-                ->exists();
-            if (!$projectExists) {
-                return ['success' => false, 'message' => 'Project not found.'];
-            }
-        }
-
-        if ($id !== null) {
-            $model = ScratchPad::find()
-                ->forUser(Yii::$app->user->id)
-                ->andWhere(['id' => $id])
-                ->one();
-            if ($model === null) {
-                return ['success' => false, 'message' => 'Scratch pad not found.'];
-            }
-        } else {
-            $model = new ScratchPad([
-                'user_id' => Yii::$app->user->id,
-                'project_id' => $projectId,
-            ]);
-        }
-
-        $model->name = $name;
-        $model->content = $content;
-        $model->response = $response;
-
-        if ($model->save()) {
+        try {
+            $note = $this->noteService->saveNote($data, Yii::$app->user->id);
             return [
                 'success' => true,
-                'id' => $model->id,
-                'message' => 'Scratch pad saved successfully.',
+                'id' => $note->id,
+                'message' => 'Note saved successfully.',
             ];
+        } catch (RuntimeException $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
         }
-
-        return ['success' => false, 'errors' => $model->getErrors()];
     }
 
     public function actionImportMarkdown(): array
@@ -389,11 +364,12 @@ class ScratchPadController extends Controller
             $deltaJson = $this->youtubeService->convertToQuillDelta($transcriptData);
             $title = $this->youtubeService->getTitle($transcriptData);
 
-            $model = new ScratchPad([
+            $model = new Note([
                 'user_id' => Yii::$app->user->id,
                 'project_id' => $form->project_id,
                 'name' => $title,
                 'content' => $deltaJson,
+                'type' => NoteType::IMPORT->value,
             ]);
 
             if ($model->save()) {
@@ -420,7 +396,7 @@ class ScratchPadController extends Controller
 
         return [
             'success' => true,
-            'content' => $model->content,
+            'content' => $this->noteService->fetchMergedContent($model),
             'projectId' => $model->project_id,
         ];
     }
@@ -445,9 +421,9 @@ class ScratchPadController extends Controller
      */
     protected function findModel(int $id): ActiveRecord
     {
-        return ScratchPad::find()->where([
+        return Note::find()->where([
             'id' => $id,
             'user_id' => Yii::$app->user->id,
-        ])->one() ?? throw new NotFoundHttpException('The requested Scratch Pad does not exist or is not yours.');
+        ])->one() ?? throw new NotFoundHttpException('The requested Note does not exist or is not yours.');
     }
 }

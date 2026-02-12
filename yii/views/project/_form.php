@@ -67,7 +67,7 @@ $modelOptions = [
         </div>
         <div class="collapse" id="claudeOptionsCollapse">
             <div class="card-body">
-                <p class="text-muted small mb-3">Default options for Claude CLI executions from this project's scratch pads. Leave blank to use CLI defaults.</p>
+                <p class="text-muted small mb-3">Default options for Claude CLI executions from this project's notes. Leave blank to use CLI defaults.</p>
 
                 <div class="row g-3">
                     <div class="col-md-6">
@@ -269,8 +269,8 @@ $modelOptions = [
 <?php
 $templateBody = json_encode($model->description);
 $claudeContextBody = json_encode($model->claude_context);
-$importTextUrl = Url::to(['/scratch-pad/import-text']);
-$importMarkdownUrl = Url::to(['/scratch-pad/import-markdown']);
+$importTextUrl = Url::to(['/note/import-text']);
+$importMarkdownUrl = Url::to(['/note/import-markdown']);
 $script = <<<JS
     var quill = new Quill('#project-editor', {
         theme: 'snow',
@@ -299,7 +299,7 @@ $script = <<<JS
         document.querySelector('#project-description').value = JSON.stringify(quill.getContents());
     });
 
-    // Claude context Quill editor (same toolbar as scratch-pad)
+    // Claude context Quill editor (same toolbar as note)
     var contextQuill = new Quill('#claude-context-editor', {
         theme: 'snow',
         modules: {

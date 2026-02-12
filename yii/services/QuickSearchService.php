@@ -4,15 +4,15 @@ namespace app\services;
 
 use app\models\Context;
 use app\models\Field;
+use app\models\Note;
 use app\models\PromptInstance;
 use app\models\PromptTemplate;
-use app\models\ScratchPad;
 use yii\base\Component;
 use yii\helpers\Url;
 
 /**
  * Service for quick search across multiple entity types.
- * Searches Contexts, Fields, Templates, Generated Prompts, and Scratch Pads.
+ * Searches Contexts, Fields, Templates, Generated Prompts, and Notes.
  */
 class QuickSearchService extends Component
 {
@@ -21,7 +21,7 @@ class QuickSearchService extends Component
     /**
      * Search across all entity types for the given term.
      *
-     * @return array{contexts: array, fields: array, templates: array, instances: array, scratchPads: array}
+     * @return array{contexts: array, fields: array, templates: array, instances: array, notes: array}
      */
     public function search(string $term, int $userId, int $limit = self::DEFAULT_LIMIT): array
     {
@@ -35,7 +35,7 @@ class QuickSearchService extends Component
             'fields' => $this->searchFields($term, $userId, $limit),
             'templates' => $this->searchTemplates($term, $userId, $limit),
             'instances' => $this->searchInstances($term, $userId, $limit),
-            'scratchPads' => $this->searchScratchPads($term, $userId, $limit),
+            'notes' => $this->searchNotes($term, $userId, $limit),
         ];
     }
 
@@ -126,26 +126,28 @@ class QuickSearchService extends Component
     /**
      * @return array<int, array{id: int, type: string, name: string, subtitle: string, url: string}>
      */
-    private function searchScratchPads(string $term, int $userId, int $limit): array
+    private function searchNotes(string $term, int $userId, int $limit): array
     {
-        $scratchPads = ScratchPad::find()
+        $notes = Note::find()
             ->forUser($userId)
             ->searchByTerm($term)
             ->prioritizeNameMatch($term)
             ->limit($limit)
             ->all();
 
-        return array_map(fn(ScratchPad $pad) => [
-            'id' => $pad->id,
-            'type' => 'scratchPad',
-            'name' => $pad->name,
-            'subtitle' => $pad->project->name ?? 'No project',
-            'url' => Url::to(['/scratch-pad/view', 'id' => $pad->id, 'p' => $pad->project_id]),
-        ], $scratchPads);
+        return array_map(fn(Note $note) => [
+            'id' => $note->id,
+            'type' => 'note',
+            'name' => $note->name,
+            'subtitle' => $note->project->name ?? 'No project',
+            'url' => $note->parent_id
+                ? Url::to(['/note/view', 'id' => $note->parent_id, 'p' => $note->project_id])
+                : Url::to(['/note/view', 'id' => $note->id, 'p' => $note->project_id]),
+        ], $notes);
     }
 
     /**
-     * @return array{contexts: array, fields: array, templates: array, instances: array, scratchPads: array}
+     * @return array{contexts: array, fields: array, templates: array, instances: array, notes: array}
      */
     private function emptyResults(): array
     {
@@ -154,7 +156,7 @@ class QuickSearchService extends Component
             'fields' => [],
             'templates' => [],
             'instances' => [],
-            'scratchPads' => [],
+            'notes' => [],
         ];
     }
 }

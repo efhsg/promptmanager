@@ -6,14 +6,14 @@ use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
 /**
- * ScratchPadSearch represents the model behind the search form about `app\models\ScratchPad`.
+ * NoteSearch represents the model behind the search form about `app\models\Note`.
  */
-class ScratchPadSearch extends ScratchPad
+class NoteSearch extends Note
 {
     public function rules(): array
     {
         return [
-            [['name'], 'safe'],
+            [['name', 'type'], 'safe'],
         ];
     }
 
@@ -26,13 +26,18 @@ class ScratchPadSearch extends ScratchPad
         array $params,
         int $userId,
         ?int $currentProjectId = null,
-        bool $isAllProjects = false
+        bool $isAllProjects = false,
+        bool $showChildren = false
     ): ActiveDataProvider {
         $query = $isAllProjects
-            ? ScratchPad::find()->forUser($userId)
-            : ScratchPad::find()->forUserWithProject($userId, $currentProjectId);
+            ? Note::find()->forUser($userId)
+            : Note::find()->forUserWithProject($userId, $currentProjectId);
 
-        $query->orderedByUpdated();
+        if (!$showChildren) {
+            $query->topLevel();
+        }
+
+        $query->withChildCount()->orderedByUpdated();
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
@@ -48,6 +53,7 @@ class ScratchPadSearch extends ScratchPad
         }
 
         $query->andFilterWhere(['like', 'name', $this->name]);
+        $query->andFilterWhere(['type' => $this->type]);
 
         return $dataProvider;
     }

@@ -108,7 +108,7 @@ class EntityLoader
             $placeholders[] = $key;
             $params[$key] = $id;
         }
-        return (int)$this->db->createCommand(
+        return (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$this->tempSchema}`.`{$table}` WHERE `{$parentColumn}` IN (" . implode(',', $placeholders) . ")",
             $params
         )->queryScalar();
@@ -125,35 +125,35 @@ class EntityLoader
         $schema = $this->productionSchema;
 
         $counts['project'] = 1;
-        $counts['context'] = (int)$this->db->createCommand(
+        $counts['context'] = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`context` WHERE project_id = :id",
             [':id' => $projectId]
         )->queryScalar();
-        $counts['field'] = (int)$this->db->createCommand(
+        $counts['field'] = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`field` WHERE project_id = :id",
             [':id' => $projectId]
         )->queryScalar();
-        $counts['field_option'] = (int)$this->db->createCommand(
+        $counts['field_option'] = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`field_option` WHERE field_id IN (SELECT id FROM `{$schema}`.`field` WHERE project_id = :id)",
             [':id' => $projectId]
         )->queryScalar();
-        $counts['prompt_template'] = (int)$this->db->createCommand(
+        $counts['prompt_template'] = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`prompt_template` WHERE project_id = :id",
             [':id' => $projectId]
         )->queryScalar();
-        $counts['template_field'] = (int)$this->db->createCommand(
+        $counts['template_field'] = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`template_field` WHERE template_id IN (SELECT id FROM `{$schema}`.`prompt_template` WHERE project_id = :id)",
             [':id' => $projectId]
         )->queryScalar();
-        $counts['prompt_instance'] = (int)$this->db->createCommand(
+        $counts['prompt_instance'] = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`prompt_instance` WHERE template_id IN (SELECT id FROM `{$schema}`.`prompt_template` WHERE project_id = :id)",
             [':id' => $projectId]
         )->queryScalar();
-        $counts['scratch_pad'] = (int)$this->db->createCommand(
-            "SELECT COUNT(*) FROM `{$schema}`.`scratch_pad` WHERE project_id = :id",
+        $counts['note'] = (int) $this->db->createCommand(
+            "SELECT COUNT(*) FROM `{$schema}`.`note` WHERE project_id = :id",
             [':id' => $projectId]
         )->queryScalar();
-        $counts['project_linked_project'] = (int)$this->db->createCommand(
+        $counts['project_linked_project'] = (int) $this->db->createCommand(
             "SELECT COUNT(*) FROM `{$schema}`.`project_linked_project` WHERE project_id = :id",
             [':id' => $projectId]
         )->queryScalar();
@@ -202,7 +202,7 @@ class EntityLoader
             return null;
         }
 
-        return (int)$this->db->getLastInsertID();
+        return (int) $this->db->getLastInsertID();
     }
 
     /**
@@ -258,7 +258,7 @@ class EntityLoader
                     $sourceValue = $record[$column] ?? null;
 
                     if ($sourceValue !== null) {
-                        $mappedId = $this->getMappedId($fkEntity, (int)$sourceValue);
+                        $mappedId = $this->getMappedId($fkEntity, (int) $sourceValue);
                         if ($mappedId !== null) {
                             $values[] = $mappedId;
                         } else {
@@ -284,8 +284,8 @@ class EntityLoader
             $newId = $this->insertRecord($table, $insertColumns, $values);
 
             if ($hasAutoIncrement && $dumpId !== null && $newId !== null) {
-                $idMap[(int)$dumpId] = $newId;
-                $this->addIdMapping($entity, (int)$dumpId, $newId);
+                $idMap[(int) $dumpId] = $newId;
+                $this->addIdMapping($entity, (int) $dumpId, $newId);
             }
 
             $inserted++;
@@ -355,7 +355,7 @@ class EntityLoader
             return $localProjectId;
         }
 
-        return (int)$this->db->getLastInsertID();
+        return (int) $this->db->getLastInsertID();
     }
 
     /**
@@ -423,7 +423,7 @@ class EntityLoader
             $params[':excludeId'] = $excludeProjectId;
         }
 
-        return (int)$this->db->createCommand($sql, $params)->queryScalar() > 0;
+        return (int) $this->db->createCommand($sql, $params)->queryScalar() > 0;
     }
 
 }

@@ -14,7 +14,7 @@ Quick start guide for new sessions or developers.
 
 **Domain Entities:**
 ```
-Project → { Context, Field, PromptTemplate, ScratchPad } → PromptInstance
+Project → { Context, Field, PromptTemplate, Note } → PromptInstance
 ```
 
 **Placeholder Syntax:**

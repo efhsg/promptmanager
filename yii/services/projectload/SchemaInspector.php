@@ -107,7 +107,7 @@ class SchemaInspector
             [':schema' => $schema, ':table' => $table]
         )->queryScalar();
 
-        return (int)$count > 0;
+        return (int) $count > 0;
     }
 
     /**

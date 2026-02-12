@@ -7,7 +7,7 @@
 (function() {
     'use strict';
 
-    const IMPORT_URL = '/scratch-pad/import-text';
+    const IMPORT_URL = '/note/import-text';
 
     function getCsrfToken() {
         const meta = document.querySelector('meta[name="csrf-token"]');

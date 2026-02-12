@@ -398,7 +398,7 @@ class ClaudeController extends Controller
             return ['success' => false, 'error' => 'Content is empty.'];
         }
 
-        $result = $this->claudeQuickHandler->run('scratch-pad-name', $content);
+        $result = $this->claudeQuickHandler->run('note-name', $content);
 
         if (!$result['success']) {
             return $result;
@@ -414,30 +414,30 @@ class ClaudeController extends Controller
     }
 
     /**
-     * Saves selected messages as a new ScratchPad.
-     * Delegates to ScratchPadController::actionSave.
+     * Saves selected messages as a new Note.
+     * Delegates to NoteController::actionSave.
      */
     public function actionSave(): array
     {
-        return Yii::$app->runAction('scratch-pad/save', Yii::$app->request->queryParams);
+        return Yii::$app->runAction('note/save', Yii::$app->request->queryParams);
     }
 
     /**
      * Imports plain text as Quill Delta.
-     * Delegates to ScratchPadController::actionImportText.
+     * Delegates to NoteController::actionImportText.
      */
     public function actionImportText(): array
     {
-        return Yii::$app->runAction('scratch-pad/import-text', Yii::$app->request->queryParams);
+        return Yii::$app->runAction('note/import-text', Yii::$app->request->queryParams);
     }
 
     /**
      * Imports markdown as Quill Delta.
-     * Delegates to ScratchPadController::actionImportMarkdown.
+     * Delegates to NoteController::actionImportMarkdown.
      */
     public function actionImportMarkdown(): array
     {
-        return Yii::$app->runAction('scratch-pad/import-markdown', Yii::$app->request->queryParams);
+        return Yii::$app->runAction('note/import-markdown', Yii::$app->request->queryParams);
     }
 
     // ---------------------------------------------------------------

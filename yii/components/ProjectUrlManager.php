@@ -18,7 +18,7 @@ class ProjectUrlManager extends UrlManager
         'field',
         'prompt-template',
         'prompt-instance',
-        'scratch-pad',
+        'note',
     ];
 
     /**
