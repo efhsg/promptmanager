@@ -370,89 +370,13 @@ window.QuillToolbar = (function() {
         });
     };
 
-    const CLI_TEMPLATE = 'claude --permission-mode plan -p %s';
-
-    const escapeForShell = (str) => {
-        return str.replace(/'/g, "'\\''");
-    };
-
-    /**
-     * Copy content as a Claude CLI command
-     * @param {string} deltaContent - The Quill delta JSON string
-     * @param {string} format - The target format (e.g., 'md', 'text')
-     * @param {HTMLElement} button - The button element to show feedback on
-     * @param {string} cliTemplate - CLI command template with %s placeholder
-     * @param {string} convertUrl - Optional custom convert URL
-     */
-    const copyAsCli = async (deltaContent, format, button, cliTemplate, convertUrl) => {
-        const url = convertUrl || DEFAULT_CONVERT_FORMAT_URL;
-        const template = cliTemplate || CLI_TEMPLATE;
-        const originalHtml = button.innerHTML;
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    content: deltaContent,
-                    format: format
-                })
-            });
-
-            const data = await response.json();
-            if (data.success && data.content !== undefined) {
-                const cliCommand = template.replace('%s', "'" + escapeForShell(data.content) + "'");
-                await copyToClipboard(cliCommand);
-                button.innerHTML = '<i class="bi bi-check"></i> Copied';
-                setTimeout(() => {
-                    button.innerHTML = originalHtml;
-                }, 1000);
-            } else {
-                console.error('Failed to convert format:', data.message);
-                showToast('Failed to copy', 'danger');
-            }
-        } catch (err) {
-            console.error('Failed to copy:', err);
-            showToast('Failed to copy', 'danger');
-        }
-    };
-
-    /**
-     * Setup a CLI copy button with format selector
-     * @param {string} buttonId - The CLI copy button element ID
-     * @param {string} formatSelectId - The format dropdown element ID
-     * @param {Function|string} contentProvider - Function returning delta JSON, or static delta JSON string
-     * @param {string} cliTemplate - Optional CLI command template
-     * @param {string} convertUrl - Optional custom convert URL
-     */
-    const setupCliCopyButton = (buttonId, formatSelectId, contentProvider, cliTemplate, convertUrl) => {
-        const button = document.getElementById(buttonId);
-        const formatSelect = document.getElementById(formatSelectId);
-
-        if (!button || !formatSelect) return;
-
-        button.addEventListener('click', () => {
-            const format = formatSelect.value;
-            const deltaContent = typeof contentProvider === 'function'
-                ? contentProvider()
-                : contentProvider;
-            copyAsCli(deltaContent, format, button, cliTemplate, convertUrl);
-        });
-    };
-
     return {
         setupClearEditor: setupClearEditor,
         setupSmartPaste: setupSmartPaste,
         setupLoadMd: setupLoadMd,
         showToast: showToast,
         copyWithFormat: copyWithFormat,
-        setupCopyButton: setupCopyButton,
-        copyAsCli: copyAsCli,
-        setupCliCopyButton: setupCliCopyButton
+        setupCopyButton: setupCopyButton
     };
 })();
 

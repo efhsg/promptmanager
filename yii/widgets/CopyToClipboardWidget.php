@@ -22,7 +22,6 @@ class CopyToClipboardWidget extends Widget
     public string $defaultClass = 'btn btn-sm btn-outline-secondary';
     public string $successClass = 'btn btn-sm btn-primary';
     public int $successDuration = 250;
-    public ?string $cliCommandTemplate = null;
 
     public function run()
     {
@@ -34,9 +33,6 @@ class CopyToClipboardWidget extends Widget
             $this->buttonOptions['data-copy-content'] = $this->copyContent;
         }
         $this->buttonOptions['data-target-selector'] = $this->targetSelector;
-        if ($this->cliCommandTemplate !== null) {
-            $this->buttonOptions['data-cli-template'] = $this->cliCommandTemplate;
-        }
         Html::addCssClass($this->buttonOptions, $this->defaultClass);
 
         $button = Html::button($this->label, $this->buttonOptions);
@@ -51,33 +47,18 @@ class CopyToClipboardWidget extends Widget
                 if (!button) {
                     return;
                 }
-                function escapeForShell(str) {
-                    return str.replace(/'/g, "'\\''");
-                }
-
                 function resolveText() {
-                    var rawContent;
-                    if (button.hasAttribute('data-copy-content')) {
-                        rawContent = button.dataset.copyContent || '';
-                    } else {
-                        var target = targetSelector ? document.querySelector(targetSelector) : null;
-                        if (!target) {
-                            return '';
-                        }
+                    if (button.hasAttribute('data-copy-content'))
+                        return button.dataset.copyContent || '';
 
-                        if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
-                            rawContent = target.value || target.textContent || '';
-                        } else {
-                            rawContent = target.textContent || '';
-                        }
-                    }
+                    var target = targetSelector ? document.querySelector(targetSelector) : null;
+                    if (!target)
+                        return '';
 
-                    if (button.hasAttribute('data-cli-template')) {
-                        var template = button.dataset.cliTemplate;
-                        return template.replace('%s', "'" + escapeForShell(rawContent) + "'");
-                    }
+                    if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')
+                        return target.value || target.textContent || '';
 
-                    return rawContent;
+                    return target.textContent || '';
                 }
 
                 function toggleSuccess(button, isSuccess) {
