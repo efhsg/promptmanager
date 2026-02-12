@@ -39,16 +39,11 @@ class m260211_000004_rename_scratch_pad_rbac_permissions extends Migration
             $auth->update($oldName, $perm);
         }
 
-        // Replace rule: remove old, add new
-        $oldRule = $auth->getRule(self::OLD_RULE_NAME);
-        if ($oldRule !== null) {
-            $auth->remove($oldRule);
-        }
-
+        // Add new rule first
         $newRule = new NoteOwnerRule();
         $auth->add($newRule);
 
-        // Update permissions that used the old rule to use the new rule
+        // Update permissions to reference the new rule (before deleting the old one, due to FK constraint)
         $permissionsWithRule = ['viewNote', 'updateNote', 'deleteNote'];
         foreach ($permissionsWithRule as $permName) {
             $perm = $auth->getPermission($permName);
@@ -57,6 +52,10 @@ class m260211_000004_rename_scratch_pad_rbac_permissions extends Migration
                 $auth->update($permName, $perm);
             }
         }
+
+        // Remove old rule directly via SQL (the old ScratchPadOwnerRule class no longer exists,
+        // so DbManager->getRule() returns __PHP_Incomplete_Class which cannot be passed to remove())
+        $this->delete('{{%auth_rule}}', ['name' => self::OLD_RULE_NAME]);
 
         EntityPermissionService::invalidatePermissionCache();
     }
