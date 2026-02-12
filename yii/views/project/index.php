@@ -3,6 +3,7 @@
 
 use app\models\Project;
 use app\models\ProjectSearch;
+use app\widgets\MobileCardView;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
@@ -32,6 +33,15 @@ echo $this->render('_breadcrumbs', [
             <strong>Project List</strong>
         </div>
         <div class="card-body p-0">
+            <?= MobileCardView::widget([
+                'dataProvider' => $dataProvider,
+                'titleAttribute' => 'name',
+                'metaAttributes' => [
+                    'label',
+                    static fn(Project $model) => Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i'),
+                ],
+                'metaLabels' => [0 => 'Label', 1 => 'Updated'],
+            ]) ?>
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',

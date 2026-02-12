@@ -4,6 +4,7 @@
 /** @var app\models\ContextSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
+use app\widgets\MobileCardView;
 use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -39,6 +40,16 @@ $currentProject = Yii::$app->projectContext->getCurrentProject();
             <strong>Context List</strong>
         </div>
         <div class="card-body p-0">
+            <?= MobileCardView::widget([
+                'dataProvider' => $dataProvider,
+                'titleAttribute' => 'name',
+                'metaAttributes' => [
+                    'projectName',
+                    static fn($model) => $model->is_default ? 'Default' : null,
+                    static fn($model) => 'Order: ' . $model->order,
+                ],
+                'metaLabels' => [0 => 'Project'],
+            ]) ?>
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',

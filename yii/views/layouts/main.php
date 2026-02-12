@@ -14,9 +14,9 @@ $this->beginContent('@app/views/layouts/_base.php'); ?>
         <?php
         NavBar::begin([
             'brandLabel' => Html::img('@web/images/prompt-manager-logo-nav.png', ['alt' => Yii::$app->name, 'height' => 40])
-                . '<span class="d-none d-xxl-inline">&nbsp;&nbsp;&nbsp;' . Yii::$app->name . '</span>',
+                . '<span class="d-none d-xl-inline">&nbsp;&nbsp;&nbsp;' . Yii::$app->name . '</span>',
             'brandUrl' => Yii::$app->homeUrl,
-            'options' => ['class' => 'navbar-expand-xl navbar-dark bg-primary fixed-top'],
+            'options' => ['class' => 'navbar-expand-lg navbar-dark bg-primary fixed-top'],
         ]);
 
 echo Nav::widget([
@@ -145,6 +145,15 @@ if (!Yii::$app->user->isGuest) {
     <?= $this->render('_advanced-search-modal') ?>
 <?php endif; ?>
 
+<?php
+// Bottom navigation bar: show on all pages except Claude chat (which has its own sticky input)
+$isClaudeChatPage = Yii::$app->controller->id === 'claude';
+if (!Yii::$app->user->isGuest && !$isClaudeChatPage):
+?>
+    <?= $this->render('_bottom-nav') ?>
+    <?= $this->render('_mobile-search-overlay') ?>
+<?php endif; ?>
+
 <script>
 (function() {
     window.updateProjectInUrl = function(projectId) {
@@ -175,7 +184,7 @@ if (!Yii::$app->user->isGuest) {
         const wrapper = document.querySelector('.project-context-wrapper');
         if (!wrapper) return;
 
-        const isDesktop = window.innerWidth >= 1200; // Bootstrap xl breakpoint
+        const isDesktop = window.innerWidth >= 992; // Bootstrap lg breakpoint
         if (isDesktop) {
             const notesLink = document.querySelector('#nav-notes a');
             if (notesLink) {
@@ -196,6 +205,103 @@ if (!Yii::$app->user->isGuest) {
     document.addEventListener('DOMContentLoaded', positionProjectDropdown);
     window.addEventListener('load', positionProjectDropdown);
     window.addEventListener('resize', positionProjectDropdown);
+
+    // Mobile search overlay functionality
+    function initMobileSearch() {
+        const trigger = document.getElementById('mobile-search-trigger');
+        const overlay = document.getElementById('mobile-search-overlay');
+        const closeBtn = document.getElementById('mobile-search-close');
+        const input = document.getElementById('mobile-search-input');
+        const results = document.getElementById('mobile-search-results');
+
+        if (!trigger || !overlay) return;
+
+        trigger.addEventListener('click', function() {
+            overlay.classList.add('show');
+            setTimeout(() => input.focus(), 100);
+        });
+
+        closeBtn.addEventListener('click', function() {
+            overlay.classList.remove('show');
+            input.value = '';
+            results.innerHTML = '';
+        });
+
+        // Close on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && overlay.classList.contains('show')) {
+                overlay.classList.remove('show');
+                input.value = '';
+                results.innerHTML = '';
+            }
+        });
+
+        // Reuse quick search logic for mobile
+        let debounceTimer;
+        input.addEventListener('input', function() {
+            clearTimeout(debounceTimer);
+            const query = this.value.trim();
+
+            if (query.length < 2) {
+                results.innerHTML = '';
+                return;
+            }
+
+            debounceTimer = setTimeout(function() {
+                fetch('<?= \yii\helpers\Url::to(['/search/quick']) ?>?q=' + encodeURIComponent(query), {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.text())
+                .then(html => { results.innerHTML = html; })
+                .catch(err => console.error('Search failed:', err));
+            }, 200);
+        });
+
+        // Handle result clicks
+        results.addEventListener('click', function(e) {
+            const item = e.target.closest('.quick-search-item, .advanced-search-item');
+            if (item && item.href) {
+                window.location.href = item.href;
+            }
+        });
+    }
+
+    // Soft keyboard detection - hide bottom nav when keyboard is open
+    function initKeyboardDetection() {
+        const initialHeight = window.innerHeight;
+
+        window.addEventListener('resize', function() {
+            const currentHeight = window.innerHeight;
+            const heightDiff = initialHeight - currentHeight;
+
+            // If viewport shrunk significantly, keyboard is probably open
+            if (heightDiff > 150) {
+                document.body.classList.add('keyboard-open');
+            } else {
+                document.body.classList.remove('keyboard-open');
+            }
+        });
+
+        // Also detect based on focus events
+        document.addEventListener('focusin', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                if (window.innerWidth < 768) {
+                    setTimeout(() => document.body.classList.add('keyboard-open'), 300);
+                }
+            }
+        });
+
+        document.addEventListener('focusout', function(e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+                setTimeout(() => document.body.classList.remove('keyboard-open'), 100);
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        initMobileSearch();
+        initKeyboardDetection();
+    });
 })();
 </script>
 

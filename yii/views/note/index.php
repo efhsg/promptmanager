@@ -3,6 +3,7 @@
 use app\models\Note;
 use app\models\NoteSearch;
 use app\presenters\PromptInstancePresenter;
+use app\widgets\MobileCardView;
 use common\enums\NoteType;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
@@ -66,6 +67,16 @@ $this->params['breadcrumbs'][] = $this->title;
             <strong>Note List</strong>
         </div>
         <div class="card-body p-0">
+            <?= MobileCardView::widget([
+                'dataProvider' => $dataProvider,
+                'titleAttribute' => static fn(Note $model) => $model->name ?: 'Note #' . $model->id,
+                'metaAttributes' => [
+                    static fn(Note $model) => $model->project?->name ?? 'Global',
+                    static fn(Note $model) => NoteType::resolve($model->type)?->label() ?? $model->type,
+                    static fn(Note $model) => Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i'),
+                ],
+                'metaLabels' => [0 => 'Scope', 1 => 'Type', 2 => 'Updated'],
+            ]) ?>
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',

@@ -1,0 +1,710 @@
+/* ===================================================================
+   MOBILE RESPONSIVE STYLES
+   Primary breakpoint: 767.98px (consistent with claude-chat.css)
+   =================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. BOTTOM NAVIGATION BAR
+   --------------------------------------------------------------------- */
+.mobile-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    background: #fff;
+    border-top: 1px solid #dee2e6;
+    padding: 0.5rem 0;
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.mobile-bottom-nav__list {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.mobile-bottom-nav__item {
+    flex: 1;
+    text-align: center;
+}
+
+.mobile-bottom-nav__link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    color: #6c757d;
+    text-decoration: none;
+    padding: 0.25rem;
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+}
+
+.mobile-bottom-nav__link:hover,
+.mobile-bottom-nav__link:focus {
+    color: #0d6efd;
+    text-decoration: none;
+}
+
+.mobile-bottom-nav__link.active {
+    color: #0d6efd;
+}
+
+.mobile-bottom-nav__icon {
+    font-size: 1.25rem;
+}
+
+.mobile-bottom-nav__label {
+    font-size: 0.65rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+@media (max-width: 767.98px) {
+    .mobile-bottom-nav {
+        display: block;
+    }
+
+    /* Add padding to main content to prevent overlap with bottom nav */
+    main#main {
+        padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* Hide bottom nav when soft keyboard is active */
+body.keyboard-open .mobile-bottom-nav {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------------------
+   2. NAVBAR ADJUSTMENTS
+   --------------------------------------------------------------------- */
+/* Collapse at lg (992px) instead of xl (1200px) */
+@media (max-width: 991.98px) {
+    .navbar-expand-xl .navbar-collapse {
+        display: flex !important;
+        flex-basis: auto;
+    }
+
+    .navbar-expand-xl .navbar-toggler {
+        display: none;
+    }
+}
+
+/* Project selector on mobile - centered in header */
+@media (max-width: 767.98px) {
+    .project-context-wrapper {
+        position: fixed !important;
+        top: 8px !important;
+        bottom: auto !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        z-index: 1031;
+        width: auto;
+        max-width: calc(100% - 120px);
+    }
+
+    .project-context-wrapper .form-select {
+        background-color: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        font-size: 0.75rem;
+        padding: 0.25rem 1.5rem 0.25rem 0.5rem;
+    }
+
+    /* Hide quick search input on mobile (use bottom nav search instead) */
+    .navbar .quick-search-container #quick-search-input {
+        display: none;
+    }
+
+    .navbar .quick-search-container {
+        width: auto;
+        margin: 0;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   3. FULLSCREEN SEARCH OVERLAY
+   --------------------------------------------------------------------- */
+.mobile-search-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1060;
+    background: #fff;
+    padding: 1rem;
+    padding-top: calc(1rem + env(safe-area-inset-top, 0px));
+}
+
+.mobile-search-overlay.show {
+    display: flex;
+    flex-direction: column;
+}
+
+.mobile-search-overlay__header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.mobile-search-overlay__input {
+    flex: 1;
+}
+
+.mobile-search-overlay__close {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    color: #6c757d;
+    cursor: pointer;
+}
+
+.mobile-search-overlay__results {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ---------------------------------------------------------------------
+   4. GRIDVIEW CARD LAYOUT (MOBILE)
+   --------------------------------------------------------------------- */
+
+/* Card layout styles - DEFAULT: hidden on desktop */
+.mobile-card-view {
+    display: none;
+}
+
+/* MOBILE: show cards, hide table */
+@media (max-width: 767.98px) {
+    /* Hide table and empty text on mobile, show cards */
+    .grid-view table.table,
+    .grid-view .empty,
+    .card-body .grid-view .empty {
+        display: none !important;
+    }
+
+    /* Show mobile card view on mobile screens */
+    .mobile-card-view {
+        display: block;
+    }
+
+    /* Card footer layout fix */
+    .grid-view .card-footer {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+
+    .grid-view .card-footer .position-absolute {
+        position: static !important;
+        transform: none !important;
+        text-align: center;
+    }
+
+    .grid-view .card-footer .text-center {
+        order: -1;
+    }
+
+    /* Simplified pagination */
+    .grid-view .pagination .page-item:not(.prev):not(.next):not(.active) {
+        display: none;
+    }
+
+    .grid-view .pagination .page-item.first,
+    .grid-view .pagination .page-item.last {
+        display: none;
+    }
+}
+
+.mobile-card-item {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.mobile-card-item:hover {
+    border-color: #0d6efd;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+}
+
+.mobile-card-item:active {
+    background: #f8f9fa;
+}
+
+.mobile-card-item__title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mobile-card-item__meta {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.mobile-card-item__meta span {
+    display: inline-block;
+    margin-right: 0.75rem;
+}
+
+.mobile-card-item__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.mobile-card-item__actions .btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Tablet: scrollable tables */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .grid-view .card-body {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .grid-view table.table {
+        min-width: 600px;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   5. FORM RESPONSIVE STYLES
+   --------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    /* Stack form columns */
+    .form-group .col-md-6,
+    .form-group .col-lg-6,
+    .row .col-md-6,
+    .row .col-lg-6 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+
+    /* Full-width buttons */
+    .form-group .btn-primary,
+    .form-group .btn-secondary,
+    .btn-group-form .btn {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    /* Form action buttons */
+    .form-actions,
+    .form-group:last-child {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .form-actions .btn,
+    .form-group:last-child .btn {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    /* Quill editor max height */
+    .resizable-editor-container {
+        max-height: 50vh;
+    }
+
+    /* Collapsible sections chevron indicator */
+    .collapse-toggle::after {
+        content: '\F282';
+        font-family: 'bootstrap-icons';
+        margin-left: 0.5rem;
+        transition: transform 0.2s;
+    }
+
+    .collapse-toggle.collapsed::after {
+        transform: rotate(-90deg);
+    }
+
+    /* Form labels don't truncate */
+    .form-label,
+    .control-label,
+    label {
+        white-space: normal;
+        word-wrap: break-word;
+    }
+}
+
+@media (max-width: 575.98px) {
+    /* Extra small: full-width buttons with larger height */
+    .btn-primary,
+    .btn-secondary,
+    .btn-success,
+    .btn-danger {
+        min-height: 48px;
+    }
+
+    /* Form action buttons full width */
+    .form-actions .btn,
+    form .btn[type="submit"] {
+        width: 100%;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   6. QUILL EDITOR MOBILE OPTIMIZATIONS
+   --------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    /* Hide less-used toolbar groups */
+    .ql-toolbar .ql-formats:has(.ql-indent),
+    .ql-toolbar .ql-formats:has(.ql-header:not(button)),
+    .ql-toolbar .ql-formats:has(.ql-align),
+    .ql-toolbar .ql-formats:has(.ql-clean) {
+        display: none;
+    }
+
+    /* Fallback for browsers without :has() */
+    .ql-toolbar .ql-indent,
+    .ql-toolbar select.ql-header,
+    .ql-toolbar .ql-align,
+    .ql-toolbar .ql-clean {
+        display: none;
+    }
+
+    /* Keep header button (h1/h2) visible */
+    .ql-toolbar button.ql-header {
+        display: inline-block;
+    }
+
+    /* Ensure toolbar wraps properly */
+    .ql-toolbar {
+        padding: 4px;
+    }
+
+    .ql-toolbar .ql-formats {
+        margin-right: 8px;
+        margin-bottom: 4px;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   7. SELECT2 MOBILE OPTIMIZATIONS
+   --------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    .select2-container--bootstrap .select2-dropdown {
+        max-height: 50vh;
+    }
+
+    .select2-container--bootstrap .select2-results__options {
+        max-height: calc(50vh - 40px);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Multi-select tags wrap properly */
+    .select2-container--bootstrap .select2-selection--multiple .select2-selection__rendered {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   8. PROMPT GENERATION MOBILE STYLES
+   --------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    /* Sticky navigation buttons */
+    .prompt-generation-nav {
+        position: sticky;
+        bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+        z-index: 1020;
+        background: #fff;
+        padding: 0.75rem;
+        margin: 0 -0.75rem;
+        border-top: 1px solid #dee2e6;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .prompt-generation-nav .btn {
+        flex: 1;
+        min-height: 44px;
+    }
+
+    /* Generated prompt container */
+    .generated-prompt-container {
+        max-height: 60vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Claude button touch target */
+    .btn-claude,
+    .btn[title*="Claude"] {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   9. MODAL MOBILE STYLES
+   --------------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+    /* Fullscreen modals on extra small screens */
+    .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        height: 100%;
+    }
+
+    .modal-content {
+        height: 100%;
+        border: none;
+        border-radius: 0;
+    }
+
+    .modal-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Modal close button touch target */
+    .modal-header .btn-close {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.75rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Advanced search modal fullscreen */
+    #advancedSearchModal .modal-dialog {
+        margin: 0;
+        max-width: 100%;
+        height: 100%;
+    }
+
+    #advancedSearchModal .modal-content {
+        height: 100%;
+        border: none;
+        border-radius: 0;
+    }
+
+    /* Path preview modal scrollable */
+    #path-preview-modal pre {
+        max-height: 80vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* Bootstrap 5 fullscreen modal classes for compatibility */
+.modal-fullscreen-sm-down {
+    width: 100vw;
+    max-width: none;
+    height: 100%;
+    margin: 0;
+}
+
+.modal-fullscreen-sm-down .modal-content {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+}
+
+@media (min-width: 576px) {
+    .modal-fullscreen-sm-down {
+        width: auto;
+        max-width: var(--bs-modal-width);
+        height: auto;
+        margin: var(--bs-modal-margin) auto;
+    }
+
+    .modal-fullscreen-sm-down .modal-content {
+        height: auto;
+        border: var(--bs-modal-border-width) solid var(--bs-modal-border-color);
+        border-radius: var(--bs-modal-border-radius);
+    }
+}
+
+.modal-fullscreen-md-down {
+    width: 100vw;
+    max-width: none;
+    height: 100%;
+    margin: 0;
+}
+
+.modal-fullscreen-md-down .modal-content {
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+}
+
+@media (min-width: 768px) {
+    .modal-fullscreen-md-down {
+        width: auto;
+        max-width: var(--bs-modal-width);
+        height: auto;
+        margin: var(--bs-modal-margin) auto;
+    }
+
+    .modal-fullscreen-md-down .modal-content {
+        height: auto;
+        border: var(--bs-modal-border-width) solid var(--bs-modal-border-color);
+        border-radius: var(--bs-modal-border-radius);
+    }
+}
+
+/* ---------------------------------------------------------------------
+   10. COPY WIDGET MOBILE STYLES
+   --------------------------------------------------------------------- */
+@media (max-width: 767.98px) {
+    /* Touch-friendly copy buttons */
+    .copy-to-clipboard-btn,
+    .btn-copy,
+    [data-clipboard-target] {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    /* Dropup for format selector when near bottom */
+    .copy-dropdown.dropup .dropdown-menu {
+        bottom: 100%;
+        top: auto;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   11. HOMEPAGE MOBILE STYLES
+   --------------------------------------------------------------------- */
+@media (max-width: 575.98px) {
+    /* Responsive logo */
+    .jumbotron img,
+    .hero-logo,
+    .site-index img[alt*="logo" i] {
+        max-width: 150px;
+        height: auto;
+    }
+
+    /* Full-width CTA */
+    .jumbotron .btn,
+    .hero-cta,
+    .site-index .btn-lg {
+        width: 100%;
+        min-height: 48px;
+    }
+
+    /* Compact spacing */
+    .jumbotron,
+    .hero-section {
+        padding: 1.5rem 1rem;
+    }
+}
+
+@media (min-width: 576px) {
+    .jumbotron img,
+    .hero-logo,
+    .site-index img[alt*="logo" i] {
+        max-width: 200px;
+    }
+}
+
+/* ---------------------------------------------------------------------
+   12. EDGE CASES & POLISH
+   --------------------------------------------------------------------- */
+/* Text ellipsis for long content */
+.text-ellipsis,
+.mobile-card-item__title,
+.navbar-brand span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Horizontal scroll for wide code blocks */
+pre,
+.ql-code-block-container,
+code {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* iOS safe area for sticky elements */
+.sticky-bottom,
+.prompt-generation-nav,
+.mobile-bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Smooth scrolling for scrollable containers */
+.scrollable,
+.overflow-auto,
+.overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-friendly action buttons */
+@media (max-width: 767.98px) {
+    .action-column .btn,
+    .btn-sm,
+    .btn-xs {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.5rem;
+    }
+
+    /* GridView action icons */
+    .grid-view .action-column a,
+    .grid-view td:last-child a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.5rem;
+    }
+}
+
+/* Orientation change handling */
+@media (orientation: landscape) and (max-height: 500px) {
+    .mobile-bottom-nav {
+        padding: 0.25rem 0;
+    }
+
+    .mobile-bottom-nav__icon {
+        font-size: 1rem;
+    }
+
+    .mobile-bottom-nav__label {
+        font-size: 0.55rem;
+    }
+
+    main#main {
+        padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px));
+    }
+}

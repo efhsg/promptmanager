@@ -3,6 +3,7 @@
 
 use app\presenters\PromptInstancePresenter;
 use app\models\PromptInstance;
+use app\widgets\MobileCardView;
 use yii\grid\ActionColumn;
 use yii\grid\GridView;
 use yii\helpers\Html;
@@ -53,6 +54,15 @@ echo $this->render('_breadcrumbs', [
             </div>
         </div>
         <div class="card-body p-0">
+            <?= MobileCardView::widget([
+                'dataProvider' => $dataProvider,
+                'titleAttribute' => static fn(PromptInstance $model) => $model->label ?: 'Instance #' . $model->id,
+                'metaAttributes' => [
+                    static fn(PromptInstance $model) => $model->template?->name,
+                    static fn(PromptInstance $model) => Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i'),
+                ],
+                'metaLabels' => [0 => 'Template', 1 => 'Updated'],
+            ]) ?>
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',

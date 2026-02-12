@@ -1,5 +1,6 @@
 <?php /** @noinspection PhpUnhandledExceptionInspection */
 
+use app\widgets\MobileCardView;
 use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -35,6 +36,12 @@ echo $this->render('_breadcrumbs', [
             <strong>Template List</strong>
         </div>
         <div class="card-body p-0">
+            <?= MobileCardView::widget([
+                'dataProvider' => $dataProvider,
+                'titleAttribute' => 'name',
+                'metaAttributes' => ['projectName'],
+                'metaLabels' => [0 => 'Project'],
+            ]) ?>
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',

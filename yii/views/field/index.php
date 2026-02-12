@@ -3,6 +3,7 @@
 /** @var app\models\FieldSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 
+use app\widgets\MobileCardView;
 use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -25,6 +26,16 @@ echo $this->render('_breadcrumbs', [
             <strong>Field List</strong>
         </div>
         <div class="card-body p-0">
+            <?= MobileCardView::widget([
+                'dataProvider' => $dataProvider,
+                'titleAttribute' => 'name',
+                'metaAttributes' => [
+                    static fn($model) => $model->project?->name,
+                    'type',
+                    static fn($model) => $model->share ? 'Shared' : null,
+                ],
+                'metaLabels' => [0 => 'Project', 1 => 'Type'],
+            ]) ?>
             <?php
 
             echo GridView::widget([

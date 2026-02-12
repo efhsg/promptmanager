@@ -191,7 +191,7 @@ echo $form->field($model, 'template_id')
         </div>
         <div class="invalid-feedback d-block d-none" id="suggest-label-error"></div>
     </div>
-    <div class="form-group mt-4 text-end">
+    <div class="form-group mt-4 text-end prompt-generation-nav">
         <?= Html::button('Previous', [
             'class' => 'btn btn-secondary me-2 d-none',
             'id' => 'previous-button',

@@ -65,7 +65,7 @@ a.desc:after {
     color: rgba(255, 255, 255, 0.5);
 }
 
-@media (max-width: 767px) {
+@media (max-width: 767.98px) {
     .nav li > form > button.logout {
         display: block;
         text-align: left;
@@ -532,7 +532,7 @@ a.desc:after {
 }
 
 /* Responsive adjustments */
-@media (max-width: 1199px) {
+@media (max-width: 991.98px) {
     .navbar .quick-search-container {
         margin-left: 0;
         margin-top: 0.5rem;
@@ -649,10 +649,12 @@ a.desc:after {
     background-color: #fff;
 }
 
-/* Project context selector - always visible in navbar */
+/* Project context selector - fixed in navbar (56px height, centered at 28px) */
 .project-context-wrapper {
     position: fixed;
-    top: 14px;
+    top: 28px;
+    left: 200px;
+    transform: translateY(-50%);
     z-index: 1031;
 }
 
@@ -662,6 +664,7 @@ a.desc:after {
     color: #fff;
     padding: 0.25rem 2rem 0.25rem 0.5rem;
     font-size: 0.875rem;
+    line-height: 1.25;
     transition: background-color 0.2s ease, border-color 0.2s ease;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='rgba(255,255,255,0.8)' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
 }
@@ -679,12 +682,12 @@ a.desc:after {
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
 }
 
-/* Mobile: centered horizontally, lower position to fit collapsed navbar */
-@media (max-width: 1199.98px) {
+/* Tablet/smaller screens: centered horizontally in navbar */
+@media (max-width: 991.98px) {
     .project-context-wrapper {
         left: 50%;
-        top: 18px;
-        transform: translateX(-50%);
+        top: 28px;
+        transform: translate(-50%, -50%);
     }
 }
 
