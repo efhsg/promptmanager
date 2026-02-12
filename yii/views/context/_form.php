@@ -26,7 +26,9 @@ QuillAsset::register($this);
             ['prompt' => 'Select a Project']
         )->label('Project') ?>
 
-        <?= $form->field($model, 'name')->textInput(['maxlength' => true])->label('Context Name') ?>
+        <?= $form->field($model, 'name', [
+            'template' => "{label}\n<div class=\"input-group\">{input}<button type=\"button\" class=\"btn btn-outline-secondary\" id=\"suggest-name-btn\" title=\"Suggest name based on content\"><i class=\"bi bi-stars\"></i></button></div>\n{hint}\n{error}",
+        ])->textInput(['maxlength' => true])->label('Context Name') ?>
 
         <?= $form->field($model, 'is_default')->dropDownList(
             [0 => 'No', 1 => 'Yes']
@@ -58,6 +60,7 @@ QuillAsset::register($this);
 $templateBody = json_encode($model->content);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
+$suggestNameUrl = Url::to(['/claude/suggest-name']);
 $script = <<<JS
     var quill = new Quill('#editor', {
         theme: 'snow',
@@ -99,6 +102,47 @@ $script = <<<JS
     }
     quill.on('text-change', function() {
         hidden.value = JSON.stringify(quill.getContents())
+    });
+
+    // Suggest name functionality
+    document.getElementById('suggest-name-btn').addEventListener('click', function() {
+        const btn = this;
+        const nameInput = document.getElementById('context-name');
+        const content = quill.getText().trim();
+
+        if (!content) {
+            alert('Write some content first.');
+            return;
+        }
+
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        fetch('$suggestNameUrl', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ content: content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.name) {
+                nameInput.value = data.name;
+            } else {
+                alert(data.error || 'Could not generate name.');
+            }
+        })
+        .catch(() => {
+            alert('Request failed.');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+        });
     });
     JS;
 $this->registerJs($script);
