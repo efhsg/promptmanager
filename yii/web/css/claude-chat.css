@@ -1551,12 +1551,10 @@
         justify-content: center;
     }
     .claude-chat-page .claude-message__go {
-        min-height: 44px;
         display: inline-flex;
         align-items: center;
-        padding: 0.1rem 0.4rem;
-        font-size: 0.7rem;
-        line-height: 1.2;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.8rem;
     }
 
     /* Stream preview: taller on mobile since editor is collapsed */
