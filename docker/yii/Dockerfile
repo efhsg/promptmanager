@@ -38,11 +38,6 @@ RUN apt-get update \
 # Install youtube-transcript-api for YouTube transcript import
 RUN pip3 install --break-system-packages youtube-transcript-api
 
-# Install Node.js for Claude CLI
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # Install GitHub CLI
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
         | tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null && \
@@ -99,7 +94,7 @@ ARG USER_NAME
 # Create a user, add /data directory for persisting files, and change ownership
 RUN adduser --uid $USER_ID --disabled-password --gecos "" $USER_NAME \
     && mkdir -p /data \
-    && mkdir -p /home/$USER_NAME/.local/bin \
+    && mkdir -p /home/$USER_NAME/.local/bin /home/$USER_NAME/.local/share \
     && chown -R $USER_NAME:$USER_NAME /var/www/html /data /home/$USER_NAME/.local
 
 # Define the work directory as a build argument
@@ -124,6 +119,13 @@ RUN sed -i "s|9000|${PHP_FPM_PORT}|" /usr/local/etc/php-fpm.d/www.conf
 RUN sed -i "s|9000|${PHP_FPM_PORT}|" /usr/local/etc/php-fpm.d/zz-docker.conf
 
 USER $USER_NAME
+
+# Install Claude Code (stable channel, no auto-updates in container)
+ENV DISABLE_AUTOUPDATER=1
+RUN curl -fsSL https://claude.ai/install.sh | bash -s stable
+
+# Symlink Claude config from mounted directory to home (avoids Docker single-file bind mount issues)
+RUN ln -sf /home/$USER_NAME/.claude-config/.claude.json /home/$USER_NAME/.claude.json
 
 # Create the function and append it to ~/.bashrc
 RUN echo 'function test() {' >> /home/$USER_NAME/.bashrc && \

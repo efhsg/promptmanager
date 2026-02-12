@@ -180,11 +180,8 @@ mkdir -p /Users/<username>/projects
 
 # Claude CLI config (if not already present)
 mkdir -p ~/.claude
-touch ~/.claude.json
-
-# Local bins and share (if not already present)
-mkdir -p ~/.local/bin
-mkdir -p ~/.local/share
+mkdir -p ~/.claude-config
+[ -f ~/.claude-config/.claude.json ] || echo '{}' > ~/.claude-config/.claude.json
 
 # GitHub CLI config (if not already present)
 mkdir -p ~/.config/gh

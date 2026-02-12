@@ -201,11 +201,8 @@ mkdir -p /Users/<username>/projects
 
 # Claude CLI config
 mkdir -p ~/.claude
-[ -f ~/.claude.json ] || echo '{}' > ~/.claude.json
-
-# Local bin and share directories
-mkdir -p ~/.local/bin
-mkdir -p ~/.local/share
+mkdir -p ~/.claude-config
+[ -f ~/.claude-config/.claude.json ] || echo '{}' > ~/.claude-config/.claude.json
 
 # GitHub CLI config directory
 mkdir -p ~/.config/gh
@@ -490,7 +487,7 @@ docker compose run --rm pma_npm
 - [ ] `jq` and `rclone` installed via Homebrew
 - [ ] `.env` created with all placeholders replaced
 - [ ] `ytx/` directory created
-- [ ] Host directories exist (`~/.claude`, `~/.local/bin`, `~/.local/share`, `~/.config/gh`)
+- [ ] Host directories exist (`~/.claude`, `~/.claude-config`, `~/.config/gh`)
 - [ ] SSH keys and `.gitconfig` present on host
 
 ### Stack Running

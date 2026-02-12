@@ -31,9 +31,7 @@ services:
       - ${YTX_PATH:-./ytx}:/opt/ytx:ro
       - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
-      - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
-      - ${HOME}/.local/bin:/home/${USER_NAME}/.local/bin
-      - ${HOME}/.local/share:/home/${USER_NAME}/.local/share
+      - ${HOME}/.claude-config:/home/${USER_NAME}/.claude-config
       - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
       - ${HOME}/.gitconfig:/home/${USER_NAME}/.gitconfig:ro
       - ${HOME}/.config/gh:/home/${USER_NAME}/.config/gh:ro
@@ -52,6 +50,7 @@ services:
       - ./docker/nginx.conf.template:/etc/nginx/nginx.conf.template
     environment:
       PHP_FPM_PORT: ${PHP_FPM_PORT:-9000}
+    entrypoint: [""]  # Override default nginx entrypoint to use our own envsubst command
     command: >
       sh -c "envsubst '$$PHP_FPM_PORT' < /etc/nginx/nginx.conf.template \
       > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
