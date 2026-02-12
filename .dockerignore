@@ -1,0 +1,6 @@
+data/
+.git/
+.idea/
+wip/
+trash/
+docker/yii/claude-binary

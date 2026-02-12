@@ -120,9 +120,16 @@ RUN sed -i "s|9000|${PHP_FPM_PORT}|" /usr/local/etc/php-fpm.d/zz-docker.conf
 
 USER $USER_NAME
 
-# Install Claude Code (stable channel, no auto-updates in container)
+# Install Claude Code: curl install with local binary fallback for WSL2
 ENV DISABLE_AUTOUPDATER=1
-RUN curl -fsSL https://claude.ai/install.sh | bash -s stable
+COPY docker/yii/claude-bin* /tmp/
+RUN (curl -4 -fsSL https://claude.ai/install.sh -o /tmp/install-claude.sh && \
+    bash /tmp/install-claude.sh stable && \
+    rm -f /tmp/install-claude.sh) || \
+    (test -f /tmp/claude-binary && \
+     mkdir -p ~/.local/bin && \
+     cp /tmp/claude-binary ~/.local/bin/claude && \
+     chmod +x ~/.local/bin/claude)
 
 # Symlink Claude config from mounted directory to home (avoids Docker single-file bind mount issues)
 RUN ln -sf /home/$USER_NAME/.claude-config/.claude.json /home/$USER_NAME/.claude.json

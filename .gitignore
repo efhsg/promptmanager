@@ -10,6 +10,7 @@ trash/
 scripts/backup.log
 .claude/settings.local.json
 docker-compose.override.yml
+docker/yii/claude-binary
 
 # Runtime storage (managed Claude workspaces, etc.)
 yii/storage/
