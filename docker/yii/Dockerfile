@@ -122,7 +122,7 @@ USER $USER_NAME
 
 # Install Claude Code: curl install with local binary fallback for WSL2
 ENV DISABLE_AUTOUPDATER=1
-COPY docker/yii/claude-bin* /tmp/
+COPY docker/yii/.gitkeep docker/yii/claude-bin* /tmp/
 RUN (curl -4 -fsSL https://claude.ai/install.sh -o /tmp/install-claude.sh && \
     bash /tmp/install-claude.sh stable && \
     rm -f /tmp/install-claude.sh) || \
