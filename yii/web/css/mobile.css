@@ -98,15 +98,15 @@ body.keyboard-open .mobile-bottom-nav {
     }
 }
 
-/* Project selector on mobile - centered in header */
+/* Project selector on mobile - centered in header (56px navbar height) */
 @media (max-width: 767.98px) {
     .project-context-wrapper {
         position: fixed !important;
-        top: 8px !important;
+        top: 28px !important;
         bottom: auto !important;
         left: 50% !important;
         right: auto !important;
-        transform: translateX(-50%) !important;
+        transform: translate(-50%, -50%) !important;
         z-index: 1031;
         width: auto;
         max-width: calc(100% - 120px);
