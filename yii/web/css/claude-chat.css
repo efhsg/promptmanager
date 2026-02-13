@@ -1557,6 +1557,14 @@
         font-size: 0.8rem;
     }
 
+    /* Actions bar: move lower and add more bottom padding to prevent overlap */
+    .claude-chat-page .claude-message--claude {
+        padding-bottom: 3.5rem;
+    }
+    .claude-chat-page .claude-message__actions {
+        bottom: 8px;
+    }
+
     /* Stream preview: taller on mobile since editor is collapsed */
     .claude-chat-page .claude-stream-preview__body {
         max-height: 200px;
