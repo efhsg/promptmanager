@@ -124,7 +124,7 @@ The app is **project-scoped** — most views filter content by the currently sel
 ### Architecture Overview
 
 ```
-Browser ──SSE──→ ScratchPadController.actionStreamClaude()
+Browser ──SSE──→ NoteController.actionStreamClaude()
                         │
                         ▼
                  ClaudeCliService.executeStreaming()
@@ -363,7 +363,7 @@ Entities are matched between local and remote databases using **natural keys** (
 
 Entities sync in dependency order to ensure foreign key integrity:
 ```
-project → context, field → field_option, prompt_template → template_field, prompt_instance → scratch_pad
+project → context, field → field_option, prompt_template → template_field, prompt_instance → note
 ```
 
 ### Conflict Resolution
@@ -390,12 +390,12 @@ Each use case gets its own directory under `.claude/workdirs/{name}/` containing
 ```
 .claude/workdirs/
 ├── prompt-title/CLAUDE.md    # "Summarize this prompt into a title"
-└── scratch-pad-name/CLAUDE.md # "Suggest a name for this scratch pad"
+└── note-name/CLAUDE.md       # "Suggest a name for this note"
 ```
 
 ### Per-Use-Case Configuration
 
-| Parameter | prompt-title | scratch-pad-name |
+| Parameter | prompt-title | note-name |
 |-----------|-------------|-----------------|
 | Min input length | 120 chars | 20 chars |
 | Max input length | 1000 chars | 3000 chars |
@@ -573,12 +573,12 @@ The `LlmXmlWriter` converts rich text to a structured XML format optimized for L
 Each controller defines an action→permission map in its behaviors:
 
 ```php
-// Example: ScratchPadController
-'checkClaudeConfig' → 'viewScratchPad'
-'streamClaude'      → 'viewScratchPad'
-'create'            → 'createScratchPad'
-'update'            → 'updateScratchPad'
-'delete'            → 'deleteScratchPad'
+// Example: NoteController
+'checkClaudeConfig' → 'viewNote'
+'streamClaude'      → 'viewNote'
+'create'            → 'createNote'
+'update'            → 'updateNote'
+'delete'            → 'deleteNote'
 ```
 
 ### Ownership Chain Traversal
@@ -592,7 +592,7 @@ Owner rules navigate relationship chains to find the user:
 | `FieldOwnerRule` | `field.user_id` |
 | `PromptTemplateOwnerRule` | `template → project.user_id` |
 | `PromptInstanceOwnerRule` | `instance → template → project.user_id` |
-| `ScratchPadOwnerRule` | `scratchPad.user_id` |
+| `NoteOwnerRule` | `note.user_id` |
 
 ### Match Callback Pattern
 
@@ -612,7 +612,7 @@ Controllers use `matchCallback` in behaviors to load the model and pass it to th
 `ProjectUrlManager` extends Yii's URL manager and automatically appends `?p=X` to **project-scoped routes**:
 
 ```
-Project-scoped routes: context, field, prompt-template, prompt-instance, scratch-pad
+Project-scoped routes: context, field, prompt-template, prompt-instance, note
 ```
 
 When generating a URL for any of these routes, the URL manager:

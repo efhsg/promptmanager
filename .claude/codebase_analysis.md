@@ -220,15 +220,16 @@ Many-to-many relationship for project linking.
 
 ---
 
-#### ScratchPad (`yii/models/ScratchPad.php`)
-Workspace for prompt composition and editing.
+#### Note (`yii/models/Note.php`)
+Workspace for prompt composition and editing. Supports parent/child hierarchy.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `id` | int | Primary key |
 | `user_id` | int | Owner reference |
 | `project_id` | int\|null | Optional project scope |
-| `name` | string | Scratch pad name |
+| `parent_id` | int\|null | Parent note for hierarchy |
+| `name` | string | Note name |
 | `content` | string\|null | Quill Delta JSON content |
 | `created_at` | int | Unix timestamp |
 | `updated_at` | int | Unix timestamp |
@@ -236,6 +237,8 @@ Workspace for prompt composition and editing.
 **Relationships:**
 - `belongsTo User`
 - `belongsTo Project` (optional)
+- `belongsTo Note` (parent, optional)
+- `hasMany Note` (children)
 
 ---
 
@@ -284,7 +287,7 @@ prioritizeNameMatch(string $term): self
 linkedProjectIdsFor(int $projectId, int $userId): self
 ```
 
-#### ScratchPadQuery (`yii/models/query/ScratchPadQuery.php`)
+#### NoteQuery (`yii/models/query/NoteQuery.php`)
 ```php
 forUser(int $userId): self
 forProject(?int $projectId): self
@@ -294,6 +297,7 @@ orderedByName(): self
 searchByTerm(string $term): self
 searchByKeywords(array $keywords): self
 prioritizeNameMatch(string $term): self
+topLevel(): self
 ```
 
 #### PromptTemplateQuery (`yii/models/query/PromptTemplateQuery.php`)
@@ -324,7 +328,7 @@ Search models handle GridView/ListView filtering by extending base models:
 - `FieldSearch` - Filter fields by project, name, type
 - `PromptTemplateSearch` - Filter templates by project, name
 - `PromptInstanceSearch` - Filter instances by template, label
-- `ScratchPadSearch` - Filter scratch pads by project, name
+- `NoteSearch` - Filter notes by project, name
 
 ### Form Models
 
@@ -677,7 +681,7 @@ generateAuthKey(): void
 | `FieldOwnerRule` | Check if user owns the field |
 | `PromptTemplateOwnerRule` | Check if user owns the template (via project) |
 | `PromptInstanceOwnerRule` | Check if user owns the instance (via template->project) |
-| `ScratchPadOwnerRule` | Check if user owns the scratch pad |
+| `NoteOwnerRule` | Check if user owns the note |
 
 ---
 
@@ -693,7 +697,7 @@ generateAuthKey(): void
 | `FieldController` | Field CRUD with options |
 | `PromptTemplateController` | Template CRUD |
 | `PromptInstanceController` | Instance generation and management |
-| `ScratchPadController` | Scratch pad CRUD and content management |
+| `NoteController` | Note CRUD, content management, Claude chat |
 | `SearchController` | AJAX search endpoints (quick and advanced) |
 
 ### PromptInstanceController Actions
@@ -799,8 +803,8 @@ try {
 │  │                    Controllers                            │  │
 │  │  SiteController, ProjectController, ContextController,    │  │
 │  │  FieldController, PromptTemplateController,               │  │
-│  │  PromptInstanceController, ScratchPadController,          │  │
-│  │  SearchController                                         │  │
+│  │  PromptInstanceController, NoteController,                │  │
+│  │  SearchController, ClaudeController                       │  │
 │  └───────────────────────────┬──────────────────────────────┘  │
 │                              │                                  │
 │  ┌───────────────────────────┴──────────────────────────────┐  │
@@ -826,7 +830,7 @@ try {
 ├─────────────────────────────────────────────────────────────────┤
 │  RBAC: ProjectOwnerRule, ContextOwnerRule, FieldOwnerRule,      │
 │        PromptTemplateOwnerRule, PromptInstanceOwnerRule,        │
-│        ScratchPadOwnerRule                                      │
+│        NoteOwnerRule                                            │
 ├─────────────────────────────────────────────────────────────────┤
 │  Infrastructure: Docker (pma_yii, pma_mysql, pma_nginx, pma_npm)│
 └─────────────────────────────────────────────────────────────────┘
@@ -874,7 +878,7 @@ yii/tests/
 | `prompt_template` | Template definitions |
 | `template_field` | Template-field associations |
 | `prompt_instance` | Generated prompt instances |
-| `scratch_pad` | Scratch pad workspaces |
+| `note` | Note workspaces |
 | `user_preference` | User preferences |
 
 ---
