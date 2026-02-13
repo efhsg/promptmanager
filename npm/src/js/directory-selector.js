@@ -211,9 +211,9 @@ class DirectorySelector {
 
     /**
      * Reset to initial state
-     * @param {string} [defaultValue='/']
+     * @param {string} [defaultValue='']
      */
-    reset(defaultValue = '/') {
+    reset(defaultValue = '') {
         this.cache = [];
         this.input.value = defaultValue;
         this._hideDropdown();

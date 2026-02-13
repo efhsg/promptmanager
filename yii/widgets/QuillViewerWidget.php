@@ -15,12 +15,17 @@ use yii\helpers\Json;
 class QuillViewerWidget extends Widget
 {
     public ?string $content = '';
-    public bool $enableCopy = true;
+    public bool $enableCopy = false;
     public array $copyButtonOptions = [];
     public string $copyButtonLabel = '<i class="bi bi-clipboard"> </i>';
     public string $copyFormat = 'text';
     public array $options = [];
     public string $theme = 'snow';
+
+    public bool $enableExport = false;
+    public ?int $exportProjectId = null;
+    public ?string $exportEntityName = null;
+    public ?string $exportRootDirectory = null;
 
     public function init(): void
     {
@@ -53,10 +58,15 @@ class QuillViewerWidget extends Widget
         $id = $this->getId();
         $viewerId = "$id-viewer";
         $hiddenId = "$id-hidden";
-        $copyFormat = strtolower($this->copyFormat);
-        $copyType = CopyType::tryFrom($copyFormat) ?? CopyType::TEXT;
-        $converter = new CopyFormatConverter();
-        $copyContent = $converter->convertFromQuillDelta($this->content, $copyType);
+
+        $copyFormat = '';
+        $copyContent = '';
+        if ($this->enableCopy) {
+            $copyFormat = strtolower($this->copyFormat);
+            $copyType = CopyType::tryFrom($copyFormat) ?? CopyType::TEXT;
+            $converter = new CopyFormatConverter();
+            $copyContent = $converter->convertFromQuillDelta($this->content, $copyType);
+        }
 
         /* viewer shell with fallback content */
         $style = rtrim(($this->options['style'] ?? ''), ';');
@@ -87,24 +97,94 @@ class QuillViewerWidget extends Widget
             ? Html::tag('textarea', Html::encode($copyContent), ['id' => $hiddenId, 'style' => 'display:none;'])
             : '';
 
-        /* copy button */
-        $copyBtnHtml = $this->enableCopy
-            ? CopyToClipboardWidget::widget([
-                'targetSelector' => "#$hiddenId",
-                'copyFormat' => $copyFormat,
-                'copyContent' => $copyContent,
-                'buttonOptions' => $this->copyButtonOptions,
-                'label' => $this->copyButtonLabel,
-            ])
-            : '';
+        /* action buttons (export + copy) */
+        $buttonsHtml = $this->renderActionButtons($viewerId, $hiddenId, $copyFormat, $copyContent);
 
         /* container */
-        $html = Html::tag('div', $hiddenTextarea . $viewerDiv . $copyBtnHtml, ['class' => 'position-relative']);
+        $html = Html::tag('div', $hiddenTextarea . $viewerDiv . $buttonsHtml, ['class' => 'position-relative']);
 
         /* initialise Quill with decoded delta */
         $this->registerInitScript($viewerId, $this->content, $this->theme);
 
         return $html;
+    }
+
+    /**
+     * Render export and copy buttons in a floating container.
+     *
+     * @throws Throwable
+     */
+    private function renderActionButtons(
+        string $viewerId,
+        string $hiddenId,
+        string $copyFormat,
+        string $copyContent
+    ): string {
+        if (!$this->enableExport && !$this->enableCopy) {
+            return '';
+        }
+
+        $buttons = [];
+
+        if ($this->enableExport) {
+            $buttons[] = $this->renderExportButton($viewerId);
+        }
+
+        if ($this->enableCopy) {
+            $buttons[] = CopyToClipboardWidget::widget([
+                'targetSelector' => "#$hiddenId",
+                'copyFormat' => $copyFormat,
+                'copyContent' => $copyContent,
+                'buttonOptions' => $this->copyButtonOptions,
+                'label' => $this->copyButtonLabel,
+            ]);
+        }
+
+        return Html::tag('div', implode('', $buttons), ['class' => 'quill-viewer-actions']);
+    }
+
+    /**
+     * Render export button that opens the ExportModal.
+     */
+    private function renderExportButton(string $viewerId): string
+    {
+        $buttonId = $viewerId . '-export-btn';
+        $hasRoot = $this->exportProjectId && $this->exportRootDirectory;
+
+        $btn = Html::button('<i class="bi bi-box-arrow-up"></i>', [
+            'id' => $buttonId,
+            'class' => 'btn btn-sm btn-outline-secondary',
+            'title' => 'Export content',
+            'aria-label' => 'Export content',
+        ]);
+
+        $config = Json::htmlEncode([
+            'projectId' => $this->exportProjectId,
+            'entityName' => $this->exportEntityName ?? '',
+            'hasRoot' => $hasRoot,
+            'rootDirectory' => $this->exportRootDirectory,
+        ]);
+
+        $this->getView()->registerJs(
+            <<<JS
+                (function() {
+                    var btn = document.getElementById('$buttonId');
+                    if (!btn) return;
+                    btn.addEventListener('click', function() {
+                        var container = document.getElementById('$viewerId');
+                        var config = $config;
+                        config.getContent = function() {
+                            return container ? container.dataset.deltaContent : null;
+                        };
+                        if (window.ExportModal) {
+                            window.ExportModal.open(config);
+                        }
+                    });
+                })();
+                JS
+        );
+
+        return $btn;
     }
 
     /**

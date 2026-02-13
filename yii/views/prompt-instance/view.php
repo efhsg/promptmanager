@@ -6,7 +6,6 @@
 /** @noinspection PhpUnhandledExceptionInspection */
 
 use app\models\PromptInstance;
-use common\enums\CopyType;
 use app\widgets\QuillViewerWidget;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -78,21 +77,15 @@ echo $this->render('_breadcrumbs', [
                         'format' => 'raw',
                         'label' => 'Prompt',
                         'value' => static function (PromptInstance $model) {
-                            $projectCopyFormat = $model->template?->project?->getPromptInstanceCopyFormatEnum()->value
-                                ?? CopyType::MD->value;
-
                             return QuillViewerWidget::widget([
                                 'content' => $model->final_prompt,
                                 'options' => [
                                     'style' => 'height: 300px;',
                                 ],
-                                'copyButtonOptions' => [
-                                    'class' => 'btn btn-sm position-absolute',
-                                    'style' => 'bottom: 10px; right: 20px;',
-                                    'title' => 'Copy to clipboard',
-                                    'aria-label' => 'Copy template content to clipboard',
-                                    'copyFormat' => $projectCopyFormat,
-                                ],
+                                'enableExport' => true,
+                                'exportProjectId' => $model->template?->project_id,
+                                'exportEntityName' => $model->label ?: 'Prompt Instance #' . $model->id,
+                                'exportRootDirectory' => $model->template?->project?->root_directory,
                             ]);
                         },
                     ],

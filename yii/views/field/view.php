@@ -110,13 +110,10 @@ $pathPreview = $showPath
                                 'value' => static function ($model): string {
                                     return QuillViewerWidget::widget([
                                         'content' => $model->content,
-                                        'copyButtonOptions' => [
-                                            'class' => 'btn btn-sm position-absolute',
-                                            'style' => 'bottom: 10px; right: 20px;',
-                                            'title' => 'Copy to clipboard',
-                                            'aria-label' => 'Copy content to clipboard',
-                                            'copyFormat' => 'md',
-                                        ],
+                                        'enableExport' => true,
+                                        'exportProjectId' => $model->project_id,
+                                        'exportEntityName' => $model->name,
+                                        'exportRootDirectory' => $model->project?->root_directory,
                                     ]);
                                 },
                             ]

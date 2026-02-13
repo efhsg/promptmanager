@@ -82,7 +82,10 @@ $children ??= [];
         <div class="card-body">
             <?= QuillViewerWidget::widget([
                 'content' => $model->content,
-                'enableCopy' => false,
+                'enableExport' => true,
+                'exportProjectId' => $model->project_id,
+                'exportEntityName' => $model->name,
+                'exportRootDirectory' => $model->project?->root_directory,
             ]) ?>
         </div>
         <?php foreach ($children as $child):
@@ -106,9 +109,12 @@ $children ??= [];
                 </div>
             </div>
             <?= QuillViewerWidget::widget([
-                    'content' => $child->content,
-                    'enableCopy' => false,
-                ]) ?>
+                'content' => $child->content,
+                'enableExport' => true,
+                'exportProjectId' => $model->project_id,
+                'exportEntityName' => $child->name,
+                'exportRootDirectory' => $model->project?->root_directory,
+            ]) ?>
         </div>
         <?php endforeach; ?>
     </div>
