@@ -26,6 +26,11 @@ window.QuillToolbar = (function() {
         '<path d="M9 7v6M7 11l2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
         '</svg>';
 
+    const EXPORT_SVG = '<svg viewBox="0 0 18 18" width="18" height="18">' +
+        '<path d="M4 2h7l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1"/>' +
+        '<path d="M9 12V6M7 8l2-2 2 2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+        '</svg>';
+
     const getCsrfToken = () => {
         const meta = document.querySelector('meta[name="csrf-token"]');
         return meta ? (meta.content || meta.getAttribute('content')) : '';
@@ -295,6 +300,51 @@ window.QuillToolbar = (function() {
         });
     };
 
+    /**
+     * Setup export content toolbar button
+     * @param {Quill} quill - The Quill editor instance
+     * @param {HTMLInputElement} hidden - The hidden input to sync content to
+     * @param {object} config - Configuration object
+     * @param {Function} config.getProjectId - Function returning current project ID
+     * @param {Function} config.getEntityName - Function returning entity name for filename
+     * @param {Function} config.getHasRoot - Function returning whether project has root directory
+     */
+    const setupExportContent = (quill, hidden, config) => {
+        const toolbar = quill.getModule('toolbar');
+        if (!toolbar || !toolbar.container) return;
+
+        const el = toolbar.container.querySelector('.ql-exportContent');
+        if (!el) return;
+
+        let btn;
+        if (el.tagName === 'BUTTON') {
+            btn = el;
+        } else {
+            btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ql-exportContent';
+            btn.title = 'Export content';
+            btn.innerHTML = EXPORT_SVG;
+            el.replaceWith(btn);
+        }
+
+        btn.addEventListener('click', () => {
+            if (!window.ExportModal) {
+                console.error('ExportModal not loaded');
+                showToast('Export feature not available', 'danger');
+                return;
+            }
+
+            window.ExportModal.open({
+                projectId: config.getProjectId ? config.getProjectId() : null,
+                entityName: config.getEntityName ? config.getEntityName() : 'export',
+                hasRoot: config.getHasRoot ? config.getHasRoot() : false,
+                rootDirectory: config.getRootDirectory ? config.getRootDirectory() : null,
+                getContent: () => JSON.stringify(quill.getContents())
+            });
+        });
+    };
+
     const copyToClipboard = (text) => {
         if (navigator.clipboard && navigator.clipboard.writeText)
             return navigator.clipboard.writeText(text);
@@ -380,13 +430,46 @@ window.QuillToolbar = (function() {
         });
     };
 
+    /**
+     * Setup an export button that opens the export modal
+     * @param {string} buttonId - The export button element ID
+     * @param {object} config - Configuration object
+     * @param {Function} config.getContent - Function returning Quill text content
+     * @param {Function} config.getDelta - Function returning Quill delta JSON string
+     * @param {string|number|null} config.projectId - Project ID for file export
+     * @param {string} config.entityName - Default filename
+     * @param {boolean} config.hasRoot - Whether project has root directory
+     */
+    const setupExportButton = (buttonId, config) => {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+
+        button.addEventListener('click', () => {
+            if (!window.ExportModal) {
+                console.error('ExportModal not loaded');
+                showToast('Export feature not available', 'danger');
+                return;
+            }
+
+            window.ExportModal.open({
+                projectId: config.projectId || null,
+                entityName: config.entityName || '',
+                hasRoot: config.hasRoot || false,
+                rootDirectory: config.rootDirectory || null,
+                getContent: config.getDelta || (() => '')
+            });
+        });
+    };
+
     return {
         setupClearEditor: setupClearEditor,
         setupSmartPaste: setupSmartPaste,
         setupLoadMd: setupLoadMd,
+        setupExportContent: setupExportContent,
         showToast: showToast,
         copyWithFormat: copyWithFormat,
-        setupCopyButton: setupCopyButton
+        setupCopyButton: setupCopyButton,
+        setupExportButton: setupExportButton
     };
 })();
 
@@ -448,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Register no-op handlers for custom toolbar buttons so Quill
         // doesn't warn about nonexistent formats during init.
-        const noopHandlers = { clearEditor: function() {}, smartPaste: function() {}, loadMd: function() {} };
+        const noopHandlers = { clearEditor: function() {}, smartPaste: function() {}, loadMd: function() {}, exportContent: function() {} };
         if (cfg.modules && cfg.modules.toolbar) {
             if (Array.isArray(cfg.modules.toolbar)) {
                 cfg.modules.toolbar = { container: cfg.modules.toolbar, handlers: noopHandlers };

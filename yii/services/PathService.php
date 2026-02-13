@@ -103,8 +103,17 @@ class PathService
         $normalizedBase = str_replace('\\', '/', $base);
         $normalizedRelative = ltrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $relativePath), DIRECTORY_SEPARATOR);
         $candidate = $base . DIRECTORY_SEPARATOR . $normalizedRelative;
-        $realPath = realpath($candidate) ?: $candidate;
-        $normalizedCandidate = str_replace('\\', '/', $realPath);
+        $realPath = realpath($candidate);
+
+        if ($realPath !== false) {
+            $normalizedCandidate = str_replace('\\', '/', $realPath);
+        } else {
+            // File doesn't exist yet - canonicalize manually to prevent traversal
+            $normalizedCandidate = $this->canonicalizePath($candidate);
+            if ($normalizedCandidate === null) {
+                return null;
+            }
+        }
 
         if (!str_starts_with($normalizedCandidate, $normalizedBase . '/') && $normalizedCandidate !== $normalizedBase) {
             return null;
@@ -129,6 +138,44 @@ class PathService
         }
 
         return rtrim($resolved, DIRECTORY_SEPARATOR) ?: DIRECTORY_SEPARATOR;
+    }
+
+    /**
+     * Canonicalize a path by resolving . and .. segments without requiring the path to exist.
+     * Returns null if the path attempts to traverse above root.
+     */
+    private function canonicalizePath(string $path): ?string
+    {
+        $path = str_replace('\\', '/', $path);
+
+        // Handle stream wrappers (vfs://, file://, etc.)
+        $prefix = '';
+        if (preg_match('#^([a-zA-Z][a-zA-Z0-9+.-]*://)(.*)$#', $path, $matches)) {
+            $prefix = $matches[1];
+            $path = $matches[2];
+        } elseif (str_starts_with($path, '/')) {
+            $prefix = '/';
+            $path = substr($path, 1);
+        }
+
+        $parts = explode('/', $path);
+        $resolved = [];
+
+        foreach ($parts as $part) {
+            if ($part === '' || $part === '.') {
+                continue;
+            }
+            if ($part === '..') {
+                if ($resolved === []) {
+                    return null;
+                }
+                array_pop($resolved);
+            } else {
+                $resolved[] = $part;
+            }
+        }
+
+        return $prefix . implode('/', $resolved);
     }
 
     private function makeRelativePath(string $normalizedBase, string $path): string

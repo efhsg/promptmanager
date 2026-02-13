@@ -42,6 +42,7 @@ QuillAsset::register($this);
 
         <?= $form->field($model, 'content')->hiddenInput(['id' => 'context-content'])->label(false) ?>
 
+        <label class="form-label">Content</label>
         <div class="resizable-editor-container mb-3">
             <div id="editor" class="resizable-editor">
                 <?= $model->content ?>
@@ -61,7 +62,21 @@ $templateBody = json_encode($model->content);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
 $suggestNameUrl = Url::to(['/claude/suggest-name']);
+
+// Build project data for export
+$projectDataForExport = [];
+foreach ($projects as $projectId => $projectName) {
+    $project = \app\models\Project::find()->findUserProject($projectId, Yii::$app->user->id);
+    $projectDataForExport[$projectId] = [
+        'hasRoot' => $project && !empty($project->root_directory),
+        'rootDirectory' => $project->root_directory ?? null,
+    ];
+}
+$projectDataJson = json_encode($projectDataForExport);
+
 $script = <<<JS
+    window.contextProjectData = $projectDataJson;
+
     var quill = new Quill('#editor', {
         theme: 'snow',
         modules: {
@@ -76,7 +91,8 @@ $script = <<<JS
                 ['clean'],
                 [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
-                [{ 'loadMd': [] }]
+                [{ 'loadMd': [] }],
+                [{ 'exportContent': [] }]
             ]
         }
     });
@@ -102,6 +118,24 @@ $script = <<<JS
     }
     quill.on('text-change', function() {
         hidden.value = JSON.stringify(quill.getContents())
+    });
+
+    // Setup export toolbar button
+    var projectSelect = document.getElementById('context-project_id');
+    var projectData = window.contextProjectData || {};
+    window.QuillToolbar.setupExportContent(quill, hidden, {
+        getProjectId: () => projectSelect ? projectSelect.value : null,
+        getEntityName: () => document.getElementById('context-name')?.value || 'context',
+        getHasRoot: () => {
+            var selectedProjectId = projectSelect ? projectSelect.value : null;
+            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
+            return !!projectInfo.hasRoot;
+        },
+        getRootDirectory: () => {
+            var selectedProjectId = projectSelect ? projectSelect.value : null;
+            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
+            return projectInfo.rootDirectory || null;
+        }
     });
 
     // Suggest name functionality

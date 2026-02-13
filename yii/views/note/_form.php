@@ -42,7 +42,7 @@ $children ??= [];
             <div id="collapseContent" class="accordion-collapse collapse show" aria-labelledby="headingContent"
                  data-bs-parent="#noteAccordion">
                 <div class="accordion-body p-0">
-                    <div class="d-flex justify-content-end p-2 border-bottom">
+                    <div class="d-flex justify-content-end p-2 border-bottom gap-2">
                         <div class="input-group input-group-sm" style="width: auto;">
                             <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
                                 'id' => 'copy-format-select',
@@ -141,7 +141,20 @@ $updateUrlTemplate = Url::to(['/note/update', 'id' => '__ID__']);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
 $suggestNameUrl = Url::to(['/claude/suggest-name']);
+
+// Build project data for export (need to know which projects have root_directory)
+$projectDataForExport = [];
+foreach ($projectList as $projectId => $projectName) {
+    $project = \app\models\Project::find()->findUserProject($projectId, Yii::$app->user->id);
+    $projectDataForExport[$projectId] = [
+        'hasRoot' => $project && !empty($project->root_directory),
+        'rootDirectory' => $project->root_directory ?? null,
+    ];
+}
+$projectDataJson = json_encode($projectDataForExport);
+
 $script = <<<JS
+    window.noteProjectData = $projectDataJson;
     var quill = new Quill('#note-editor', {
         theme: 'snow',
         modules: {
@@ -155,7 +168,8 @@ $script = <<<JS
                 ['clean'],
                 [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
-                [{ 'loadMd': [] }]
+                [{ 'loadMd': [] }],
+                [{ 'exportContent': [] }]
             ]
         }
     });
@@ -186,6 +200,24 @@ $script = <<<JS
 
     // Setup copy buttons
     window.QuillToolbar.setupCopyButton('copy-content-btn', 'copy-format-select', () => JSON.stringify(quill.getContents()));
+
+    // Setup export toolbar button
+    var projectSelect = document.getElementById('note-project_id');
+    var projectData = window.noteProjectData || {};
+    window.QuillToolbar.setupExportContent(quill, hidden, {
+        getProjectId: () => projectSelect ? projectSelect.value : null,
+        getEntityName: () => document.getElementById('note-name')?.value || 'export',
+        getHasRoot: () => {
+            var selectedProjectId = projectSelect ? projectSelect.value : null;
+            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
+            return !!projectInfo.hasRoot;
+        },
+        getRootDirectory: () => {
+            var selectedProjectId = projectSelect ? projectSelect.value : null;
+            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
+            return projectInfo.rootDirectory || null;
+        }
+    });
 
     // Save As functionality
     const saveAsBtn = document.getElementById('save-as-btn');

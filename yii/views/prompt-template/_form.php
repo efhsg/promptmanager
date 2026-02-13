@@ -50,7 +50,20 @@ $externalFieldsJson = json_encode($externalFieldsMap, JSON_UNESCAPED_UNICODE | J
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
 
+// Build project data for export
+$projectDataForExport = [];
+foreach ($projects as $projectId => $projectName) {
+    $project = \app\models\Project::find()->findUserProject($projectId, Yii::$app->user->id);
+    $projectDataForExport[$projectId] = [
+        'hasRoot' => $project && !empty($project->root_directory),
+        'rootDirectory' => $project->root_directory ?? null,
+    ];
+}
+$projectDataJson = json_encode($projectDataForExport);
+
 $script = <<<JS
+    window.templateProjectData = $projectDataJson;
+
     window.quill = new Quill('#editor', {
         theme: 'snow',
         modules: {
@@ -68,7 +81,8 @@ $script = <<<JS
                     [{ 'insertExternalField': [] }],
                     [{ 'clearEditor': [] }],
                     [{ 'smartPaste': [] }],
-                    [{ 'loadMd': [] }]
+                    [{ 'loadMd': [] }],
+                    [{ 'exportContent': [] }]
                 ]
             }
         }
@@ -151,6 +165,24 @@ $script = <<<JS
 
     externalFieldDropdown.addEventListener('change', function() {
         insertFieldText(this);
+    });
+
+    // Setup export toolbar button
+    var projectSelect = document.getElementById('prompttemplate-project_id');
+    var projectData = window.templateProjectData || {};
+    window.QuillToolbar.setupExportContent(window.quill, hidden, {
+        getProjectId: () => projectSelect ? projectSelect.value : null,
+        getEntityName: () => document.getElementById('prompttemplate-name')?.value || 'template',
+        getHasRoot: () => {
+            var selectedProjectId = projectSelect ? projectSelect.value : null;
+            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
+            return !!projectInfo.hasRoot;
+        },
+        getRootDirectory: () => {
+            var selectedProjectId = projectSelect ? projectSelect.value : null;
+            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
+            return projectInfo.rootDirectory || null;
+        }
     });
     JS;
 
