@@ -38,18 +38,18 @@ These constraints are non-negotiable:
    - Long methods → Split into focused methods
    - Deep nesting → Early returns
    - Tight coupling → Dependency injection or interfaces
-3. Run existing tests to establish baseline:
+3. Run existing tests to establish baseline (vanuit `/var/www/html/yii`):
    ```bash
-   docker exec pma_yii vendor/bin/codecept run unit {relevant-test-path}
+   vendor/bin/codecept run unit {relevant-test-path}
    ```
 4. Apply refactoring changes
 5. Run linter to fix formatting:
    ```bash
-   ./linter.sh fix
+   vendor/bin/php-cs-fixer fix {file} --config=../.php-cs-fixer.dist.php
    ```
 6. Re-run tests to verify no behavior change:
    ```bash
-   docker exec pma_yii vendor/bin/codecept run unit {relevant-test-path}
+   vendor/bin/codecept run unit {relevant-test-path}
    ```
 7. If tests fail, revert changes and report issue
 

@@ -19,8 +19,10 @@ Read `.claude/rules/coding-standards.md`, then verify each changed PHP file. Rep
 
 ### 3. Run linter
 
+Vanuit `/var/www/html/yii`:
+
 ```bash
-docker exec pma_yii vendor/bin/php-cs-fixer fix
+vendor/bin/php-cs-fixer fix <path> --config=../.php-cs-fixer.dist.php
 ```
 
 ### 4. Run relevant tests
@@ -29,8 +31,10 @@ Map changed files to test files:
 - `models/Foo.php` → `tests/unit/models/FooTest.php`
 - `services/FooService.php` → `tests/unit/services/FooServiceTest.php`
 
+Vanuit `/var/www/html/yii`:
+
 ```bash
-docker exec pma_yii vendor/bin/codecept run unit <test-path>
+vendor/bin/codecept run unit <test-path>
 ```
 
 If tests fail, stop and report.

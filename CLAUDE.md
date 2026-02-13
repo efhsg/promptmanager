@@ -60,16 +60,15 @@ For architecture details, see `.claude/codebase_analysis.md`.
 ## Project Configuration
 
 See `.claude/config/project.md` for:
-- Commands (docker, tests, migrations, linter, frontend)
+- Commands (tests, migrations, linter, frontend)
 - File structure and path mappings
 - Test path conventions
 - Domain concepts and RBAC rules
 
-**Quick reference:**
+**Quick reference (vanuit `/var/www/html/yii`):**
 ```bash
-docker exec pma_yii vendor/bin/codecept run unit          # Run tests
-./linter.sh fix                                           # Run linter
-./linter-staged.sh fix                                    # Lint staged files only
+vendor/bin/codecept run unit                              # Run tests
+vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php  # Linter
 ```
 
 ## Domain Essentials

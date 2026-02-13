@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Edit, Write, Bash(docker exec:*)
+allowed-tools: Read, Edit, Write, Bash(./yii:*, ./yii_test:*)
 description: Create a database migration following PromptManager patterns
 ---
 

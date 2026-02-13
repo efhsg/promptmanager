@@ -12,72 +12,51 @@ Single source of truth for project-specific operations.
 | Test Framework | Codeception |
 | Rich Text | Quill Delta JSON |
 
+**BELANGRIJK**: Claude Code draait **in** de `pma_yii` container. Voer commands direct uit zonder `docker exec`. Docker is niet beschikbaar vanuit de container.
+
 ## Commands
-
-### Docker
-
-```bash
-# Start containers
-docker compose up -d
-
-# Shell into container
-docker exec -it pma_yii bash
-
-# View logs
-docker logs pma_yii
-
-# Restart container
-docker restart pma_yii
-```
 
 ### Linter
 
 ```bash
-# Check all files (dry run)
-./linter.sh check
+# Vanuit /var/www/html/yii - gebruik php-cs-fixer direct
+vendor/bin/php-cs-fixer fix path/to/file.php --config=../.php-cs-fixer.dist.php --using-cache=no
 
-# Fix all files
-./linter.sh fix
-
-# Check staged files only (for pre-commit)
-./linter-staged.sh check
-
-# Fix staged files only
-./linter-staged.sh fix
+# Of fix meerdere bestanden
+vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-cache=no
 ```
 
 ### Tests
 
 ```bash
-# Run all unit tests
-docker exec pma_yii vendor/bin/codecept run unit
+# Run all unit tests (vanuit /var/www/html/yii)
+vendor/bin/codecept run unit
 
 # Run single test file
-docker exec pma_yii vendor/bin/codecept run unit tests/unit/path/FooTest.php
+vendor/bin/codecept run unit tests/unit/path/FooTest.php
 
 # Run single test method
-docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest:testMethod
+vendor/bin/codecept run unit tests/unit/services/MyServiceTest:testMethod
 ```
 
 ### Database
 
 ```bash
-# Run migrations (both schemas required)
-docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+# Run migrations (both schemas required, vanuit /var/www/html/yii)
+./yii migrate --migrationNamespaces=app\\migrations --interactive=0
+./yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
 
 # Migration status
-docker exec pma_yii yii migrate/history --migrationNamespaces=app\\migrations
+./yii migrate/history --migrationNamespaces=app\\migrations
 ```
 
 ### Frontend
 
-```bash
-# Build frontend assets (after Quill/JS changes)
-docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
+Frontend builds vereisen de npm container (niet beschikbaar vanuit yii container). Vraag de gebruiker om dit handmatig te doen:
 
-# Watch mode (auto-rebuild editor-init.js on changes)
-cd npm && npm run watch
+```bash
+# Vanuit host systeem
+docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
 ```
 
 ## File Structure

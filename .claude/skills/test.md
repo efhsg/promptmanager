@@ -114,4 +114,4 @@ See `.claude/rules/testing.md` for naming conventions and test commands.
 - All public methods tested (except trivial)
 - Edge cases covered
 - Uses proper assertions (assertSame, not assertEquals)
-- Tests pass: `docker exec pma_yii vendor/bin/codecept run unit`
+- Tests pass: `vendor/bin/codecept run unit`

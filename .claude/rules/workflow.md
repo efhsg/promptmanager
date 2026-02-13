@@ -47,10 +47,10 @@ This preserves context across session resets.
 - Use `{{%table_name}}` syntax for table prefix support.
 - Use `safeUp()` and `safeDown()` methods (not `up()`/`down()`) for automatic transaction handling.
 - Migration filenames use a timestamp prefix (e.g., `m251123_123456_add_new_table.php`).
-- Run on both schemas:
+- Run on both schemas (vanuit `/var/www/html/yii`):
   ```bash
-  docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-  docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+  ./yii migrate --migrationNamespaces=app\\migrations --interactive=0
+  ./yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
   ```
 
 ## Transactions

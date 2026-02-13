@@ -3,8 +3,8 @@
 ## Stack
 
 - **Codeception** for all tests
-- Run all: `docker exec pma_yii vendor/bin/codecept run unit`
-- Run single: `docker exec pma_yii vendor/bin/codecept run unit tests/unit/path/ToTest.php`
+- Run all (vanuit `/var/www/html/yii`): `vendor/bin/codecept run unit`
+- Run single: `vendor/bin/codecept run unit tests/unit/path/ToTest.php`
 
 ## Requirements
 

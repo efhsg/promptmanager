@@ -1,5 +1,5 @@
 ---
-allowed-tools: Read, Edit, Write, Bash(docker exec:*)
+allowed-tools: Read, Edit, Write, Bash(vendor/bin/codecept:*)
 description: Create a unit test following PromptManager patterns
 ---
 

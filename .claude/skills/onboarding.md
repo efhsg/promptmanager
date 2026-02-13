@@ -34,15 +34,17 @@ Project → { Context, Field, PromptTemplate, Note } → PromptInstance
 
 ## Quick Commands
 
+Alle commands vanuit `/var/www/html/yii`:
+
 ```bash
 # Run tests
-docker exec pma_yii vendor/bin/codecept run unit
+vendor/bin/codecept run unit
 
 # Run linter
-./linter.sh fix
+vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php
 
 # Run migrations
-docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
+./yii migrate --migrationNamespaces=app\\migrations --interactive=0
 ```
 
 ## Available Slash Commands

@@ -146,17 +146,20 @@ For each service:
 - Codeception for unit/functional testing
 
 ### 7. Development Commands
+
+Alle commands vanuit `/var/www/html/yii`:
+
 ```bash
 # Tests
-docker exec pma_yii vendor/bin/codecept run unit
-docker exec pma_yii vendor/bin/codecept run unit services/MyServiceTest:testMethod
+vendor/bin/codecept run unit
+vendor/bin/codecept run unit tests/unit/services/MyServiceTest:testMethod
 
 # Migrations
-docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+./yii migrate --migrationNamespaces=app\\migrations --interactive=0
+./yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
 
-# Frontend build
-docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
+# Frontend build (vraag gebruiker - vereist npm container)
+# docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
 ```
 
 ### 8. Architecture Diagram
