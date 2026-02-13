@@ -1,7 +1,6 @@
 <?php
 
 use app\widgets\QuillViewerWidget;
-use common\enums\CopyType;
 use common\enums\NoteType;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -11,7 +10,6 @@ use yii\widgets\DetailView;
 /** @var app\models\Note $model */
 /** @var app\models\Note[] $children */
 
-$copyTypes = CopyType::labels();
 $canRunClaude = $model->project_id !== null;
 $claudeTooltip = $canRunClaude ? 'Talk to Claude' : 'Project required';
 $claudeUrl = $canRunClaude
@@ -93,16 +91,6 @@ $fetchContentUrl = Url::to(['/note/fetch-content', 'id' => $model->id]);
                     'disabled' => !$canRunClaude,
                 ]) ?>
                 <?php endif; ?>
-                <div class="input-group input-group-sm" style="width: auto;">
-                    <?= Html::dropDownList('contentCopyFormat', CopyType::MD->value, $copyTypes, [
-                        'id' => 'content-copy-format-select',
-                        'class' => 'form-select',
-                        'style' => 'width: auto;',
-                    ]) ?>
-                    <button type="button" id="copy-content-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
-                        <i class="bi bi-clipboard"></i> Copy
-                    </button>
-                </div>
             </div>
         </div>
         <div class="card-body">
@@ -153,8 +141,6 @@ foreach ($children as $child) {
 $childDeltasJs = json_encode($childDeltas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 $script = <<<JS
-        window.QuillToolbar.setupCopyButton('copy-content-btn', 'content-copy-format-select', $contentDelta);
-
         var deltas = Object.assign({content: $contentDelta}, $childDeltasJs);
         document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {

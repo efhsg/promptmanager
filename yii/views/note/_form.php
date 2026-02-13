@@ -2,7 +2,6 @@
 /** @noinspection JSUnresolvedReference */
 
 use app\assets\QuillAsset;
-use common\enums\CopyType;
 use common\enums\NoteType;
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -14,7 +13,6 @@ use yii\widgets\ActiveForm;
 /** @var app\models\Note[] $children */
 
 QuillAsset::register($this);
-$copyTypes = CopyType::labels();
 $isUpdate = !$model->isNewRecord;
 $children ??= [];
 ?>
@@ -42,18 +40,6 @@ $children ??= [];
             <div id="collapseContent" class="accordion-collapse collapse show" aria-labelledby="headingContent"
                  data-bs-parent="#noteAccordion">
                 <div class="accordion-body p-0">
-                    <div class="d-flex justify-content-end p-2 border-bottom gap-2">
-                        <div class="input-group input-group-sm" style="width: auto;">
-                            <?= Html::dropDownList('copyFormat', CopyType::MD->value, $copyTypes, [
-                                'id' => 'copy-format-select',
-                                'class' => 'form-select',
-                                'style' => 'width: auto;',
-                            ]) ?>
-                            <button type="button" id="copy-content-btn" class="btn btn-primary btn-sm text-nowrap" title="Copy to clipboard">
-                                <i class="bi bi-clipboard"></i> Copy
-                            </button>
-                        </div>
-                    </div>
                     <div class="resizable-editor-container">
                         <div id="note-editor" class="resizable-editor" style="min-height: 300px;"></div>
                     </div>
@@ -197,9 +183,6 @@ $script = <<<JS
     quill.on('text-change', function() {
         hidden.value = JSON.stringify(quill.getContents());
     });
-
-    // Setup copy buttons
-    window.QuillToolbar.setupCopyButton('copy-content-btn', 'copy-format-select', () => JSON.stringify(quill.getContents()));
 
     // Setup export toolbar button
     var projectSelect = document.getElementById('note-project_id');
