@@ -14,6 +14,7 @@ class AppAsset extends AssetBundle
         'css/mobile.css',
     ];
     public $js       = [
+        'js/directory-selector.js',
         'js/form.js',
         'js/quick-search.js',
         'js/advanced-search.js',

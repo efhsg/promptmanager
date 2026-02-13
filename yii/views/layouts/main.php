@@ -143,6 +143,7 @@ if (!Yii::$app->user->isGuest) {
 
 <?php if (!Yii::$app->user->isGuest): ?>
     <?= $this->render('_advanced-search-modal') ?>
+    <?= $this->render('_export-modal') ?>
 <?php endif; ?>
 
 <?php
