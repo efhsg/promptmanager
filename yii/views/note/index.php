@@ -1,5 +1,6 @@
 <?php
 
+use app\components\ProjectContext;
 use app\models\Note;
 use app\models\NoteSearch;
 use app\presenters\PromptInstancePresenter;
@@ -11,6 +12,7 @@ use yii\helpers\Html;
 use yii\helpers\Json;
 use yii\helpers\StringHelper;
 use yii\helpers\Url;
+use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
 /** @var NoteSearch $searchModel */
@@ -18,6 +20,7 @@ use yii\helpers\Url;
 /** @var app\models\Project|null $currentProject */
 /** @var bool $isAllProjects */
 /** @var array $projectList */
+/** @var array $projectOptions */
 /** @var bool $showChildren */
 
 $this->title = 'Notes';
@@ -55,16 +58,79 @@ $this->params['breadcrumbs'][] = $this->title;
     <?php endif; ?>
 
     <div class="mb-3">
+        <?php
+        // Preserve current search filters when toggling show_all
+        // Use searchModel values (already loaded) to ensure correct state
+        $toggleParams = [];
+        if ($searchModel->q !== null && $searchModel->q !== '') {
+            $toggleParams['q'] = $searchModel->q;
+        }
+        if ($searchModel->type !== null && $searchModel->type !== '') {
+            $toggleParams['type'] = $searchModel->type;
+        }
+        // Always include project_id to preserve selection
+        if ($searchModel->project_id !== null) {
+            $toggleParams['project_id'] = $searchModel->project_id;
+        }
+        $toggleUrl = array_merge(
+            ['index'],
+            !empty($toggleParams) ? ['NoteSearch' => $toggleParams] : []
+        );
+        ?>
         <?php if ($showChildren): ?>
-            <?= Html::a('Hide children', ['index'], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+            <?= Html::a('Hide children', $toggleUrl, ['class' => 'btn btn-sm btn-outline-secondary']) ?>
         <?php else: ?>
-            <?= Html::a('Show all', ['index', 'show_all' => 1], ['class' => 'btn btn-sm btn-outline-secondary']) ?>
+            <?= Html::a('Show all', array_merge($toggleUrl, ['show_all' => 1]), ['class' => 'btn btn-sm btn-outline-secondary']) ?>
         <?php endif; ?>
     </div>
 
     <div class="card">
         <div class="card-header">
-            <strong>Note List</strong>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <strong class="mb-0">Note List</strong>
+                <?php $form = ActiveForm::begin([
+                    'action' => ['index', 'show_all' => $showChildren ? 1 : null],
+                    'method' => 'get',
+                    'options' => ['class' => 'd-flex flex-wrap align-items-center gap-2 mb-0'],
+                ]); ?>
+                    <?= $form->field($searchModel, 'q', [
+                        'options' => ['class' => 'mb-0'],
+                    ])->textInput([
+                        'class' => 'form-control',
+                        'placeholder' => 'Search notes...',
+                    ])->label(false) ?>
+                    <?= $form->field($searchModel, 'type', [
+                        'options' => ['class' => 'mb-0'],
+                    ])->dropDownList(
+                        NoteType::labels(),
+                        [
+                            'class' => 'form-select',
+                            'prompt' => 'All Types',
+                        ]
+                    )->label(false) ?>
+                    <?= $form->field($searchModel, 'project_id', [
+                        'options' => ['class' => 'mb-0'],
+                    ])->dropDownList(
+                        $projectOptions,
+                        [
+                            'class' => 'form-select',
+                        ]
+                    )->label(false) ?>
+                    <?php
+                    // Determine if project was explicitly changed from context default
+                    $contextDefaultProjectId = $isAllProjects
+                        ? ProjectContext::ALL_PROJECTS_ID
+                        : ($currentProject?->id);
+                    $projectChanged = $searchModel->project_id !== $contextDefaultProjectId;
+                    ?>
+                    <div class="d-flex align-items-center gap-2">
+                        <?= Html::submitButton('Search', ['class' => 'btn btn-outline-primary']) ?>
+                        <?php if ($searchModel->q !== null || $searchModel->type !== null || $projectChanged): ?>
+                            <?= Html::a('Reset', ['index', 'show_all' => $showChildren ? 1 : null], ['class' => 'btn btn-link px-2']) ?>
+                        <?php endif; ?>
+                    </div>
+                <?php ActiveForm::end(); ?>
+            </div>
         </div>
         <div class="card-body p-0">
             <?= MobileCardView::widget([
@@ -75,7 +141,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     static fn(Note $model) => NoteType::resolve($model->type)?->label() ?? $model->type,
                     static fn(Note $model) => Yii::$app->formatter->asDatetime($model->updated_at, 'php:Y-m-d H:i'),
                 ],
-                'metaLabels' => [0 => 'Scope', 1 => 'Type', 2 => 'Updated'],
+                'metaLabels' => [0 => 'Project', 1 => 'Type', 2 => 'Updated'],
             ]) ?>
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
@@ -151,7 +217,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     ],
                     [
                         'attribute' => 'project_id',
-                        'label' => 'Scope',
+                        'label' => 'Project',
                         'value' => fn(Note $model) => $model->project ? $model->project->name : 'Global',
                     ],
                     [
@@ -197,6 +263,9 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <?php
 $fetchUrl = Json::encode(Url::to(['/note/fetch-content']));
+$setProjectUrl = Json::encode(Url::to(['/project/set-current']));
+$csrfParam = Json::encode(Yii::$app->request->csrfParam);
+$csrfToken = Json::encode(Yii::$app->request->csrfToken);
 $script = <<<JS
         document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
@@ -216,6 +285,19 @@ $script = <<<JS
                 .then(function(data) {
                     if (data.success && data.content) {
                         sessionStorage.setItem('claudePromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
+                    }
+                    // Set project context to note's project before navigating to Claude
+                    if (data.success && data.projectId) {
+                        var formData = new FormData();
+                        formData.append('project_id', data.projectId);
+                        formData.append({$csrfParam}, {$csrfToken});
+                        return fetch({$setProjectUrl}, {
+                            method: 'POST',
+                            headers: {'X-Requested-With': 'XMLHttpRequest'},
+                            body: formData
+                        }).then(function() {
+                            window.location.href = claudeUrl;
+                        });
                     }
                     window.location.href = claudeUrl;
                 })

@@ -27,4 +27,13 @@ return [
         'created_at' => date('Y-m-d H:i:s'),
         'updated_at' => date('Y-m-d H:i:s'),
     ],
+    'project4' => [
+        'id' => 4,
+        'user_id' => 100,
+        'name' => 'Second Test Project',
+        'label' => 'STP',
+        'description' => 'Second project for user 100',
+        'created_at' => date('Y-m-d H:i:s'),
+        'updated_at' => date('Y-m-d H:i:s'),
+    ],
 ];

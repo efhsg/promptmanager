@@ -107,12 +107,17 @@ class NoteController extends Controller
             $showChildren
         );
 
+        // Build project dropdown options: "All Projects" first, then user projects
+        $projectList = Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id);
+        $projectOptions = [ProjectContext::ALL_PROJECTS_ID => 'All Projects'] + $projectList;
+
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'currentProject' => $currentProject,
             'isAllProjects' => $isAllProjects,
-            'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
+            'projectList' => $projectList,
+            'projectOptions' => $projectOptions,
             'showChildren' => $showChildren,
         ]);
     }

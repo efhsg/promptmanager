@@ -30,7 +30,8 @@ class ProjectServiceTest extends Unit
     {
         $result = $this->service->fetchProjectsList(100);
 
-        $this->assertSame([1 => 'Test Project'], $result);
+        // User 100 has 2 projects in fixtures: id=1 "Test Project" and id=4 "Second Test Project"
+        $this->assertSame([4 => 'Second Test Project', 1 => 'Test Project'], $result);
     }
 
     public function testFetchProjectsListReturnsEmptyForUserWithoutProjects(): void
@@ -51,7 +52,8 @@ class ProjectServiceTest extends Unit
         try {
             $result = $this->service->fetchProjectsList(100);
 
-            $this->assertCount(2, $result);
+            // User 100 has 2 fixture projects + 1 created here = 3 total
+            $this->assertCount(3, $result);
             $this->assertSame('Test Project', $result[1]);
             $this->assertSame('Additional Project', $result[(int) $project->id]);
         } finally {
@@ -75,9 +77,12 @@ class ProjectServiceTest extends Unit
         try {
             $result = $this->service->fetchProjectsList(100);
 
+            // User 100 has fixture projects: "Test Project" and "Second Test Project"
+            // Plus created: "Alpha Project" and "Zeta Project"
             $this->assertSame(
                 [
                     'Alpha Project',
+                    'Second Test Project',
                     'Test Project',
                     'Zeta Project',
                 ],
