@@ -64,7 +64,7 @@ $suggestNameUrl = Url::to(['/claude/suggest-name']);
                             Project root: <code id="export-root-display"></code>
                         </small>
                         <div class="position-relative">
-                            <input type="text" class="form-control" id="export-directory" value="/" placeholder="/" autocomplete="off">
+                            <input type="text" class="form-control" id="export-directory" value="" placeholder="" autocomplete="off">
                             <div id="export-directory-dropdown" class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto;"></div>
                         </div>
                     </div>
@@ -203,7 +203,6 @@ window.ExportModal = (function() {
             pathListUrl: URLS.pathList,
             onSelect: () => updatePreviewPath(),
             onChange: () => updatePreviewPath(),
-            placeholder: '/',
             emptyText: 'No directories match'
         });
     };
@@ -412,9 +411,9 @@ window.ExportModal = (function() {
 
         // Reset directory selector
         if (directorySelector) {
-            directorySelector.reset('/');
+            directorySelector.reset();
         } else {
-            el.directoryInput.value = '/';
+            el.directoryInput.value = '';
         }
 
         // Update root directory display
