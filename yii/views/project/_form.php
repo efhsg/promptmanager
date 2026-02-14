@@ -283,7 +283,6 @@ $script = <<<JS
                 [{ 'size': ['small', false, 'large', 'huge'] }],
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
                 [{ 'color': [] }, { 'background': [] }],
-                [{ 'align': [] }],
                 ['clean']
             ]
         }
@@ -309,7 +308,6 @@ $script = <<<JS
                 [{ 'list': 'ordered' }, { 'list': 'bullet' }],
                 [{ 'indent': '-1' }, { 'indent': '+1' }],
                 [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                [{ 'align': [] }],
                 ['clean'],
                 [{ 'clearEditor': [] }],
                 [{ 'smartPaste': [] }],
