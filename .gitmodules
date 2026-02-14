@@ -1,0 +1,4 @@
+[submodule "npm/quill"]
+	path = npm/quill
+	url = https://github.com/quilljs/quill.git
+	ignore = dirty
