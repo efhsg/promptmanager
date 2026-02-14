@@ -900,6 +900,7 @@ $js = <<<JS
              *   1. Slash-separated: "Post / Bewerk / Skip?"
              *   2. Parenthesized:   "Approve? (Yes / No)"
              *   3. Bracket-letter:  "[I] Implementatie\n[R] Review\n[E] Bewerk"
+             *   4. Inline bracket:  "[I] Implementatie [R] Review [E] Bewerk"
              *
              * Returns an array of {label, action} objects, or null if no pattern found.
              */
@@ -960,6 +961,18 @@ $js = <<<JS
                 }
                 if (bracketOptions.length >= 2 && bracketOptions.length <= 5)
                     return bracketOptions;
+
+                // --- Format 4: inline bracket-letter on single line ---
+                var inlinePattern = /\[([A-Z])\]\s+(.+?)(?=\s*\[[A-Z]\]|$)/g;
+                var inlineOptions = [];
+                var im;
+                while ((im = inlinePattern.exec(lastLine)) !== null) {
+                    var iLabel = stripMd(im[2]);
+                    if (!iLabel || iLabel.length > 40) { inlineOptions = []; break; }
+                    inlineOptions.push({ label: iLabel, action: editWords.indexOf(iLabel.toLowerCase()) !== -1 ? 'edit' : 'send' });
+                }
+                if (inlineOptions.length >= 2 && inlineOptions.length <= 5)
+                    return inlineOptions;
 
                 return null;
             },
