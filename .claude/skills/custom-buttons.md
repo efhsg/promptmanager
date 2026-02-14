@@ -44,6 +44,12 @@ Akkoord met de aanpak? (Ja / Nee / Aanpassen)
 
 Gebruikt wanneer opties een letter-code nodig hebben of langer zijn dan 30 tekens. De bracket-lines moeten de **laatste opeenvolgende non-empty lines** zijn.
 
+Inline variant op één regel wordt ook herkend:
+
+```
+[I] Start implementatie [R] Nog een review ronde [E] Handmatig bewerken
+```
+
 ### Regels bracket-syntax
 
 | Regel | Detail |
@@ -51,7 +57,7 @@ Gebruikt wanneer opties een letter-code nodig hebben of langer zijn dan 30 teken
 | Patroon | `[X] Beschrijving` (hoofdletter) |
 | Aantal opties | 2-5 |
 | Max lengte beschrijving | 40 tekens |
-| Positie | Opeenvolgende regels aan eind response |
+| Positie | Opeenvolgende regels aan eind response, of inline op de laatste regel |
 
 ## Gebruik in prompts
 
