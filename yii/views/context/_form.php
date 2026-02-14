@@ -102,9 +102,13 @@ $script = <<<JS
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
     };
+    var projectConfig = window.QuillToolbar.buildProjectConfig(
+        'context-project_id', window.contextProjectData || {},
+        { nameInputId: 'context-name', entityName: 'context' }
+    );
     window.QuillToolbar.setupClearEditor(quill, hidden);
     window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
-    window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(quill, hidden, projectConfig);
 
     // Enable sticky/fixed toolbar on page scroll
     var editorContainer = document.querySelector('#editor').closest('.resizable-editor-container');
@@ -121,22 +125,7 @@ $script = <<<JS
     });
 
     // Setup export toolbar button
-    var projectSelect = document.getElementById('context-project_id');
-    var projectData = window.contextProjectData || {};
-    window.QuillToolbar.setupExportContent(quill, hidden, {
-        getProjectId: () => projectSelect ? projectSelect.value : null,
-        getEntityName: () => document.getElementById('context-name')?.value || 'context',
-        getHasRoot: () => {
-            var selectedProjectId = projectSelect ? projectSelect.value : null;
-            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
-            return !!projectInfo.hasRoot;
-        },
-        getRootDirectory: () => {
-            var selectedProjectId = projectSelect ? projectSelect.value : null;
-            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
-            return projectInfo.rootDirectory || null;
-        }
-    });
+    window.QuillToolbar.setupExportContent(quill, hidden, projectConfig);
 
     // Suggest name functionality
     document.getElementById('suggest-name-btn').addEventListener('click', function() {

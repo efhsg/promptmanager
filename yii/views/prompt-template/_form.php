@@ -136,9 +136,13 @@ $script = <<<JS
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
     };
+    var projectConfig = window.QuillToolbar.buildProjectConfig(
+        'prompttemplate-project_id', window.templateProjectData || {},
+        { nameInputId: 'prompttemplate-name', entityName: 'template' }
+    );
     window.QuillToolbar.setupClearEditor(window.quill, hidden);
     window.QuillToolbar.setupSmartPaste(window.quill, hidden, urlConfig);
-    window.QuillToolbar.setupLoadMd(window.quill, hidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(window.quill, hidden, projectConfig);
 
     // Enable sticky/fixed toolbar on page scroll
     var editorContainer = document.querySelector('#editor').closest('.resizable-editor-container');
@@ -168,22 +172,7 @@ $script = <<<JS
     });
 
     // Setup export toolbar button
-    var projectSelect = document.getElementById('prompttemplate-project_id');
-    var projectData = window.templateProjectData || {};
-    window.QuillToolbar.setupExportContent(window.quill, hidden, {
-        getProjectId: () => projectSelect ? projectSelect.value : null,
-        getEntityName: () => document.getElementById('prompttemplate-name')?.value || 'template',
-        getHasRoot: () => {
-            var selectedProjectId = projectSelect ? projectSelect.value : null;
-            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
-            return !!projectInfo.hasRoot;
-        },
-        getRootDirectory: () => {
-            var selectedProjectId = projectSelect ? projectSelect.value : null;
-            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
-            return projectInfo.rootDirectory || null;
-        }
-    });
+    window.QuillToolbar.setupExportContent(window.quill, hidden, projectConfig);
     JS;
 
 $this->registerJs($script);

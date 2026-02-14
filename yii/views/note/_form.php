@@ -165,9 +165,13 @@ $script = <<<JS
         importTextUrl: '$importTextUrl',
         importMarkdownUrl: '$importMarkdownUrl'
     };
+    var projectConfig = window.QuillToolbar.buildProjectConfig(
+        'note-project_id', window.noteProjectData || {},
+        { nameInputId: 'note-name', entityName: 'export' }
+    );
     window.QuillToolbar.setupClearEditor(quill, hidden);
     window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
-    window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
+    window.QuillToolbar.setupLoadMd(quill, hidden, projectConfig);
 
     // Enable sticky/fixed toolbar on page scroll
     var contentContainer = document.querySelector('#note-editor').closest('.resizable-editor-container');
@@ -185,22 +189,7 @@ $script = <<<JS
     });
 
     // Setup export toolbar button
-    var projectSelect = document.getElementById('note-project_id');
-    var projectData = window.noteProjectData || {};
-    window.QuillToolbar.setupExportContent(quill, hidden, {
-        getProjectId: () => projectSelect ? projectSelect.value : null,
-        getEntityName: () => document.getElementById('note-name')?.value || 'export',
-        getHasRoot: () => {
-            var selectedProjectId = projectSelect ? projectSelect.value : null;
-            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
-            return !!projectInfo.hasRoot;
-        },
-        getRootDirectory: () => {
-            var selectedProjectId = projectSelect ? projectSelect.value : null;
-            var projectInfo = selectedProjectId ? (projectData[selectedProjectId] || {}) : {};
-            return projectInfo.rootDirectory || null;
-        }
-    });
+    window.QuillToolbar.setupExportContent(quill, hidden, projectConfig);
 
     // Save As functionality
     const saveAsBtn = document.getElementById('save-as-btn');

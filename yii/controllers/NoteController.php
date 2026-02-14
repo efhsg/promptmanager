@@ -15,6 +15,7 @@ use app\services\copyformat\MarkdownParser;
 use app\services\copyformat\QuillDeltaWriter;
 use app\services\EntityPermissionService;
 use app\services\NoteService;
+use app\services\PathService;
 use app\services\YouTubeTranscriptService;
 use common\enums\CopyType;
 use common\enums\NoteType;
@@ -32,11 +33,14 @@ use yii\web\UploadedFile;
 
 class NoteController extends Controller
 {
+    private const IMPORT_ALLOWED_EXTENSIONS = ['md', 'markdown', 'txt'];
+
     private ProjectContext $projectContext;
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
     private readonly YouTubeTranscriptService $youtubeService;
     private readonly NoteService $noteService;
+    private readonly PathService $pathService;
 
     public function __construct(
         $id,
@@ -44,12 +48,14 @@ class NoteController extends Controller
         EntityPermissionService $permissionService,
         YouTubeTranscriptService $youtubeService,
         NoteService $noteService = new NoteService(),
+        PathService $pathService = new PathService(),
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->youtubeService = $youtubeService;
         $this->noteService = $noteService;
+        $this->pathService = $pathService;
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('note');
     }
 
@@ -67,13 +73,14 @@ class NoteController extends Controller
                 'actions' => [
                     'delete' => ['POST'],
                     'save' => ['POST'],
+                    'import-server-file' => ['POST'],
                 ],
             ],
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index', 'create', 'import-markdown', 'import-text', 'import-youtube', 'convert-format', 'save'],
+                        'actions' => ['index', 'create', 'import-markdown', 'import-text', 'import-server-file', 'import-youtube', 'convert-format', 'save'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -238,8 +245,7 @@ class NoteController extends Controller
             ];
         }
 
-        $allowedExtensions = ['md', 'markdown', 'txt'];
-        if (!in_array(strtolower($file->extension), $allowedExtensions, true)) {
+        if (!in_array(strtolower($file->extension), self::IMPORT_ALLOWED_EXTENSIONS, true)) {
             return [
                 'success' => false,
                 'errors' => ['mdFile' => ['Invalid file type. Accepted: .md, .markdown, .txt']],
@@ -306,6 +312,79 @@ class NoteController extends Controller
                 'content' => $deltaJson,
             ],
             'format' => $isMarkdown ? 'md' : 'txt',
+        ];
+    }
+
+    public function actionImportServerFile(): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'message' => 'Invalid request method.'];
+        }
+
+        $data = json_decode(Yii::$app->request->rawBody, true);
+        if (!is_array($data)) {
+            return ['success' => false, 'message' => 'Invalid JSON data.'];
+        }
+
+        $projectId = (int) ($data['project_id'] ?? 0);
+        $path = (string) ($data['path'] ?? '');
+
+        $project = Project::find()->findUserProject($projectId, Yii::$app->user->id);
+        if ($project === null || empty($project->root_directory)) {
+            return ['success' => false, 'message' => 'Invalid project.'];
+        }
+
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+        if ($extension === '' || !in_array($extension, self::IMPORT_ALLOWED_EXTENSIONS, true)) {
+            return ['success' => false, 'message' => 'Invalid file type. Accepted: .md, .markdown, .txt'];
+        }
+
+        $absolutePath = $this->pathService->resolveRequestedPath(
+            $project->root_directory,
+            $path,
+            $project->getBlacklistedDirectories()
+        );
+
+        if ($absolutePath === null) {
+            return ['success' => false, 'message' => 'File not found or not accessible.'];
+        }
+
+        if (!is_file($absolutePath)) {
+            return ['success' => false, 'message' => 'File not found or not accessible.'];
+        }
+
+        if (filesize($absolutePath) > 1048576) {
+            return ['success' => false, 'message' => 'File exceeds size limit (max 1MB).'];
+        }
+
+        $content = @file_get_contents($absolutePath);
+        if ($content === false) {
+            return ['success' => false, 'message' => 'File not found or not accessible.'];
+        }
+
+        $isMarkdown = in_array($extension, ['md', 'markdown'], true) || MarkdownDetector::isMarkdown($content);
+
+        if ($isMarkdown) {
+            $parser = new MarkdownParser();
+            $blocks = $parser->parse($content);
+            $deltaWriter = new QuillDeltaWriter();
+            $deltaJson = $deltaWriter->writeFromBlocks($blocks);
+        } else {
+            $deltaJson = json_encode([
+                'ops' => [
+                    ['insert' => $content . "\n"],
+                ],
+            ]);
+        }
+
+        return [
+            'success' => true,
+            'importData' => [
+                'content' => $deltaJson,
+            ],
+            'filename' => basename($path),
         ];
     }
 

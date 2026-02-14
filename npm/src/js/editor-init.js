@@ -66,7 +66,6 @@ window.QuillToolbar = (function() {
     };
 
     const DEFAULT_IMPORT_TEXT_URL = '/note/import-text';
-    const DEFAULT_IMPORT_MARKDOWN_URL = '/note/import-markdown';
 
     const setupClearEditor = (quill, hidden) => {
         const toolbar = quill.getModule('toolbar');
@@ -214,6 +213,26 @@ window.QuillToolbar = (function() {
         });
     };
 
+    const applyImportDelta = (quill, hidden, deltaContent) => {
+        const delta = typeof deltaContent === 'string'
+            ? JSON.parse(deltaContent)
+            : deltaContent;
+
+        const Delta = Quill.import('delta');
+        const length = quill.getLength();
+
+        if (length <= 1) {
+            quill.setContents(delta);
+        } else {
+            const range = quill.getSelection(true);
+            quill.updateContents(new Delta().retain(range.index).concat(delta));
+        }
+
+        if (hidden) {
+            hidden.value = JSON.stringify(quill.getContents());
+        }
+    };
+
     const setupLoadMd = (quill, hidden, config) => {
         const toolbar = quill.getModule('toolbar');
         if (!toolbar || !toolbar.container) return;
@@ -221,15 +240,7 @@ window.QuillToolbar = (function() {
         const el = toolbar.container.querySelector('.ql-loadMd');
         if (!el) return;
 
-        const importUrl = (config && config.importMarkdownUrl) || DEFAULT_IMPORT_MARKDOWN_URL;
-
         ensureSpinnerCss();
-
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.md,.markdown,.txt';
-        fileInput.style.display = 'none';
-        document.body.appendChild(fileInput);
 
         let btn;
         if (el.tagName === 'BUTTON') {
@@ -238,65 +249,24 @@ window.QuillToolbar = (function() {
             btn = document.createElement('button');
             btn.type = 'button';
             btn.className = 'ql-loadMd';
-            btn.title = 'Load markdown file';
+            btn.title = 'Import content';
             btn.innerHTML = LOAD_MD_SVG;
             el.replaceWith(btn);
         }
 
-        btn.addEventListener('click', () => fileInput.click());
-
-        fileInput.addEventListener('change', async function() {
-            const file = this.files[0];
-            if (!file) return;
-
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = SPINNER_SVG;
-            btn.disabled = true;
-
-            try {
-                const formData = new FormData();
-                formData.append('mdFile', file);
-
-                const response = await fetch(importUrl, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-Token': getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-
-                const data = await response.json();
-                if (data.success && data.importData && data.importData.content) {
-                    const delta = typeof data.importData.content === 'string'
-                        ? JSON.parse(data.importData.content)
-                        : data.importData.content;
-
-                    const Delta = Quill.import('delta');
-                    const length = quill.getLength();
-
-                    if (length <= 1) {
-                        quill.setContents(delta);
-                    } else {
-                        const range = quill.getSelection(true);
-                        quill.updateContents(new Delta().retain(range.index).concat(delta));
-                    }
-
-                    if (hidden) {
-                        hidden.value = JSON.stringify(quill.getContents());
-                    }
-                    showToast('Loaded ' + file.name, 'success');
-                } else {
-                    showToast(data.errors?.mdFile?.[0] || data.message || 'Failed to load file', 'danger');
-                }
-            } catch (err) {
-                console.error('Load MD error:', err);
-                showToast('Failed to load file', 'danger');
-            } finally {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-                fileInput.value = '';
+        btn.addEventListener('click', () => {
+            if (!window.ImportModal) {
+                console.error('ImportModal not loaded');
+                showToast('Import feature not available', 'danger');
+                return;
             }
+
+            window.ImportModal.open({
+                projectId: config.getProjectId ? config.getProjectId() : null,
+                hasRoot: config.getHasRoot ? config.getHasRoot() : false,
+                rootDirectory: config.getRootDirectory ? config.getRootDirectory() : null,
+                onImport: (deltaContent) => applyImportDelta(quill, hidden, deltaContent)
+            });
         });
     };
 
@@ -461,6 +431,26 @@ window.QuillToolbar = (function() {
         });
     };
 
+    const buildProjectConfig = (selectId, dataVar, defaults = {}) => {
+        const select = document.getElementById(selectId);
+        const data = dataVar || {};
+        const nameEl = defaults.nameInputId ? document.getElementById(defaults.nameInputId) : null;
+        return {
+            getProjectId: () => select ? select.value : null,
+            getEntityName: () => (nameEl && nameEl.value) || defaults.entityName || 'export',
+            getHasRoot: () => {
+                const id = select ? select.value : null;
+                const info = id ? (data[id] || {}) : {};
+                return !!info.hasRoot;
+            },
+            getRootDirectory: () => {
+                const id = select ? select.value : null;
+                const info = id ? (data[id] || {}) : {};
+                return info.rootDirectory || null;
+            }
+        };
+    };
+
     return {
         setupClearEditor: setupClearEditor,
         setupSmartPaste: setupSmartPaste,
@@ -469,7 +459,9 @@ window.QuillToolbar = (function() {
         showToast: showToast,
         copyWithFormat: copyWithFormat,
         setupCopyButton: setupCopyButton,
-        setupExportButton: setupExportButton
+        setupExportButton: setupExportButton,
+        buildProjectConfig: buildProjectConfig,
+        getCsrfToken: getCsrfToken
     };
 })();
 
@@ -554,6 +546,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         window.QuillToolbar.setupClearEditor(quill, hidden);
         window.QuillToolbar.setupSmartPaste(quill, hidden, urlConfig);
+        // urlConfig lacks project getters — ImportModal will disable server tab
         window.QuillToolbar.setupLoadMd(quill, hidden, urlConfig);
 
         if (hidden.value) {
