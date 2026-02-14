@@ -893,8 +893,13 @@ $js = <<<JS
             },
 
             /**
-             * Parse the last non-empty line of a response for slash-separated
-             * choice options like "Post / Bewerk / Skip?" or "Yes / No?".
+             * Parse the last lines of a response for choice options.
+             *
+             * Supported formats (preferred first):
+             *   1. Slash-separated: "Post / Bewerk / Skip?"
+             *   2. Parenthesized:   "Approve? (Yes / No)"
+             *   3. Bracket-letter:  "[I] Implementatie\n[R] Review\n[E] Bewerk"
+             *
              * Returns an array of {label, action} objects, or null if no pattern found.
              */
             parseChoiceOptions: function(text) {
@@ -907,37 +912,55 @@ $js = <<<JS
                 }
                 if (!lastLine) return null;
 
-                // Must contain at least one " / " separator
-                if (lastLine.indexOf(' / ') === -1) return null;
-
-                // Extract from parentheses if present: "question? (A / B / C)"
-                var choicePart = lastLine;
-                var parenMatch = lastLine.match(/\(([^)]*\/[^)]*)\)/);
-                if (parenMatch)
-                    choicePart = parenMatch[1].trim();
-
-                // Strip trailing punctuation and whitespace
-                var cleaned = choicePart.replace(/\??\s*$/, '').trim();
-                var parts = cleaned.split(' / ');
-
-                // Need 2-4 options, each reasonable length (max 30 chars, non-empty)
-                if (parts.length < 2 || parts.length > 4) return null;
-                for (var j = 0; j < parts.length; j++) {
-                    if (!parts[j] || parts[j].length > 30) return null;
-                }
-
                 var editWords = ['bewerk', 'edit', 'aanpassen', 'modify', 'adjust'];
                 var stripMd = function(s) {
                     return s.replace(/[*_`~]/g, '').trim();
                 };
-                var options = [];
-                for (var k = 0; k < parts.length; k++) {
-                    var label = stripMd(parts[k]);
-                    if (!label) return null;
-                    var action = editWords.indexOf(label.toLowerCase()) !== -1 ? 'edit' : 'send';
-                    options.push({ label: label, action: action });
+
+                // --- Format 1 & 2: slash-separated ---
+                if (lastLine.indexOf(' / ') !== -1) {
+                    var choicePart = lastLine;
+                    var parenMatch = lastLine.match(/\(([^)]*\/[^)]*)\)/);
+                    if (parenMatch)
+                        choicePart = parenMatch[1].trim();
+
+                    var cleaned = choicePart.replace(/\??\s*$/, '').trim();
+                    var parts = cleaned.split(' / ');
+
+                    if (parts.length >= 2 && parts.length <= 4) {
+                        var valid = true;
+                        for (var j = 0; j < parts.length; j++) {
+                            if (!parts[j] || parts[j].length > 30) { valid = false; break; }
+                        }
+                        if (valid) {
+                            var options = [];
+                            for (var k = 0; k < parts.length; k++) {
+                                var label = stripMd(parts[k]);
+                                if (!label) return null;
+                                var action = editWords.indexOf(label.toLowerCase()) !== -1 ? 'edit' : 'send';
+                                options.push({ label: label, action: action });
+                            }
+                            return options;
+                        }
+                    }
                 }
-                return options;
+
+                // --- Format 3: bracket-letter lines [X] Description ---
+                var bracketPattern = /^\[([A-Z])\]\s+(.{1,40})$/;
+                var bracketOptions = [];
+                for (var b = lines.length - 1; b >= 0; b--) {
+                    var line = lines[b].trim();
+                    if (!line) continue;
+                    var m = line.match(bracketPattern);
+                    if (m)
+                        bracketOptions.unshift({ label: stripMd(m[2]), action: editWords.indexOf(stripMd(m[2]).toLowerCase()) !== -1 ? 'edit' : 'send' });
+                    else
+                        break;
+                }
+                if (bracketOptions.length >= 2 && bracketOptions.length <= 5)
+                    return bracketOptions;
+
+                return null;
             },
 
             /**

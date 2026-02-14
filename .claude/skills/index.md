@@ -39,6 +39,7 @@ For commands, paths, and environment: `.claude/config/project.md`
 | Onboarding | Quick start guide for new sessions | `skills/onboarding.md` |
 | New Branch | Create feature/fix branch | `skills/new-branch.md` |
 | Refactor | Structural improvements without behavior change | `skills/refactor.md` |
+| Custom Buttons | Letter-coded action buttons in prompts | `skills/custom-buttons.md` |
 
 ### Validation Skills
 

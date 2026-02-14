@@ -78,7 +78,7 @@ Edit the file with approved improvements.
 | A1 | **Single responsibility per phase** | Prompt tries to do multiple distinct tasks without clear separation. Split into named phases or workflows. |
 | A2 | **Mandatory steps are marked** | Steps the agent tends to skip (reading code, IDE navigation) lack emphasis. Mark with **mandatory** / **CRITICAL**. |
 | A3 | **Stop points are explicit** | Agent should wait for user input but no STOP instruction is given. Add "Wait for user input. Do not proceed until answered." |
-| A4 | **Action options are concrete** | Vague options like "Review reply / Mark resolved". Replace with letter-coded options: `[A] Approve`, `[F] Follow-up`, etc. |
+| A4 | **Action options are concrete** | Vague options like "Review reply / Mark resolved". Use slash-separated choices as last line: `Approve / Follow-up / Skip?`. Or bracket-letter: `[A] Approve`. See `skills/custom-buttons.md`. |
 | A5 | **Priority order is defined** | Multiple items to process but no defined order. Add explicit ordering (e.g., by severity, by dependency). |
 | A6 | **Termination condition is clear** | No defined end state. Add explicit conditions for when the workflow stops. |
 
