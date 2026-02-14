@@ -58,12 +58,6 @@ class TailscaleAwareRequest extends Request
             return (int) $matches[1];
         }
 
-        // Check X-Forwarded-Host for port
-        $forwardedHost = $headers->get('X-Forwarded-Host');
-        if ($forwardedHost !== null && preg_match('/:(\d+)$/', $forwardedHost, $matches)) {
-            return (int) $matches[1];
-        }
-
         return null;
     }
 }

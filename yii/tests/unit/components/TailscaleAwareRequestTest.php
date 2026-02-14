@@ -53,10 +53,6 @@ class TailscaleAwareRequestTest extends Unit
                 ['Host' => 'localhost'],
                 false,
             ],
-            'HTTPS indicator port in X-Forwarded-Host' => [
-                ['Host' => 'localhost', 'X-Forwarded-Host' => '100.107.169.66:8443'],
-                true,
-            ],
             'Custom HTTPS indicator port' => [
                 ['Host' => '100.107.169.66:9443'],
                 true,
@@ -79,7 +75,7 @@ class TailscaleAwareRequestTest extends Unit
         $request->method('getHeaders')->willReturn($headerCollection);
 
         $request->trustedHosts = [
-            '.*' => ['X-Forwarded-Proto', 'X-Forwarded-Port', 'X-Forwarded-For', 'X-Forwarded-Host'],
+            '.*' => ['X-Forwarded-Proto', 'X-Forwarded-Port', 'X-Forwarded-For'],
         ];
 
         return $request;
