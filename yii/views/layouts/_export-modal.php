@@ -28,6 +28,10 @@ $suggestNameUrl = Url::to(['/claude/suggest-name']);
                         <label class="btn btn-outline-primary" for="export-dest-clipboard">
                             <i class="bi bi-clipboard"></i> Clipboard
                         </label>
+                        <input type="radio" class="btn-check" name="export-destination" id="export-dest-download" value="download">
+                        <label class="btn btn-outline-primary" for="export-dest-download">
+                            <i class="bi bi-download"></i> Download
+                        </label>
                         <input type="radio" class="btn-check" name="export-destination" id="export-dest-file" value="file">
                         <label class="btn btn-outline-primary" for="export-dest-file" id="export-dest-file-label">
                             <i class="bi bi-file-earmark"></i> File
@@ -43,7 +47,7 @@ $suggestNameUrl = Url::to(['/claude/suggest-name']);
                     ]) ?>
                 </div>
 
-                <div id="export-file-options" class="d-none">
+                <div id="export-filename-options" class="d-none">
                     <hr>
 
                     <div class="mb-3">
@@ -57,7 +61,9 @@ $suggestNameUrl = Url::to(['/claude/suggest-name']);
                         </div>
                         <div class="invalid-feedback d-block d-none" id="export-filename-error"></div>
                     </div>
+                </div>
 
+                <div id="export-directory-options" class="d-none">
                     <div class="mb-3">
                         <label for="export-directory" class="form-label fw-bold">Directory</label>
                         <small class="text-muted d-block mb-1" id="export-root-display-wrapper">
@@ -97,12 +103,12 @@ $suggestNameUrl = Url::to(['/claude/suggest-name']);
 
 <script>
 window.ExportModal = (function() {
-    const EXTENSION_MAP = {
-        'md': '.md',
-        'text': '.txt',
-        'html': '.html',
-        'quilldelta': '.json',
-        'llm-xml': '.xml'
+    const FORMAT_MAP = {
+        'md': { ext: '.md', mime: 'text/markdown' },
+        'text': { ext: '.txt', mime: 'text/plain' },
+        'html': { ext: '.html', mime: 'text/html' },
+        'quilldelta': { ext: '.json', mime: 'application/json' },
+        'llm-xml': { ext: '.xml', mime: 'application/xml' }
     };
 
     const URLS = {
@@ -137,10 +143,12 @@ window.ExportModal = (function() {
         modal: document.getElementById('exportModal'),
         errorAlert: document.getElementById('export-error-alert'),
         destClipboard: document.getElementById('export-dest-clipboard'),
+        destDownload: document.getElementById('export-dest-download'),
         destFile: document.getElementById('export-dest-file'),
         destFileLabel: document.getElementById('export-dest-file-label'),
         formatSelect: document.getElementById('export-format'),
-        fileOptions: document.getElementById('export-file-options'),
+        filenameOptions: document.getElementById('export-filename-options'),
+        directoryOptions: document.getElementById('export-directory-options'),
         filenameInput: document.getElementById('export-filename'),
         filenameError: document.getElementById('export-filename-error'),
         extensionSpan: document.getElementById('export-extension'),
@@ -155,6 +163,11 @@ window.ExportModal = (function() {
         submitBtn: document.getElementById('export-submit-btn')
     });
 
+    const getSelectedDestination = () => {
+        const checked = document.querySelector('input[name="export-destination"]:checked');
+        return checked ? checked.value : 'clipboard';
+    };
+
     const sanitizeFilename = (name) => {
         let sanitized = name.replace(/[\/\\:*?"<>|]/g, '-');
         sanitized = sanitized.replace(/^[\s.]+|[\s.]+$/g, '');
@@ -164,7 +177,8 @@ window.ExportModal = (function() {
     const updateExtension = () => {
         const el = getElements();
         const format = el.formatSelect.value;
-        el.extensionSpan.textContent = EXTENSION_MAP[format] || '.txt';
+        const formatInfo = FORMAT_MAP[format] || { ext: '.txt' };
+        el.extensionSpan.textContent = formatInfo.ext;
         updatePreviewPath();
     };
 
@@ -175,17 +189,21 @@ window.ExportModal = (function() {
         const relativeDir = directorySelector ? directorySelector.getValue() : (el.directoryInput.value.trim() || '/');
         const normalizedRelativeDir = relativeDir.endsWith('/') ? relativeDir : relativeDir + '/';
 
-        // Show absolute path in preview when root is available
         const rootDir = currentConfig.rootDirectory || '';
         const normalizedRoot = rootDir.endsWith('/') ? rootDir.slice(0, -1) : rootDir;
         const absolutePath = normalizedRoot + normalizedRelativeDir + sanitizeFilename(filename) + ext;
         el.previewPath.textContent = absolutePath;
     };
 
-    const toggleFileOptions = () => {
+    const toggleDestinationOptions = () => {
         const el = getElements();
-        const isFile = el.destFile.checked;
-        el.fileOptions.classList.toggle('d-none', !isFile);
+        const destination = getSelectedDestination();
+
+        const showFilename = destination === 'download' || destination === 'file';
+        const showDirectory = destination === 'file';
+
+        el.filenameOptions.classList.toggle('d-none', !showFilename);
+        el.directoryOptions.classList.toggle('d-none', !showDirectory);
         el.overwriteWarning.classList.add('d-none');
         el.overwriteCheckbox.checked = false;
     };
@@ -312,6 +330,62 @@ window.ExportModal = (function() {
         }
     };
 
+    const exportToDownload = async (deltaContent, format) => {
+        const el = getElements();
+        const filename = el.filenameInput.value.trim();
+
+        if (!filename) {
+            el.filenameError.textContent = 'Filename is required.';
+            el.filenameError.classList.remove('d-none');
+            el.filenameInput.focus();
+            return;
+        }
+
+        el.filenameError.classList.add('d-none');
+
+        const originalHtml = el.submitBtn.innerHTML;
+        el.submitBtn.disabled = true;
+        el.submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Exporting...';
+
+        try {
+            const response = await fetch(URLS.convertFormat, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ content: deltaContent, format: format })
+            });
+
+            const data = await response.json();
+            if (data.success && data.content !== undefined) {
+                const formatInfo = FORMAT_MAP[format] || { ext: '.txt', mime: 'text/plain' };
+                const blob = new Blob([data.content], { type: formatInfo.mime });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = sanitizeFilename(filename) + formatInfo.ext;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                bootstrap.Modal.getInstance(el.modal).hide();
+                showToast('Downloaded ' + sanitizeFilename(filename) + formatInfo.ext, 'success');
+            } else {
+                el.errorAlert.textContent = data.message || 'Failed to convert format.';
+                el.errorAlert.classList.remove('d-none');
+            }
+        } catch (err) {
+            el.errorAlert.textContent = 'Export failed.';
+            el.errorAlert.classList.remove('d-none');
+        } finally {
+            el.submitBtn.disabled = false;
+            el.submitBtn.innerHTML = originalHtml;
+        }
+    };
+
     const exportToFile = async (deltaContent, format) => {
         const el = getElements();
         const filename = el.filenameInput.value.trim();
@@ -380,12 +454,17 @@ window.ExportModal = (function() {
 
         const deltaContent = currentConfig.getContent();
         const format = el.formatSelect.value;
-        const isFile = el.destFile.checked;
 
-        if (isFile) {
-            await exportToFile(deltaContent, format);
-        } else {
-            await exportToClipboard(deltaContent, format);
+        switch (getSelectedDestination()) {
+            case 'clipboard':
+                await exportToClipboard(deltaContent, format);
+                break;
+            case 'download':
+                await exportToDownload(deltaContent, format);
+                break;
+            case 'file':
+                await exportToFile(deltaContent, format);
+                break;
         }
     };
 
@@ -437,7 +516,7 @@ window.ExportModal = (function() {
             el.destFileLabel.title = 'Project has no root directory configured';
         }
 
-        toggleFileOptions();
+        toggleDestinationOptions();
         updateExtension();
 
         const modal = new bootstrap.Modal(el.modal);
@@ -447,8 +526,9 @@ window.ExportModal = (function() {
     const init = () => {
         const el = getElements();
 
-        el.destClipboard.addEventListener('change', toggleFileOptions);
-        el.destFile.addEventListener('change', toggleFileOptions);
+        el.destClipboard.addEventListener('change', toggleDestinationOptions);
+        el.destDownload.addEventListener('change', toggleDestinationOptions);
+        el.destFile.addEventListener('change', toggleDestinationOptions);
         el.formatSelect.addEventListener('change', updateExtension);
         el.filenameInput.addEventListener('input', updatePreviewPath);
         el.suggestBtn.addEventListener('click', suggestName);
