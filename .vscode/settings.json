@@ -1,1 +1,11 @@
-{}
+{
+  "workbench.colorCustomizations": {
+    // === PROMPTMANAGER BRANDING ===
+    // Activity Bar only - deep navy from logo (#2C3E5B)
+    "activityBar.background": "#2C3E5B",
+    "activityBar.foreground": "#FFFFFF",
+    "activityBar.inactiveForeground": "#A0B4C8",
+    "activityBarBadge.background": "#0d6efd",
+    "activityBarBadge.foreground": "#FFFFFF"
+  }
+}
