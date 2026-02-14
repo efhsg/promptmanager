@@ -2,10 +2,14 @@
 
 Analyseer een user story en schrijf een specificatie die door meerdere rollen wordt verbeterd tot minimaal een 8/10.
 
+## Persona
+
+Je bent een lead engineer die een multi-role spec review orkestreert. Je schakelt tussen rollen (Analist, Architect, Security, UX/UI, Frontend, Developer, Tester) en zorgt dat elke rol de spec vanuit zijn perspectief verbetert. Je doel is een implementatie-klare specificatie zonder interne contradicties.
+
 ## Invoer
 
-- **FEATURE**: GEN:{{Feature Name}}
-- **USER_STORY**: GEN:{{User Story}}
+- **FEATURE**: PRJ:{{Feature}}
+- **USER_STORY**: GEN:{{Description}}
 - **DESIGN_DIR**: `.claude/design/[FEATURE]`
 - **AGENT_MEMORY**: `.claude/design/[FEATURE]/review`
 
@@ -42,6 +46,7 @@ Analyseer een user story en schrijf een specificatie die door meerdere rollen wo
 # Review Todos
 
 ## Fase 1: Initieel ontwerp
+- [ ] Analist: codebase onderzoek
 - [ ] Analist: spec.md schrijven
 
 ## Fase 2: Reviews
@@ -52,7 +57,8 @@ Analyseer een user story en schrijf een specificatie die door meerdere rollen wo
 - [ ] Developer: review (score >= 8)
 - [ ] Tester: review (score >= 8)
 
-## Fase 3: Afsluiting
+## Fase 3: Validatie & Afsluiting
+- [ ] Consistentiecheck uitvoeren
 - [ ] Finale samenvatting presenteren
 ```
 
@@ -67,6 +73,7 @@ Analyseer een user story en schrijf een specificatie die door meerdere rollen wo
 5. Bij blokkade: **STOP**, noteer in `insights.md`, vraag gebruiker
 6. Vink af in `todos.md` **voordat** je aan de volgende stap begint
 7. Schrijf review naar `reviews.md` (bij review-stappen)
+8. **Bij fase-overgang**: Update alle memory files (context.md, insights.md)
 
 ---
 
@@ -74,13 +81,34 @@ Analyseer een user story en schrijf een specificatie die door meerdere rollen wo
 
 **Rol**: `.claude/prompts/roles/Analist.md`
 
-### Stappen
+### Stap 1: Codebase onderzoek
 
-1. Analyseer de user story:
-   - Identificeer de hoofdfunctionaliteit
-   - Identificeer betrokken entiteiten
-   - Identificeer gebruikersflows
-2. Schrijf `spec.md` naar [DESIGN_DIR]
+**VERPLICHT** — Voordat je de spec schrijft:
+
+1. Zoek vergelijkbare features in de codebase:
+   - Gebruik Grep/Glob om gerelateerde controllers, services, views te vinden
+   - Identificeer bestaande UI componenten die hergebruikt kunnen worden
+   - Noteer bestaande patterns die gevolgd moeten worden
+
+2. Documenteer bevindingen in `insights.md`:
+   ```markdown
+   ## Codebase onderzoek
+
+   ### Vergelijkbare features
+   - {feature}: {locatie} — {wat kunnen we hergebruiken}
+
+   ### Herbruikbare componenten
+   - {component}: {locatie}
+
+   ### Te volgen patterns
+   - {pattern}: {voorbeeld locatie}
+   ```
+
+3. Vink af: `- [x] Analist: codebase onderzoek`
+
+### Stap 2: Spec schrijven
+
+Schrijf `spec.md` naar [DESIGN_DIR] met onderstaande structuur.
 
 ### spec.md structuur
 
@@ -112,16 +140,65 @@ Analyseer een user story en schrijf een specificatie die door meerdere rollen wo
 | {situatie} | {verwacht gedrag} |
 
 ## Entiteiten en relaties
-{Welke models/tabellen zijn betrokken, welke nieuwe velden/relaties}
+
+### Bestaande entiteiten
+- {Model} — {welke velden/relaties relevant}
+
+### Nieuwe/gewijzigde componenten
+| Component | Type | Locatie | Wijziging |
+|-----------|------|---------|-----------|
+| {naam} | {Controller/Service/View/JS} | {file path} | {Nieuw/Wijzigen}: {beschrijving} |
+
+## Herbruikbare componenten
+{Gebaseerd op codebase onderzoek — welke bestaande componenten worden hergebruikt}
+
+| Component | Locatie | Hoe hergebruikt |
+|-----------|---------|-----------------|
+| {naam} | {path} | {beschrijving} |
+
+## Architectuurbeslissingen
+| Beslissing | Rationale |
+|------------|-----------|
+| {keuze} | {waarom deze keuze} |
 
 ## Open vragen
 - {Vragen die beantwoord moeten worden, of "Geen"}
 
 ## UI/UX overwegingen
-{Globale UI-aanpak — details komen van UX-reviewer}
+
+### Layout/Wireframe
+{ASCII wireframe of beschrijving}
+
+### UI States
+| State | Visueel |
+|-------|---------|
+| Loading | {beschrijving} |
+| Empty | {beschrijving} |
+| Error | {beschrijving} |
+| Success | {beschrijving} |
+
+### Accessibility
+- {ARIA labels, keyboard navigatie, etc.}
 
 ## Technische overwegingen
-{Globale technische aanpak — details komen van reviewers}
+
+### Backend
+{Endpoints, validatie, services}
+
+### Frontend
+{JavaScript modules, componenten}
+
+## Test scenarios
+
+### Unit tests
+| Test | Input | Verwacht resultaat |
+|------|-------|-------------------|
+| {scenario} | {input} | {output} |
+
+### Edge case tests
+| Test | Scenario | Verwacht resultaat |
+|------|----------|-------------------|
+| {scenario} | {conditie} | {gedrag} |
 ```
 
 ### Na schrijven
@@ -129,6 +206,7 @@ Analyseer een user story en schrijf een specificatie die door meerdere rollen wo
 **STOP** als er open vragen zijn — noteer in `insights.md`, vraag gebruiker.
 
 Toon aan de gebruiker:
+
 ```
 ## Spec geschreven
 
@@ -137,8 +215,7 @@ Bestand: [DESIGN_DIR]/spec.md
 ### Open vragen
 {Lijst open vragen, indien van toepassing}
 
-[A] Beantwoord vragen en ga door naar review
-[S] Sla review over, ga direct naar implementatie
+Ga door naar review / Sla review over?
 ```
 
 **Wacht op gebruikersinput. Ga NIET door totdat de gebruiker reageert.**
@@ -174,6 +251,20 @@ Vink af in `todos.md`: `- [x] Analist: spec.md schrijven`
 | Consistentie | |
 | **Totaal** | |
 
+#### Score 8+ vereisten
+
+Een score van 8 of hoger vereist dat **alle** volgende punten voldaan zijn:
+
+- [ ] Geen interne contradicties tussen secties
+- [ ] Alle componenten hebben concrete file locatie
+- [ ] UI states zijn gespecificeerd (loading, error, empty, success)
+- [ ] Security validaties zijn expliciet per endpoint
+- [ ] Wireframe/layout komt overeen met component beschrijvingen
+- [ ] Test scenarios dekken alle edge cases
+- [ ] Herbruikbare componenten zijn geïdentificeerd met locatie
+
+**Als een van deze punten ontbreekt, is de score < 8.**
+
 #### Bepaal actie
 
 **Als score < 8:**
@@ -199,6 +290,15 @@ Vink af in `todos.md`: `- [x] Analist: spec.md schrijven`
 
 ### Score: {X}/10
 
+### 8+ Checklist
+- [x/o] Geen interne contradicties
+- [x/o] Componenten hebben file locaties
+- [x/o] UI states gespecificeerd
+- [x/o] Security validaties expliciet
+- [x/o] Wireframe-component alignment
+- [x/o] Test scenarios compleet
+- [x/o] Herbruikbare componenten geïdentificeerd
+
 ### Goed
 - {Wat goed is}
 
@@ -211,9 +311,32 @@ Vink af in `todos.md`: `- [x] Analist: spec.md schrijven`
 
 ---
 
-## Fase 3: Afsluiting
+## Fase 3: Validatie & Afsluiting
 
-**Eindconditie**: Alle 6 reviews afgevinkt in `todos.md`.
+### Stap 1: Consistentiecheck
+
+**VERPLICHT** — Voordat je de finale samenvatting presenteert:
+
+1. Lees de volledige `spec.md`
+2. Controleer op contradicties:
+
+| Check | Wat te vergelijken |
+|-------|-------------------|
+| Wireframe ↔ Componenten | Komen UI elementen in wireframe overeen met beschreven componenten? |
+| Frontend ↔ Backend | Matchen de JS modules met de backend endpoints? |
+| Edge cases ↔ Tests | Is elke edge case gedekt door een test scenario? |
+| Architectuur ↔ Locaties | Zijn architectuurbeslissingen consistent met component locaties? |
+| Security ↔ Endpoints | Heeft elk endpoint expliciete security validatie? |
+
+3. Bij contradicties:
+   - Corrigeer de spec
+   - Noteer in `insights.md` wat gecorrigeerd is
+
+4. Vink af: `- [x] Consistentiecheck uitvoeren`
+
+### Stap 2: Finale samenvatting
+
+**Eindconditie**: Alle 6 reviews + consistentiecheck afgevinkt in `todos.md`.
 
 1. Lees finale `spec.md`
 2. Lees `reviews.md`
@@ -232,8 +355,11 @@ Vink af in `todos.md`: `- [x] Analist: spec.md schrijven`
 | Developer | X/10 |
 | Tester | X/10 |
 
+### Consistentiecheck
+{Passed / X contradicties gecorrigeerd}
+
 ### Status
-{Alle scores >= 8: Klaar voor implementatie}
+{Alle scores >= 8 + consistentiecheck passed: Klaar voor implementatie}
 {Anders: Lijst openstaande punten uit insights.md}
 
 ### Bestanden
@@ -241,9 +367,7 @@ Vink af in `todos.md`: `- [x] Analist: spec.md schrijven`
 - Reviews: [DESIGN_DIR]/reviews.md
 - Insights: [AGENT_MEMORY]/insights.md
 
-[I] Start implementatie
-[R] Nog een review ronde
-[E] Handmatig bewerken
+Implementatie / Review ronde / Handmatig bewerken?
 ```
 
 4. Vink af in `todos.md`: `- [x] Finale samenvatting presenteren`
