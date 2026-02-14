@@ -34,7 +34,7 @@ $suggestNameUrl = Url::to(['/claude/suggest-name']);
                         </label>
                         <input type="radio" class="btn-check" name="export-destination" id="export-dest-file" value="file">
                         <label class="btn btn-outline-primary" for="export-dest-file" id="export-dest-file-label">
-                            <i class="bi bi-file-earmark"></i> File
+                            <i class="bi bi-hdd"></i> Server
                         </label>
                     </div>
                 </div>
