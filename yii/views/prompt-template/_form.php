@@ -223,45 +223,9 @@ $initialDeltaJson = $model->template_body ?: '{"ops":[{"insert":"\n"}]}';
 $initialDeltaEncoded = json_encode($initialDeltaJson, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 $script = <<<JS
     (function() {
-        // Check for imported data in localStorage
-        var importedData = localStorage.getItem('importedTemplate');
         var deltaToLoad = $initialDeltaEncoded;
-
-        if (importedData) {
-            try {
-                var parsed = JSON.parse(importedData);
-                console.log('Found imported data in localStorage:', parsed);
-
-                // Set form fields
-                if (parsed.project_id) {
-                    var projectSelect = document.getElementById('prompttemplate-project_id');
-                    if (projectSelect) {
-                        projectSelect.value = parsed.project_id;
-                    }
-                }
-                if (parsed.name) {
-                    var nameInput = document.getElementById('prompttemplate-name');
-                    if (nameInput) {
-                        nameInput.value = parsed.name;
-                    }
-                }
-                if (parsed.template_body) {
-                    deltaToLoad = parsed.template_body;
-                    // Also update the hidden input
-                    document.getElementById('template-body').value = parsed.template_body;
-                }
-
-                // Clear localStorage after use
-                localStorage.removeItem('importedTemplate');
-            } catch (e) {
-                console.error('Failed to parse imported data:', e);
-            }
-        }
-
-        // Load delta into Quill
         try {
             var delta = typeof deltaToLoad === 'string' ? JSON.parse(deltaToLoad) : deltaToLoad;
-            console.log('Loading delta into Quill:', delta);
             window.quill.setContents(delta);
         } catch (e) {
             console.error('Failed to parse delta:', e, deltaToLoad);

@@ -8,9 +8,6 @@ use yii\helpers\Url;
 /** @var yii\web\View $this */
 /** @var app\models\PromptTemplateSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
-/** @var array $projects */
-/** @var int|null $currentProjectId */
-
 $this->title = 'Templates';
 echo $this->render('_breadcrumbs', [
     'model' => null,
@@ -21,14 +18,7 @@ echo $this->render('_breadcrumbs', [
 <div class="prompt-template-index container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
-        <div>
-            <?= Html::button('Import from MD', [
-                'class' => 'btn btn-primary me-2',
-                'data-bs-toggle' => 'modal',
-                'data-bs-target' => '#importMarkdownModal',
-            ]) ?>
-            <?= Html::a('Create Template', ['create'], ['class' => 'btn btn-primary']) ?>
-        </div>
+        <?= Html::a('Create Template', ['create'], ['class' => 'btn btn-primary']) ?>
     </div>
 
     <div class="card">
@@ -107,5 +97,3 @@ echo $this->render('_breadcrumbs', [
         </div>
     </div>
 </div>
-
-<?= $this->render('_import-modal', ['projects' => $projects, 'currentProjectId' => $currentProjectId]) ?>

@@ -5,11 +5,8 @@
 namespace app\controllers;
 
 use app\components\ProjectContext;
-use app\models\MarkdownImportForm;
 use app\models\PromptTemplate;
 use app\models\PromptTemplateSearch;
-use app\services\copyformat\MarkdownParser;
-use app\services\copyformat\QuillDeltaWriter;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ModelService;
@@ -19,11 +16,9 @@ use Yii;
 use yii\db\ActiveRecord;
 use yii\db\Exception;
 use yii\filters\AccessControl;
-use yii\helpers\Url;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
-use yii\web\UploadedFile;
 
 class PromptTemplateController extends Controller
 {
@@ -50,7 +45,7 @@ class PromptTemplateController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index', 'import-markdown'],
+                        'actions' => ['index'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -114,10 +109,7 @@ class PromptTemplateController extends Controller
             ];
         }
 
-        $projects = $this->projectService->fetchProjectsList(Yii::$app->user->id);
-        $currentProjectId = $projectContext->getCurrentProject()?->id;
-
-        return $this->render('index', compact('searchModel', 'dataProvider', 'projects', 'currentProjectId'));
+        return $this->render('index', compact('searchModel', 'dataProvider'));
     }
 
     /**
@@ -155,51 +147,6 @@ class PromptTemplateController extends Controller
         $model->template_body = '{"ops":[{"insert":"\n"}]}';
 
         return $this->handleForm($model);
-    }
-
-    public function actionImportMarkdown(): array
-    {
-        Yii::$app->response->format = Response::FORMAT_JSON;
-
-        if (!Yii::$app->request->isPost) {
-            return ['success' => false, 'message' => 'Invalid request method.'];
-        }
-
-        $form = new MarkdownImportForm();
-        $form->load(Yii::$app->request->post());
-        $form->mdFile = UploadedFile::getInstance($form, 'mdFile');
-
-        if (!$form->validate()) {
-            return [
-                'success' => false,
-                'errors' => $form->getErrors(),
-            ];
-        }
-
-        $markdownContent = @file_get_contents($form->mdFile->tempName);
-        if ($markdownContent === false) {
-            return ['success' => false, 'message' => 'Failed to read uploaded file.'];
-        }
-
-        $parser = new MarkdownParser();
-        $blocks = $parser->parse($markdownContent);
-        $deltaWriter = new QuillDeltaWriter();
-        $deltaJson = $deltaWriter->writeFromBlocks($blocks);
-
-        $templateName = $form->name;
-        if (empty($templateName)) {
-            $templateName = pathinfo($form->mdFile->name, PATHINFO_FILENAME);
-        }
-
-        return [
-            'success' => true,
-            'redirectUrl' => Url::to(['create']),
-            'importData' => [
-                'project_id' => $form->project_id,
-                'name' => $templateName,
-                'template_body' => $deltaJson,
-            ],
-        ];
     }
 
     /**
