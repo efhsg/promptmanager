@@ -1153,6 +1153,15 @@
 .claude-chat-page .claude-usage-summary__pct--orange { color: #fd7e14; }
 .claude-chat-page .claude-usage-summary__pct--red { color: #dc3545; }
 
+.claude-chat-page .claude-combined-bar__usage--compact {
+    flex-wrap: nowrap;
+    overflow: hidden;
+}
+
+.claude-chat-page .claude-combined-bar__usage--compact .claude-usage-summary__bar {
+    display: none;
+}
+
 @media (max-width: 576px) {
     .claude-chat-page .claude-usage-summary__label,
     .claude-chat-page .claude-usage-summary__bar {

@@ -552,6 +552,7 @@ $js = <<<JS
                 this.updateSettingsSummary();
                 this.setupEventListeners();
                 this.startUsageAutoRefresh();
+                this.setupUsageCompactResize();
                 if (window.matchMedia('(max-width: 767.98px)').matches && this.inputMode === 'quill')
                     this.switchToTextareaNoConfirm();
             },
@@ -590,8 +591,8 @@ $js = <<<JS
                         var parts = [];
                         if (data.hasCLAUDE_MD) parts.push('CLAUDE.md');
                         if (data.hasClaudeDir) parts.push('.claude/');
-                        label = parts.join(' + ');
-                        title = 'Using project\'s own config: ' + label;
+                        label = 'Configured';
+                        title = 'Project config: ' + parts.join(' + ');
                     } else if (ps === 'no_config' && data.hasPromptManagerContext) {
                         icon = 'bi-info-circle'; bg = 'bg-info'; label = 'PM context';
                         title = 'No project config found. Using managed workspace with PromptManager context.';
@@ -1846,6 +1847,33 @@ $js = <<<JS
                 setInterval(function() { self.fetchSubscriptionUsage(); }, 300000);
             },
 
+            setupUsageCompactResize: function() {
+                var self = this;
+                var timer;
+                window.addEventListener('resize', function() {
+                    clearTimeout(timer);
+                    timer = setTimeout(function() { self.recheckUsageCompact(); }, 150);
+                });
+            },
+
+            recheckUsageCompact: function() {
+                var summary = document.getElementById('claude-combined-usage');
+                if (!summary || summary.classList.contains('d-none')) return;
+
+                // Reset to full mode (with bars)
+                summary.classList.remove('claude-combined-bar__usage--compact');
+
+                // Temporarily force nowrap to detect horizontal overflow
+                summary.style.flexWrap = 'nowrap';
+                summary.style.overflow = 'hidden';
+                var overflows = summary.scrollWidth > summary.clientWidth;
+                summary.style.flexWrap = '';
+                summary.style.overflow = '';
+
+                if (overflows)
+                    summary.classList.add('claude-combined-bar__usage--compact');
+            },
+
             fetchSubscriptionUsage: function() {
                 if (!this.usageUrl) return;
                 var self = this;
@@ -2507,6 +2535,9 @@ $js = <<<JS
                     summary.appendChild(item);
                     itemCount++;
                 });
+
+                // Hide mini bars only when they would cause a line-wrap
+                this.recheckUsageCompact();
 
                 // Propagate warning state to combined bar
                 if (maxPct >= 80)
