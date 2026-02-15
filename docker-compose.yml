@@ -98,6 +98,7 @@ services:
       - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
       - ${HOME}/.claude-config:/home/${USER_NAME}/.claude-config
+      - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
     env_file:
       - .env
       - path: .env.db
