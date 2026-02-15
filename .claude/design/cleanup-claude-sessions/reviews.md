@@ -29,6 +29,44 @@
 ### Nog open
 - Geen
 
+## Review: Codebase Alignment — 2026-02-15
+
+### Score: 9/10
+
+### 8+ Checklist
+- [x] Geen interne contradicties
+- [x] Componenten hebben file locaties
+- [x] UI states gespecificeerd
+- [x] Security validaties expliciet
+- [x] Wireframe-component alignment
+- [x] Test scenarios compleet
+- [x] Herbruikbare componenten geidentificeerd
+
+### Goed
+- Alle bestaande ClaudeRunQuery scopes (forUser, terminal, forSession) bestaan en werken exact zoals gespecificeerd
+- ClaudeRun model heeft alle benodigde methoden: getStreamFilePath(), getSessionLatestStatus(), getSessionRunCount(), isTerminal()
+- ClaudeRunStatus::terminalValues() bestaat en retourneert correct [completed, failed, cancelled]
+- Security via forUser() query scope is consistent met bestaande ClaudeController endpoints (stream-run, cancel-run, run-status)
+- Service als plain class (geen Component) is consistent met ClaudeStreamRelayService
+- Constructor DI in ClaudeController is bewezen patroon (4 services al geïnjecteerd)
+
+### Verbeterd
+| Issue | Locatie | Wijziging |
+|-------|---------|-----------|
+| DI registratie in config/main.php is onnodig | Componentenoverzicht | Verwijderd — auto-wired, consistent met ClaudeStreamRelayService, ClaudeCliService etc. |
+| Wireframe toonde "First Prompt" en "Cost" kolom | Wireframe | Gecorrigeerd naar "Summary" + Cost kolom verwijderd (matcht actuele runs.php GridView) |
+| Service method signatures misten PHPDoc | ClaudeRunCleanupService definitie | PHPDoc met @return en gedragsbeschrijving toegevoegd |
+| `deleteRunsWithCleanup` had invalid PHP type hint `ClaudeRun[]` | Service definitie | Gecorrigeerd naar `array` parameter type |
+| Controller action flow ontbrak | Technische sectie | Concrete controller code voor actionDeleteSession() en actionCleanup() toegevoegd |
+| Service query logica voor deleteSession was impliciet | Service definitie | Expliciete query logica met forUser()/forSession()/terminal() scopes toegevoegd |
+| Error handling bij file deletion was vaag | Transactiestrategie | Gespecificeerd: file_exists() + @unlink() + Yii::error() bij DB failure |
+| "Service is plain class" niet gedocumenteerd | Service definitie | Note toegevoegd dat service geen Component extends (consistent met codebase) |
+| Controller tests ontbraken | Test scenarios | Controller test scenarios toegevoegd (VerbFilter, 404, confirm page, post execute) |
+| deleteStreamFile() in componentenoverzicht was misleidend | Componentenoverzicht | Vervangen door volledige public method lijst |
+
+### Nog open
+- Geen
+
 ## Review: Security — 2026-02-15
 
 ### Score: 8/10

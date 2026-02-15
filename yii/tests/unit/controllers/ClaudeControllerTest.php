@@ -7,6 +7,7 @@ use app\handlers\ClaudeQuickHandler;
 use app\models\Project;
 use app\modules\identity\models\User;
 use app\services\ClaudeCliService;
+use app\services\ClaudeRunCleanupService;
 use app\services\ClaudeStreamRelayService;
 use app\services\EntityPermissionService;
 use Codeception\Test\Unit;
@@ -621,6 +622,7 @@ class ClaudeControllerTest extends Unit
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeQuickHandler = $this->createMock(ClaudeQuickHandler::class);
         $streamRelayService = new ClaudeStreamRelayService();
+        $cleanupService = new ClaudeRunCleanupService();
 
         return new ClaudeController(
             'claude',
@@ -628,7 +630,8 @@ class ClaudeControllerTest extends Unit
             $permissionService,
             $claudeService,
             $claudeQuickHandler,
-            $streamRelayService
+            $streamRelayService,
+            $cleanupService
         );
     }
 
@@ -637,6 +640,7 @@ class ClaudeControllerTest extends Unit
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeCliService = new ClaudeCliService();
         $streamRelayService = new ClaudeStreamRelayService();
+        $cleanupService = new ClaudeRunCleanupService();
 
         return new ClaudeController(
             'claude',
@@ -644,7 +648,8 @@ class ClaudeControllerTest extends Unit
             $permissionService,
             $claudeCliService,
             $quickHandler,
-            $streamRelayService
+            $streamRelayService,
+            $cleanupService
         );
     }
 

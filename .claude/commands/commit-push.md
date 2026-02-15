@@ -53,6 +53,10 @@ git push origin HEAD
 
 **If push fails:**
 - If rejected due to remote changes → run `git pull --rebase origin HEAD` then retry push
+- If SSH host key or permission error → the Claude Code sandbox doesn't have access to SSH keys mounted in `pma_yii`. Instruct the user to push manually:
+  ```bash
+  docker exec -it pma_yii bash -c "cd /var/www/html && git push origin HEAD"
+  ```
 - If other error → report the error and stop
 
 Report success with commit hash.

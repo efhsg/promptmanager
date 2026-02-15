@@ -80,12 +80,13 @@ In claude/runs we need a cleanup function, so the user can easily remove dialogs
 
 | Component | Type | Locatie | Wijziging |
 |-----------|------|---------|-----------|
-| ClaudeRunCleanupService | Service | `yii/services/ClaudeRunCleanupService.php` | Nieuw: deleteSession(), bulkCleanup(), deleteStreamFile() |
+| ClaudeRunCleanupService | Service | `yii/services/ClaudeRunCleanupService.php` | Nieuw: deleteSession(), bulkCleanup(), countTerminalSessions(), countTerminalRuns() |
 | ClaudeController | Controller | `yii/controllers/ClaudeController.php` | Wijzigen: actionDeleteSession(), actionCleanup() toevoegen; VerbFilter + access control updaten; ClaudeRunCleanupService injecteren via constructor |
-| main.php | Config | `yii/config/main.php` | Wijzigen: ClaudeRunCleanupService registreren in DI container (indien niet auto-wired) |
 | runs.php | View | `yii/views/claude/runs.php` | Wijzigen: delete-kolom + cleanup-knop toevoegen |
 | cleanup-confirm.php | View | `yii/views/claude/cleanup-confirm.php` | Nieuw: bevestigingspagina voor bulk cleanup |
 | ClaudeRunCleanupServiceTest | Test | `yii/tests/unit/services/ClaudeRunCleanupServiceTest.php` | Nieuw: unit tests voor delete/cleanup logic |
+
+**DI registratie:** Niet nodig in `config/main.php`. ClaudeController-services (ClaudeCliService, ClaudeStreamRelayService, etc.) worden auto-wired door Yii2's DI container via constructor type hints. ClaudeRunCleanupService volgt hetzelfde patroon — geen configuratie-wijziging nodig.
 
 ## Herbruikbare componenten
 
@@ -120,19 +121,21 @@ In claude/runs we need a cleanup function, so the user can easily remove dialogs
 ### Layout/Wireframe
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Claude Sessions                            [+ New dialog]  │
-├─────────────────────────────────────────────────────────────┤
-│  All Sessions                                               │
-│  [Search___] [Status ▼] [Search] [Reset] [↻ Auto] [Cleanup]│
-├──────┬─────────┬──────────────┬─────┬─────┬──────┬────┬─────┤
-│Status│ Project │ First Prompt │Runs │Start│ Dur. │Cost│  ×  │
-├──────┼─────────┼──────────────┼─────┼─────┼──────┼────┼─────┤
-│ ✓    │ MyProj  │ Fix the bug  │  3  │ ... │ 2m   │$0.1│ [🗑] │
-│ ✗    │ MyProj  │ Add feature  │  1  │ ... │ 1m   │$0.0│ [🗑] │
-│ ⏳   │ MyProj  │ Running task │  2  │ ... │  -   │ -  │      │
-└──────┴─────────┴──────────────┴─────┴─────┴──────┴────┴─────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Claude Sessions                             [+ New dialog]  │
+├──────────────────────────────────────────────────────────────┤
+│  All Sessions                                                │
+│  [Search___] [Status ▼] [Search] [Reset] [↻ Auto] [Cleanup] │
+├──────┬─────────┬──────────────┬─────┬─────┬──────┬───────────┤
+│Status│ Project │ Summary      │Runs │Start│ Dur. │           │
+├──────┼─────────┼──────────────┼─────┼─────┼──────┼───────────┤
+│ ✓    │ MyProj  │ Fix the bug  │  3  │ ... │ 2m   │    [🗑]   │
+│ ✗    │ MyProj  │ Add feature  │  1  │ ... │ 1m   │    [🗑]   │
+│ ⏳   │ MyProj  │ Running task │  2  │ ... │  -   │           │
+└──────┴─────────┴──────────────┴─────┴─────┴──────┴───────────┘
 ```
+
+> **Note:** Kolommen matchen de bestaande runs.php GridView (Status, Project, Summary, Runs, Started, Duration). Er is géén Cost-kolom in de huidige implementatie.
 
 ### UI States
 
@@ -180,35 +183,104 @@ In claude/runs we need a cleanup function, so the user can easily remove dialogs
 ```php
 class ClaudeRunCleanupService
 {
+    /**
+     * Verwijdert alle terminal runs met zelfde session_id (of enkel de run bij null session_id).
+     * De representativeRun wordt gebruikt om session_id en user_id af te leiden.
+     * Query scoped op forUser() + terminal() voor beveiliging.
+     *
+     * @return int aantal verwijderde records
+     */
     public function deleteSession(ClaudeRun $representativeRun): int
-    // Verwijdert alle terminal runs met zelfde session_id (of enkel de run bij null session_id)
-    // Gebruikt transactie: stream files verwijderen, dan DB records in transactie
-    // Returns: aantal verwijderde records
 
+    /**
+     * Verwijdert alle terminal runs van de gebruiker.
+     *
+     * @return int aantal verwijderde records
+     */
     public function bulkCleanup(int $userId): int
-    // Verwijdert alle terminal runs van de gebruiker
-    // Gebruikt transactie voor DB deletes; stream files eerst opruimen
-    // Returns: aantal verwijderde records
 
+    /**
+     * Telt het aantal verwijderbare sessies (voor bevestigingspagina).
+     * Telt distinct session_id's + standalone runs (session_id IS NULL).
+     */
     public function countTerminalSessions(int $userId): int
-    // Telt het aantal verwijderbare sessies (voor bevestigingspagina)
-    // Telt distinct session_id's + standalone runs (session_id IS NULL)
 
+    /**
+     * Telt het totaal aantal verwijderbare runs (voor bevestigingspagina).
+     */
     public function countTerminalRuns(int $userId): int
-    // Telt het totaal aantal verwijderbare runs (voor bevestigingspagina)
 
-    private function deleteRunsWithCleanup(ClaudeRun[] $runs): int
-    // 1. Verzamel stream file paths
-    // 2. Verwijder stream files (graceful, skip missing)
-    // 3. DB transactie: delete runs
-    // Returns: aantal verwijderde records
+    /**
+     * Interne helper: verwijdert stream files + DB records in transactie.
+     * 1. Verzamel stream file paths via getStreamFilePath()
+     * 2. Verwijder stream files (file_exists() check, @unlink() voor graceful skip)
+     * 3. DB transactie: delete runs via $run->delete()
+     * Bij DB failure: rollback + Yii::error() log
+     *
+     * @param ClaudeRun[] $runs
+     * @return int aantal verwijderde records
+     */
+    private function deleteRunsWithCleanup(array $runs): int
 }
+```
+
+> **Note:** Service is een plain class (geen `extends Component`), consistent met `ClaudeStreamRelayService` en andere ClaudeController-services die via DI autowiring worden geïnjecteerd.
+
+**Controller flow voor `actionDeleteSession(int $id)`:**
+```php
+// 1. Lookup met ownership scope — 404 als niet gevonden of niet van user
+$run = ClaudeRun::find()
+    ->forUser(Yii::$app->user->id)
+    ->andWhere(['id' => $id])
+    ->one() ?? throw new NotFoundHttpException();
+
+// 2. Delegeer naar service
+$deleted = $this->cleanupService->deleteSession($run);
+
+// 3. Flash + redirect
+Yii::$app->session->setFlash('success', "$deleted run(s) deleted.");
+return $this->redirect(['runs']);
+```
+
+**Controller flow voor `actionCleanup()`:**
+```php
+$userId = Yii::$app->user->id;
+
+// GET: toon bevestigingspagina
+if (!Yii::$app->request->isPost) {
+    return $this->render('cleanup-confirm', [
+        'sessionCount' => $this->cleanupService->countTerminalSessions($userId),
+        'runCount' => $this->cleanupService->countTerminalRuns($userId),
+    ]);
+}
+
+// POST: voer bulk delete uit
+$deleted = $this->cleanupService->bulkCleanup($userId);
+Yii::$app->session->setFlash('success', "$deleted run(s) deleted.");
+return $this->redirect(['runs']);
 ```
 
 **Transactiestrategie:**
 - Stream files worden EERST verwijderd (idempotent, geen rollback nodig)
 - DB deletes in transactie — als een delete faalt, rollback alle DB wijzigingen
 - Orphaned stream files (file verwijderd maar DB delete faalt) zijn acceptabel: ze zijn ephemeral data
+- Error handling: bij DB failure wordt `Yii::error()` gelogd, exception doorgegooid naar controller
+
+**Service `deleteSession` query logica:**
+```php
+// Als representativeRun een session_id heeft: alle terminal runs in die sessie
+if ($representativeRun->session_id !== null) {
+    $runs = ClaudeRun::find()
+        ->forUser($representativeRun->user_id)
+        ->forSession($representativeRun->session_id)
+        ->terminal()
+        ->all();
+} else {
+    // Standalone run: alleen deze run (mits terminal)
+    $runs = $representativeRun->isTerminal() ? [$representativeRun] : [];
+}
+return $this->deleteRunsWithCleanup($runs);
+```
 
 **Validatie:**
 - `forUser()` scope op alle queries — eigendom op DB-niveau, niet client-side
@@ -291,6 +363,15 @@ De tests vereisen een fixture met:
   - 1 running run met zelfde `session_id` als een completed run (mixed sessie)
   - 1 pending run (standalone)
   - 1 completed run van User B (ownership test)
+
+### Controller tests
+
+| Test | Scenario | Verwacht resultaat |
+|------|----------|-------------------|
+| `testDeleteSessionRejectsGetRequest` | GET naar `/claude/delete-session?id=1` | 405 Method Not Allowed (VerbFilter) |
+| `testDeleteSessionReturns404ForNonexistentRun` | POST met onbekend id | 404 Not Found |
+| `testCleanupShowsConfirmationPageOnGet` | GET naar `/claude/cleanup` | 200, render cleanup-confirm view |
+| `testCleanupExecutesOnPost` | POST naar `/claude/cleanup` | Redirect naar runs met flash message |
 
 ### Regressie-impact
 

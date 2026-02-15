@@ -105,6 +105,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                 'title' => 'Auto-refresh every 5 seconds',
                             ]
                         ) ?>
+                        <?= Html::a('Cleanup', ['cleanup'], ['class' => 'btn btn-outline-danger']) ?>
                     </div>
                 <?php ActiveForm::end(); ?>
             </div>
@@ -179,6 +180,30 @@ $this->params['breadcrumbs'][] = $this->title;
                     [
                         'label' => 'Duration',
                         'value' => static fn(ClaudeRun $model): string => $model->getFormattedSessionDuration(),
+                    ],
+                    [
+                        'label' => '',
+                        'format' => 'raw',
+                        'contentOptions' => ['class' => 'text-center', 'style' => 'width: 50px;'],
+                        'value' => static function (ClaudeRun $model): string {
+                            if (!in_array($model->getSessionLatestStatus(), ClaudeRunStatus::terminalValues(), true))
+                                return '';
+
+                            return Html::a(
+                                '<i class="bi bi-trash"></i>',
+                                ['delete-session', 'id' => $model->id],
+                                [
+                                    'class' => 'btn btn-sm btn-outline-danger',
+                                    'title' => 'Delete session',
+                                    'aria-label' => 'Delete session',
+                                    'onclick' => 'event.stopPropagation();',
+                                    'data' => [
+                                        'confirm' => 'Delete this session? (' . $model->getSessionRunCount() . ' runs will be removed)',
+                                        'method' => 'post',
+                                    ],
+                                ]
+                            );
+                        },
                     ],
                 ],
             ]); ?>

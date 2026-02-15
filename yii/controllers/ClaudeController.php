@@ -8,6 +8,7 @@ use app\models\ClaudeRun;
 use app\models\ClaudeRunSearch;
 use app\models\Project;
 use app\services\ClaudeCliService;
+use app\services\ClaudeRunCleanupService;
 use app\services\ClaudeStreamRelayService;
 use app\services\EntityPermissionService;
 use common\enums\ClaudeRunStatus;
@@ -30,6 +31,7 @@ class ClaudeController extends Controller
     private readonly ClaudeCliService $claudeCliService;
     private readonly ClaudeQuickHandler $claudeQuickHandler;
     private readonly ClaudeStreamRelayService $streamRelayService;
+    private readonly ClaudeRunCleanupService $cleanupService;
 
     public function __construct(
         $id,
@@ -38,6 +40,7 @@ class ClaudeController extends Controller
         ClaudeCliService $claudeCliService,
         ClaudeQuickHandler $claudeQuickHandler,
         ClaudeStreamRelayService $streamRelayService,
+        ClaudeRunCleanupService $cleanupService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
@@ -45,6 +48,7 @@ class ClaudeController extends Controller
         $this->claudeCliService = $claudeCliService;
         $this->claudeQuickHandler = $claudeQuickHandler;
         $this->streamRelayService = $streamRelayService;
+        $this->cleanupService = $cleanupService;
     }
 
     public function behaviors(): array
@@ -57,6 +61,7 @@ class ClaudeController extends Controller
                     'cancel' => ['POST'],
                     'start-run' => ['POST'],
                     'cancel-run' => ['POST'],
+                    'delete-session' => ['POST'],
                     'summarize-session' => ['POST'],
                     'summarize-prompt' => ['POST'],
                     'summarize-response' => ['POST'],
@@ -76,7 +81,7 @@ class ClaudeController extends Controller
                     ],
                     [
                         // Run-based endpoints — ownership validated via ClaudeRunQuery::forUser()
-                        'actions' => ['stream-run', 'cancel-run', 'run-status', 'runs'],
+                        'actions' => ['stream-run', 'cancel-run', 'run-status', 'runs', 'delete-session', 'cleanup'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -147,6 +152,46 @@ class ClaudeController extends Controller
             'projectList' => $projectList,
             'defaultProjectId' => $defaultProjectId,
         ]);
+    }
+
+    /**
+     * Deletes a session (all terminal runs with the same session_id).
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionDeleteSession(int $id): Response
+    {
+        $run = ClaudeRun::find()
+            ->forUser(Yii::$app->user->id)
+            ->andWhere(['id' => $id])
+            ->one() ?? throw new NotFoundHttpException('Run not found.');
+
+        $deleted = $this->cleanupService->deleteSession($run);
+        Yii::$app->session->setFlash('success', "$deleted run(s) deleted.");
+
+        return $this->redirect(['runs']);
+    }
+
+    /**
+     * GET: shows confirmation page with counts. POST: executes bulk cleanup.
+     *
+     * @return string|Response
+     */
+    public function actionCleanup()
+    {
+        $userId = Yii::$app->user->id;
+
+        if (!Yii::$app->request->isPost) {
+            return $this->render('cleanup-confirm', [
+                'sessionCount' => $this->cleanupService->countTerminalSessions($userId),
+                'runCount' => $this->cleanupService->countTerminalRuns($userId),
+            ]);
+        }
+
+        $deleted = $this->cleanupService->bulkCleanup($userId);
+        Yii::$app->session->setFlash('success', "$deleted run(s) deleted.");
+
+        return $this->redirect(['runs']);
     }
 
     /**
