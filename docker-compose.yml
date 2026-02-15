@@ -95,10 +95,14 @@ services:
       replicas: ${QUEUE_WORKERS:-3}
     volumes:
       - .:/var/www/html
+      - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
+      - ${YTX_PATH:-./ytx}:/opt/ytx:ro
       - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
       - ${HOME}/.claude-config:/home/${USER_NAME}/.claude-config
       - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
+      - ${HOME}/.gitconfig:/home/${USER_NAME}/.gitconfig:ro
+      - ${HOME}/.config/gh:/home/${USER_NAME}/.config/gh:ro
     env_file:
       - .env
       - path: .env.db

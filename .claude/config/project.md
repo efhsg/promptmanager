@@ -14,6 +14,8 @@ Single source of truth for project-specific operations.
 
 **BELANGRIJK**: Claude Code draait **in** de `pma_yii` container. Voer commands direct uit zonder `docker exec`. Docker is niet beschikbaar vanuit de container.
 
+**Git & GitHub**: Host `~/.gitconfig`, `~/.ssh`, and `~/.config/gh` are mounted read-only. Git identity, SSH push, and `gh` CLI work directly without extra configuration.
+
 ## Commands
 
 ### Linter
