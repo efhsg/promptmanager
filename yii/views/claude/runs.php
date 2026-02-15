@@ -41,7 +41,9 @@ $this->params['breadcrumbs'][] = $this->title;
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <?php foreach ($projectList as $pId => $pName): ?>
-                        <?php if ($pId === $defaultProjectId) continue; ?>
+                        <?php if ($pId === $defaultProjectId) {
+                            continue;
+                        } ?>
                         <li><?= Html::a(
                             Html::encode($pName),
                             ['/claude/index', 'p' => $pId],
@@ -142,7 +144,7 @@ $this->params['breadcrumbs'][] = $this->title;
                         's' => $model->session_id,
                         'run' => $model->getSessionLastRunId(),
                     ])),
-                    'onclick' => 'window.location.href = this.dataset.url;',
+                    'onclick' => 'if (!event.target.closest("[data-method]")) window.location.href = this.dataset.url;',
                     'style' => 'cursor: pointer;',
                 ],
                 'columns' => [
@@ -162,8 +164,8 @@ $this->params['breadcrumbs'][] = $this->title;
                     ],
                     [
                         'label' => 'Summary',
-                        'value' => static fn(ClaudeRun $model): string =>
-                            Html::encode(StringHelper::truncate($model->getDisplaySummary(), 80, '...')),
+                        'value' => static fn(ClaudeRun $model): string
+                            => Html::encode(StringHelper::truncate($model->getDisplaySummary(), 80, '...')),
                         'format' => 'raw',
                     ],
                     [
@@ -186,8 +188,9 @@ $this->params['breadcrumbs'][] = $this->title;
                         'format' => 'raw',
                         'contentOptions' => ['class' => 'text-center', 'style' => 'width: 50px;'],
                         'value' => static function (ClaudeRun $model): string {
-                            if (!in_array($model->getSessionLatestStatus(), ClaudeRunStatus::terminalValues(), true))
+                            if (!in_array($model->getSessionLatestStatus(), ClaudeRunStatus::terminalValues(), true)) {
                                 return '';
+                            }
 
                             return Html::a(
                                 '<i class="bi bi-trash"></i>',
@@ -196,7 +199,6 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'class' => 'btn btn-sm btn-outline-danger',
                                     'title' => 'Delete session',
                                     'aria-label' => 'Delete session',
-                                    'onclick' => 'event.stopPropagation();',
                                     'data' => [
                                         'confirm' => 'Delete this session? (' . $model->getSessionRunCount() . ' runs will be removed)',
                                         'method' => 'post',
