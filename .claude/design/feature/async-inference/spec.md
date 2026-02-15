@@ -74,7 +74,28 @@ Als PromptManager-gebruiker wil ik dat een Claude inference doorloopt op de serv
   - [ ] De job geeft `--resume {sessionId}` door aan de CLI
   - [ ] Nieuwe run krijgt eigen `id` maar deelt `session_id` met eerdere runs in dezelfde conversatie
 
-### FR-8: Migratie van directe streaming
+### FR-8: Runs overzicht pagina
+
+- Beschrijving: Cross-project overzicht van alle Claude runs van de ingelogde gebruiker, bereikbaar via navigatie. Gebruiker kan filteren op status en zoektekst, en doorklikken naar de Claude chat met sessieherstel.
+- Acceptatiecriteria:
+  - [x] GET `/claude/runs` toont gepagineerde lijst (20 per pagina) van alle runs
+  - [x] Kolommen: status (badge), project, prompt (truncated), created_at, duur, kosten
+  - [x] Filter: status dropdown + vrije tekst zoeken op `prompt_summary`
+  - [x] Klikken op een rij opent Claude chat met `?p={project_id}&s={session_id}` voor sessieherstel
+  - [x] Ownership via `ClaudeRunQuery::forUser()` — geen project-parameter nodig
+  - [x] "Claude" link in desktop navbar en mobile bottom nav verwijst naar `/claude/runs`
+  - [x] Desktop navbar: project dropdown verankerd rechts van Claude link (niet overlappend)
+  - [x] Bottom nav: `/claude/runs` toont bottom nav (alleen chat-pagina verbergt deze)
+
+### FR-9: Session resume via URL
+
+- Beschrijving: De Claude chat-pagina accepteert een `s` query-parameter met een `session_id`, zodat follow-up prompts aansluiten bij een eerdere sessie wanneer de gebruiker doorklikt vanuit het runs overzicht.
+- Acceptatiecriteria:
+  - [x] GET `/claude/index?p={id}&s={session_id}` initialiseert `ClaudeChat.sessionId` met de meegegeven waarde
+  - [x] Zonder `s` parameter blijft het gedrag ongewijzigd (`sessionId: null`)
+  - [x] De waarde wordt veilig ge-encoded via `Json::encode()` in de PHP-sectie (niet in heredoc)
+
+### FR-10: Migratie van directe streaming
 
 - Beschrijving: De bestaande `actionStream` wordt eerst een wrapper die de async flow aanroept, daarna volledig verwijderd.
 - Acceptatiecriteria:
@@ -205,18 +226,22 @@ Helper methods: `values()`, `labels()`, `activeValues()` (pending+running), `ter
 | Component | Type | Locatie | Wijziging |
 |-----------|------|---------|-----------|
 | `ClaudeRunStatus` | Enum | `yii/common/enums/ClaudeRunStatus.php` | Nieuw |
-| `ClaudeRun` | Model | `yii/models/ClaudeRun.php` | Nieuw |
+| `ClaudeRun` | Model | `yii/models/ClaudeRun.php` | Nieuw + display helpers: `getStatusBadgeClass()`, `getDuration()`, `getFormattedDuration()`, `getCostUsd()` |
 | `ClaudeRunQuery` | Query | `yii/models/query/ClaudeRunQuery.php` | Nieuw |
 | `RunClaudeJob` | Job | `yii/jobs/RunClaudeJob.php` | Nieuw |
 | `ClaudeStreamRelayService` | Service | `yii/services/ClaudeStreamRelayService.php` | Nieuw |
 | `ClaudeRunOwnerRule` | RBAC | `yii/rbac/ClaudeRunOwnerRule.php` | Nieuw |
 | `ClaudeRunController` (console) | Command | `yii/commands/ClaudeRunController.php` | Nieuw |
 | Migration: `claude_run` tabel | Migration | `yii/migrations/m260214_000001_create_claude_run_table.php` | Nieuw |
+| `ClaudeRunSearch` | Search model | `yii/models/ClaudeRunSearch.php` | Nieuw: zoek/filter model met `$q` en `$status` filters |
 | `ClaudeCliService` | Service | `yii/services/ClaudeCliService.php` | Wijzigen: CLI guard in `connection_aborted()`, conditionele PID store/clear, null streamToken handling |
-| `ClaudeController` | Controller | `yii/controllers/ClaudeController.php` | Wijzigen: 5 nieuwe actions (`startRun`, `streamRun`, `cancelRun`, `runStatus`, `activeRuns`) + `createRun()` helper + migratie wrapper voor `actionStream` |
+| `ClaudeController` | Controller | `yii/controllers/ClaudeController.php` | Wijzigen: 6 nieuwe actions (`startRun`, `streamRun`, `cancelRun`, `runStatus`, `activeRuns`, `runs`) + `createRun()` helper + migratie wrapper voor `actionStream` + `?s` param op `actionIndex` |
 | Queue config | Config | `yii/config/main.php` | Wijzigen: `queue` component toevoegen |
 | RBAC config | Config | `yii/config/rbac.php` | Wijzigen: `claudeRun` entity permissions toevoegen |
-| Claude view | View/JS | `yii/views/claude/index.php` | Wijzigen: twee-staps send flow, reconnect, cancel via runId, active runs badge |
+| Claude view | View/JS | `yii/views/claude/index.php` | Wijzigen: twee-staps send flow, reconnect, cancel via runId, active runs badge, `sessionId` initialisatie vanuit `$resumeSessionIdJson` |
+| Runs view | View | `yii/views/claude/runs.php` | Nieuw: GridView met status/project/prompt/timing/cost kolommen, zoekformulier, clickable rows |
+| Layout: main | View | `yii/views/layouts/main.php` | Wijzigen: "Claude" link in desktop navbar, project dropdown verankerd na Claude link, bottom nav conditie exclusief voor chat-pagina |
+| Layout: bottom nav | View | `yii/views/layouts/_bottom-nav.php` | Wijzigen: Claude link naar `/claude/runs` |
 | Docker worker | Infra | `docker-compose.yml` | Wijzigen: `pma_queue` service toevoegen |
 | Composer | Dependency | `composer.json` | Wijzigen: `yiisoft/yii2-queue` toevoegen |
 
@@ -350,6 +375,7 @@ Bij pagina-herlaad met een lopende of recent voltooide run:
 | `/claude/cancel-run?runId={id}` | POST | — | `{success, cancelled}` | Run ownership (forUser query) |
 | `/claude/run-status?runId={id}` | GET | — | `{success, id, status, sessionId, resultMetadata, errorMessage, startedAt, completedAt}` | Run ownership (forUser query) |
 | `/claude/active-runs?p={id}` | GET | — | `{success, runs: [{id, status, promptSummary, sessionId, startedAt, createdAt}]}` | Project ownership (matchCallback) |
+| `/claude/runs` | GET | `ClaudeRunSearch[q]`, `ClaudeRunSearch[status]` | HTML: gepagineerd GridView met alle runs | Authenticated (`@`), ownership via `forUser()` |
 
 #### Queue configuratie
 
@@ -387,7 +413,7 @@ pma_queue:
       - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}
   container_name: pma_queue
   working_dir: /var/www/html/yii
-  mem_limit: 256m
+  mem_limit: 1g
   command: ["php", "yii", "queue/listen", "--verbose=1"]
   volumes:
     - .:/var/www/html
@@ -482,7 +508,7 @@ Fase 2: `send()` gebruikt `start-run` + `stream-run`. Bestaande stream event han
 - `ClaudeRun` heeft `user_id` — alle queries filteren op eigenaar via `ClaudeRunQuery::forUser()`
 - Nieuwe RBAC rule: `ClaudeRunOwnerRule` (controleert `user_id`)
 - Project-gebaseerde endpoints (`start-run`, `active-runs`): ownership via bestaande `matchCallback` + `findProject()`
-- Run-gebaseerde endpoints (`stream-run`, `cancel-run`, `run-status`): ownership via `forUser()` query
+- Run-gebaseerde endpoints (`stream-run`, `cancel-run`, `run-status`, `runs`): ownership via `forUser()` query
 - RBAC config in `yii/config/rbac.php`: `claudeRun` entity toevoegen
 
 ### CSRF-bescherming
@@ -544,7 +570,6 @@ Fase 2: `send()` gebruikt `start-run` + `stream-run`. Bestaande stream event han
 - Export van run-history
 - Redis queue driver (start met DB driver)
 - Run retry mechanisme
-- Runs overzicht pagina (dropdown/panel met lijst)
 - Verwijdering van oude `actionStream`/`actionRun`/`actionCancel` (fase 2, na validatie)
 
 ---
@@ -562,7 +587,7 @@ Fase 2: `send()` gebruikt `start-run` + `stream-run`. Bestaande stream event han
 - Cron job voor stale-run cleanup (elke 5 min, vanuit `pma_yii`)
 - Cron job voor file cleanup (dagelijks, vanuit `pma_yii`)
 - Storage directory: `yii/storage/claude-runs/` (gedeeld volume)
-- Geheugenimpact: ~80 MB idle, max 256 MB (cap)
+- Geheugenimpact: ~80 MB idle, max 1 GB (cap)
 
 ### Risico's
 
@@ -570,7 +595,7 @@ Fase 2: `send()` gebruikt `start-run` + `stream-run`. Bestaande stream event han
 |--------|--------|-----------|
 | yii2-queue DB poll interval (3s) | Lichte vertraging bij run start | Browser animatie maskeert latentie |
 | Cross-container PID kill werkt niet | Cancel via SIGTERM faalt | Cancel via DB status-poll (elke 10s) |
-| Worker OOM | Run blijft hangen | `mem_limit: 256m` + heartbeat + stale detector |
+| Worker OOM | Run blijft hangen | `mem_limit: 1g` + heartbeat + stale detector |
 | Docker Desktop macOS file I/O | Langzamere stream relay | VirtioFS + Apple SSD compenseert |
 | Stream-file groeit bij lange runs | Disk gebruik | Cleanup cron (24h) |
 | Race: twee workers pakken dezelfde job | Dubbele execution | Atomaire UPDATE + yii2-queue mutex |

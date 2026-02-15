@@ -151,15 +151,35 @@ return [
         'claude' => [
             'actionPermissionMap' => [
                 'index' => 'viewProject',
-                'run' => 'viewProject',
                 'stream' => 'viewProject',
                 'cancel' => 'viewProject',
+                'startRun' => 'viewProject',
+                'streamRun' => 'viewProject',
+                'cancelRun' => 'viewProject',
+                'runStatus' => 'viewProject',
+                'activeRuns' => 'viewProject',
                 'usage' => 'viewProject',
                 'checkConfig' => 'viewProject',
                 'summarizeSession' => 'viewProject',
                 'summarizePrompt' => 'viewProject',
             ],
             // Permissions are defined under 'project' entity — no additional permissions needed.
+        ],
+        'claudeRun' => [
+            'actionPermissionMap' => [
+                'view' => 'viewClaudeRun',
+                'cancel' => 'updateClaudeRun',
+            ],
+            'permissions' => [
+                'viewClaudeRun' => [
+                    'description' => 'View a Claude Run',
+                    'rule' => 'app\rbac\ClaudeRunOwnerRule',
+                ],
+                'updateClaudeRun' => [
+                    'description' => 'Update a Claude Run',
+                    'rule' => 'app\rbac\ClaudeRunOwnerRule',
+                ],
+            ],
         ],
         'note' => [
             'actionPermissionMap' => [
@@ -219,6 +239,8 @@ return [
                 'viewNote',
                 'updateNote',
                 'deleteNote',
+                'viewClaudeRun',
+                'updateClaudeRun',
             ],
             'children' => [],
         ],

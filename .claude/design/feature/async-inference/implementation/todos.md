@@ -1,0 +1,26 @@
+# Async Inference — Implementation Steps
+
+- [x] 1. Install yii2-queue dependency via composer
+- [x] 2. Create ClaudeRunStatus enum (`yii/common/enums/ClaudeRunStatus.php`)
+- [x] 3. Create migration (`yii/migrations/m260215_000001_create_claude_run_table.php`)
+- [x] 4. Create ClaudeRunQuery (`yii/models/query/ClaudeRunQuery.php`)
+- [x] 5. Create ClaudeRun model (`yii/models/ClaudeRun.php`)
+- [x] 6. Create ClaudeRunOwnerRule (`yii/rbac/ClaudeRunOwnerRule.php`)
+- [x] 7. Create RunClaudeJob (`yii/jobs/RunClaudeJob.php`)
+- [x] 8. Create ClaudeStreamRelayService (`yii/services/ClaudeStreamRelayService.php`)
+- [x] 9. Create ClaudeRunController console command (`yii/commands/ClaudeRunController.php`)
+- [x] 10. Modify ClaudeCliService (4 changes: connection_aborted guard, streamToken null handling, conditional PID)
+- [x] 11. Modify ClaudeController (5 new actions + actionStream wrapper)
+- [x] 12. Update config/main.php (queue component)
+- [x] 13. Update config/rbac.php (claudeRun entity)
+- [x] 14. Update docker-compose.yml (pma_queue service)
+- [x] 15. Update composer.json (yii2-queue dependency — handled by composer require)
+- [x] 16. Create storage directory for stream files
+- [x] 17. Update frontend view (two-step flow, reconnect, cancel, badge)
+- [x] 18. Create unit tests: ClaudeRunStatus, ClaudeRun, ClaudeRunQuery
+- [x] 19. Create unit tests: RunClaudeJob, ClaudeStreamRelayService
+- [x] 20. Create unit tests: ClaudeRunController (console cleanup commands)
+- [x] 21. Run queue migration on both schemas
+- [x] 22. Run claude_run migration on both schemas
+- [x] 23. Run linter + fix issues
+- [x] 24. Run all unit tests + fix issues

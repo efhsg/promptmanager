@@ -79,6 +79,38 @@ services:
     networks:
       - promptmanager_network
 
+  pma_queue:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: ./docker/yii/Dockerfile
+      args:
+        - USER_ID=${USER_ID:-1000}
+        - USER_NAME=${USER_NAME:-appuser}
+        - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}
+    working_dir: /var/www/html/yii
+    mem_limit: 1g
+    command: ["php", "yii", "queue/listen", "--verbose=1"]
+    deploy:
+      replicas: ${QUEUE_WORKERS:-3}
+    volumes:
+      - .:/var/www/html
+      - ${PROJECTS_ROOT}:/projects:rw
+      - ${HOME}/.claude:/home/${USER_NAME}/.claude
+      - ${HOME}/.claude-config:/home/${USER_NAME}/.claude-config
+    env_file:
+      - .env
+      - path: .env.db
+        required: false
+    environment:
+      HOME: /home/${USER_NAME}
+      PATH: /home/${USER_NAME}/.local/bin:/var/www/html/yii:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      TZ: ${TIMEZONE:-Europe/Amsterdam}
+    depends_on:
+      - pma_mysql
+    networks:
+      - promptmanager_network
+
   pma_npm:
     build:
       context: ./npm

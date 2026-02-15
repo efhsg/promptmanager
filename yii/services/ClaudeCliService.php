@@ -212,12 +212,6 @@ class ClaudeCliService
         ?string $sessionId = null,
         ?string $streamToken = null
     ): array {
-        // Ensure streamToken is never null to prevent shared PID cache keys
-        if ($streamToken === null) {
-            $streamToken = bin2hex(random_bytes(16));
-            Yii::warning('streamToken was null, generated fallback: ' . $streamToken, __METHOD__);
-        }
-
         $effectiveWorkDir = $this->determineWorkingDirectory($workingDirectory, $project);
         $containerPath = $this->translatePath($effectiveWorkDir);
 
@@ -242,9 +236,11 @@ class ClaudeCliService
         fwrite($pipes[0], $prompt);
         fclose($pipes[0]);
 
-        // Store PID in cache so the cancel endpoint can terminate the process
+        // Store PID in cache so the cancel endpoint can terminate the process (web context only)
         $status = proc_get_status($process);
-        $this->storeProcessPid($status['pid'], $streamToken);
+        if ($streamToken !== null) {
+            $this->storeProcessPid($status['pid'], $streamToken);
+        }
 
         stream_set_blocking($pipes[1], true);
         stream_set_timeout($pipes[1], 30);
@@ -254,34 +250,81 @@ class ClaudeCliService
         $startTime = time();
         $cancelled = false;
 
-        while (($line = fgets($pipes[1])) !== false) {
-            if ((time() - $startTime) > $timeout) {
-                proc_terminate($process, 9);
-                fclose($pipes[1]);
-                fclose($pipes[2]);
-                proc_close($process);
-                $this->clearProcessPid($streamToken);
-                return ['exitCode' => 124, 'error' => 'Command timed out after ' . $timeout . ' seconds'];
-            }
+        try {
+            while (true) {
+                $line = fgets($pipes[1]);
 
-            // Detect client disconnect (browser aborted the fetch)
-            if (connection_aborted()) {
-                proc_terminate($process, 15);
-                usleep(100000);
-                $s = proc_get_status($process);
-                if ($s['running']) {
-                    proc_terminate($process, 9);
+                if ($line === false) {
+                    // Distinguish read timeout from true EOF
+                    $meta = stream_get_meta_data($pipes[1]);
+                    if ($meta['timed_out']) {
+                        // Read timeout — process may still be running (e.g. extended thinking)
+                        if ((time() - $startTime) > $timeout) {
+                            proc_terminate($process, 9);
+                            fclose($pipes[1]);
+                            fclose($pipes[2]);
+                            proc_close($process);
+                            if ($streamToken !== null) {
+                                $this->clearProcessPid($streamToken);
+                            }
+                            return ['exitCode' => 124, 'error' => 'Command timed out after ' . $timeout . ' seconds'];
+                        }
+
+                        // Trigger heartbeat callback with empty content during silence
+                        $onLine('');
+
+                        continue;
+                    }
+
+                    // True EOF — process closed stdout
+                    break;
                 }
-                $cancelled = true;
-                break;
-            }
 
-            $line = trim($line);
-            if ($line !== '') {
-                $onLine($line);
-            }
+                if ((time() - $startTime) > $timeout) {
+                    proc_terminate($process, 9);
+                    fclose($pipes[1]);
+                    fclose($pipes[2]);
+                    proc_close($process);
+                    if ($streamToken !== null) {
+                        $this->clearProcessPid($streamToken);
+                    }
+                    return ['exitCode' => 124, 'error' => 'Command timed out after ' . $timeout . ' seconds'];
+                }
 
-            $error .= stream_get_contents($pipes[2]) ?: '';
+                // Detect client disconnect (browser aborted the fetch) — skip in CLI context
+                if (PHP_SAPI !== 'cli' && connection_aborted()) {
+                    proc_terminate($process, 15);
+                    usleep(100000);
+                    $s = proc_get_status($process);
+                    if ($s['running']) {
+                        proc_terminate($process, 9);
+                    }
+                    $cancelled = true;
+                    break;
+                }
+
+                $line = trim($line);
+                if ($line !== '') {
+                    $onLine($line);
+                }
+
+                $error .= stream_get_contents($pipes[2]) ?: '';
+            }
+        } catch (RuntimeException $e) {
+            // Callback threw (e.g. cancellation) — terminate the CLI process
+            proc_terminate($process, 15);
+            usleep(100000);
+            $s = proc_get_status($process);
+            if ($s['running']) {
+                proc_terminate($process, 9);
+            }
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            proc_close($process);
+            if ($streamToken !== null) {
+                $this->clearProcessPid($streamToken);
+            }
+            throw $e;
         }
 
         $error .= stream_get_contents($pipes[2]) ?: '';
@@ -292,7 +335,9 @@ class ClaudeCliService
         $status = proc_get_status($process);
         $exitCode = $cancelled ? 130 : ($status['running'] ? -1 : $status['exitcode']);
         proc_close($process);
-        $this->clearProcessPid($streamToken);
+        if ($streamToken !== null) {
+            $this->clearProcessPid($streamToken);
+        }
 
         return ['exitCode' => $exitCode, 'error' => trim($error)];
     }

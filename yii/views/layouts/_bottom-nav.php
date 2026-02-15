@@ -31,7 +31,7 @@ $isActive = static fn(string $controller, ?string $action = null): string =>
             </a>
         </li>
         <li class="mobile-bottom-nav__item">
-            <a href="<?= Url::to(['/claude/index']) ?>"
+            <a href="<?= Url::to(['/claude/runs']) ?>"
                class="mobile-bottom-nav__link <?= $isActive('claude') ?>">
                 <i class="bi bi-chat-dots mobile-bottom-nav__icon"></i>
                 <span class="mobile-bottom-nav__label">Claude</span>

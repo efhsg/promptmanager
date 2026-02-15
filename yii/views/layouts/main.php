@@ -60,6 +60,12 @@ echo Nav::widget([
             'url' => ['/note/index'],
             'options' => ['id' => 'nav-notes'],
         ],
+        [
+            'label' => 'Claude',
+            'url' => ['/claude/runs'],
+            'options' => ['id' => 'nav-claude'],
+            'active' => (Yii::$app->controller->id === 'claude' && Yii::$app->controller->action->id === 'runs'),
+        ],
     ],
 ]);
 
@@ -149,7 +155,7 @@ if (!Yii::$app->user->isGuest) {
 
 <?php
 // Bottom navigation bar: show on all pages except Claude chat (which has its own sticky input)
-$isClaudeChatPage = Yii::$app->controller->id === 'claude';
+$isClaudeChatPage = Yii::$app->controller->id === 'claude' && Yii::$app->controller->action->id !== 'runs';
 if (!Yii::$app->user->isGuest && !$isClaudeChatPage):
 ?>
     <?= $this->render('_bottom-nav') ?>
@@ -188,7 +194,7 @@ if (!Yii::$app->user->isGuest && !$isClaudeChatPage):
 
         const isDesktop = window.innerWidth >= 992; // Bootstrap lg breakpoint
         if (isDesktop) {
-            const notesLink = document.querySelector('#nav-notes a');
+            const notesLink = document.querySelector('#nav-claude a') || document.querySelector('#nav-notes a');
             if (notesLink) {
                 const linkRect = notesLink.getBoundingClientRect();
                 const wrapperHeight = wrapper.offsetHeight;

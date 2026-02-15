@@ -7,6 +7,7 @@ use app\handlers\ClaudeQuickHandler;
 use app\models\Project;
 use app\modules\identity\models\User;
 use app\services\ClaudeCliService;
+use app\services\ClaudeStreamRelayService;
 use app\services\EntityPermissionService;
 use Codeception\Test\Unit;
 use ReflectionClass;
@@ -26,277 +27,6 @@ class ClaudeControllerTest extends Unit
     protected function _after(): void
     {
         Project::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
-    }
-
-    // ---------------------------------------------------------------
-    // actionRun tests
-    // ---------------------------------------------------------------
-
-    public function testRunSucceedsWithValidProject(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $this->mockJsonRequest(['contentDelta' => '{"ops":[{"insert":"Hello Claude\n"}]}']);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('convertToMarkdown')->willReturn('Hello Claude');
-        $mockClaudeService->method('execute')->willReturn([
-            'success' => true,
-            'output' => 'Claude response here',
-            'error' => '',
-            'exitCode' => 0,
-            'duration_ms' => 5000,
-            'model' => 'opus-4.5',
-            'input_tokens' => 24500,
-            'output_tokens' => 150,
-            'configSource' => 'managed_workspace',
-        ]);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $result = $controller->actionRun($project->id);
-
-        $this->assertTrue($result['success']);
-        $this->assertSame('Claude response here', $result['output']);
-        $this->assertSame('opus-4.5', $result['model']);
-        $this->assertSame(24500, $result['input_tokens']);
-        $this->assertSame(150, $result['output_tokens']);
-    }
-
-    public function testRunReturnsErrorWhenNoPromptProvided(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $this->mockJsonRequest([]);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $result = $controller->actionRun($project->id);
-
-        $this->assertFalse($result['success']);
-        $this->assertSame('No prompt content provided.', $result['error']);
-    }
-
-    public function testRunReturnsErrorForEmptyPrompt(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $this->mockJsonRequest(['prompt' => '   ']);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $result = $controller->actionRun($project->id);
-
-        $this->assertFalse($result['success']);
-        $this->assertSame('Prompt is empty.', $result['error']);
-    }
-
-    public function testRunMergesProjectDefaultsWithRequestOptions(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = new Project([
-            'user_id' => self::TEST_USER_ID,
-            'name' => 'Test Project',
-        ]);
-        $project->setClaudeOptions(['permissionMode' => 'plan', 'model' => 'sonnet']);
-        $project->save(false);
-
-        $this->mockJsonRequest([
-            'prompt' => 'Test prompt',
-            'model' => 'opus',
-        ]);
-
-        $capturedOptions = null;
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('execute')
-            ->willReturnCallback(function ($prompt, $dir, $timeout, $options) use (&$capturedOptions) {
-                $capturedOptions = $options;
-                return [
-                    'success' => true,
-                    'output' => 'Response',
-                    'error' => '',
-                    'exitCode' => 0,
-                ];
-            });
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $controller->actionRun($project->id);
-
-        $this->assertSame('plan', $capturedOptions['permissionMode']);
-        $this->assertSame('opus', $capturedOptions['model']);
-    }
-
-    public function testRunReturnsSessionId(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $this->mockJsonRequest(['prompt' => 'Hello']);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('execute')->willReturn([
-            'success' => true,
-            'output' => 'Response',
-            'error' => '',
-            'exitCode' => 0,
-            'session_id' => 'test-session-123',
-        ]);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $result = $controller->actionRun($project->id);
-
-        $this->assertTrue($result['success']);
-        $this->assertSame('test-session-123', $result['sessionId']);
-    }
-
-    public function testRunWithFollowUpPrompt(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $this->mockJsonRequest([
-            'sessionId' => 'existing-session-456',
-            'prompt' => 'Follow-up question here',
-        ]);
-
-        $capturedPrompt = null;
-        $capturedSessionId = null;
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('execute')
-            ->willReturnCallback(function ($prompt, $dir, $timeout, $options, $project, $sessionId) use (&$capturedPrompt, &$capturedSessionId) {
-                $capturedPrompt = $prompt;
-                $capturedSessionId = $sessionId;
-                return [
-                    'success' => true,
-                    'output' => 'Follow-up response',
-                    'error' => '',
-                    'exitCode' => 0,
-                    'session_id' => 'existing-session-456',
-                ];
-            });
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $result = $controller->actionRun($project->id);
-
-        $this->assertTrue($result['success']);
-        $this->assertSame('Follow-up question here', $capturedPrompt);
-        $this->assertSame('existing-session-456', $capturedSessionId);
-    }
-
-    public function testRunConvertsContentDeltaToMarkdown(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $editedDelta = '{"ops":[{"insert":"Edited content\n"}]}';
-
-        $this->mockJsonRequest([
-            'contentDelta' => $editedDelta,
-        ]);
-
-        $capturedPrompt = null;
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('convertToMarkdown')
-            ->willReturnCallback(function (string $input) use (&$capturedPrompt) {
-                $capturedPrompt = $input;
-                return 'Edited content';
-            });
-        $mockClaudeService->method('execute')->willReturn([
-            'success' => true,
-            'output' => 'Response',
-            'error' => '',
-            'exitCode' => 0,
-        ]);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $controller->actionRun($project->id);
-
-        $this->assertTrue($result['success']);
-        $this->assertSame($editedDelta, $capturedPrompt);
-    }
-
-    public function testRunReturnsPromptMarkdownInResponse(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $this->mockJsonRequest(['prompt' => 'Hello']);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('execute')->willReturn([
-            'success' => true,
-            'output' => 'Response',
-            'error' => '',
-            'exitCode' => 0,
-        ]);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $controller->actionRun($project->id);
-
-        $this->assertTrue($result['success']);
-        $this->assertArrayHasKey('promptMarkdown', $result);
-        $this->assertSame('Hello', $result['promptMarkdown']);
-    }
-
-    public function testRunRejectsNonExistentProject(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $this->mockJsonRequest(['prompt' => 'Hello']);
-
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-
-        $this->expectException(NotFoundHttpException::class);
-        $controller->actionRun(99999);
-    }
-
-    public function testRunContentDeltaPriorityOverPrompt(): void
-    {
-        $this->mockAuthenticatedUser(self::TEST_USER_ID);
-
-        $project = $this->createProject(self::TEST_USER_ID);
-
-        $this->mockJsonRequest([
-            'contentDelta' => '{"ops":[{"insert":"Delta content\n"}]}',
-        ]);
-
-        $capturedInput = null;
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('convertToMarkdown')
-            ->willReturnCallback(function (string $input) use (&$capturedInput) {
-                $capturedInput = $input;
-                return 'Delta content';
-            });
-        $mockClaudeService->method('execute')->willReturn([
-            'success' => true,
-            'output' => 'Response',
-            'error' => '',
-            'exitCode' => 0,
-        ]);
-
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $controller->actionRun($project->id);
-
-        $this->assertSame('{"ops":[{"insert":"Delta content\n"}]}', $capturedInput);
     }
 
     // ---------------------------------------------------------------
@@ -817,6 +547,61 @@ class ClaudeControllerTest extends Unit
     }
 
     // ---------------------------------------------------------------
+    // beforeAction session release tests
+    // ---------------------------------------------------------------
+
+    /**
+     * @dataProvider sessionFreeActionsProvider
+     */
+    public function testBeforeActionClosesSessionForStreamingActions(string $actionId): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $mockSession = $this->createMock(\yii\web\Session::class);
+        $mockSession->expects($this->once())->method('close');
+        Yii::$app->set('session', $mockSession);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller->detachBehaviors();
+
+        $action = $this->createMock(\yii\base\Action::class);
+        $action->id = $actionId;
+
+        $controller->beforeAction($action);
+    }
+
+    public static function sessionFreeActionsProvider(): array
+    {
+        return [
+            'stream' => ['stream'],
+            'start-run' => ['start-run'],
+            'stream-run' => ['stream-run'],
+            'cancel-run' => ['cancel-run'],
+            'run-status' => ['run-status'],
+            'active-runs' => ['active-runs'],
+        ];
+    }
+
+    public function testBeforeActionDoesNotCloseSessionForNormalActions(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $mockSession = $this->createMock(\yii\web\Session::class);
+        $mockSession->expects($this->never())->method('close');
+        Yii::$app->set('session', $mockSession);
+
+        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller->detachBehaviors();
+
+        $action = $this->createMock(\yii\base\Action::class);
+        $action->id = 'index';
+
+        $controller->beforeAction($action);
+    }
+
+    // ---------------------------------------------------------------
     // Helper methods
     // ---------------------------------------------------------------
 
@@ -835,13 +620,15 @@ class ClaudeControllerTest extends Unit
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeQuickHandler = $this->createMock(ClaudeQuickHandler::class);
+        $streamRelayService = new ClaudeStreamRelayService();
 
         return new ClaudeController(
             'claude',
             Yii::$app,
             $permissionService,
             $claudeService,
-            $claudeQuickHandler
+            $claudeQuickHandler,
+            $streamRelayService
         );
     }
 
@@ -849,13 +636,15 @@ class ClaudeControllerTest extends Unit
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeCliService = new ClaudeCliService();
+        $streamRelayService = new ClaudeStreamRelayService();
 
         return new ClaudeController(
             'claude',
             Yii::$app,
             $permissionService,
             $claudeCliService,
-            $quickHandler
+            $quickHandler,
+            $streamRelayService
         );
     }
 

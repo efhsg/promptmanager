@@ -14,6 +14,10 @@ use yii\web\View;
 /** @var array $claudeCommands */
 /** @var string|null $gitBranch */
 /** @var string|null $breadcrumbs */
+/** @var string|null $resumeSessionId */
+/** @var int|null $replayRunId */
+/** @var string|null $replayRunSummary */
+/** @var array $sessionHistory */
 
 QuillAsset::register($this);
 HighlightAsset::register($this);
@@ -24,6 +28,9 @@ $this->registerCssFile('@web/css/claude-chat.css');
 $pParam = ['p' => $project->id];
 $streamClaudeUrl = Url::to(array_merge(['/claude/stream'], $pParam));
 $cancelClaudeUrl = Url::to(array_merge(['/claude/cancel'], $pParam));
+$startRunUrl = Url::to(array_merge(['/claude/start-run'], $pParam));
+$streamRunUrl = Url::to(['/claude/stream-run']);
+$cancelRunUrl = Url::to(['/claude/cancel-run']);
 $summarizeUrl = Url::to(array_merge(['/claude/summarize-session'], $pParam));
 $summarizePromptUrl = Url::to(array_merge(['/claude/summarize-prompt'], $pParam));
 $summarizeResponseUrl = Url::to(array_merge(['/claude/summarize-response'], $pParam));
@@ -40,6 +47,10 @@ $checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSO
 $usageUrlJson = Json::encode($usageUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $gitBranchJson = Json::encode($gitBranch, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $projectNameJson = Json::encode($project->name, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$resumeSessionIdJson = Json::encode($resumeSessionId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$replayRunIdJson = Json::encode($replayRunId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$replayRunSummaryJson = Json::encode($replayRunSummary, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$sessionHistoryJson = Json::encode($sessionHistory ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 $permissionModes = [
     '' => '(Use default)',
@@ -130,17 +141,6 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 
             </div>
         </div>
-    </div>
-
-    <!-- Context Warning -->
-    <div id="claude-context-warning" class="alert alert-warning alert-dismissible d-none mb-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill me-1"></i>
-        <span id="claude-context-warning-text"></span>
-        <small class="ms-1">Consider starting a new session to avoid degraded performance.</small>
-        <button type="button" id="claude-summarize-warning-btn" class="btn btn-warning btn-sm ms-2">
-            <i class="bi bi-arrow-repeat"></i> Summarize &amp; Continue
-        </button>
-        <button type="button" class="btn-close" id="claude-context-warning-close" aria-label="Close"></button>
     </div>
 
     <!-- Streaming preview (lives above the prompt editor while Claude is working) -->
@@ -501,8 +501,9 @@ $js = <<<JS
         marked.use({ renderer: renderer, breaks: true, gfm: true });
 
         window.ClaudeChat = {
-            sessionId: null,
+            sessionId: $resumeSessionIdJson,
             streamToken: null,
+            currentRunId: null,
             messages: [],
             lastSentDelta: null,
             inputMode: 'quill',
@@ -542,8 +543,11 @@ $js = <<<JS
             projectName: $projectNameJson,
             gitBranch: $gitBranchJson,
             maxContext: 200000,
-            warningDismissed: false,
             summarizing: false,
+            replayRunId: $replayRunIdJson,
+            replayRunSummary: $replayRunSummaryJson,
+            sessionHistory: $sessionHistoryJson,
+            _appendNextAccordionItem: false,
 
             init: function() {
                 this.prefillFromDefaults();
@@ -553,8 +557,90 @@ $js = <<<JS
                 this.setupEventListeners();
                 this.startUsageAutoRefresh();
                 this.setupUsageCompactResize();
+                if (this.sessionHistory && this.sessionHistory.length > 0) {
+                    this.collapseSettings();
+                    this.compactEditor();
+                    var self = this;
+                    this.sessionHistory.forEach(function(run) {
+                        self.renderHistoricalExchange(run);
+                    });
+                    document.getElementById('claude-reuse-btn').classList.remove('d-none');
+                    document.getElementById('claude-summarize-group').classList.remove('d-none');
+                    document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
+                    document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
+                }
+                if (this.replayRunId) {
+                    this._appendNextAccordionItem = this.sessionHistory && this.sessionHistory.length > 0;
+                    this.connectToStream(this.replayRunId, 0, this.replayRunSummary);
+                }
                 if (window.matchMedia('(max-width: 767.98px)').matches && this.inputMode === 'quill')
                     this.switchToTextareaNoConfirm();
+            },
+
+            connectToStream: function(runId, offset, promptSummary) {
+                var self = this;
+                this.currentRunId = runId;
+
+                // Reset stream state
+                this.streamBuffer = '';
+                this.streamThinkingBuffer = '';
+                this.streamResultText = null;
+                this.streamCurrentBlockType = null;
+                this.streamMeta = {};
+                this.streamPromptMarkdown = promptSummary || '(Reconnected)';
+                this.streamReceivedText = false;
+                this.streamLabelSwitched = false;
+                this.activeReader = null;
+
+                // Create UI for reconnected stream
+                this.createActiveAccordionItem(promptSummary || '(Reconnected)', null);
+                this.showCancelButton(true);
+                this.swapResponseAboveEditor();
+
+                var url = '$streamRunUrl' + '?runId=' + runId + '&offset=' + (offset || 0);
+                fetch(url, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('HTTP ' + response.status);
+                    var reader = response.body.getReader();
+                    self.activeReader = reader;
+                    var decoder = new TextDecoder();
+                    var buffer = '';
+
+                    function processStream() {
+                        return reader.read().then(function(result) {
+                            if (result.done) {
+                                self.onStreamEnd();
+                                return;
+                            }
+                            buffer += decoder.decode(result.value, { stream: true });
+                            var lines = buffer.split('\\n');
+                            buffer = lines.pop();
+
+                            lines.forEach(function(line) {
+                                if (line.startsWith('data: ')) {
+                                    var payload = line.substring(6);
+                                    if (payload === '[DONE]') {
+                                        self.onStreamEnd();
+                                        return;
+                                    }
+                                    try {
+                                        self.onStreamEvent(JSON.parse(payload));
+                                    } catch (e) {}
+                                }
+                            });
+
+                            return processStream();
+                        });
+                    }
+
+                    return processStream();
+                })
+                .catch(function(error) {
+                    self.onStreamError('Failed to reconnect: ' + error.message);
+                });
             },
 
             prefillFromDefaults: function() {
@@ -738,19 +824,11 @@ $js = <<<JS
                     self.toggleFocusMode();
                 });
 
-                document.getElementById('claude-context-warning-close').addEventListener('click', function() {
-                    document.getElementById('claude-context-warning').classList.add('d-none');
-                    self.warningDismissed = true;
-                });
-
                 document.getElementById('claude-summarize-btn').addEventListener('click', function(e) {
                     e.preventDefault();
                     self.summarizeAndContinue(true);
                 });
                 document.getElementById('claude-summarize-auto-btn').addEventListener('click', function() {
-                    self.summarizeAndContinue(false);
-                });
-                document.getElementById('claude-summarize-warning-btn').addEventListener('click', function() {
                     self.summarizeAndContinue(false);
                 });
             },
@@ -1043,8 +1121,14 @@ $js = <<<JS
             onStreamEvent: function(data) {
                 var type = data.type;
 
-                if (type === 'prompt_markdown')
+                if (type === 'waiting')
+                    return; // Queue delay — ignore
+
+                if (type === 'prompt_markdown') {
                     this.streamPromptMarkdown = data.markdown;
+                    if (data.runId)
+                        this.currentRunId = data.runId;
+                }
                 else if (type === 'system' && data.subtype === 'init')
                     this.onStreamInit(data);
                 else if (type === 'stream_event')
@@ -1190,6 +1274,8 @@ $js = <<<JS
             onStreamEnd: function() {
                 if (this.streamEnded) return;
                 this.streamEnded = true;
+                this.currentRunId = null;
+
                 this.cleanupStreamUI();
 
                 var userContent = this.streamPromptMarkdown || '(prompt)';
@@ -1233,8 +1319,6 @@ $js = <<<JS
                 this.lastNumTurns = meta.num_turns || null;
                 this.lastToolUses = meta.tool_uses;
                 this.updateContextMeter(pctUsed, contextUsed);
-                if (pctUsed >= 80 && !this.warningDismissed)
-                    this.showContextWarning(pctUsed);
 
                 if (this.messages.length === 2) {
                     document.getElementById('claude-reuse-btn').classList.remove('d-none');
@@ -1248,6 +1332,8 @@ $js = <<<JS
 
             onStreamError: function(msg) {
                 this.streamEnded = true;
+                this.currentRunId = null;
+
 
                 // Abort active reader to prevent further events
                 if (this.activeReader) {
@@ -1279,19 +1365,32 @@ $js = <<<JS
                     this.activeReader = null;
                 }
 
-                // 2. Tell the server to kill the process
-                fetch('$cancelClaudeUrl', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': yii.getCsrfToken(),
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({ streamToken: this.streamToken })
-                }).catch(function(e) { console.error('Cancel request failed:', e); });
+                // 2. Tell the server to kill the process (async run or legacy)
+                if (this.currentRunId) {
+                    fetch('$cancelRunUrl' + '?runId=' + this.currentRunId, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': yii.getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }).catch(function(e) { console.error('Cancel run request failed:', e); });
+                } else {
+                    fetch('$cancelClaudeUrl', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': yii.getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({ streamToken: this.streamToken })
+                    }).catch(function(e) { console.error('Cancel request failed:', e); });
+                }
 
                 // 3. Finalize UI with what we have so far
                 this.streamEnded = true;
+                this.currentRunId = null;
+
                 this.cleanupStreamUI();
 
                 // Render partial content into the standalone active response container
@@ -1579,8 +1678,13 @@ $js = <<<JS
                         '</div>' +
                     '</div>';
 
-                // Prepend (newest first)
-                accordion.insertBefore(item, accordion.firstChild);
+                // Append chronologically when replaying session history, otherwise prepend (newest first)
+                if (this._appendNextAccordionItem) {
+                    accordion.appendChild(item);
+                    this._appendNextAccordionItem = false;
+                } else {
+                    accordion.insertBefore(item, accordion.firstChild);
+                }
                 document.getElementById('claude-history-wrapper').classList.remove('d-none');
 
                 // Render user prompt inside the accordion body using Quill Delta
@@ -1771,6 +1875,85 @@ $js = <<<JS
                 }
             },
 
+            renderHistoricalExchange: function(run) {
+                this.hideEmptyState();
+
+                var accordion = document.getElementById('claude-history-accordion');
+                var idx = this.historyCounter++;
+                var itemId = 'claude-history-item-' + idx;
+
+                var headerText = (run.promptSummary || run.promptMarkdown || '').replace(/[#*_`>\[\]]/g, '').trim();
+                if (headerText.length > 200) headerText = headerText.substring(0, 200) + '\u2026';
+
+                var meta = run.metadata || {};
+                var contextUsed = (meta.input_tokens || 0) + (meta.cache_tokens || 0);
+                var displayMeta = {
+                    duration_ms: meta.duration_ms,
+                    model: meta.model,
+                    context_used: contextUsed,
+                    output_tokens: meta.output_tokens,
+                    num_turns: meta.num_turns,
+                    tool_uses: []
+                };
+                var metaSummary = this.formatMeta(displayMeta);
+
+                var statusIndicator = '';
+                if (run.status === 'failed')
+                    statusIndicator = '<span class="badge bg-danger ms-2">Failed</span>';
+                else if (run.status === 'cancelled')
+                    statusIndicator = '<span class="badge bg-secondary ms-2">Cancelled</span>';
+
+                var item = document.createElement('div');
+                item.className = 'accordion-item';
+                item.id = 'item-' + itemId;
+                item.innerHTML =
+                    '<h2 class="accordion-header" id="heading-' + itemId + '">' +
+                        '<button class="accordion-button collapsed claude-history-item__header" type="button" ' +
+                            'data-bs-toggle="collapse" data-bs-target="#collapse-' + itemId + '" ' +
+                            'aria-expanded="false" aria-controls="collapse-' + itemId + '">' +
+                            '<span class="claude-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
+                            statusIndicator +
+                            '<span class="claude-history-item__meta">' + this.escapeHtml(metaSummary) + '</span>' +
+                        '</button>' +
+                    '</h2>' +
+                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
+                        'aria-labelledby="heading-' + itemId + '">' +
+                        '<div class="accordion-body p-0">' +
+                            '<div class="claude-active-prompt"></div>' +
+                            '<div class="claude-active-response"></div>' +
+                        '</div>' +
+                    '</div>';
+
+                accordion.appendChild(item);
+                document.getElementById('claude-history-wrapper').classList.remove('d-none');
+
+                var promptZone = item.querySelector('.claude-active-prompt');
+                this.renderUserPromptInto(promptZone, run.promptMarkdown, null);
+
+                var responseZone = item.querySelector('.claude-active-response');
+                if (run.status === 'completed' && run.resultText) {
+                    var msg = this.createClaudeMessageDiv(run.resultText, displayMeta);
+                    responseZone.appendChild(msg.div);
+                    this.renderToQuillViewer(msg.body, run.resultText);
+                    this.checkExpandOverflow(msg.div);
+                } else if (run.status === 'failed') {
+                    var errorDiv = document.createElement('div');
+                    errorDiv.className = 'alert alert-danger m-3';
+                    errorDiv.textContent = run.errorMessage || 'Inference failed.';
+                    responseZone.appendChild(errorDiv);
+                } else if (run.status === 'cancelled') {
+                    var cancelDiv = document.createElement('div');
+                    cancelDiv.className = 'alert alert-secondary m-3';
+                    cancelDiv.textContent = 'Inference was cancelled.';
+                    responseZone.appendChild(cancelDiv);
+                }
+
+                this.messages.push(
+                    { role: 'user', content: run.promptMarkdown },
+                    { role: 'claude', content: run.resultText || run.errorMessage || '(No output)', processContent: '' }
+                );
+            },
+
             formatMeta: function(meta) {
                 var parts = [];
                 if (meta.context_used != null) {
@@ -1846,13 +2029,6 @@ $js = <<<JS
                     remove.forEach(function(cls) { btn.classList.remove(cls); });
                     btn.classList.add(add);
                 });
-            },
-
-            showContextWarning: function(pctUsed) {
-                var warning = document.getElementById('claude-context-warning');
-                var warningText = document.getElementById('claude-context-warning-text');
-                warningText.textContent = 'Context usage is at ' + pctUsed + '%.';
-                warning.classList.remove('d-none');
             },
 
             startUsageAutoRefresh: function() {
@@ -2315,7 +2491,6 @@ $js = <<<JS
                 this.historyCounter = 0;
                 this.streamResultText = null;
                 this.maxContext = 200000;
-                this.warningDismissed = false;
                 this._replyExpand = false;
                 if (this.renderTimer) {
                     clearTimeout(this.renderTimer);
@@ -2327,7 +2502,6 @@ $js = <<<JS
                 }
                 var contextRow = document.getElementById('claude-context-row');
                 if (contextRow) contextRow.remove();
-                document.getElementById('claude-context-warning').classList.add('d-none');
 
                 this.activeItemId = null;
 
@@ -2702,10 +2876,8 @@ $js = <<<JS
 
                 // Disable buttons and show spinner on primary button
                 var summarizeAutoBtn = document.getElementById('claude-summarize-auto-btn');
-                var summarizeWarningBtn = document.getElementById('claude-summarize-warning-btn');
                 var sendBtn = document.getElementById('claude-send-btn');
                 summarizeAutoBtn.disabled = true;
-                summarizeWarningBtn.disabled = true;
                 sendBtn.disabled = true;
                 summarizeAutoBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Summarizing…';
 
@@ -2759,10 +2931,8 @@ $js = <<<JS
             restoreSummarizeButtons: function() {
                 this.summarizing = false;
                 var summarizeAutoBtn = document.getElementById('claude-summarize-auto-btn');
-                var summarizeWarningBtn = document.getElementById('claude-summarize-warning-btn');
                 var sendBtn = document.getElementById('claude-send-btn');
                 summarizeAutoBtn.disabled = false;
-                summarizeWarningBtn.disabled = false;
                 sendBtn.disabled = false;
                 summarizeAutoBtn.innerHTML = '<i class="bi bi-pencil-square"></i> Summarize';
             },

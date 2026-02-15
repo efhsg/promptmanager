@@ -28,8 +28,8 @@ $config = [
     // Common time zone
     'timeZone' => 'Europe/Amsterdam',
 
-    // Bootstrap log component in all environments that merge this config
-    'bootstrap' => ['log'],
+    // Bootstrap log component and queue in all environments that merge this config
+    'bootstrap' => ['log', 'queue'],
 
     // Common aliases
     'aliases' => [
@@ -141,6 +141,15 @@ $config = [
         },
         'claudeWorkspaceService' => [
             'class' => ClaudeWorkspaceService::class,
+        ],
+        'queue' => [
+            'class' => \yii\queue\db\Queue::class,
+            'db' => 'db',
+            'tableName' => '{{%queue}}',
+            'channel' => 'claude',
+            'mutex' => \yii\mutex\MysqlMutex::class,
+            'ttr' => 3900,     // 65 min (> max Claude timeout 3600s)
+            'attempts' => 1,   // no retry (inference not idempotent)
         ],
 
     ],

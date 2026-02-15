@@ -118,6 +118,15 @@ ARG PHP_FPM_PORT
 RUN sed -i "s|9000|${PHP_FPM_PORT}|" /usr/local/etc/php-fpm.d/www.conf
 RUN sed -i "s|9000|${PHP_FPM_PORT}|" /usr/local/etc/php-fpm.d/zz-docker.conf
 
+# Raise PHP-FPM worker pool for long-lived SSE streaming connections
+RUN cat <<'EOF' > /usr/local/etc/php-fpm.d/zzz-pool-tuning.conf
+[www]
+pm.max_children = 20
+pm.start_servers = 4
+pm.min_spare_servers = 2
+pm.max_spare_servers = 8
+EOF
+
 USER $USER_NAME
 
 # Install Claude Code: curl install with local binary fallback for WSL2

@@ -22,7 +22,8 @@
         "yii2-extensions/dynamicform": "^1.0.0",
         "conquer/select2": "^1.4",
         "nadar/quill-delta-parser": "^3.5",
-        "league/html-to-markdown": "^5.1"
+        "league/html-to-markdown": "^5.1",
+        "yiisoft/yii2-queue": "^2.3"
     },
     "require-dev": {
         "yiisoft/yii2-debug": "~2.1.0",

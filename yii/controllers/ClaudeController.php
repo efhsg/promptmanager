@@ -3,10 +3,14 @@
 namespace app\controllers;
 
 use app\handlers\ClaudeQuickHandler;
+use app\jobs\RunClaudeJob;
+use app\models\ClaudeRun;
+use app\models\ClaudeRunSearch;
 use app\models\Project;
 use app\services\ClaudeCliService;
+use app\services\ClaudeStreamRelayService;
 use app\services\EntityPermissionService;
-use RuntimeException;
+use common\enums\ClaudeRunStatus;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -25,6 +29,7 @@ class ClaudeController extends Controller
     private readonly EntityPermissionService $permissionService;
     private readonly ClaudeCliService $claudeCliService;
     private readonly ClaudeQuickHandler $claudeQuickHandler;
+    private readonly ClaudeStreamRelayService $streamRelayService;
 
     public function __construct(
         $id,
@@ -32,12 +37,14 @@ class ClaudeController extends Controller
         EntityPermissionService $permissionService,
         ClaudeCliService $claudeCliService,
         ClaudeQuickHandler $claudeQuickHandler,
+        ClaudeStreamRelayService $streamRelayService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->claudeCliService = $claudeCliService;
         $this->claudeQuickHandler = $claudeQuickHandler;
+        $this->streamRelayService = $streamRelayService;
     }
 
     public function behaviors(): array
@@ -46,9 +53,10 @@ class ClaudeController extends Controller
             'verbs' => [
                 'class' => VerbFilter::class,
                 'actions' => [
-                    'run' => ['POST'],
                     'stream' => ['POST'],
                     'cancel' => ['POST'],
+                    'start-run' => ['POST'],
+                    'cancel-run' => ['POST'],
                     'summarize-session' => ['POST'],
                     'summarize-prompt' => ['POST'],
                     'summarize-response' => ['POST'],
@@ -67,8 +75,15 @@ class ClaudeController extends Controller
                         'roles' => ['@'],
                     ],
                     [
+                        // Run-based endpoints — ownership validated via ClaudeRunQuery::forUser()
+                        'actions' => ['stream-run', 'cancel-run', 'run-status', 'runs'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                    ],
+                    [
                         'actions' => [
-                            'index', 'run', 'stream', 'cancel',
+                            'index', 'stream', 'cancel',
+                            'start-run', 'active-runs',
                             'usage', 'check-config',
                             'summarize-session', 'summarize-prompt', 'summarize-response',
                         ],
@@ -86,12 +101,95 @@ class ClaudeController extends Controller
     }
 
     /**
+     * Releases the PHP session lock immediately after access control for long-running actions.
+     *
+     * PHP's file-based session handler acquires an exclusive lock. SSE streaming
+     * and async run actions hold connections open for minutes; without early release,
+     * concurrent requests from the same browser session block on the lock.
+     *
+     * The user identity is already cached in memory by the access control filter,
+     * so Yii::$app->user->id remains available after session close.
+     */
+    public function beforeAction($action): bool
+    {
+        if (!parent::beforeAction($action)) {
+            return false;
+        }
+
+        $sessionFreeActions = ['stream', 'start-run', 'stream-run', 'cancel-run', 'run-status', 'active-runs'];
+        if (in_array($action->id, $sessionFreeActions, true)) {
+            Yii::$app->session->close();
+        }
+
+        return true;
+    }
+
+    public function actionRuns(): string
+    {
+        $userId = Yii::$app->user->id;
+        $searchModel = new ClaudeRunSearch();
+        $dataProvider = $searchModel->search(
+            Yii::$app->request->queryParams,
+            $userId
+        );
+
+        $projectList = Yii::$app->projectService->fetchProjectsList($userId);
+        $defaultProjectId = Yii::$app->projectContext->getCurrentProject()?->id;
+
+        // Fall back to first project if context project is not in the list
+        if ($defaultProjectId === null || !isset($projectList[$defaultProjectId])) {
+            $defaultProjectId = array_key_first($projectList);
+        }
+
+        return $this->render('runs', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'projectList' => $projectList,
+            'defaultProjectId' => $defaultProjectId,
+        ]);
+    }
+
+    /**
      * @throws NotFoundHttpException
      */
-    public function actionIndex(int $p, ?string $breadcrumbs = null): string
+    public function actionIndex(int $p, ?string $breadcrumbs = null, ?string $s = null, ?int $run = null): string
     {
         $project = $this->findProject($p);
         $rootDir = $project->root_directory;
+
+        $replayRunId = null;
+        $replayRunSummary = null;
+        $sessionHistory = [];
+        if ($run !== null) {
+            $userId = Yii::$app->user->id;
+            $replayRun = ClaudeRun::find()
+                ->forUser($userId)
+                ->andWhere(['id' => $run])
+                ->one();
+            if ($replayRun !== null) {
+                $replayRunSummary = $replayRun->prompt_summary;
+                $sessionId = $replayRun->session_id ?? $s;
+
+                if ($sessionId !== null) {
+                    $allRuns = ClaudeRun::find()
+                        ->forUser($userId)
+                        ->forSession($sessionId)
+                        ->terminal()
+                        ->orderedByCreated()
+                        ->all();
+
+                    foreach ($allRuns as $sessionRun) {
+                        $sessionHistory[] = $this->buildRunHistoryEntry($sessionRun);
+                    }
+                }
+
+                if (!$replayRun->isTerminal()) {
+                    $replayRunId = $replayRun->id;
+                } elseif ($sessionId === null) {
+                    $sessionHistory[] = $this->buildRunHistoryEntry($replayRun);
+                }
+            }
+        }
 
         return $this->render('index', [
             'project' => $project,
@@ -99,6 +197,10 @@ class ClaudeController extends Controller
             'claudeCommands' => $this->loadClaudeCommands($rootDir, $project),
             'gitBranch' => $rootDir ? $this->claudeCliService->getGitBranch($rootDir) : null,
             'breadcrumbs' => $breadcrumbs,
+            'resumeSessionId' => $s,
+            'replayRunId' => $replayRunId,
+            'replayRunSummary' => $replayRunSummary,
+            'sessionHistory' => $sessionHistory,
         ]);
     }
 
@@ -143,51 +245,11 @@ class ClaudeController extends Controller
     }
 
     /**
-     * @throws NotFoundHttpException
-     */
-    public function actionRun(int $p): array
-    {
-        Yii::$app->response->format = Response::FORMAT_JSON;
-
-        $project = $this->findProject($p);
-        $prepared = $this->prepareClaudeRequest($project);
-
-        if (is_array($prepared['error'] ?? null)) {
-            return $prepared['error'];
-        }
-
-        $result = $this->claudeCliService->execute(
-            $prepared['markdown'],
-            $prepared['workingDirectory'],
-            self::CLAUDE_TIMEOUT,
-            $prepared['options'],
-            $prepared['project'],
-            $prepared['sessionId']
-        );
-
-        return [
-            'success' => $result['success'],
-            'output' => $result['output'],
-            'error' => $result['error'],
-            'exitCode' => $result['exitCode'],
-            'duration_ms' => $result['duration_ms'] ?? null,
-            'model' => $result['model'] ?? null,
-            'input_tokens' => $result['input_tokens'] ?? null,
-            'cache_tokens' => $result['cache_tokens'] ?? null,
-            'output_tokens' => $result['output_tokens'] ?? null,
-            'context_window' => $result['context_window'] ?? null,
-            'num_turns' => $result['num_turns'] ?? null,
-            'tool_uses' => $result['tool_uses'] ?? [],
-            'configSource' => $result['configSource'] ?? null,
-            'sessionId' => $result['session_id'] ?? null,
-            'requestedPath' => $result['requestedPath'] ?? null,
-            'effectivePath' => $result['effectivePath'] ?? null,
-            'usedFallback' => $result['usedFallback'] ?? null,
-            'promptMarkdown' => $prepared['markdown'],
-        ];
-    }
-
-    /**
+     * Streaming endpoint — Phase 1 migration wrapper.
+     *
+     * Creates an async run and relays the stream, giving the frontend
+     * a runId for reconnect support while keeping the same SSE format.
+     *
      * @throws NotFoundHttpException
      */
     public function actionStream(int $p): void
@@ -200,56 +262,20 @@ class ClaudeController extends Controller
             return;
         }
 
-        $markdown = $prepared['markdown'];
-
-        // Release session file lock so other requests from this user are not blocked
-        Yii::$app->session->close();
-
-        // Ensure connection abort is detectable inside the streaming loop
-        ignore_user_abort(false);
-
-        $this->beginSseResponse();
-
-        // Send prompt markdown as first event so frontend can display the user message
-        echo "data: " . json_encode(['type' => 'prompt_markdown', 'markdown' => $markdown]) . "\n\n";
-        flush();
-
-        $onLine = function (string $line): void {
-            echo "data: " . $line . "\n\n";
-            flush();
-        };
-
-        try {
-            $result = $this->claudeCliService->executeStreaming(
-                $markdown,
-                $prepared['workingDirectory'],
-                $onLine,
-                self::CLAUDE_TIMEOUT,
-                $prepared['options'],
-                $prepared['project'],
-                $prepared['sessionId'],
-                $prepared['streamToken']
-            );
-
-            if ($result['error'] !== '') {
-                echo "data: " . json_encode([
-                    'type' => 'server_error',
-                    'error' => $result['error'],
-                    'exitCode' => $result['exitCode'],
-                ]) . "\n\n";
-                flush();
-            }
-        } catch (RuntimeException $e) {
-            echo "data: " . json_encode([
-                'type' => 'server_error',
-                'error' => $e->getMessage(),
-                'exitCode' => 1,
-            ]) . "\n\n";
-            flush();
+        $userId = Yii::$app->user->id;
+        $activeCount = ClaudeRun::find()->forUser($userId)->active()->count();
+        if ($activeCount >= ClaudeRun::MAX_CONCURRENT_RUNS) {
+            $this->sendSseError('Maximum concurrent runs reached (' . ClaudeRun::MAX_CONCURRENT_RUNS . ').');
+            return;
         }
 
-        echo "data: [DONE]\n\n";
-        flush();
+        $run = $this->createRun($project, $prepared);
+        if ($run === null) {
+            $this->sendSseError('Failed to create run.');
+            return;
+        }
+
+        $this->relayRunStream($run, 0);
     }
 
     /**
@@ -277,6 +303,175 @@ class ClaudeController extends Controller
             'cancelled' => $cancelled,
         ];
     }
+
+    // ---------------------------------------------------------------
+    // Async run endpoints
+    // ---------------------------------------------------------------
+
+    /**
+     * Creates a new ClaudeRun and pushes it to the queue.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionStartRun(int $p): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $project = $this->findProject($p);
+        $prepared = $this->prepareClaudeRequest($project);
+
+        if (isset($prepared['error'])) {
+            return $prepared['error'];
+        }
+
+        $userId = Yii::$app->user->id;
+        $activeCount = ClaudeRun::find()->forUser($userId)->active()->count();
+
+        if ($activeCount >= ClaudeRun::MAX_CONCURRENT_RUNS) {
+            Yii::$app->response->statusCode = 429;
+            return [
+                'success' => false,
+                'error' => 'Maximum concurrent runs reached (' . ClaudeRun::MAX_CONCURRENT_RUNS . ').',
+            ];
+        }
+
+        $run = $this->createRun($project, $prepared);
+        if ($run === null) {
+            return [
+                'success' => false,
+                'error' => 'Failed to create run.',
+            ];
+        }
+
+        return [
+            'success' => true,
+            'runId' => $run->id,
+            'promptMarkdown' => $prepared['markdown'],
+        ];
+    }
+
+    /**
+     * SSE endpoint that relays stream events from a run's NDJSON file.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionStreamRun(int $runId, int $offset = 0): void
+    {
+        $run = ClaudeRun::find()
+            ->forUser(Yii::$app->user->id)
+            ->andWhere(['id' => $runId])
+            ->one();
+
+        if ($run === null) {
+            throw new NotFoundHttpException('Run not found.');
+        }
+
+        $this->relayRunStream($run, $offset);
+    }
+
+    /**
+     * Cancels a running run via DB status update.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionCancelRun(int $runId): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $run = ClaudeRun::find()
+            ->forUser(Yii::$app->user->id)
+            ->andWhere(['id' => $runId])
+            ->one();
+
+        if ($run === null) {
+            throw new NotFoundHttpException('Run not found.');
+        }
+
+        if (!$run->isActive()) {
+            return ['success' => true, 'cancelled' => false, 'reason' => 'Run is not active.'];
+        }
+
+        $run->markCancelled();
+
+        return ['success' => true, 'cancelled' => true];
+    }
+
+    /**
+     * Returns the current status and metadata of a run.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionRunStatus(int $runId): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $run = ClaudeRun::find()
+            ->forUser(Yii::$app->user->id)
+            ->andWhere(['id' => $runId])
+            ->one();
+
+        if ($run === null) {
+            throw new NotFoundHttpException('Run not found.');
+        }
+
+        return [
+            'success' => true,
+            'id' => $run->id,
+            'status' => $run->status,
+            'sessionId' => $run->session_id,
+            'resultMetadata' => $run->getDecodedResultMetadata(),
+            'errorMessage' => $run->error_message,
+            'startedAt' => $run->started_at,
+            'completedAt' => $run->completed_at,
+        ];
+    }
+
+    /**
+     * Returns active and recent runs for a project.
+     *
+     * @throws NotFoundHttpException
+     */
+    public function actionActiveRuns(int $p): array
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $this->findProject($p);
+        $userId = Yii::$app->user->id;
+
+        $runs = ClaudeRun::find()
+            ->forUser($userId)
+            ->forProject($p)
+            ->andWhere(['or',
+                ['status' => ClaudeRunStatus::activeValues()],
+                ['and',
+                    ['status' => ClaudeRunStatus::COMPLETED->value],
+                    ['>=', 'completed_at', date('Y-m-d H:i:s', time() - 3600)],
+                ],
+            ])
+            ->orderedByCreated()
+            ->all();
+
+        $result = [];
+        foreach ($runs as $run) {
+            $result[] = [
+                'id' => $run->id,
+                'status' => $run->status,
+                'promptSummary' => $run->prompt_summary,
+                'sessionId' => $run->session_id,
+                'startedAt' => $run->started_at,
+                'createdAt' => $run->created_at,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'runs' => $result,
+        ];
+    }
+
+    // ---------------------------------------------------------------
+    // Existing endpoints
+    // ---------------------------------------------------------------
 
     /**
      * @throws NotFoundHttpException
@@ -444,6 +639,29 @@ class ClaudeController extends Controller
     // Private helpers
     // ---------------------------------------------------------------
 
+    private function buildRunHistoryEntry(ClaudeRun $run): array
+    {
+        $meta = $run->getDecodedResultMetadata();
+
+        return [
+            'id' => $run->id,
+            'status' => $run->status,
+            'promptMarkdown' => $run->prompt_markdown,
+            'promptSummary' => $run->prompt_summary,
+            'resultText' => $run->result_text,
+            'errorMessage' => $run->error_message,
+            'metadata' => [
+                'duration_ms' => $meta['duration_ms'] ?? null,
+                'model' => $meta['model'] ?? null,
+                'input_tokens' => $meta['input_tokens'] ?? null,
+                'cache_tokens' => $meta['cache_tokens'] ?? null,
+                'output_tokens' => $meta['output_tokens'] ?? null,
+                'num_turns' => $meta['num_turns'] ?? null,
+                'total_cost_usd' => $meta['total_cost_usd'] ?? null,
+            ],
+        ];
+    }
+
     /**
      * @return array{markdown: string, options: array, workingDirectory: string, project: Project, sessionId: ?string, streamToken: ?string}|array{error: array}
      */
@@ -496,6 +714,111 @@ class ClaudeController extends Controller
                 is_string($requestOptions['streamToken'] ?? null) ? $requestOptions['streamToken'] : null
             ),
         ];
+    }
+
+    /**
+     * Creates a ClaudeRun record and pushes the job to the queue.
+     *
+     * @return ClaudeRun|null The saved run, or null on validation failure
+     */
+    private function createRun(Project $project, array $prepared): ?ClaudeRun
+    {
+        $run = new ClaudeRun();
+        $run->user_id = Yii::$app->user->id;
+        $run->project_id = $project->id;
+        $run->prompt_markdown = $prepared['markdown'];
+        $run->prompt_summary = mb_substr($prepared['markdown'], 0, 255);
+        $run->session_id = $prepared['sessionId'];
+        $run->options = json_encode($prepared['options']);
+        $run->working_directory = $prepared['workingDirectory'];
+
+        if (!$run->save()) {
+            return null;
+        }
+
+        $job = new RunClaudeJob();
+        $job->runId = $run->id;
+        Yii::$app->queue->push($job);
+
+        return $run;
+    }
+
+    /**
+     * Waits for the stream file, relays NDJSON events via SSE, and sends [DONE].
+     */
+    private function relayRunStream(ClaudeRun $run, int $offset): void
+    {
+        ignore_user_abort(false);
+
+        $this->beginSseResponse();
+
+        echo "data: " . json_encode([
+            'type' => 'prompt_markdown',
+            'markdown' => $run->prompt_markdown,
+            'runId' => $run->id,
+        ]) . "\n\n";
+        flush();
+
+        $streamFilePath = $run->getStreamFilePath();
+
+        // Wait for stream file (max 10s)
+        $waitStart = time();
+        while (!file_exists($streamFilePath) && (time() - $waitStart) < 10) {
+            echo "data: " . json_encode(['type' => 'waiting']) . "\n\n";
+            flush();
+            sleep(1);
+
+            if (connection_aborted()) {
+                return;
+            }
+
+            $run->refresh();
+            if ($run->isTerminal()) {
+                break;
+            }
+
+            clearstatcache(true, $streamFilePath);
+        }
+
+        clearstatcache(true, $streamFilePath);
+
+        // Relay stream events from file
+        $linesSent = 0;
+        $this->streamRelayService->relay(
+            $streamFilePath,
+            $offset,
+            function (string $line) use (&$linesSent): void {
+                echo "data: " . $line . "\n\n";
+                flush();
+                $linesSent++;
+            },
+            function () use ($run): bool {
+                if (connection_aborted()) {
+                    return false;
+                }
+
+                $run->refresh();
+                return $run->isActive();
+            },
+            self::CLAUDE_TIMEOUT
+        );
+
+        // DB fallback: send any lines the relay missed due to cross-container filesystem sync delays
+        $run->refresh();
+        if ($run->isTerminal() && $run->stream_log !== null) {
+            $allLines = array_values(array_filter(
+                array_map('trim', explode("\n", $run->stream_log)),
+                fn(string $l): bool => $l !== '' && $l !== '[DONE]'
+            ));
+            $missedLines = array_slice($allLines, $linesSent);
+            foreach ($missedLines as $line) {
+                echo "data: " . $line . "\n\n";
+                flush();
+            }
+        }
+
+        echo "data: [DONE]\n\n";
+        flush();
     }
 
     private function beginSseResponse(): void
