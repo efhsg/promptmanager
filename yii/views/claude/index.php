@@ -1128,6 +1128,10 @@ $js = <<<JS
                     this.streamPromptMarkdown = data.markdown;
                     if (data.runId)
                         this.currentRunId = data.runId;
+                    if (this._pendingSummarize) {
+                        this.summarizePromptTitle(this._pendingSummarize.itemId, this._pendingSummarize.promptText);
+                        this._pendingSummarize = null;
+                    }
                 }
                 else if (type === 'system' && data.subtype === 'init')
                     this.onStreamInit(data);
@@ -1700,14 +1704,22 @@ $js = <<<JS
                 if (!document.getElementById('claudePromptCard').classList.contains('show'))
                     this.setStreamPreviewTall(true);
 
-                // Fire-and-forget: summarize prompt into a short title
-                this.summarizePromptTitle(itemId, promptText);
+                // Fire-and-forget: summarize prompt into a short title.
+                // When currentRunId is already known (reconnect), include it so
+                // the server can persist the title to prompt_summary right away.
+                // For new runs the runId arrives via the prompt_markdown SSE event;
+                // onStreamEvent will trigger the call at that point instead.
+                if (this.currentRunId)
+                    this.summarizePromptTitle(itemId, promptText);
+                else
+                    this._pendingSummarize = { itemId: itemId, promptText: promptText };
             },
 
             /**
              * Request a short AI-generated title for the accordion item.
              */
             summarizePromptTitle: function(itemId, promptText) {
+                var self = this;
                 fetch('$summarizePromptUrl', {
                     method: 'POST',
                     headers: {
@@ -1715,7 +1727,7 @@ $js = <<<JS
                         'X-CSRF-Token': yii.getCsrfToken(),
                         'X-Requested-With': 'XMLHttpRequest'
                     },
-                    body: JSON.stringify({ prompt: promptText })
+                    body: JSON.stringify({ prompt: promptText, runId: self.currentRunId || null })
                 })
                 .then(function(r) {
                     if (!r.ok) {

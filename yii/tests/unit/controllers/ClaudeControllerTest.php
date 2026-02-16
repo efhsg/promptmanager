@@ -4,6 +4,7 @@ namespace tests\unit\controllers;
 
 use app\controllers\ClaudeController;
 use app\handlers\ClaudeQuickHandler;
+use app\models\ClaudeRun;
 use app\models\Project;
 use app\modules\identity\models\User;
 use app\services\ClaudeCliService;
@@ -22,11 +23,13 @@ class ClaudeControllerTest extends Unit
 
     protected function _before(): void
     {
+        ClaudeRun::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
         Project::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
     }
 
     protected function _after(): void
     {
+        ClaudeRun::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
         Project::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
     }
 
@@ -351,6 +354,141 @@ class ClaudeControllerTest extends Unit
 
         $this->assertFalse($result['success']);
         $this->assertSame('Could not generate a name.', $result['error']);
+    }
+
+    // ---------------------------------------------------------------
+    // actionSummarizePrompt tests
+    // ---------------------------------------------------------------
+
+    public function testSummarizePromptPersistsTitleToRunWhenRunIdProvided(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = $this->createProject(self::TEST_USER_ID);
+
+        $run = new ClaudeRun([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'prompt_markdown' => 'Some long prompt text that needs summarizing',
+        ]);
+        $run->save(false);
+
+        $this->mockJsonRequest([
+            'prompt' => str_repeat('a', 120),
+            'runId' => $run->id,
+        ]);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler->method('run')->willReturn([
+            'success' => true,
+            'output' => 'AI-generated title',
+        ]);
+
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSummarizePrompt($project->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('AI-generated title', $result['title']);
+
+        $run->refresh();
+        $this->assertSame('AI-generated title', $run->prompt_summary);
+    }
+
+    public function testSummarizePromptDoesNotPersistWhenRunIdMissing(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = $this->createProject(self::TEST_USER_ID);
+
+        $run = new ClaudeRun([
+            'user_id' => self::TEST_USER_ID,
+            'project_id' => $project->id,
+            'prompt_markdown' => 'Original summary text',
+            'prompt_summary' => 'Original summary',
+        ]);
+        $run->save(false);
+
+        $this->mockJsonRequest([
+            'prompt' => str_repeat('a', 120),
+        ]);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler->method('run')->willReturn([
+            'success' => true,
+            'output' => 'AI-generated title',
+        ]);
+
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSummarizePrompt($project->id);
+
+        $this->assertTrue($result['success']);
+
+        $run->refresh();
+        $this->assertSame('Original summary', $run->prompt_summary);
+    }
+
+    public function testSummarizePromptIgnoresNonNumericRunId(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+
+        $project = $this->createProject(self::TEST_USER_ID);
+
+        $this->mockJsonRequest([
+            'prompt' => str_repeat('a', 120),
+            'runId' => 'not-a-number',
+        ]);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler->method('run')->willReturn([
+            'success' => true,
+            'output' => 'AI-generated title',
+        ]);
+
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSummarizePrompt($project->id);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame('AI-generated title', $result['title']);
+    }
+
+    public function testSummarizePromptIgnoresRunOwnedByOtherUser(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $this->ensureUserExists(self::OTHER_USER_ID);
+
+        $project = $this->createProject(self::TEST_USER_ID);
+        $otherProject = new Project([
+            'user_id' => self::OTHER_USER_ID,
+            'name' => 'Other Project',
+        ]);
+        $otherProject->save(false);
+
+        $otherRun = new ClaudeRun([
+            'user_id' => self::OTHER_USER_ID,
+            'project_id' => $otherProject->id,
+            'prompt_markdown' => 'Other user prompt',
+            'prompt_summary' => 'Original other summary',
+        ]);
+        $otherRun->save(false);
+
+        $this->mockJsonRequest([
+            'prompt' => str_repeat('a', 120),
+            'runId' => $otherRun->id,
+        ]);
+
+        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler->method('run')->willReturn([
+            'success' => true,
+            'output' => 'AI-generated title',
+        ]);
+
+        $controller = $this->createControllerWithQuickHandler($mockHandler);
+        $result = $controller->actionSummarizePrompt($project->id);
+
+        $this->assertTrue($result['success']);
+
+        $otherRun->refresh();
+        $this->assertSame('Original other summary', $otherRun->prompt_summary);
     }
 
     // ---------------------------------------------------------------

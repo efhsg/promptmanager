@@ -592,9 +592,18 @@ class ClaudeController extends Controller
 
         $result = $this->claudeQuickHandler->run('prompt-title', $prompt);
 
-        return $result['success']
-            ? ['success' => true, 'title' => $result['output']]
-            : $result;
+        if (!$result['success']) {
+            return $result;
+        }
+
+        $title = $result['output'];
+        $runId = $requestData['runId'] ?? null;
+
+        if ($runId !== null && is_numeric($runId)) {
+            $this->updatePromptSummary((int) $runId, $title);
+        }
+
+        return ['success' => true, 'title' => $title];
     }
 
     /**
@@ -786,6 +795,21 @@ class ClaudeController extends Controller
         Yii::$app->queue->push($job);
 
         return $run;
+    }
+
+    private function updatePromptSummary(int $runId, string $title): void
+    {
+        $run = ClaudeRun::find()
+            ->forUser(Yii::$app->user->id)
+            ->andWhere(['id' => $runId])
+            ->one();
+
+        if ($run === null) {
+            return;
+        }
+
+        $run->prompt_summary = mb_substr($title, 0, 255);
+        $run->save(false, ['prompt_summary']);
     }
 
     /**
