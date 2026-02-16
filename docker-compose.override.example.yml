@@ -15,3 +15,8 @@ services:
     volumes:
       - ${PROJECTS_ROOT_2}:/projects_2:rw
       # - ${PROJECTS_ROOT_3}:/projects_3:rw
+
+  pma_queue:
+    volumes:
+      - ${PROJECTS_ROOT_2}:/projects_2:rw
+      # - ${PROJECTS_ROOT_3}:/projects_3:rw
