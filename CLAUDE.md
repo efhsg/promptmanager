@@ -68,7 +68,7 @@ See `.claude/config/project.md` for:
 **Quick reference (vanuit `/var/www/html/yii`):**
 ```bash
 vendor/bin/codecept run unit                              # Run tests
-vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php  # Linter
+vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-cache=no  # Linter
 ```
 
 ## Domain Essentials

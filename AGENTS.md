@@ -16,20 +16,21 @@ All configuration, rules, and patterns are defined in `CLAUDE.md`. Read and foll
 
 ## Quick Reference
 
-See `.claude/config/project.md` for the complete command reference. Most common:
+See `.claude/config/project.md` for the complete command reference. These commands assume execution from the **host system** (outside Docker):
 
 ```bash
 # Tests
 docker exec pma_yii vendor/bin/codecept run unit
 
 # Migrations (both schemas required)
-docker exec pma_yii yii migrate --migrationNamespaces=app\\migrations --interactive=0
-docker exec pma_yii yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii ./yii migrate --migrationNamespaces=app\\migrations --interactive=0
+docker exec pma_yii ./yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
 
 # Linter
-./linter.sh fix
-./linter-staged.sh fix
+docker exec pma_yii vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-cache=no
 ```
+
+> **Note:** Claude Code runs **inside** the `pma_yii` container and uses commands directly (without `docker exec`). See `.claude/config/project.md` for in-container commands.
 
 ## Before Any Code Change
 
