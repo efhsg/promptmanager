@@ -69,6 +69,7 @@ $suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
                         <small class="text-muted d-block mb-1" id="export-root-display-wrapper">
                             Project root: <code id="export-root-display"></code>
                         </small>
+                        <div class="alert alert-warning py-2 d-none" id="export-directory-error"></div>
                         <div class="position-relative">
                             <input type="text" class="form-control" id="export-directory" value="" placeholder="" autocomplete="off">
                             <div id="export-directory-dropdown" class="dropdown-menu w-100" style="max-height: 200px; overflow-y: auto;"></div>
@@ -154,6 +155,7 @@ window.ExportModal = (function() {
         extensionSpan: document.getElementById('export-extension'),
         directoryInput: document.getElementById('export-directory'),
         directoryDropdown: document.getElementById('export-directory-dropdown'),
+        directoryError: document.getElementById('export-directory-error'),
         rootDisplay: document.getElementById('export-root-display'),
         rootDisplayWrapper: document.getElementById('export-root-display-wrapper'),
         previewPath: document.getElementById('export-preview-path'),
@@ -226,8 +228,16 @@ window.ExportModal = (function() {
     };
 
     const loadDirectories = async (projectId) => {
+        const el = getElements();
+        el.directoryError.classList.add('d-none');
+        el.directoryError.textContent = '';
+
         if (directorySelector) {
-            await directorySelector.load(projectId, 'directory');
+            const result = await directorySelector.load(projectId, 'directory');
+            if (result.error) {
+                el.directoryError.textContent = result.error;
+                el.directoryError.classList.remove('d-none');
+            }
         }
     };
 

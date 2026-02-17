@@ -158,12 +158,12 @@ class DirectorySelector {
      * Load directories for a project
      * @param {string|number} projectId - The project ID
      * @param {string} [type='directory'] - Type of paths to load ('directory' or 'file')
-     * @returns {Promise<string[]>} The loaded paths
+     * @returns {Promise<{paths: string[], error: string|null}>} The result with paths or error
      */
     async load(projectId, type = 'directory') {
         if (!projectId) {
             this.cache = [];
-            return [];
+            return { paths: [], error: null };
         }
 
         this.isLoading = true;
@@ -179,14 +179,14 @@ class DirectorySelector {
             const data = await response.json();
             if (data.success && Array.isArray(data.paths)) {
                 this.cache = data.paths;
-                return this.cache;
+                return { paths: this.cache, error: null };
             }
 
             this.cache = [];
-            return [];
+            return { paths: [], error: data.message || 'Failed to load directories' };
         } catch (err) {
             this.cache = [];
-            return [];
+            return { paths: [], error: 'Failed to load directories' };
         } finally {
             this.isLoading = false;
         }
