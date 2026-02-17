@@ -22,14 +22,8 @@ For commands, paths, and environment: `.claude/config/project.md`
 | Skill | Description | Contract |
 |-------|-------------|----------|
 | Model | ActiveRecord model with query class + naming conventions | `skills/model.md` |
-| Service | Business logic service class | `skills/service.md` |
-| Form | Form model with validation | `skills/form.md` |
-| Enum | String-backed enum | `skills/enum.md` |
 | Frontend Design | UI components with Bootstrap/Quill | `skills/frontend-design.md` |
 | Migration | Database migration | `skills/migration.md` |
-| Search | Search model for filtering/listing | `skills/search.md` |
-| Controller Action | Controller + AJAX patterns, RBAC config | `skills/controller-action.md` |
-| Test | Unit test with Codeception | `skills/test.md` |
 | Error Handling | Exception types, logging, error patterns | `skills/error-handling.md` |
 
 ### Workflow Skills
@@ -40,6 +34,8 @@ For commands, paths, and environment: `.claude/config/project.md`
 | New Branch | Create feature/fix branch | `skills/new-branch.md` |
 | Refactor | Structural improvements without behavior change | `skills/refactor.md` |
 | Custom Buttons | Letter-coded action buttons in prompts | `skills/custom-buttons.md` |
+| Orac Style | Orac (Blake's 7) persona — arrogant, reluctantly helpful | `skills/orac-style.md` |
+| Zen Style | Zen (Blake's 7) persona — formal, terse, impersonal | `skills/zen-style.md` |
 
 ### Validation Skills
 
@@ -56,14 +52,7 @@ Commands are thin executable wrappers that invoke skills:
 | Command | Invokes Skill | Purpose |
 |---------|---------------|---------|
 | `/new-model` | `skills/model.md` | Create model + query class |
-| `/new-service` | `skills/service.md` | Create service class |
-| `/new-form` | `skills/form.md` | Create form model |
-| `/new-enum` | `skills/enum.md` | Create enum |
 | `/new-migration` | `skills/migration.md` | Create migration |
-| `/new-search` | `skills/search.md` | Create search model |
-| `/new-controller-action` | `skills/controller-action.md` | Add controller action |
-| `/new-test` | `skills/test.md` | Create unit test |
-| `/new-tests-staged` | `skills/test.md` | Batch test creation |
 | `/new-branch` | `skills/new-branch.md` | Create feature/fix branch |
 | `/onboarding` | `skills/onboarding.md` | Quick start for new sessions |
 | `/refactor` | `skills/refactor.md` | Refactor code without behavior change |

@@ -13,15 +13,13 @@ See `.claude/config/project.md` → File Structure for the complete path referen
 
 ## Controllers & AJAX
 
-See `skills/controller-action.md` for:
-- Controller templates and patterns
-- AJAX response format
-- RBAC configuration
-- Action templates (create, update, delete, AJAX)
+Standard patterns:
+- AJAX responses use `['success' => bool, 'message' => string, 'data' => mixed]`
+- RBAC rules in `yii/rbac/` for owner validation
+- Actions follow REST-like naming: `actionCreate`, `actionUpdate`, `actionDelete`
 
 ## Query Classes
 
-See `skills/model.md` → Query Method Naming Conventions for:
-- Query class templates
-- Method naming patterns (`forUser`, `forProject`, `active`, etc.)
-- Usage examples
+See `skills/model.md` for query class patterns:
+- Method naming: `forUser`, `forProject`, `active`, `byId`, etc.
+- Query classes in `models/query/`
