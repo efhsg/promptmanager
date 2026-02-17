@@ -2,8 +2,8 @@
 
 namespace app\commands;
 
-use app\models\ClaudeRun;
-use common\enums\ClaudeRunStatus;
+use app\models\AiRun;
+use common\enums\AiRunStatus;
 use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -30,7 +30,7 @@ class ClaudeRunController extends Controller
     {
         $this->stdout("Checking for stale Claude runs (threshold: {$thresholdMinutes} min)...\n", Console::FG_CYAN);
 
-        $staleRuns = ClaudeRun::find()->stale($thresholdMinutes)->all();
+        $staleRuns = AiRun::find()->stale($thresholdMinutes)->all();
 
         if ($staleRuns === []) {
             $this->stdout("No stale runs found.\n", Console::FG_GREEN);

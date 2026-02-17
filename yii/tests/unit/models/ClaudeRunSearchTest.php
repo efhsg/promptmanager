@@ -2,14 +2,14 @@
 
 namespace tests\unit\models;
 
-use app\models\ClaudeRun;
-use app\models\ClaudeRunSearch;
-use common\enums\ClaudeRunStatus;
+use app\models\AiRun;
+use app\models\AiRunSearch;
+use common\enums\AiRunStatus;
 use Codeception\Test\Unit;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 
-class ClaudeRunSearchTest extends Unit
+class AiRunSearchTest extends Unit
 {
     public function _fixtures(): array
     {
@@ -21,7 +21,7 @@ class ClaudeRunSearchTest extends Unit
 
     protected function _before(): void
     {
-        ClaudeRun::deleteAll([]);
+        AiRun::deleteAll([]);
     }
 
     public function testSearchReturnsOnlyRunsForUser(): void
@@ -30,7 +30,7 @@ class ClaudeRunSearchTest extends Unit
         $this->createRun(100, 'Another prompt');
         $this->createRun(1, 'Other user prompt');
 
-        $searchModel = new ClaudeRunSearch();
+        $searchModel = new AiRunSearch();
         $dataProvider = $searchModel->search([], 100);
 
         verify($dataProvider->getTotalCount())->equals(2);
@@ -38,13 +38,13 @@ class ClaudeRunSearchTest extends Unit
 
     public function testSearchFiltersOnStatus(): void
     {
-        $this->createRun(100, 'Pending run', ClaudeRunStatus::PENDING);
-        $this->createRun(100, 'Completed run', ClaudeRunStatus::COMPLETED);
-        $this->createRun(100, 'Failed run', ClaudeRunStatus::FAILED);
+        $this->createRun(100, 'Pending run', AiRunStatus::PENDING);
+        $this->createRun(100, 'Completed run', AiRunStatus::COMPLETED);
+        $this->createRun(100, 'Failed run', AiRunStatus::FAILED);
 
-        $searchModel = new ClaudeRunSearch();
+        $searchModel = new AiRunSearch();
         $dataProvider = $searchModel->search([
-            'ClaudeRunSearch' => ['status' => 'completed'],
+            'AiRunSearch' => ['status' => 'completed'],
         ], 100);
 
         verify($dataProvider->getTotalCount())->equals(1);
@@ -56,9 +56,9 @@ class ClaudeRunSearchTest extends Unit
         $this->createRun(100, 'Fix database bug');
         $this->createRun(100, 'Authentication flow');
 
-        $searchModel = new ClaudeRunSearch();
+        $searchModel = new AiRunSearch();
         $dataProvider = $searchModel->search([
-            'ClaudeRunSearch' => ['q' => 'authentication'],
+            'AiRunSearch' => ['q' => 'authentication'],
         ], 100);
 
         verify($dataProvider->getTotalCount())->equals(2);
@@ -70,7 +70,7 @@ class ClaudeRunSearchTest extends Unit
         $this->createRun(100, 'Run 2');
         $this->createRun(100, 'Run 3');
 
-        $searchModel = new ClaudeRunSearch();
+        $searchModel = new AiRunSearch();
         $dataProvider = $searchModel->search([], 100);
 
         verify($dataProvider->getTotalCount())->equals(3);
@@ -79,9 +79,9 @@ class ClaudeRunSearchTest extends Unit
     private function createRun(
         int $userId,
         string $summary,
-        ClaudeRunStatus $status = ClaudeRunStatus::PENDING
-    ): ClaudeRun {
-        $run = new ClaudeRun();
+        AiRunStatus $status = AiRunStatus::PENDING
+    ): AiRun {
+        $run = new AiRun();
         $run->user_id = $userId;
         $run->project_id = 1;
         $run->prompt_markdown = 'Test prompt';

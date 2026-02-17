@@ -2,7 +2,7 @@
 
 namespace common\enums;
 
-enum ClaudeRunStatus: string
+enum AiRunStatus: string
 {
     case PENDING = 'pending';
     case RUNNING = 'running';

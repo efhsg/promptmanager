@@ -2,11 +2,11 @@
 
 namespace app\services;
 
-use app\models\ClaudeRun;
+use app\models\AiRun;
 use Yii;
 
 /**
- * Handles deletion of ClaudeRun records and their associated stream files.
+ * Handles deletion of AiRun records and their associated stream files.
  */
 class ClaudeRunCleanupService
 {
@@ -16,10 +16,10 @@ class ClaudeRunCleanupService
      *
      * @return int number of deleted records
      */
-    public function deleteSession(ClaudeRun $representativeRun): int
+    public function deleteSession(AiRun $representativeRun): int
     {
         if ($representativeRun->session_id !== null) {
-            $runs = ClaudeRun::find()
+            $runs = AiRun::find()
                 ->forUser($representativeRun->user_id)
                 ->forSession($representativeRun->session_id)
                 ->terminal()
@@ -38,7 +38,7 @@ class ClaudeRunCleanupService
      */
     public function bulkCleanup(int $userId): int
     {
-        $runs = ClaudeRun::find()
+        $runs = AiRun::find()
             ->forUser($userId)
             ->terminal()
             ->all();
@@ -51,7 +51,7 @@ class ClaudeRunCleanupService
      */
     public function countTerminalSessions(int $userId): int
     {
-        $query = ClaudeRun::find()
+        $query = AiRun::find()
             ->forUser($userId)
             ->terminal();
 
@@ -73,7 +73,7 @@ class ClaudeRunCleanupService
      */
     public function countTerminalRuns(int $userId): int
     {
-        return (int) ClaudeRun::find()
+        return (int) AiRun::find()
             ->forUser($userId)
             ->terminal()
             ->count();
@@ -84,7 +84,7 @@ class ClaudeRunCleanupService
      *
      * Stream files are deleted first (idempotent). DB deletes are wrapped in a transaction.
      *
-     * @param ClaudeRun[] $runs
+     * @param AiRun[] $runs
      * @return int number of deleted records
      */
     private function deleteRunsWithCleanup(array $runs): int
@@ -114,7 +114,7 @@ class ClaudeRunCleanupService
             return $deleted;
         } catch (\Throwable $e) {
             $transaction->rollBack();
-            Yii::error('Failed to delete ClaudeRun records: ' . $e->getMessage(), __METHOD__);
+            Yii::error('Failed to delete AiRun records: ' . $e->getMessage(), __METHOD__);
             throw $e;
         }
     }

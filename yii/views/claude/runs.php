@@ -1,8 +1,8 @@
 <?php
 
-use app\models\ClaudeRun;
-use app\models\ClaudeRunSearch;
-use common\enums\ClaudeRunStatus;
+use app\models\AiRun;
+use app\models\AiRunSearch;
+use common\enums\AiRunStatus;
 use yii\grid\GridView;
 use yii\helpers\Html;
 use yii\helpers\StringHelper;
@@ -10,7 +10,7 @@ use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 
 /** @var yii\web\View $this */
-/** @var ClaudeRunSearch $searchModel */
+/** @var AiRunSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
 /** @var array $projectList id => name */
 /** @var int|null $defaultProjectId */
@@ -88,7 +88,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     <?= $form->field($searchModel, 'status', [
                         'options' => ['class' => 'mb-0'],
                     ])->dropDownList(
-                        ClaudeRunStatus::labels(),
+                        AiRunStatus::labels(),
                         [
                             'class' => 'form-select',
                             'prompt' => 'All Statuses',
@@ -137,7 +137,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     'disabledPageCssClass' => 'disabled',
                 ],
                 'emptyText' => 'No sessions yet.',
-                'rowOptions' => fn(ClaudeRun $model) => [
+                'rowOptions' => fn(AiRun $model) => [
                     'data-url' => Url::to(array_filter([
                         '/claude/index',
                         'p' => $model->project_id,
@@ -151,7 +151,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     [
                         'label' => 'Status',
                         'format' => 'raw',
-                        'value' => static function (ClaudeRun $model): string {
+                        'value' => static function (AiRun $model): string {
                             $label = $model->getSessionLatestStatusEnum()->label();
                             $class = $model->getSessionStatusBadgeClass();
                             return Html::tag('span', Html::encode($label), ['class' => "badge $class"]);
@@ -159,18 +159,18 @@ $this->params['breadcrumbs'][] = $this->title;
                     ],
                     [
                         'label' => 'Project',
-                        'value' => static fn(ClaudeRun $model): string => Html::encode($model->project?->name ?? '-'),
+                        'value' => static fn(AiRun $model): string => Html::encode($model->project?->name ?? '-'),
                         'format' => 'raw',
                     ],
                     [
                         'label' => 'Summary',
-                        'value' => static fn(ClaudeRun $model): string
+                        'value' => static fn(AiRun $model): string
                             => Html::encode(StringHelper::truncate($model->getDisplaySummary(), 80, '...')),
                         'format' => 'raw',
                     ],
                     [
                         'label' => 'Runs',
-                        'value' => static fn(ClaudeRun $model): int => $model->getSessionRunCount(),
+                        'value' => static fn(AiRun $model): int => $model->getSessionRunCount(),
                         'contentOptions' => ['class' => 'text-center'],
                         'headerOptions' => ['class' => 'text-center'],
                     ],
@@ -181,14 +181,14 @@ $this->params['breadcrumbs'][] = $this->title;
                     ],
                     [
                         'label' => 'Duration',
-                        'value' => static fn(ClaudeRun $model): string => $model->getFormattedSessionDuration(),
+                        'value' => static fn(AiRun $model): string => $model->getFormattedSessionDuration(),
                     ],
                     [
                         'label' => '',
                         'format' => 'raw',
                         'contentOptions' => ['class' => 'text-center', 'style' => 'width: 50px;'],
-                        'value' => static function (ClaudeRun $model): string {
-                            if (!in_array($model->getSessionLatestStatus(), ClaudeRunStatus::terminalValues(), true)) {
+                        'value' => static function (AiRun $model): string {
+                            if (!in_array($model->getSessionLatestStatus(), AiRunStatus::terminalValues(), true)) {
                                 return '';
                             }
 

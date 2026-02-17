@@ -4,7 +4,7 @@ namespace tests\unit\controllers;
 
 use app\controllers\ClaudeController;
 use app\handlers\ClaudeQuickHandler;
-use app\models\ClaudeRun;
+use app\models\AiRun;
 use app\models\Project;
 use app\modules\identity\models\User;
 use app\services\ClaudeCliService;
@@ -23,13 +23,13 @@ class ClaudeControllerTest extends Unit
 
     protected function _before(): void
     {
-        ClaudeRun::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
+        AiRun::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
         Project::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
     }
 
     protected function _after(): void
     {
-        ClaudeRun::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
+        AiRun::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
         Project::deleteAll(['user_id' => [self::TEST_USER_ID, self::OTHER_USER_ID]]);
     }
 
@@ -366,7 +366,7 @@ class ClaudeControllerTest extends Unit
 
         $project = $this->createProject(self::TEST_USER_ID);
 
-        $run = new ClaudeRun([
+        $run = new AiRun([
             'user_id' => self::TEST_USER_ID,
             'project_id' => $project->id,
             'prompt_markdown' => 'Some long prompt text that needs summarizing',
@@ -400,7 +400,7 @@ class ClaudeControllerTest extends Unit
 
         $project = $this->createProject(self::TEST_USER_ID);
 
-        $run = new ClaudeRun([
+        $run = new AiRun([
             'user_id' => self::TEST_USER_ID,
             'project_id' => $project->id,
             'prompt_markdown' => 'Original summary text',
@@ -463,7 +463,7 @@ class ClaudeControllerTest extends Unit
         ]);
         $otherProject->save(false);
 
-        $otherRun = new ClaudeRun([
+        $otherRun = new AiRun([
             'user_id' => self::OTHER_USER_ID,
             'project_id' => $otherProject->id,
             'prompt_markdown' => 'Other user prompt',

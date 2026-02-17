@@ -2,17 +2,17 @@
 
 namespace tests\unit\rbac;
 
-use app\models\ClaudeRun;
-use app\rbac\ClaudeRunOwnerRule;
+use app\models\AiRun;
+use app\rbac\AiRunOwnerRule;
 use Codeception\Test\Unit;
 
-class ClaudeRunOwnerRuleTest extends Unit
+class AiRunOwnerRuleTest extends Unit
 {
     public function testReturnsTrueWhenUserIsOwner(): void
     {
-        $rule = new ClaudeRunOwnerRule();
+        $rule = new AiRunOwnerRule();
 
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = 42;
 
         $result = $rule->execute(42, null, ['model' => $run]);
@@ -22,9 +22,9 @@ class ClaudeRunOwnerRuleTest extends Unit
 
     public function testReturnsFalseWhenUserIsNotOwner(): void
     {
-        $rule = new ClaudeRunOwnerRule();
+        $rule = new AiRunOwnerRule();
 
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = 42;
 
         $result = $rule->execute(99, null, ['model' => $run]);
@@ -34,7 +34,7 @@ class ClaudeRunOwnerRuleTest extends Unit
 
     public function testReturnsFalseWhenModelHasNoUserId(): void
     {
-        $rule = new ClaudeRunOwnerRule();
+        $rule = new AiRunOwnerRule();
 
         $result = $rule->execute(42, null, ['model' => new \stdClass()]);
 
@@ -43,9 +43,9 @@ class ClaudeRunOwnerRuleTest extends Unit
 
     public function testHandlesStringUserIdComparison(): void
     {
-        $rule = new ClaudeRunOwnerRule();
+        $rule = new AiRunOwnerRule();
 
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = '42';
 
         $result = $rule->execute('42', null, ['model' => $run]);

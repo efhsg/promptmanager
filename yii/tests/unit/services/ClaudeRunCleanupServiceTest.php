@@ -2,7 +2,7 @@
 
 namespace tests\unit\services;
 
-use app\models\ClaudeRun;
+use app\models\AiRun;
 use app\services\ClaudeRunCleanupService;
 use Codeception\Test\Unit;
 use tests\fixtures\ClaudeRunFixture;
@@ -54,25 +54,25 @@ class ClaudeRunCleanupServiceTest extends Unit
 
     public function testDeleteSessionRemovesAllRunsInSession(): void
     {
-        $run = ClaudeRun::findOne(1); // session-aaa, 3 completed runs
+        $run = AiRun::findOne(1); // session-aaa, 3 completed runs
         $deleted = $this->service->deleteSession($run);
 
         verify($deleted)->equals(3);
-        verify(ClaudeRun::find()->forSession('session-aaa')->count())->equals(0);
+        verify(AiRun::find()->forSession('session-aaa')->count())->equals(0);
     }
 
     public function testDeleteSessionRemovesSingleStandaloneRun(): void
     {
-        $run = ClaudeRun::findOne(4); // standalone failed run
+        $run = AiRun::findOne(4); // standalone failed run
         $deleted = $this->service->deleteSession($run);
 
         verify($deleted)->equals(1);
-        verify(ClaudeRun::findOne(4))->null();
+        verify(AiRun::findOne(4))->null();
     }
 
     public function testDeleteSessionCleansUpStreamFiles(): void
     {
-        $run = ClaudeRun::findOne(4);
+        $run = AiRun::findOne(4);
         $streamPath = $run->getStreamFilePath();
         file_put_contents($streamPath, '{"type":"test"}' . "\n");
 
@@ -85,7 +85,7 @@ class ClaudeRunCleanupServiceTest extends Unit
 
     public function testDeleteSessionSkipsMissingStreamFiles(): void
     {
-        $run = ClaudeRun::findOne(4); // no stream file exists
+        $run = AiRun::findOne(4); // no stream file exists
         $deleted = $this->service->deleteSession($run);
 
         verify($deleted)->equals(1);
@@ -93,21 +93,21 @@ class ClaudeRunCleanupServiceTest extends Unit
 
     public function testDeleteSessionDoesNotDeleteActiveRuns(): void
     {
-        $run = ClaudeRun::findOne(7); // standalone pending run
+        $run = AiRun::findOne(7); // standalone pending run
         $deleted = $this->service->deleteSession($run);
 
         verify($deleted)->equals(0);
-        verify(ClaudeRun::findOne(7))->notNull();
+        verify(AiRun::findOne(7))->notNull();
     }
 
     public function testDeleteSessionWithMixedStatusesInSession(): void
     {
-        $run = ClaudeRun::findOne(5); // session-bbb: 1 completed + 1 running
+        $run = AiRun::findOne(5); // session-bbb: 1 completed + 1 running
         $deleted = $this->service->deleteSession($run);
 
         verify($deleted)->equals(1); // only the completed one
-        verify(ClaudeRun::findOne(5))->null(); // completed: deleted
-        verify(ClaudeRun::findOne(6))->notNull(); // running: still exists
+        verify(AiRun::findOne(5))->null(); // completed: deleted
+        verify(AiRun::findOne(6))->notNull(); // running: still exists
     }
 
     // ---------------------------------------------------------------
@@ -121,8 +121,8 @@ class ClaudeRunCleanupServiceTest extends Unit
         // Should delete: runs 1,2,3 (session-aaa completed), 4 (standalone failed), 5 (session-bbb completed)
         // Should NOT delete: 6 (running), 7 (pending)
         verify($deleted)->equals(5);
-        verify(ClaudeRun::findOne(6))->notNull(); // running
-        verify(ClaudeRun::findOne(7))->notNull(); // pending
+        verify(AiRun::findOne(6))->notNull(); // running
+        verify(AiRun::findOne(7))->notNull(); // pending
     }
 
     public function testBulkCleanupReturnsDeletedCount(): void
@@ -148,7 +148,7 @@ class ClaudeRunCleanupServiceTest extends Unit
         $this->service->bulkCleanup(100); // user A
 
         // User B's run should still exist
-        verify(ClaudeRun::findOne(8))->notNull();
+        verify(AiRun::findOne(8))->notNull();
     }
 
     // ---------------------------------------------------------------
@@ -184,7 +184,7 @@ class ClaudeRunCleanupServiceTest extends Unit
     {
         // Run 8 belongs to user B (id=1), session-ccc
         // If we create a ClaudeRun with user A's scope, it should find nothing
-        $run = ClaudeRun::findOne(8);
+        $run = AiRun::findOne(8);
 
         // Manually change user_id to simulate another user trying to delete
         // The service uses $representativeRun->user_id for the forUser() scope

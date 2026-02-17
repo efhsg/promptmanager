@@ -2,65 +2,65 @@
 
 namespace app\models\query;
 
-use app\models\ClaudeRun;
-use common\enums\ClaudeRunStatus;
+use app\models\AiRun;
+use common\enums\AiRunStatus;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
 
 /**
- * @extends ActiveQuery<ClaudeRun>
+ * @extends ActiveQuery<AiRun>
  */
-class ClaudeRunQuery extends ActiveQuery
+class AiRunQuery extends ActiveQuery
 {
     public function forUser(int $userId): self
     {
-        return $this->andWhere([ClaudeRun::tableName() . '.user_id' => $userId]);
+        return $this->andWhere([AiRun::tableName() . '.user_id' => $userId]);
     }
 
     public function forProject(int $projectId): self
     {
-        return $this->andWhere([ClaudeRun::tableName() . '.project_id' => $projectId]);
+        return $this->andWhere([AiRun::tableName() . '.project_id' => $projectId]);
     }
 
     public function active(): self
     {
-        return $this->andWhere([ClaudeRun::tableName() . '.status' => ClaudeRunStatus::activeValues()]);
+        return $this->andWhere([AiRun::tableName() . '.status' => AiRunStatus::activeValues()]);
     }
 
     public function terminal(): self
     {
-        return $this->andWhere([ClaudeRun::tableName() . '.status' => ClaudeRunStatus::terminalValues()]);
+        return $this->andWhere([AiRun::tableName() . '.status' => AiRunStatus::terminalValues()]);
     }
 
-    public function withStatus(ClaudeRunStatus $status): self
+    public function withStatus(AiRunStatus $status): self
     {
-        return $this->andWhere([ClaudeRun::tableName() . '.status' => $status->value]);
+        return $this->andWhere([AiRun::tableName() . '.status' => $status->value]);
     }
 
     public function forSession(string $sessionId): self
     {
-        return $this->andWhere([ClaudeRun::tableName() . '.session_id' => $sessionId]);
+        return $this->andWhere([AiRun::tableName() . '.session_id' => $sessionId]);
     }
 
     public function stale(int $thresholdMinutes = 5): self
     {
-        return $this->withStatus(ClaudeRunStatus::RUNNING)
-            ->andWhere(['<', ClaudeRun::tableName() . '.updated_at', date('Y-m-d H:i:s', time() - $thresholdMinutes * 60)]);
+        return $this->withStatus(AiRunStatus::RUNNING)
+            ->andWhere(['<', AiRun::tableName() . '.updated_at', date('Y-m-d H:i:s', time() - $thresholdMinutes * 60)]);
     }
 
     public function createdBefore(string $datetime): self
     {
-        return $this->andWhere(['<', ClaudeRun::tableName() . '.created_at', $datetime]);
+        return $this->andWhere(['<', AiRun::tableName() . '.created_at', $datetime]);
     }
 
     public function orderedByCreated(): self
     {
-        return $this->orderBy([ClaudeRun::tableName() . '.created_at' => SORT_DESC]);
+        return $this->orderBy([AiRun::tableName() . '.created_at' => SORT_DESC]);
     }
 
     public function orderedByCreatedAsc(): self
     {
-        return $this->orderBy([ClaudeRun::tableName() . '.created_at' => SORT_ASC]);
+        return $this->orderBy([AiRun::tableName() . '.created_at' => SORT_ASC]);
     }
 
     // ---------------------------------------------------------------
@@ -72,7 +72,7 @@ class ClaudeRunQuery extends ActiveQuery
      */
     public function sessionRepresentatives(): self
     {
-        $t = ClaudeRun::tableName();
+        $t = AiRun::tableName();
 
         return $this->andWhere([
             'or',
@@ -86,7 +86,7 @@ class ClaudeRunQuery extends ActiveQuery
      */
     public function withSessionAggregates(): self
     {
-        $t = ClaudeRun::tableName();
+        $t = AiRun::tableName();
 
         return $this->addSelect(["{$t}.*"])
             ->addSelect([
@@ -133,7 +133,7 @@ class ClaudeRunQuery extends ActiveQuery
      */
     public function hasLatestSessionStatus(string $status): self
     {
-        $t = ClaudeRun::tableName();
+        $t = AiRun::tableName();
 
         return $this->andWhere([
             'or',

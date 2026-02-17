@@ -4,9 +4,9 @@ namespace tests\unit\jobs;
 
 use app\handlers\ClaudeQuickHandler;
 use app\jobs\RunClaudeJob;
-use app\models\ClaudeRun;
+use app\models\AiRun;
 use app\services\ClaudeCliService;
-use common\enums\ClaudeRunStatus;
+use common\enums\AiRunStatus;
 use Codeception\Test\Unit;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
@@ -23,7 +23,7 @@ class RunClaudeJobTest extends Unit
 
     protected function _before(): void
     {
-        ClaudeRun::deleteAll([]);
+        AiRun::deleteAll([]);
     }
 
     public function testSkipsWhenRunNotFound(): void
@@ -39,7 +39,7 @@ class RunClaudeJobTest extends Unit
 
     public function testSkipsWhenRunIsNotPending(): void
     {
-        $run = $this->createRun(ClaudeRunStatus::RUNNING);
+        $run = $this->createRun(AiRunStatus::RUNNING);
 
         $job = new RunClaudeJob();
         $job->runId = $run->id;
@@ -48,7 +48,7 @@ class RunClaudeJobTest extends Unit
 
         // Status should remain unchanged
         $run->refresh();
-        verify($run->status)->equals(ClaudeRunStatus::RUNNING->value);
+        verify($run->status)->equals(AiRunStatus::RUNNING->value);
     }
 
     public function testCanRetryReturnsFalse(): void
@@ -68,7 +68,7 @@ class RunClaudeJobTest extends Unit
 
     public function testExecuteCompletesSuccessfully(): void
     {
-        $run = $this->createRun(ClaudeRunStatus::PENDING);
+        $run = $this->createRun(AiRunStatus::PENDING);
 
         $mockCliService = $this->createMock(\app\services\ClaudeCliService::class);
         $mockCliService->method('executeStreaming')
@@ -92,7 +92,7 @@ class RunClaudeJobTest extends Unit
         $job->execute(null);
 
         $run->refresh();
-        verify($run->status)->equals(ClaudeRunStatus::COMPLETED->value);
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
         verify($run->result_text)->stringContainsString('Final answer');
         verify($run->pid)->null();
         verify($run->completed_at)->notNull();
@@ -100,7 +100,7 @@ class RunClaudeJobTest extends Unit
 
     public function testExecuteMarksFailedOnNonZeroExitCode(): void
     {
-        $run = $this->createRun(ClaudeRunStatus::PENDING);
+        $run = $this->createRun(AiRunStatus::PENDING);
 
         $mockCliService = $this->createMock(\app\services\ClaudeCliService::class);
         $mockCliService->method('executeStreaming')
@@ -120,13 +120,13 @@ class RunClaudeJobTest extends Unit
         $job->execute(null);
 
         $run->refresh();
-        verify($run->status)->equals(ClaudeRunStatus::FAILED->value);
+        verify($run->status)->equals(AiRunStatus::FAILED->value);
         verify($run->error_message)->equals('CLI timeout');
     }
 
     public function testGeneratesSessionSummaryOnCompletion(): void
     {
-        $run = $this->createRun(ClaudeRunStatus::PENDING);
+        $run = $this->createRun(AiRunStatus::PENDING);
 
         $mockCliService = $this->createMock(ClaudeCliService::class);
         $mockCliService->method('executeStreaming')
@@ -162,13 +162,13 @@ class RunClaudeJobTest extends Unit
         $job->execute(null);
 
         $run->refresh();
-        verify($run->status)->equals(ClaudeRunStatus::COMPLETED->value);
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
         verify($run->session_summary)->equals('Refactored auth to JWT');
     }
 
     public function testSessionSummaryFailureDoesNotAffectRunStatus(): void
     {
-        $run = $this->createRun(ClaudeRunStatus::PENDING);
+        $run = $this->createRun(AiRunStatus::PENDING);
 
         $mockCliService = $this->createMock(ClaudeCliService::class);
         $mockCliService->method('executeStreaming')
@@ -202,13 +202,13 @@ class RunClaudeJobTest extends Unit
         $job->execute(null);
 
         $run->refresh();
-        verify($run->status)->equals(ClaudeRunStatus::COMPLETED->value);
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
         verify($run->session_summary)->null();
     }
 
-    private function createRun(ClaudeRunStatus $status): ClaudeRun
+    private function createRun(AiRunStatus $status): AiRun
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = 100;
         $run->project_id = 1;
         $run->prompt_markdown = 'Test prompt';

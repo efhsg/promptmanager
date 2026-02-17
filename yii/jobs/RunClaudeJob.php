@@ -3,9 +3,9 @@
 namespace app\jobs;
 
 use app\handlers\ClaudeQuickHandler;
-use app\models\ClaudeRun;
+use app\models\AiRun;
 use app\services\ClaudeCliService;
-use common\enums\ClaudeRunStatus;
+use common\enums\AiRunStatus;
 use RuntimeException;
 use Throwable;
 use Yii;
@@ -26,14 +26,14 @@ class RunClaudeJob implements RetryableJobInterface
      */
     public function execute($queue): void
     {
-        $run = ClaudeRun::findOne($this->runId);
+        $run = AiRun::findOne($this->runId);
 
         if ($run === null) {
             Yii::warning("RunClaudeJob: run {$this->runId} not found, skipping", __METHOD__);
             return;
         }
 
-        if ($run->status !== ClaudeRunStatus::PENDING->value) {
+        if ($run->status !== AiRunStatus::PENDING->value) {
             Yii::warning("RunClaudeJob: run {$this->runId} is not pending (status={$run->status}), skipping", __METHOD__);
             return;
         }
@@ -70,7 +70,7 @@ class RunClaudeJob implements RetryableJobInterface
 
                 // Check for cancellation
                 $run->refresh();
-                if ($run->status === ClaudeRunStatus::CANCELLED->value) {
+                if ($run->status === AiRunStatus::CANCELLED->value) {
                     throw new RuntimeException('Run cancelled by user');
                 }
             }
@@ -112,7 +112,7 @@ class RunClaudeJob implements RetryableJobInterface
         } catch (RuntimeException $e) {
             $streamLog = file_get_contents($streamFilePath) ?: null;
 
-            if ($run->status === ClaudeRunStatus::CANCELLED->value) {
+            if ($run->status === AiRunStatus::CANCELLED->value) {
                 $run->markCancelled($streamLog);
             } else {
                 $run->markFailed($e->getMessage(), $streamLog);
@@ -194,7 +194,7 @@ class RunClaudeJob implements RetryableJobInterface
     /**
      * Extracts the session_id from the stream log and updates the run.
      */
-    private function extractSessionId(ClaudeRun $run, ?string $streamLog): void
+    private function extractSessionId(AiRun $run, ?string $streamLog): void
     {
         if ($streamLog === null || $run->session_id !== null) {
             return;
@@ -222,7 +222,7 @@ class RunClaudeJob implements RetryableJobInterface
      * Generates an AI summary of what the run accomplished and stores it on the run.
      * Best-effort: failures are logged but do not affect the run's terminal state.
      */
-    private function generateSessionSummary(ClaudeRun $run): void
+    private function generateSessionSummary(AiRun $run): void
     {
         $input = $this->buildSessionDialog($run);
         if ($input === '') {
@@ -248,12 +248,12 @@ class RunClaudeJob implements RetryableJobInterface
     /**
      * Builds a chronological dialog of all runs in the session, truncated to fit maxChars.
      */
-    private function buildSessionDialog(ClaudeRun $run): string
+    private function buildSessionDialog(AiRun $run): string
     {
         $maxChars = 5000;
 
         if ($run->session_id !== null) {
-            $runs = ClaudeRun::find()
+            $runs = AiRun::find()
                 ->forSession($run->session_id)
                 ->orderedByCreatedAsc()
                 ->all();

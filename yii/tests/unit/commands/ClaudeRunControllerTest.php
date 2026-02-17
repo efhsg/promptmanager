@@ -3,8 +3,8 @@
 namespace tests\unit\commands;
 
 use app\commands\ClaudeRunController;
-use app\models\ClaudeRun;
-use common\enums\ClaudeRunStatus;
+use app\models\AiRun;
+use common\enums\AiRunStatus;
 use Codeception\Test\Unit;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
@@ -22,20 +22,20 @@ class ClaudeRunControllerTest extends Unit
 
     protected function _before(): void
     {
-        ClaudeRun::deleteAll([]);
+        AiRun::deleteAll([]);
     }
 
     public function testCleanupStaleMarksOldRunsAsFailed(): void
     {
         // Create a stale running run (updated > 5 min ago)
-        $staleRun = $this->createRun(ClaudeRunStatus::RUNNING);
-        ClaudeRun::updateAll(
+        $staleRun = $this->createRun(AiRunStatus::RUNNING);
+        AiRun::updateAll(
             ['updated_at' => date('Y-m-d H:i:s', time() - 600)],
             ['id' => $staleRun->id]
         );
 
         // Create a recent running run
-        $recentRun = $this->createRun(ClaudeRunStatus::RUNNING);
+        $recentRun = $this->createRun(AiRunStatus::RUNNING);
 
         $controller = new ClaudeRunController('claude-run', Yii::$app);
         $controller->actionCleanupStale(5);
@@ -43,16 +43,16 @@ class ClaudeRunControllerTest extends Unit
         $staleRun->refresh();
         $recentRun->refresh();
 
-        verify($staleRun->status)->equals(ClaudeRunStatus::FAILED->value);
+        verify($staleRun->status)->equals(AiRunStatus::FAILED->value);
         verify($staleRun->error_message)->stringContainsString('heartbeat timeout');
-        verify($recentRun->status)->equals(ClaudeRunStatus::RUNNING->value);
+        verify($recentRun->status)->equals(AiRunStatus::RUNNING->value);
     }
 
     public function testCleanupStaleIgnoresNonRunningRuns(): void
     {
         // Create a stale completed run
-        $completedRun = $this->createRun(ClaudeRunStatus::COMPLETED);
-        ClaudeRun::updateAll(
+        $completedRun = $this->createRun(AiRunStatus::COMPLETED);
+        AiRun::updateAll(
             ['updated_at' => date('Y-m-d H:i:s', time() - 600)],
             ['id' => $completedRun->id]
         );
@@ -61,7 +61,7 @@ class ClaudeRunControllerTest extends Unit
         $controller->actionCleanupStale(5);
 
         $completedRun->refresh();
-        verify($completedRun->status)->equals(ClaudeRunStatus::COMPLETED->value);
+        verify($completedRun->status)->equals(AiRunStatus::COMPLETED->value);
     }
 
     public function testCleanupFilesRemovesOldFiles(): void
@@ -100,9 +100,9 @@ class ClaudeRunControllerTest extends Unit
         verify($exitCode)->equals(0); // ExitCode::OK
     }
 
-    private function createRun(ClaudeRunStatus $status): ClaudeRun
+    private function createRun(AiRunStatus $status): AiRun
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = 100;
         $run->project_id = 1;
         $run->prompt_markdown = 'Test prompt';

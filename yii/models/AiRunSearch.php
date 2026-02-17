@@ -2,14 +2,14 @@
 
 namespace app\models;
 
-use common\enums\ClaudeRunStatus;
+use common\enums\AiRunStatus;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
 /**
- * ClaudeRunSearch represents the model behind the search/filter form for ClaudeRun.
+ * AiRunSearch represents the model behind the search/filter form for AiRun.
  */
-class ClaudeRunSearch extends ClaudeRun
+class AiRunSearch extends AiRun
 {
     public ?string $q = null;
 
@@ -33,7 +33,7 @@ class ClaudeRunSearch extends ClaudeRun
 
     public function search(array $params, int $userId): ActiveDataProvider
     {
-        $query = ClaudeRun::find()
+        $query = AiRun::find()
             ->forUser($userId)
             ->sessionRepresentatives()
             ->withSessionAggregates()
@@ -59,7 +59,7 @@ class ClaudeRunSearch extends ClaudeRun
         }
 
         if ($this->q !== null && $this->q !== '') {
-            $t = ClaudeRun::tableName();
+            $t = AiRun::tableName();
             $query->andWhere([
                 'or',
                 ['like', "{$t}.prompt_summary", $this->q],

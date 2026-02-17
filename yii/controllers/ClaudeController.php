@@ -4,14 +4,14 @@ namespace app\controllers;
 
 use app\handlers\ClaudeQuickHandler;
 use app\jobs\RunClaudeJob;
-use app\models\ClaudeRun;
-use app\models\ClaudeRunSearch;
+use app\models\AiRun;
+use app\models\AiRunSearch;
 use app\models\Project;
 use app\services\ClaudeCliService;
 use app\services\ClaudeRunCleanupService;
 use app\services\ClaudeStreamRelayService;
 use app\services\EntityPermissionService;
-use common\enums\ClaudeRunStatus;
+use common\enums\AiRunStatus;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -80,7 +80,7 @@ class ClaudeController extends Controller
                         'roles' => ['@'],
                     ],
                     [
-                        // Run-based endpoints — ownership validated via ClaudeRunQuery::forUser()
+                        // Run-based endpoints — ownership validated via AiRunQuery::forUser()
                         'actions' => ['stream-run', 'cancel-run', 'run-status', 'runs', 'delete-session', 'cleanup'],
                         'allow' => true,
                         'roles' => ['@'],
@@ -132,7 +132,7 @@ class ClaudeController extends Controller
     public function actionRuns(): string
     {
         $userId = Yii::$app->user->id;
-        $searchModel = new ClaudeRunSearch();
+        $searchModel = new AiRunSearch();
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
             $userId
@@ -161,7 +161,7 @@ class ClaudeController extends Controller
      */
     public function actionDeleteSession(int $id): Response
     {
-        $run = ClaudeRun::find()
+        $run = AiRun::find()
             ->forUser(Yii::$app->user->id)
             ->andWhere(['id' => $id])
             ->one() ?? throw new NotFoundHttpException('Run not found.');
@@ -207,7 +207,7 @@ class ClaudeController extends Controller
         $sessionHistory = [];
         if ($run !== null) {
             $userId = Yii::$app->user->id;
-            $replayRun = ClaudeRun::find()
+            $replayRun = AiRun::find()
                 ->forUser($userId)
                 ->andWhere(['id' => $run])
                 ->one();
@@ -216,7 +216,7 @@ class ClaudeController extends Controller
                 $sessionId = $replayRun->session_id ?? $s;
 
                 if ($sessionId !== null) {
-                    $allRuns = ClaudeRun::find()
+                    $allRuns = AiRun::find()
                         ->forUser($userId)
                         ->forSession($sessionId)
                         ->terminal()
@@ -308,9 +308,9 @@ class ClaudeController extends Controller
         }
 
         $userId = Yii::$app->user->id;
-        $activeCount = ClaudeRun::find()->forUser($userId)->active()->count();
-        if ($activeCount >= ClaudeRun::MAX_CONCURRENT_RUNS) {
-            $this->sendSseError('Maximum concurrent runs reached (' . ClaudeRun::MAX_CONCURRENT_RUNS . ').');
+        $activeCount = AiRun::find()->forUser($userId)->active()->count();
+        if ($activeCount >= AiRun::MAX_CONCURRENT_RUNS) {
+            $this->sendSseError('Maximum concurrent runs reached (' . AiRun::MAX_CONCURRENT_RUNS . ').');
             return;
         }
 
@@ -354,7 +354,7 @@ class ClaudeController extends Controller
     // ---------------------------------------------------------------
 
     /**
-     * Creates a new ClaudeRun and pushes it to the queue.
+     * Creates a new AiRun and pushes it to the queue.
      *
      * @throws NotFoundHttpException
      */
@@ -370,13 +370,13 @@ class ClaudeController extends Controller
         }
 
         $userId = Yii::$app->user->id;
-        $activeCount = ClaudeRun::find()->forUser($userId)->active()->count();
+        $activeCount = AiRun::find()->forUser($userId)->active()->count();
 
-        if ($activeCount >= ClaudeRun::MAX_CONCURRENT_RUNS) {
+        if ($activeCount >= AiRun::MAX_CONCURRENT_RUNS) {
             Yii::$app->response->statusCode = 429;
             return [
                 'success' => false,
-                'error' => 'Maximum concurrent runs reached (' . ClaudeRun::MAX_CONCURRENT_RUNS . ').',
+                'error' => 'Maximum concurrent runs reached (' . AiRun::MAX_CONCURRENT_RUNS . ').',
             ];
         }
 
@@ -402,7 +402,7 @@ class ClaudeController extends Controller
      */
     public function actionStreamRun(int $runId, int $offset = 0): void
     {
-        $run = ClaudeRun::find()
+        $run = AiRun::find()
             ->forUser(Yii::$app->user->id)
             ->andWhere(['id' => $runId])
             ->one();
@@ -423,7 +423,7 @@ class ClaudeController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $run = ClaudeRun::find()
+        $run = AiRun::find()
             ->forUser(Yii::$app->user->id)
             ->andWhere(['id' => $runId])
             ->one();
@@ -450,7 +450,7 @@ class ClaudeController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $run = ClaudeRun::find()
+        $run = AiRun::find()
             ->forUser(Yii::$app->user->id)
             ->andWhere(['id' => $runId])
             ->one();
@@ -483,13 +483,13 @@ class ClaudeController extends Controller
         $this->findProject($p);
         $userId = Yii::$app->user->id;
 
-        $runs = ClaudeRun::find()
+        $runs = AiRun::find()
             ->forUser($userId)
             ->forProject($p)
             ->andWhere(['or',
-                ['status' => ClaudeRunStatus::activeValues()],
+                ['status' => AiRunStatus::activeValues()],
                 ['and',
-                    ['status' => ClaudeRunStatus::COMPLETED->value],
+                    ['status' => AiRunStatus::COMPLETED->value],
                     ['>=', 'completed_at', date('Y-m-d H:i:s', time() - 3600)],
                 ],
             ])
@@ -693,7 +693,7 @@ class ClaudeController extends Controller
     // Private helpers
     // ---------------------------------------------------------------
 
-    private function buildRunHistoryEntry(ClaudeRun $run): array
+    private function buildRunHistoryEntry(AiRun $run): array
     {
         $meta = $run->getDecodedResultMetadata();
 
@@ -771,13 +771,13 @@ class ClaudeController extends Controller
     }
 
     /**
-     * Creates a ClaudeRun record and pushes the job to the queue.
+     * Creates a AiRun record and pushes the job to the queue.
      *
-     * @return ClaudeRun|null The saved run, or null on validation failure
+     * @return AiRun|null The saved run, or null on validation failure
      */
-    private function createRun(Project $project, array $prepared): ?ClaudeRun
+    private function createRun(Project $project, array $prepared): ?AiRun
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = Yii::$app->user->id;
         $run->project_id = $project->id;
         $run->prompt_markdown = $prepared['markdown'];
@@ -799,7 +799,7 @@ class ClaudeController extends Controller
 
     private function updatePromptSummary(int $runId, string $title): void
     {
-        $run = ClaudeRun::find()
+        $run = AiRun::find()
             ->forUser(Yii::$app->user->id)
             ->andWhere(['id' => $runId])
             ->one();
@@ -815,7 +815,7 @@ class ClaudeController extends Controller
     /**
      * Waits for the stream file, relays NDJSON events via SSE, and sends [DONE].
      */
-    private function relayRunStream(ClaudeRun $run, int $offset): void
+    private function relayRunStream(AiRun $run, int $offset): void
     {
         ignore_user_abort(false);
 

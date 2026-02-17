@@ -2,13 +2,13 @@
 
 namespace tests\unit\models;
 
-use app\models\ClaudeRun;
-use common\enums\ClaudeRunStatus;
+use app\models\AiRun;
+use common\enums\AiRunStatus;
 use Codeception\Test\Unit;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 
-class ClaudeRunTest extends Unit
+class AiRunTest extends Unit
 {
     public function _fixtures(): array
     {
@@ -20,80 +20,80 @@ class ClaudeRunTest extends Unit
 
     public function testIsActiveReturnsTrueForPending(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::PENDING->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::PENDING->value;
 
         verify($run->isActive())->true();
     }
 
     public function testIsActiveReturnsTrueForRunning(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::RUNNING->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::RUNNING->value;
 
         verify($run->isActive())->true();
     }
 
     public function testIsActiveReturnsFalseForCompleted(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::COMPLETED->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::COMPLETED->value;
 
         verify($run->isActive())->false();
     }
 
     public function testIsActiveReturnsFalseForFailed(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::FAILED->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::FAILED->value;
 
         verify($run->isActive())->false();
     }
 
     public function testIsActiveReturnsFalseForCancelled(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::CANCELLED->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::CANCELLED->value;
 
         verify($run->isActive())->false();
     }
 
     public function testIsTerminalReturnsTrueForCompleted(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::COMPLETED->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::COMPLETED->value;
 
         verify($run->isTerminal())->true();
     }
 
     public function testIsTerminalReturnsTrueForFailed(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::FAILED->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::FAILED->value;
 
         verify($run->isTerminal())->true();
     }
 
     public function testIsTerminalReturnsTrueForCancelled(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::CANCELLED->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::CANCELLED->value;
 
         verify($run->isTerminal())->true();
     }
 
     public function testIsTerminalReturnsFalseForPending(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::PENDING->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::PENDING->value;
 
         verify($run->isTerminal())->false();
     }
 
     public function testIsTerminalReturnsFalseForRunning(): void
     {
-        $run = new ClaudeRun();
-        $run->status = ClaudeRunStatus::RUNNING->value;
+        $run = new AiRun();
+        $run->status = AiRunStatus::RUNNING->value;
 
         verify($run->isTerminal())->false();
     }
@@ -103,7 +103,7 @@ class ClaudeRunTest extends Unit
         $run = $this->createSavedRun();
         $run->markRunning(12345);
 
-        verify($run->status)->equals(ClaudeRunStatus::RUNNING->value);
+        verify($run->status)->equals(AiRunStatus::RUNNING->value);
         verify($run->pid)->equals(12345);
         verify($run->started_at)->notNull();
     }
@@ -116,7 +116,7 @@ class ClaudeRunTest extends Unit
         $metadata = ['duration_ms' => 5000, 'model' => 'opus'];
         $run->markCompleted('Result text here', $metadata, 'stream log data');
 
-        verify($run->status)->equals(ClaudeRunStatus::COMPLETED->value);
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
         verify($run->result_text)->equals('Result text here');
         verify($run->pid)->null();
         verify($run->completed_at)->notNull();
@@ -133,7 +133,7 @@ class ClaudeRunTest extends Unit
         $run->markRunning(123);
         $run->markFailed('Something went wrong', 'partial log');
 
-        verify($run->status)->equals(ClaudeRunStatus::FAILED->value);
+        verify($run->status)->equals(AiRunStatus::FAILED->value);
         verify($run->error_message)->equals('Something went wrong');
         verify($run->pid)->null();
         verify($run->completed_at)->notNull();
@@ -146,7 +146,7 @@ class ClaudeRunTest extends Unit
         $run->markRunning(123);
         $run->markCancelled('partial log data');
 
-        verify($run->status)->equals(ClaudeRunStatus::CANCELLED->value);
+        verify($run->status)->equals(AiRunStatus::CANCELLED->value);
         verify($run->pid)->null();
         verify($run->completed_at)->notNull();
         verify($run->stream_log)->equals('partial log data');
@@ -154,7 +154,7 @@ class ClaudeRunTest extends Unit
 
     public function testGetStreamFilePath(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->id = 42;
 
         $path = $run->getStreamFilePath();
@@ -164,14 +164,14 @@ class ClaudeRunTest extends Unit
 
     public function testDefaultStatusIsPending(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
 
-        verify($run->status)->equals(ClaudeRunStatus::PENDING->value);
+        verify($run->status)->equals(AiRunStatus::PENDING->value);
     }
 
     public function testGetDecodedOptionsReturnsEmptyArrayWhenNull(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->options = null;
 
         verify($run->getDecodedOptions())->equals([]);
@@ -179,7 +179,7 @@ class ClaudeRunTest extends Unit
 
     public function testGetDecodedOptionsReturnsArray(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->options = json_encode(['model' => 'opus', 'permissionMode' => 'plan']);
 
         $decoded = $run->getDecodedOptions();
@@ -189,7 +189,7 @@ class ClaudeRunTest extends Unit
 
     public function testGetDecodedResultMetadataReturnsEmptyArrayWhenNull(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->result_metadata = null;
 
         verify($run->getDecodedResultMetadata())->equals([]);
@@ -197,7 +197,7 @@ class ClaudeRunTest extends Unit
 
     public function testValidationRequiresUserIdProjectIdAndPrompt(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = null;
         $run->project_id = null;
         $run->prompt_markdown = null;
@@ -215,9 +215,9 @@ class ClaudeRunTest extends Unit
         $oldTimestamp = $run->updated_at;
 
         // Override timestamp to simulate time passing
-        ClaudeRun::setTimestampOverride('2099-01-01 00:00:00');
+        AiRun::setTimestampOverride('2099-01-01 00:00:00');
         $run->heartbeat();
-        ClaudeRun::setTimestampOverride(null);
+        AiRun::setTimestampOverride(null);
 
         verify($run->updated_at)->notEquals($oldTimestamp);
     }
@@ -251,7 +251,7 @@ class ClaudeRunTest extends Unit
 
     public function testGetDisplaySummaryPrefersSessionSummaryLatestAttribute(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->prompt_summary = 'Fix the bug';
         $run->session_summary = 'Fixed login CSRF';
         $run->session_summary_latest = 'Resolved auth issues across 3 runs';
@@ -261,7 +261,7 @@ class ClaudeRunTest extends Unit
 
     public function testGetDisplaySummaryFallsBackToOwnSessionSummary(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->prompt_summary = 'Fix the bug';
         $run->session_summary = 'Fixed login CSRF validation';
 
@@ -270,7 +270,7 @@ class ClaudeRunTest extends Unit
 
     public function testGetDisplaySummaryFallsBackToPromptSummary(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->prompt_summary = 'Fix the login bug in the auth module';
 
         verify($run->getDisplaySummary())->equals('Fix the login bug in the auth module');
@@ -278,7 +278,7 @@ class ClaudeRunTest extends Unit
 
     public function testGetDisplaySummaryReturnsDashWhenEmpty(): void
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
 
         verify($run->getDisplaySummary())->equals('-');
     }
@@ -290,12 +290,12 @@ class ClaudeRunTest extends Unit
     public function testClaimForProcessingSucceeds(): void
     {
         $run = $this->createSavedRun();
-        verify($run->status)->equals(ClaudeRunStatus::PENDING->value);
+        verify($run->status)->equals(AiRunStatus::PENDING->value);
 
         $result = $run->claimForProcessing(12345);
 
         verify($result)->true();
-        verify($run->status)->equals(ClaudeRunStatus::RUNNING->value);
+        verify($run->status)->equals(AiRunStatus::RUNNING->value);
         verify($run->pid)->equals(12345);
         verify($run->started_at)->notNull();
     }
@@ -309,7 +309,7 @@ class ClaudeRunTest extends Unit
         verify($result1)->true();
 
         // Second claim on the same run fails (status is no longer PENDING)
-        $run2 = ClaudeRun::findOne($run->id);
+        $run2 = AiRun::findOne($run->id);
         $result2 = $run2->claimForProcessing(222);
         verify($result2)->false();
 
@@ -331,9 +331,9 @@ class ClaudeRunTest extends Unit
         verify($run->pid)->equals(999);
     }
 
-    private function createSavedRun(): ClaudeRun
+    private function createSavedRun(): AiRun
     {
-        $run = new ClaudeRun();
+        $run = new AiRun();
         $run->user_id = 100;
         $run->project_id = 1;
         $run->prompt_markdown = 'Test prompt';

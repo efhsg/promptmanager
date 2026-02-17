@@ -2,10 +2,10 @@
 
 namespace app\models;
 
-use app\models\query\ClaudeRunQuery;
+use app\models\query\AiRunQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
-use common\enums\ClaudeRunStatus;
+use common\enums\AiRunStatus;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -36,7 +36,7 @@ use yii\db\ActiveRecord;
  * @property User $user
  * @property Project $project
  */
-class ClaudeRun extends ActiveRecord
+class AiRun extends ActiveRecord
 {
     use TimestampTrait;
 
@@ -68,9 +68,9 @@ class ClaudeRun extends ActiveRecord
         return '{{%ai_run}}';
     }
 
-    public static function find(): ClaudeRunQuery
+    public static function find(): AiRunQuery
     {
-        return new ClaudeRunQuery(static::class);
+        return new AiRunQuery(static::class);
     }
 
     public function rules(): array
@@ -84,8 +84,8 @@ class ClaudeRun extends ActiveRecord
             [['prompt_summary', 'session_summary'], 'string', 'max' => 255],
             [['working_directory'], 'string', 'max' => 500],
             [['status'], 'string'],
-            [['status'], 'in', 'range' => ClaudeRunStatus::values()],
-            [['status'], 'default', 'value' => ClaudeRunStatus::PENDING->value],
+            [['status'], 'in', 'range' => AiRunStatus::values()],
+            [['status'], 'default', 'value' => AiRunStatus::PENDING->value],
             [['started_at', 'completed_at', 'created_at', 'updated_at'], 'string'],
             [
                 ['user_id'],
@@ -127,7 +127,7 @@ class ClaudeRun extends ActiveRecord
         parent::init();
 
         if ($this->isNewRecord && $this->status === null) {
-            $this->status = ClaudeRunStatus::PENDING->value;
+            $this->status = AiRunStatus::PENDING->value;
         }
     }
 
@@ -162,17 +162,17 @@ class ClaudeRun extends ActiveRecord
 
     public function isActive(): bool
     {
-        return in_array($this->status, ClaudeRunStatus::activeValues(), true);
+        return in_array($this->status, AiRunStatus::activeValues(), true);
     }
 
     public function isTerminal(): bool
     {
-        return in_array($this->status, ClaudeRunStatus::terminalValues(), true);
+        return in_array($this->status, AiRunStatus::terminalValues(), true);
     }
 
-    public function getStatusEnum(): ClaudeRunStatus
+    public function getStatusEnum(): AiRunStatus
     {
-        return ClaudeRunStatus::from($this->status);
+        return AiRunStatus::from($this->status);
     }
 
     // ---------------------------------------------------------------
@@ -186,12 +186,12 @@ class ClaudeRun extends ActiveRecord
     {
         $affected = static::updateAll(
             [
-                'status' => ClaudeRunStatus::RUNNING->value,
+                'status' => AiRunStatus::RUNNING->value,
                 'pid' => $pid,
                 'started_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s'),
             ],
-            ['id' => $this->id, 'status' => ClaudeRunStatus::PENDING->value]
+            ['id' => $this->id, 'status' => AiRunStatus::PENDING->value]
         );
 
         if ($affected === 1) {
@@ -204,7 +204,7 @@ class ClaudeRun extends ActiveRecord
 
     public function markRunning(int $pid): void
     {
-        $this->status = ClaudeRunStatus::RUNNING->value;
+        $this->status = AiRunStatus::RUNNING->value;
         $this->pid = $pid;
         $this->started_at = date('Y-m-d H:i:s');
         $this->save(false);
@@ -212,7 +212,7 @@ class ClaudeRun extends ActiveRecord
 
     public function markCompleted(string $resultText, ?array $metadata = null, ?string $streamLog = null): void
     {
-        $this->status = ClaudeRunStatus::COMPLETED->value;
+        $this->status = AiRunStatus::COMPLETED->value;
         $this->result_text = $resultText;
         $this->result_metadata = $metadata !== null ? json_encode($metadata) : null;
         $this->stream_log = $streamLog;
@@ -223,7 +223,7 @@ class ClaudeRun extends ActiveRecord
 
     public function markFailed(string $errorMessage, ?string $streamLog = null): void
     {
-        $this->status = ClaudeRunStatus::FAILED->value;
+        $this->status = AiRunStatus::FAILED->value;
         $this->error_message = $errorMessage;
         $this->stream_log = $streamLog;
         $this->pid = null;
@@ -233,7 +233,7 @@ class ClaudeRun extends ActiveRecord
 
     public function markCancelled(?string $streamLog = null): void
     {
-        $this->status = ClaudeRunStatus::CANCELLED->value;
+        $this->status = AiRunStatus::CANCELLED->value;
         $this->stream_log = $streamLog;
         $this->pid = null;
         $this->completed_at = date('Y-m-d H:i:s');
@@ -313,9 +313,9 @@ class ClaudeRun extends ActiveRecord
         return $this->session_latest_status ?? $this->status;
     }
 
-    public function getSessionLatestStatusEnum(): ClaudeRunStatus
+    public function getSessionLatestStatusEnum(): AiRunStatus
     {
-        return ClaudeRunStatus::from($this->getSessionLatestStatus());
+        return AiRunStatus::from($this->getSessionLatestStatus());
     }
 
     public function getSessionStatusBadgeClass(): string
