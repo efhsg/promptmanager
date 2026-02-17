@@ -609,21 +609,28 @@ $js = <<<JS
                     var decoder = new TextDecoder();
                     var buffer = '';
 
+                    self.resetInactivityTimer();
+
                     function processStream() {
                         return reader.read().then(function(result) {
                             if (result.done) {
                                 self.onStreamEnd();
                                 return;
                             }
+
+                            self.resetInactivityTimer();
                             buffer += decoder.decode(result.value, { stream: true });
                             var lines = buffer.split('\\n');
                             buffer = lines.pop();
 
+                            var streamDone = false;
                             lines.forEach(function(line) {
+                                if (streamDone) return;
                                 if (line.startsWith('data: ')) {
                                     var payload = line.substring(6);
                                     if (payload === '[DONE]') {
                                         self.onStreamEnd();
+                                        streamDone = true;
                                         return;
                                     }
                                     try {
@@ -632,6 +639,10 @@ $js = <<<JS
                                 }
                             });
 
+                            if (streamDone) {
+                                self.cancelActiveReader();
+                                return;
+                            }
                             return processStream();
                         });
                     }
@@ -639,7 +650,8 @@ $js = <<<JS
                     return processStream();
                 })
                 .catch(function(error) {
-                    self.onStreamError('Failed to reconnect: ' + error.message);
+                    if (!self.streamEnded)
+                        self.onStreamError('Failed to reconnect: ' + error.message);
                 });
             },
 
@@ -924,21 +936,28 @@ $js = <<<JS
                     var decoder = new TextDecoder();
                     var buffer = '';
 
+                    self.resetInactivityTimer();
+
                     function processStream() {
                         return reader.read().then(function(result) {
                             if (result.done) {
                                 self.onStreamEnd();
                                 return;
                             }
+
+                            self.resetInactivityTimer();
                             buffer += decoder.decode(result.value, { stream: true });
                             var lines = buffer.split('\\n');
                             buffer = lines.pop();
 
+                            var streamDone = false;
                             lines.forEach(function(line) {
+                                if (streamDone) return;
                                 if (line.startsWith('data: ')) {
                                     var payload = line.substring(6);
                                     if (payload === '[DONE]') {
                                         self.onStreamEnd();
+                                        streamDone = true;
                                         return;
                                     }
                                     try {
@@ -949,6 +968,10 @@ $js = <<<JS
                                 }
                             });
 
+                            if (streamDone) {
+                                self.cancelActiveReader();
+                                return;
+                            }
                             return processStream();
                         });
                     }
@@ -956,7 +979,8 @@ $js = <<<JS
                     return processStream();
                 })
                 .catch(function(error) {
-                    self.onStreamError('Failed to execute Claude CLI: ' + error.message);
+                    if (!self.streamEnded)
+                        self.onStreamError('Failed to execute Claude CLI: ' + error.message);
                 });
             },
 
@@ -1245,6 +1269,33 @@ $js = <<<JS
             },
 
             /**
+             * Cancels the active ReadableStream reader if present.
+             */
+            cancelActiveReader: function() {
+                if (this.activeReader) {
+                    try { this.activeReader.cancel(); } catch (e) {}
+                    this.activeReader = null;
+                }
+            },
+
+            /**
+             * Resets the inactivity timer. If no data arrives within 90 seconds,
+             * the stream is assumed dead and onStreamError is called.
+             */
+            resetInactivityTimer: function() {
+                var self = this;
+                if (this.streamInactivityTimer)
+                    clearTimeout(this.streamInactivityTimer);
+
+                this.streamInactivityTimer = setTimeout(function() {
+                    if (!self.streamEnded) {
+                        self.cancelActiveReader();
+                        self.onStreamError('Connection lost — no data received for 90 seconds.');
+                    }
+                }, 90000);
+            },
+
+            /**
              * Shared teardown for all stream-ending paths (success, error, cancel).
              * Disables streaming UI, re-enables the send button, clears the render timer.
              */
@@ -1254,6 +1305,11 @@ $js = <<<JS
                 this.showCancelButton(false);
                 this.closeStreamModal();
                 this.hideStreamContainer();
+                // Stop inactivity timer
+                if (this.streamInactivityTimer) {
+                    clearTimeout(this.streamInactivityTimer);
+                    this.streamInactivityTimer = null;
+                }
                 var modalDots = document.getElementById('claude-modal-dots');
                 if (modalDots) modalDots.classList.add('d-none');
                 if (this.renderTimer) {
@@ -1338,13 +1394,7 @@ $js = <<<JS
                 this.streamEnded = true;
                 this.currentRunId = null;
 
-
-                // Abort active reader to prevent further events
-                if (this.activeReader) {
-                    try { this.activeReader.cancel(); } catch (e) {}
-                    this.activeReader = null;
-                }
-
+                this.cancelActiveReader();
                 this.cleanupStreamUI();
 
                 // If we have partial streamed text, show it with error appended
@@ -1364,10 +1414,7 @@ $js = <<<JS
 
             cancel: function() {
                 // 1. Abort the ReadableStream reader
-                if (this.activeReader) {
-                    try { this.activeReader.cancel(); } catch (e) {}
-                    this.activeReader = null;
-                }
+                this.cancelActiveReader();
 
                 // 2. Tell the server to kill the process (async run or legacy)
                 if (this.currentRunId) {

@@ -853,17 +853,27 @@ class AiChatController extends Controller
 
         // Relay stream events from file
         $linesSent = 0;
+        $lastKeepalive = time();
         $this->streamRelayService->relay(
             $streamFilePath,
             $offset,
-            function (string $line) use (&$linesSent): void {
+            function (string $line) use (&$linesSent, &$lastKeepalive): void {
                 echo "data: " . $line . "\n\n";
                 flush();
                 $linesSent++;
+                $lastKeepalive = time();
             },
-            function () use ($run): bool {
+            function () use ($run, &$lastKeepalive): bool {
                 if (connection_aborted()) {
                     return false;
+                }
+
+                // Send SSE comment keepalive every 15s to detect broken connections
+                // and reset the client-side inactivity timer
+                if (time() - $lastKeepalive >= 15) {
+                    echo ": keepalive\n\n";
+                    flush();
+                    $lastKeepalive = time();
                 }
 
                 $run->refresh();
