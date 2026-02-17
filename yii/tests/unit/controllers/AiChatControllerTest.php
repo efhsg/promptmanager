@@ -16,7 +16,7 @@ use ReflectionClass;
 use Yii;
 use yii\web\NotFoundHttpException;
 
-class ClaudeControllerTest extends Unit
+class AiChatControllerTest extends Unit
 {
     private const TEST_USER_ID = 995;
     private const OTHER_USER_ID = 994;

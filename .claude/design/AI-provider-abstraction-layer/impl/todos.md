@@ -1,6 +1,6 @@
 # Implementation Progress
 
-## Status: Phase 9 complete
+## Status: Phase 10 complete
 
 ## Phases
 
@@ -12,47 +12,42 @@
 - [x] **P6**: Rename AiPermissionMode + update Project model — committed: c5e8cb1
 - [x] **P7**: Rename controllers + routes + RBAC config — committed: 3406d1b
 - [x] **P8**: Update views + CSS + layouts — committed: 294199f
-- [x] **P9**: DI wiring, config cleanup, bootstrap
-- [ ] **P10**: Rename + update tests
+- [x] **P9**: DI wiring, config cleanup, bootstrap — committed: 8281154
+- [x] **P10**: Rename + update tests
 - [ ] **P11**: Cleanup + delete old files
 
-## Current Phase: P8 — Update Views + CSS + Layouts (DONE)
+## Current Phase: P10 — Rename + Update Tests (DONE)
 
-### Renamed files/directories (git mv)
-- [x] `views/claude/` → `views/ai-chat/` (3 files: index.php, runs.php, cleanup-confirm.php)
-- [x] `web/css/claude-chat.css` → `web/css/ai-chat.css`
+### Renamed test files (14 git mv)
+- [x] `fixtures/ClaudeRunFixture.php` → `fixtures/AiRunFixture.php`
+- [x] `fixtures/data/claude_runs.php` → `fixtures/data/ai_runs.php`
+- [x] `unit/models/ClaudeRunTest.php` → `unit/models/AiRunTest.php`
+- [x] `unit/models/ClaudeRunSearchTest.php` → `unit/models/AiRunSearchTest.php`
+- [x] `unit/models/ClaudeRunQueryTest.php` → `unit/models/AiRunQueryTest.php`
+- [x] `unit/services/ClaudeStreamRelayServiceTest.php` → `unit/services/AiStreamRelayServiceTest.php`
+- [x] `unit/services/ClaudeRunCleanupServiceTest.php` → `unit/services/AiRunCleanupServiceTest.php`
+- [x] `unit/enums/ClaudeRunStatusTest.php` → `unit/enums/AiRunStatusTest.php`
+- [x] `unit/rbac/ClaudeRunOwnerRuleTest.php` → `unit/rbac/AiRunOwnerRuleTest.php`
+- [x] `unit/jobs/RunClaudeJobTest.php` → `unit/jobs/RunAiJobTest.php`
+- [x] `unit/controllers/ClaudeControllerTest.php` → `unit/controllers/AiChatControllerTest.php`
+- [x] `unit/commands/ClaudeRunControllerTest.php` → `unit/commands/AiRunControllerTest.php`
+- [x] `unit/handlers/ClaudeQuickHandlerTest.php` → `unit/handlers/AiQuickHandlerTest.php`
 
-### Route updates (`/claude/*` → `/ai-chat/*`)
-- [x] `views/ai-chat/index.php` — 15 URL references
-- [x] `views/ai-chat/runs.php` — 5 URL references
-- [x] `views/layouts/main.php` — nav URL + controller ID check
-- [x] `views/layouts/_bottom-nav.php` — URL + controller ID + label
-- [x] `views/layouts/_export-modal.php` — suggest-name URL
-- [x] `views/note/view.php`, `views/note/index.php` — route + tooltip
-- [x] `views/note/_form.php`, `views/note/create.php` — suggest-name URL
-- [x] `views/prompt-instance/_form.php`, `view.php`, `index.php` — route + tooltip
-- [x] `views/prompt-template/_form.php`, `views/context/_form.php` — suggest-name URL
+### Class name updates
+- [x] `AiRunFixture` — class name + dataFile path
+- [x] `AiChatControllerTest` — class name
+- [x] `AiRunControllerTest` — class name
 
-### CSS class updates
-- [x] `claude-chat-page` → `ai-chat-page` (in ai-chat.css + index.php)
-- [x] `claude-focus-mode` → `ai-focus-mode` (in ai-chat.css + index.php)
-- [x] CSS file comment updated
+### Reference updates
+- [x] `AiRunCleanupServiceTest` — `ClaudeRunFixture` → `AiRunFixture`, fixture key `claudeRuns` → `aiRuns`
+- [x] `ai_runs.php` — updated fixture data comment
 
-### SessionStorage key updates
-- [x] `claudePromptContent` → `aiPromptContent` (7 files)
-- [x] `claude-runs-auto-refresh` → `ai-runs-auto-refresh` (runs.php)
-
-### Label updates
-- [x] Nav label: `Claude` → `AI Chat` (main.php + _bottom-nav.php)
-- [x] Title: `Claude Sessions` → `AI Sessions` (runs.php)
-- [x] Breadcrumb: `Claude Sessions` → `AI Sessions` (cleanup-confirm.php)
-- [x] Tooltips: `Talk to Claude` → `Talk to AI` (note/view, note/index, prompt-instance views)
-- [x] `mobile.css`: updated comment + button selector
+### Not renamed (underlying classes still named Claude*)
+- `ClaudeCliServiceTest`, `ClaudeWorkspaceServiceTest`, `ClaudeCliCompletionClientTest`
 
 ### Validation
 - [x] Unit tests — 1071 pass, 21 skipped, 0 failures
-- [x] No remaining `/claude/` route references in views
-- [x] No remaining `claudePromptContent` sessionStorage keys
+- [x] No remaining `ClaudeRunFixture` or `ClaudeController` references in tests
 
 ## Session Log
 
@@ -65,4 +60,6 @@
 | 2026-02-17 | P5 | Complete | 28e09f4 | 4 file renames + 9 reference edits + class_alias, tests green |
 | 2026-02-17 | P6 | Complete | c5e8cb1 | 1 enum rename + 9 method renames + DI provider in afterSave/afterDelete |
 | 2026-02-17 | P7 | Complete | 3406d1b | 3 controller renames + RBAC + URL rule + 3 test updates |
-| 2026-02-17 | P8 | Complete | pending | 2 renames + 16 view edits + 2 CSS edits, all routes updated |
+| 2026-02-17 | P8 | Complete | 294199f | 2 renames + 16 view edits + 2 CSS edits, all routes updated |
+| 2026-02-17 | P9 | Complete | 8281154 | 2 comment updates in main.php, DI already wired |
+| 2026-02-17 | P10 | Complete | pending | 14 test file renames + 4 class/reference updates |

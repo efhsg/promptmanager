@@ -10,7 +10,7 @@ use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 use Yii;
 
-class ClaudeRunControllerTest extends Unit
+class AiRunControllerTest extends Unit
 {
     public function _fixtures(): array
     {
@@ -68,7 +68,7 @@ class ClaudeRunControllerTest extends Unit
     {
         $dir = Yii::getAlias('@app/storage/claude-runs');
         if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
+            mkdir($dir, 0o775, true);
         }
 
         // Create an old file

@@ -1,6 +1,6 @@
 <?php
 
-// Fixture data for ClaudeRunCleanupServiceTest
+// Fixture data for AiRunCleanupServiceTest
 // User A = id 100 (admin), User B = id 1 (userWithField)
 // Project 1 = id 1 (owned by user 100)
 

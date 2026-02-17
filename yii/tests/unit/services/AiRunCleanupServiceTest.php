@@ -5,7 +5,7 @@ namespace tests\unit\services;
 use app\models\AiRun;
 use app\services\AiRunCleanupService;
 use Codeception\Test\Unit;
-use tests\fixtures\ClaudeRunFixture;
+use tests\fixtures\AiRunFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 use Yii;
@@ -20,7 +20,7 @@ class AiRunCleanupServiceTest extends Unit
         return [
             'users' => UserFixture::class,
             'projects' => ProjectFixture::class,
-            'claudeRuns' => ClaudeRunFixture::class,
+            'aiRuns' => AiRunFixture::class,
         ];
     }
 
@@ -32,7 +32,7 @@ class AiRunCleanupServiceTest extends Unit
         // Create temp storage directory for stream files
         $this->tempDir = Yii::getAlias('@app/storage/claude-runs');
         if (!is_dir($this->tempDir)) {
-            mkdir($this->tempDir, 0775, true);
+            mkdir($this->tempDir, 0o775, true);
         }
     }
 
