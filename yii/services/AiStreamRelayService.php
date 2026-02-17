@@ -2,6 +2,8 @@
 
 namespace app\services;
 
+use Yii;
+
 /**
  * Relays NDJSON stream events from a file to a callback.
  *
@@ -34,6 +36,7 @@ class AiStreamRelayService
 
         $handle = fopen($filePath, 'rb');
         if ($handle === false) {
+            Yii::warning("Could not open stream file for relay: {$filePath}", __METHOD__);
             return $offset;
         }
 

@@ -244,6 +244,8 @@ class RunAiJob implements RetryableJobInterface
         if ($doneFile !== false) {
             fwrite($doneFile, "[DONE]\n");
             fclose($doneFile);
+        } else {
+            Yii::warning("Could not write [DONE] marker to stream file: {$streamFilePath}", __METHOD__);
         }
     }
 

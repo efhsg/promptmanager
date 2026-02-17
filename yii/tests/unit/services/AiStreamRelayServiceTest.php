@@ -12,7 +12,7 @@ class AiStreamRelayServiceTest extends Unit
     protected function _before(): void
     {
         $this->tempDir = sys_get_temp_dir() . '/claude_relay_test_' . uniqid();
-        mkdir($this->tempDir, 0775, true);
+        mkdir($this->tempDir, 0o775, true);
     }
 
     protected function _after(): void
@@ -160,5 +160,113 @@ class AiStreamRelayServiceTest extends Unit
         );
 
         verify($callCount)->equals(1);
+    }
+
+    public function testRelayDrainsRemainingDataWhenRunStops(): void
+    {
+        $file = $this->tempDir . '/test.ndjson';
+        // No [DONE] marker — relay reads all data in the main loop, then
+        // hits isRunning() which returns false, triggering the drain path.
+        file_put_contents($file, "{\"type\":\"line1\"}\n{\"type\":\"line2\"}\n{\"type\":\"line3\"}\n");
+
+        $received = [];
+        $isRunningCalls = 0;
+        $service = new AiStreamRelayService();
+        $service->relay(
+            $file,
+            0,
+            function (string $line) use (&$received) {
+                $received[] = $line;
+            },
+            function () use (&$isRunningCalls) {
+                $isRunningCalls++;
+                return false; // Stop immediately
+            },
+            1
+        );
+
+        // All 3 data lines should be received even though isRunning returned false
+        verify(count($received))->equals(3);
+        verify($received[0])->stringContainsString('line1');
+        verify($received[2])->stringContainsString('line3');
+        verify($isRunningCalls)->equals(1);
+    }
+
+    public function testRelayStopsAtDoneMarkerMidStream(): void
+    {
+        $file = $this->tempDir . '/test.ndjson';
+        // [DONE] appears before the last line — relay should stop at [DONE]
+        file_put_contents($file, "{\"type\":\"line1\"}\n[DONE]\n{\"type\":\"line2\"}\n");
+
+        $received = [];
+        $service = new AiStreamRelayService();
+        $service->relay(
+            $file,
+            0,
+            function (string $line) use (&$received) {
+                $received[] = $line;
+            },
+            function () { return true; },
+            1
+        );
+
+        verify(count($received))->equals(1);
+        verify($received[0])->stringContainsString('line1');
+    }
+
+    public function testRelayPicksUpAppendedData(): void
+    {
+        $file = $this->tempDir . '/test.ndjson';
+        // Start with one line, append more during relay via $isRunning callback
+        file_put_contents($file, "{\"type\":\"line1\"}\n");
+
+        $received = [];
+        $appendDone = false;
+        $service = new AiStreamRelayService();
+        $service->relay(
+            $file,
+            0,
+            function (string $line) use (&$received) {
+                $received[] = $line;
+            },
+            function () use ($file, &$appendDone) {
+                if (!$appendDone) {
+                    // Simulate the worker appending more data
+                    file_put_contents($file, "{\"type\":\"line2\"}\n[DONE]\n", FILE_APPEND);
+                    $appendDone = true;
+                    return true; // Still running
+                }
+                return true;
+            },
+            2
+        );
+
+        verify(count($received))->equals(2);
+        verify($received[0])->stringContainsString('line1');
+        verify($received[1])->stringContainsString('line2');
+    }
+
+    public function testRelayRespectsMaxWaitTimeout(): void
+    {
+        $file = $this->tempDir . '/test.ndjson';
+        // File exists but has no [DONE] — relay should timeout
+        file_put_contents($file, "{\"type\":\"line1\"}\n");
+
+        $startTime = time();
+        $received = [];
+        $service = new AiStreamRelayService();
+        $service->relay(
+            $file,
+            0,
+            function (string $line) use (&$received) {
+                $received[] = $line;
+            },
+            function () { return true; }, // Always running
+            1 // 1 second max wait
+        );
+        $elapsed = time() - $startTime;
+
+        verify(count($received))->equals(1);
+        verify($elapsed)->lessThanOrEqual(3); // Should exit within ~1-2s
     }
 }

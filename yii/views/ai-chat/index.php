@@ -1040,7 +1040,7 @@ $js = <<<JS
                         var options = [];
                         for (var j = 0; j < parts.length; j++) {
                             var label = stripMd(parts[j]);
-                            if (!label || label.length > 80) return null;
+                            if (!label || [...label].length > 80) return null;
                             var action = editWords.indexOf(label.toLowerCase()) !== -1 ? 'edit' : 'send';
                             options.push({ label: label, action: action });
                         }
@@ -1049,7 +1049,7 @@ $js = <<<JS
                 }
 
                 // --- Format 3: bracket-letter lines [X] Description ---
-                var bracketPattern = /^\[([A-Z])\]\s+(.{1,40})$/;
+                var bracketPattern = /^\[([A-Z])\]\s+(.{1,40})$/u;
                 var bracketOptions = [];
                 for (var b = lines.length - 1; b >= 0; b--) {
                     var line = lines[b].trim();
@@ -1069,7 +1069,7 @@ $js = <<<JS
                 var im;
                 while ((im = inlinePattern.exec(lastLine)) !== null) {
                     var iLabel = stripMd(im[2]);
-                    if (!iLabel || iLabel.length > 40) { inlineOptions = []; break; }
+                    if (!iLabel || [...iLabel].length > 40) { inlineOptions = []; break; }
                     inlineOptions.push({ label: iLabel, action: editWords.indexOf(iLabel.toLowerCase()) !== -1 ? 'edit' : 'send' });
                 }
                 if (inlineOptions.length >= 2 && inlineOptions.length <= 5)
