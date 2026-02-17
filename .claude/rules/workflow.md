@@ -44,14 +44,11 @@ This preserves context across session resets.
 
 ## Migrations
 
-- Use `{{%table_name}}` syntax for table prefix support.
-- Use `safeUp()` and `safeDown()` methods (not `up()`/`down()`) for automatic transaction handling.
-- Migration filenames use a timestamp prefix (e.g., `m251123_123456_add_new_table.php`).
-- Run on both schemas (vanuit `/var/www/html/yii`):
-  ```bash
-  ./yii migrate --migrationNamespaces=app\\migrations --interactive=0
-  ./yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
-  ```
+See `skills/migration.md` for migration patterns and templates. Key rules:
+
+- Use `{{%table_name}}` syntax for table prefix support
+- Use `safeUp()` and `safeDown()` methods for transaction handling
+- Run on both schemas (`yii` and `yii_test`)
 
 ## Transactions
 
@@ -75,15 +72,6 @@ This preserves context across session resets.
 - New environment variables must be documented in `.env.example`.
 - Don't hand-edit compiled frontend assets in `yii/web`; change sources in `npm/` and rebuild.
 
-## Code Review Checklist
+## Code Review
 
-Before approving changes:
-
-- [ ] Follows folder structure in `architecture.md`
-- [ ] Type hints present on params/returns/properties
-- [ ] Query methods use naming conventions (byX, withX, hasX)
-- [ ] Tests for new/changed logic
-- [ ] No silent failures (exceptions logged or thrown)
-- [ ] Security rules followed (RBAC, input validation, Html::encode)
-- [ ] Commit message follows format in `commits.md`
-- [ ] Migrations run on both schemas (if applicable)
+Use `/review-changes` for structured code review. See `skills/review-changes.md` for the full checklist.

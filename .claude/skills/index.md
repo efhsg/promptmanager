@@ -23,6 +23,7 @@ For commands, paths, and environment: `.claude/config/project.md`
 |-------|-------------|----------|
 | Model | ActiveRecord model with query class + naming conventions | `skills/model.md` |
 | Frontend Design | UI components with Bootstrap/Quill | `skills/frontend-design.md` |
+| Frontend Build | Build and minify Quill editor JavaScript | `skills/frontend-build.md` |
 | Migration | Database migration | `skills/migration.md` |
 | Error Handling | Exception types, logging, error patterns | `skills/error-handling.md` |
 

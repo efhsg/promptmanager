@@ -11,6 +11,7 @@ When working on specific file types or topics, proactively load the relevant ski
 | `yii/models/*` | `skills/model.md` |
 | `yii/exceptions/*` | `skills/error-handling.md` |
 | `yii/widgets/*` | `skills/frontend-design.md` |
+| `npm/src/js/*` | `skills/frontend-build.md` |
 
 ## Topic Routing
 
@@ -20,3 +21,4 @@ When working on specific file types or topics, proactively load the relevant ski
 | Placeholders, rich text | `skills/frontend-design.md` |
 | Error handling, exceptions | `skills/error-handling.md` |
 | External review, triage, review feedback | `skills/triage-review.md` |
+| Frontend build, minify, uglify | `skills/frontend-build.md` |

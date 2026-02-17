@@ -51,18 +51,14 @@ vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php
 
 | Command | Purpose |
 |---------|---------|
-| `/new-model` | Create ActiveRecord model + query class |
-| `/new-service` | Create service class |
-| `/new-controller-action` | Add controller action |
-| `/new-test` | Create unit test |
-| `/new-migration` | Create database migration |
 | `/review-changes` | Code review of changes |
 | `/refactor` | Refactor code without behavior change |
 | `/finalize-changes` | Lint, test, prepare commit |
-| `/onboarding` | Show this quick start guide |
 | `/commit-push` | Commit and push |
+| `/onboarding` | Show this quick start guide |
+| `/new-branch` | Create feature/fix branch |
 
-Run `/help` for full command list.
+See `.claude/skills/index.md` for full command list.
 
 ## Next Steps
 

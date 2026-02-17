@@ -80,7 +80,7 @@ vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-c
 
 ## Slash Commands
 
-See `.claude/skills/index.md` for available commands (`/new-model`, `/new-service`, `/review-changes`, etc.) and their skill contracts.
+See `.claude/skills/index.md` for available commands (`/review-changes`, `/finalize-changes`, `/refactor`, etc.) and their skill contracts.
 
 ## Commits
 

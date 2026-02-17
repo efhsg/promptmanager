@@ -29,7 +29,7 @@
   - `PromptTemplateOwnerRule`
   - `PromptInstanceOwnerRule`
   - `NoteOwnerRule`
-  - `ClaudeRunOwnerRule`
+  - `AiRunOwnerRule`
 
 ## File System Access
 
