@@ -12,9 +12,9 @@ use app\services\ai\AiProviderInterface;
  */
 class ClaudeCliCompletionClient implements AiCompletionClient
 {
-    private AiProviderInterface|ClaudeCliService $claudeCliService;
+    private AiProviderInterface $claudeCliService;
 
-    public function __construct(AiProviderInterface|ClaudeCliService $claudeCliService)
+    public function __construct(AiProviderInterface $claudeCliService)
     {
         $this->claudeCliService = $claudeCliService;
     }

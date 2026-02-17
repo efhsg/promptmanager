@@ -13,7 +13,7 @@ class EntityConfig
 {
     /** Columns excluded from load (set to NULL) — machine-specific values. */
     public const EXCLUDED_COLUMNS = [
-        'project' => ['root_directory', 'claude_options', 'claude_context'],
+        'project' => ['root_directory', 'ai_options', 'ai_context'],
     ];
 
     /** Columns overridden with a fixed value during load. */

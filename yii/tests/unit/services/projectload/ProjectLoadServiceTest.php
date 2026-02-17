@@ -189,7 +189,7 @@ class ProjectLoadServiceTest extends Unit
         $this->assertEquals('DumpProject', $project['name']);
         $this->assertEquals(1, (int) $project['user_id']);
         $this->assertNull($project['root_directory']);
-        $this->assertNull($project['claude_options']);
+        $this->assertNull($project['ai_options']);
 
         // Verify children
         $contextCount = (int) $this->db->createCommand(
@@ -644,8 +644,8 @@ class ProjectLoadServiceTest extends Unit
         $this->db->createCommand(
             "UPDATE `{$this->tempSchema}`.`project`
              SET root_directory = '/some/path',
-                 claude_options = '{\"test\": true}',
-                 claude_context = '{\"ops\": []}'
+                 ai_options = '{\"test\": true}',
+                 ai_context = '{\"ops\": []}'
              WHERE id = 500"
         )->execute();
         $dumpFile = $this->createDumpFileFromTempSchema();
@@ -656,14 +656,14 @@ class ProjectLoadServiceTest extends Unit
         $this->createdProjectIds[] = $newProjectId;
 
         $project = $this->db->createCommand(
-            "SELECT root_directory, claude_options, claude_context
+            "SELECT root_directory, ai_options, ai_context
              FROM `{$this->productionSchema}`.`project` WHERE id = :id",
             [':id' => $newProjectId]
         )->queryOne();
 
         $this->assertNull($project['root_directory']);
-        $this->assertNull($project['claude_options']);
-        $this->assertNull($project['claude_context']);
+        $this->assertNull($project['ai_options']);
+        $this->assertNull($project['ai_context']);
     }
 
     // ────────────────────────────────────────────────────────────────

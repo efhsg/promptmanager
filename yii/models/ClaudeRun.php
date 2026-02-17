@@ -11,7 +11,7 @@ use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
 /**
- * Model for the claude_run table.
+ * Model for the ai_run table.
  *
  * @property int $id
  * @property int $user_id
@@ -65,7 +65,7 @@ class ClaudeRun extends ActiveRecord
 
     public static function tableName(): string
     {
-        return 'claude_run';
+        return '{{%ai_run}}';
     }
 
     public static function find(): ClaudeRunQuery

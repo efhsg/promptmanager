@@ -167,17 +167,17 @@ return [
         ],
         'claudeRun' => [
             'actionPermissionMap' => [
-                'view' => 'viewClaudeRun',
-                'cancel' => 'updateClaudeRun',
+                'view' => 'viewAiRun',
+                'cancel' => 'updateAiRun',
             ],
             'permissions' => [
-                'viewClaudeRun' => [
-                    'description' => 'View a Claude Run',
-                    'rule' => 'app\rbac\ClaudeRunOwnerRule',
+                'viewAiRun' => [
+                    'description' => 'View an AI Run',
+                    'rule' => 'app\rbac\AiRunOwnerRule',
                 ],
-                'updateClaudeRun' => [
-                    'description' => 'Update a Claude Run',
-                    'rule' => 'app\rbac\ClaudeRunOwnerRule',
+                'updateAiRun' => [
+                    'description' => 'Update an AI Run',
+                    'rule' => 'app\rbac\AiRunOwnerRule',
                 ],
             ],
         ],
@@ -239,8 +239,8 @@ return [
                 'viewNote',
                 'updateNote',
                 'deleteNote',
-                'viewClaudeRun',
-                'updateClaudeRun',
+                'viewAiRun',
+                'updateAiRun',
             ],
             'children' => [],
         ],

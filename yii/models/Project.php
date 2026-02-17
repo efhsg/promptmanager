@@ -26,8 +26,8 @@ use Throwable;
  * @property string|null $allowed_file_extensions
  * @property string|null $blacklisted_directories
  * @property string $prompt_instance_copy_format
- * @property string|null $claude_options
- * @property string|null $claude_context
+ * @property string|null $ai_options
+ * @property string|null $ai_context
  * @property string|null $label
  * @property string $created_at
  * @property string $updated_at
@@ -96,8 +96,8 @@ class Project extends ActiveRecord
             [['prompt_instance_copy_format'], 'required'],
             [['prompt_instance_copy_format'], 'string', 'max' => 32],
             [['prompt_instance_copy_format'], 'in', 'range' => CopyType::values()],
-            [['claude_options'], 'safe'],
-            [['claude_context'], 'string'],
+            [['ai_options'], 'safe'],
+            [['ai_context'], 'string'],
             [['label'], 'string', 'max' => 64],
             [
                 ['label'],
@@ -137,8 +137,8 @@ class Project extends ActiveRecord
             'allowed_file_extensions' => 'Allowed File Extensions',
             'blacklisted_directories' => 'Blacklisted Directories',
             'prompt_instance_copy_format' => 'Prompt Instance Copy Format',
-            'claude_options' => 'Claude CLI Options',
-            'claude_context' => 'Claude Project Context',
+            'ai_options' => 'AI CLI Options',
+            'ai_context' => 'AI Project Context',
             'label' => 'Label',
             'linkedProjectIds' => 'Linked Projects',
             'created_at' => 'Created At',
@@ -308,13 +308,13 @@ class Project extends ActiveRecord
 
     public function getClaudeOptions(): array
     {
-        if (empty($this->claude_options)) {
+        if (empty($this->ai_options)) {
             return [];
         }
-        if (is_string($this->claude_options)) {
-            return json_decode($this->claude_options, true) ?? [];
+        if (is_string($this->ai_options)) {
+            return json_decode($this->ai_options, true) ?? [];
         }
-        return $this->claude_options;
+        return $this->ai_options;
     }
 
     public function setClaudeOptions(array|string|null $value): void
@@ -330,9 +330,9 @@ class Project extends ActiveRecord
                     }
                 }
             }
-            $this->claude_options = empty($value) ? null : json_encode($value);
+            $this->ai_options = empty($value) ? null : json_encode($value);
         } else {
-            $this->claude_options = $value;
+            $this->ai_options = $value;
         }
     }
 
@@ -371,21 +371,21 @@ class Project extends ActiveRecord
 
     public function getClaudeContext(): ?string
     {
-        return $this->claude_context;
+        return $this->ai_context;
     }
 
     public function setClaudeContext(?string $value): void
     {
-        $this->claude_context = $value === '' ? null : $value;
+        $this->ai_context = $value === '' ? null : $value;
     }
 
     public function hasClaudeContext(): bool
     {
-        return $this->claude_context !== null && trim($this->claude_context) !== '';
+        return $this->ai_context !== null && trim($this->ai_context) !== '';
     }
 
     /**
-     * Returns claude_context converted to markdown.
+     * Returns ai_context converted to markdown.
      *
      * Handles both Delta JSON (new format) and plain text (legacy).
      */
@@ -395,7 +395,7 @@ class Project extends ActiveRecord
             return '';
         }
 
-        $raw = $this->claude_context;
+        $raw = $this->ai_context;
         $decoded = json_decode($raw, true);
 
         if (json_last_error() === JSON_ERROR_NONE && isset($decoded['ops'])) {
@@ -563,8 +563,8 @@ class Project extends ActiveRecord
 
         // Fields that affect Claude workspace configuration
         $relevantFields = [
-            'claude_context',
-            'claude_options',
+            'ai_context',
+            'ai_options',
             'name',
             'allowed_file_extensions',
             'blacklisted_directories',

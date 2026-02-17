@@ -87,7 +87,7 @@ class ClaudeWorkspaceServiceTest extends Unit
             'id' => 999999,
             'name' => 'Test Project',
             'user_id' => 1,
-            'claude_context' => '## Guidelines\n\nFollow PSR-12.',
+            'ai_context' => '## Guidelines\n\nFollow PSR-12.',
         ]);
 
         $this->service->syncConfig($project);
@@ -148,7 +148,7 @@ class ClaudeWorkspaceServiceTest extends Unit
         $project = new Project([
             'name' => 'Test Project',
             'user_id' => 100,
-            'claude_context' => '## Custom Instructions\n\nFollow PSR-12.',
+            'ai_context' => '## Custom Instructions\n\nFollow PSR-12.',
         ]);
 
         $result = $this->service->generateClaudeMd($project);
@@ -162,7 +162,7 @@ class ClaudeWorkspaceServiceTest extends Unit
         $project = new Project([
             'name' => 'Test Project',
             'user_id' => 100,
-            'claude_context' => null,
+            'ai_context' => null,
         ]);
 
         $result = $this->service->generateClaudeMd($project);
@@ -260,7 +260,7 @@ class ClaudeWorkspaceServiceTest extends Unit
         $project = new Project([
             'name' => 'Test Project',
             'user_id' => 100,
-            'claude_options' => null,
+            'ai_options' => null,
         ]);
 
         $result = $this->service->generateSettingsJson($project);

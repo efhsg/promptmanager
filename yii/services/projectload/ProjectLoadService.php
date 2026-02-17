@@ -900,7 +900,7 @@ class ProjectLoadService
         }
 
         // Dry-run warnings
-        $report->addWarning($dumpProjectId, "root_directory, claude_options, claude_context worden niet geladen (machine-specifiek) — configureer na het laden.");
+        $report->addWarning($dumpProjectId, "root_directory, ai_options, ai_context worden niet geladen (machine-specifiek) — configureer na het laden.");
 
         // Check for global field references without --include-global-fields
         if (!$includeGlobalFields) {

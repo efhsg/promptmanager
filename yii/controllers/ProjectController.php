@@ -274,7 +274,7 @@ class ProjectController extends Controller
 
     private function loadClaudeOptions(Project $model): void
     {
-        $claudeOptions = Yii::$app->request->post('claude_options', []);
+        $claudeOptions = Yii::$app->request->post('ai_options', []);
         $model->setClaudeOptions($claudeOptions);
     }
 

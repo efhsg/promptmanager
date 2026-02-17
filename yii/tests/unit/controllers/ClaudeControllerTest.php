@@ -97,7 +97,7 @@ class ClaudeControllerTest extends Unit
             'user_id' => self::TEST_USER_ID,
             'name' => 'Test Project',
             'root_directory' => '/some/path',
-            'claude_context' => '## Custom Context',
+            'ai_context' => '## Custom Context',
         ]);
         $project->save(false);
 
@@ -522,7 +522,7 @@ class ClaudeControllerTest extends Unit
         $project = new Project([
             'user_id' => self::TEST_USER_ID,
             'name' => 'Test Project',
-            'claude_options' => json_encode(['commandBlacklist' => ['deploy', 'test']]),
+            'ai_options' => json_encode(['commandBlacklist' => ['deploy', 'test']]),
         ]);
         $project->save(false);
 
@@ -549,7 +549,7 @@ class ClaudeControllerTest extends Unit
         $project = new Project([
             'user_id' => self::TEST_USER_ID,
             'name' => 'Test Project',
-            'claude_options' => json_encode([
+            'ai_options' => json_encode([
                 'commandGroups' => [
                     'CI' => ['test', 'deploy'],
                 ],
@@ -583,7 +583,7 @@ class ClaudeControllerTest extends Unit
         $project = new Project([
             'user_id' => self::TEST_USER_ID,
             'name' => 'Test Project',
-            'claude_options' => json_encode([
+            'ai_options' => json_encode([
                 'commandGroups' => [
                     'CI' => ['test', 'nonexistent'],
                 ],
@@ -611,7 +611,7 @@ class ClaudeControllerTest extends Unit
         $project = new Project([
             'user_id' => self::TEST_USER_ID,
             'name' => 'Test Project',
-            'claude_options' => json_encode([
+            'ai_options' => json_encode([
                 'commandBlacklist' => ['test'],
                 'commandGroups' => [
                     'CI' => ['test', 'deploy'],
@@ -660,7 +660,7 @@ class ClaudeControllerTest extends Unit
         $project = new Project([
             'user_id' => self::TEST_USER_ID,
             'name' => 'Test Project',
-            'claude_options' => json_encode([
+            'ai_options' => json_encode([
                 'commandBlacklist' => ['test'],
                 'commandGroups' => [
                     'CI' => ['test'],

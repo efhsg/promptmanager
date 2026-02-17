@@ -72,14 +72,14 @@ $modelOptions = [
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label for="claude-options-model" class="form-label">Model</label>
-                        <?= Html::dropDownList('claude_options[model]', $claudeOptions['model'] ?? '', $modelOptions, [
+                        <?= Html::dropDownList('ai_options[model]', $claudeOptions['model'] ?? '', $modelOptions, [
                             'id' => 'claude-options-model',
                             'class' => 'form-select',
                         ]) ?>
                     </div>
                     <div class="col-md-6">
                         <label for="claude-options-permission-mode" class="form-label">Permission Mode</label>
-                        <?= Html::dropDownList('claude_options[permissionMode]', $claudeOptions['permissionMode'] ?? '', $permissionModes, [
+                        <?= Html::dropDownList('ai_options[permissionMode]', $claudeOptions['permissionMode'] ?? '', $permissionModes, [
                             'id' => 'claude-options-permission-mode',
                             'class' => 'form-select',
                         ]) ?>
@@ -89,7 +89,7 @@ $modelOptions = [
                 <div class="row g-3 mt-1">
                     <div class="col-md-6">
                         <label for="claude-options-allowed-tools" class="form-label">Allowed Tools</label>
-                        <?= Html::textInput('claude_options[allowedTools]', $claudeOptions['allowedTools'] ?? '', [
+                        <?= Html::textInput('ai_options[allowedTools]', $claudeOptions['allowedTools'] ?? '', [
                             'id' => 'claude-options-allowed-tools',
                             'class' => 'form-control',
                             'placeholder' => 'e.g. Read,Glob,Grep',
@@ -98,7 +98,7 @@ $modelOptions = [
                     </div>
                     <div class="col-md-6">
                         <label for="claude-options-disallowed-tools" class="form-label">Disallowed Tools</label>
-                        <?= Html::textInput('claude_options[disallowedTools]', $claudeOptions['disallowedTools'] ?? '', [
+                        <?= Html::textInput('ai_options[disallowedTools]', $claudeOptions['disallowedTools'] ?? '', [
                             'id' => 'claude-options-disallowed-tools',
                             'class' => 'form-control',
                             'placeholder' => 'e.g. Bash,Write',
@@ -109,7 +109,7 @@ $modelOptions = [
 
                 <div class="mt-3">
                     <label for="claude-options-system-prompt" class="form-label">Append to System Prompt</label>
-                    <?= Html::textarea('claude_options[appendSystemPrompt]', $claudeOptions['appendSystemPrompt'] ?? '', [
+                    <?= Html::textarea('ai_options[appendSystemPrompt]', $claudeOptions['appendSystemPrompt'] ?? '', [
                         'id' => 'claude-options-system-prompt',
                         'class' => 'form-control',
                         'rows' => 2,
@@ -167,8 +167,8 @@ $modelOptions = [
                         </div>
                     </div>
 
-                    <input type="hidden" id="claude-command-blacklist-hidden" name="claude_options[commandBlacklist]" value="<?= Html::encode(Json::encode($model->getClaudeCommandBlacklist())) ?>">
-                    <input type="hidden" id="claude-command-groups-hidden" name="claude_options[commandGroups]" value="<?= Html::encode(Json::encode($model->getClaudeCommandGroups() ?: new \stdClass())) ?>">
+                    <input type="hidden" id="claude-command-blacklist-hidden" name="ai_options[commandBlacklist]" value="<?= Html::encode(Json::encode($model->getClaudeCommandBlacklist())) ?>">
+                    <input type="hidden" id="claude-command-groups-hidden" name="ai_options[commandGroups]" value="<?= Html::encode(Json::encode($model->getClaudeCommandGroups() ?: new \stdClass())) ?>">
                 <?php endif; ?>
             </div>
         </div>
@@ -214,7 +214,7 @@ $modelOptions = [
                     <?php endif; ?>
                 <?php endif; ?>
 
-                <?= $form->field($model, 'claude_context')
+                <?= $form->field($model, 'ai_context')
                     ->hiddenInput(['id' => 'claude-context-hidden'])
                     ->label(false) ?>
 
@@ -268,7 +268,7 @@ $modelOptions = [
 
 <?php
 $templateBody = json_encode($model->description);
-$claudeContextBody = json_encode($model->claude_context);
+$claudeContextBody = json_encode($model->ai_context);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
 $script = <<<JS

@@ -2,15 +2,15 @@
 
 namespace tests\unit\services;
 
+use app\services\ai\AiProviderInterface;
 use app\services\ClaudeCliCompletionClient;
-use app\services\ClaudeCliService;
 use Codeception\Test\Unit;
 
 class ClaudeCliCompletionClientTest extends Unit
 {
     public function testCompleteReturnsOutputOnSuccess(): void
     {
-        $service = $this->createMock(ClaudeCliService::class);
+        $service = $this->createMock(AiProviderInterface::class);
         $service->method('execute')->willReturn([
             'success' => true,
             'output' => 'Refactor auth to JWT',
@@ -27,7 +27,7 @@ class ClaudeCliCompletionClientTest extends Unit
 
     public function testCompleteReturnsErrorOnFailure(): void
     {
-        $service = $this->createMock(ClaudeCliService::class);
+        $service = $this->createMock(AiProviderInterface::class);
         $service->method('execute')->willReturn([
             'success' => false,
             'output' => '',
@@ -44,7 +44,7 @@ class ClaudeCliCompletionClientTest extends Unit
 
     public function testCompleteReturnsErrorWhenOutputEmpty(): void
     {
-        $service = $this->createMock(ClaudeCliService::class);
+        $service = $this->createMock(AiProviderInterface::class);
         $service->method('execute')->willReturn([
             'success' => true,
             'output' => '',
@@ -61,7 +61,7 @@ class ClaudeCliCompletionClientTest extends Unit
 
     public function testCompletePassesIsolatedOptionsToService(): void
     {
-        $service = $this->createMock(ClaudeCliService::class);
+        $service = $this->createMock(AiProviderInterface::class);
         $service->expects($this->once())
             ->method('execute')
             ->with(
@@ -94,7 +94,7 @@ class ClaudeCliCompletionClientTest extends Unit
 
     public function testCompleteTrimsOutput(): void
     {
-        $service = $this->createMock(ClaudeCliService::class);
+        $service = $this->createMock(AiProviderInterface::class);
         $service->method('execute')->willReturn([
             'success' => true,
             'output' => "  Trimmed title  \n",

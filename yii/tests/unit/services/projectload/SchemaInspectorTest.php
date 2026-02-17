@@ -47,11 +47,11 @@ class SchemaInspectorTest extends Unit
         $columns = $this->inspector->getInsertColumns(
             $this->schema,
             'project',
-            ['root_directory', 'claude_options']
+            ['root_directory', 'ai_options']
         );
 
         $this->assertNotContains('root_directory', $columns);
-        $this->assertNotContains('claude_options', $columns);
+        $this->assertNotContains('ai_options', $columns);
         $this->assertContains('name', $columns);
     }
 
