@@ -1,6 +1,6 @@
 # Implementation Progress
 
-## Status: Phase 10 complete
+## Status: Phase 11 complete (all phases done)
 
 ## Phases
 
@@ -13,41 +13,34 @@
 - [x] **P7**: Rename controllers + routes + RBAC config — committed: 3406d1b
 - [x] **P8**: Update views + CSS + layouts — committed: 294199f
 - [x] **P9**: DI wiring, config cleanup, bootstrap — committed: 8281154
-- [x] **P10**: Rename + update tests
-- [ ] **P11**: Cleanup + delete old files
+- [x] **P10**: Rename + update tests — committed: 4334bb9
+- [x] **P11**: Cleanup + delete old files
 
-## Current Phase: P10 — Rename + Update Tests (DONE)
+## Current Phase: P11 — Cleanup + Delete Old Files (DONE)
 
-### Renamed test files (14 git mv)
-- [x] `fixtures/ClaudeRunFixture.php` → `fixtures/AiRunFixture.php`
-- [x] `fixtures/data/claude_runs.php` → `fixtures/data/ai_runs.php`
-- [x] `unit/models/ClaudeRunTest.php` → `unit/models/AiRunTest.php`
-- [x] `unit/models/ClaudeRunSearchTest.php` → `unit/models/AiRunSearchTest.php`
-- [x] `unit/models/ClaudeRunQueryTest.php` → `unit/models/AiRunQueryTest.php`
-- [x] `unit/services/ClaudeStreamRelayServiceTest.php` → `unit/services/AiStreamRelayServiceTest.php`
-- [x] `unit/services/ClaudeRunCleanupServiceTest.php` → `unit/services/AiRunCleanupServiceTest.php`
-- [x] `unit/enums/ClaudeRunStatusTest.php` → `unit/enums/AiRunStatusTest.php`
-- [x] `unit/rbac/ClaudeRunOwnerRuleTest.php` → `unit/rbac/AiRunOwnerRuleTest.php`
-- [x] `unit/jobs/RunClaudeJobTest.php` → `unit/jobs/RunAiJobTest.php`
-- [x] `unit/controllers/ClaudeControllerTest.php` → `unit/controllers/AiChatControllerTest.php`
-- [x] `unit/commands/ClaudeRunControllerTest.php` → `unit/commands/AiRunControllerTest.php`
-- [x] `unit/handlers/ClaudeQuickHandlerTest.php` → `unit/handlers/AiQuickHandlerTest.php`
+### Storage directory rename
+- [x] `storage/claude-runs/` → `storage/ai-runs/` (5 PHP references updated)
+- [x] `.gitignore` comment updated
 
-### Class name updates
-- [x] `AiRunFixture` — class name + dataFile path
-- [x] `AiChatControllerTest` — class name
-- [x] `AiRunControllerTest` — class name
+### Files NOT deleted (still actively used)
+These services are still directly imported by controllers, commands, and jobs.
+Callers haven't been migrated to use provider interfaces yet.
+- `services/ClaudeCliService.php` — imported by 5 non-test files
+- `services/ClaudeWorkspaceService.php` — imported by AiController
+- `services/ClaudeCliCompletionClient.php` — registered in DI config
+- `rbac/ClaudeRunOwnerRule.php` — migration safeDown() dependency
 
-### Reference updates
-- [x] `AiRunCleanupServiceTest` — `ClaudeRunFixture` → `AiRunFixture`, fixture key `claudeRuns` → `aiRuns`
-- [x] `ai_runs.php` — updated fixture data comment
-
-### Not renamed (underlying classes still named Claude*)
-- `ClaudeCliServiceTest`, `ClaudeWorkspaceServiceTest`, `ClaudeCliCompletionClientTest`
+### Remaining `Claude` references (categorized)
+1. **Provider-specific (correct)**: `ClaudeCliProvider.php` — IS the Claude provider, name is intentional
+2. **Old services (future work)**: `ClaudeCliService`, `ClaudeWorkspaceService`, `ClaudeCliCompletionClient` — need caller migration before deletion
+3. **RBAC rule (migration dep)**: `ClaudeRunOwnerRule` — kept for migration rollback safety
+4. **UI labels (correct)**: "Claude CLI", "Claude thinking" etc. in views — product name, not code naming
+5. **Comments/docblocks (correct)**: References to "Claude CLI" in services/jobs — describes the tool being used
 
 ### Validation
 - [x] Unit tests — 1071 pass, 21 skipped, 0 failures
-- [x] No remaining `ClaudeRunFixture` or `ClaudeController` references in tests
+- [x] No remaining `claude-runs` storage path references in PHP code
+- [x] No broken `use` imports
 
 ## Session Log
 
@@ -62,4 +55,5 @@
 | 2026-02-17 | P7 | Complete | 3406d1b | 3 controller renames + RBAC + URL rule + 3 test updates |
 | 2026-02-17 | P8 | Complete | 294199f | 2 renames + 16 view edits + 2 CSS edits, all routes updated |
 | 2026-02-17 | P9 | Complete | 8281154 | 2 comment updates in main.php, DI already wired |
-| 2026-02-17 | P10 | Complete | pending | 14 test file renames + 4 class/reference updates |
+| 2026-02-17 | P10 | Complete | 4334bb9 | 14 test file renames + 4 class/reference updates |
+| 2026-02-17 | P11 | Complete | pending | Storage dir rename + cleanup documentation |

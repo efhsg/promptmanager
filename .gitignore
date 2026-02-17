@@ -12,6 +12,6 @@ scripts/backup.log
 docker-compose.override.yml
 docker/yii/claude-binary
 
-# Runtime storage (managed Claude workspaces, etc.)
+# Runtime storage (managed AI workspaces, etc.)
 yii/storage/
 yii/web/quill/1.3.7/editor-init.js

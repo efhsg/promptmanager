@@ -57,7 +57,7 @@ class AiRunController extends Controller
     {
         $this->stdout("Cleaning up stream files older than {$maxAgeHours}h...\n", Console::FG_CYAN);
 
-        $directory = Yii::getAlias('@app/storage/claude-runs');
+        $directory = Yii::getAlias('@app/storage/ai-runs');
         if (!is_dir($directory)) {
             $this->stdout("Stream directory does not exist, nothing to clean.\n", Console::FG_GREEN);
             return ExitCode::OK;

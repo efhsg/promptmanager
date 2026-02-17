@@ -30,7 +30,7 @@ class AiRunCleanupServiceTest extends Unit
         $this->service = new AiRunCleanupService();
 
         // Create temp storage directory for stream files
-        $this->tempDir = Yii::getAlias('@app/storage/claude-runs');
+        $this->tempDir = Yii::getAlias('@app/storage/ai-runs');
         if (!is_dir($this->tempDir)) {
             mkdir($this->tempDir, 0o775, true);
         }

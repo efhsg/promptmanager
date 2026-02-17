@@ -371,7 +371,7 @@ class AiRun extends ActiveRecord
 
     public function getStreamFilePath(): string
     {
-        return Yii::getAlias('@app/storage/claude-runs/' . $this->id . '.ndjson');
+        return Yii::getAlias('@app/storage/ai-runs/' . $this->id . '.ndjson');
     }
 
     // ---------------------------------------------------------------

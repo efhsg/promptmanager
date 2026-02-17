@@ -159,7 +159,7 @@ class AiRunTest extends Unit
 
         $path = $run->getStreamFilePath();
 
-        verify($path)->stringContainsString('storage/claude-runs/42.ndjson');
+        verify($path)->stringContainsString('storage/ai-runs/42.ndjson');
     }
 
     public function testDefaultStatusIsPending(): void

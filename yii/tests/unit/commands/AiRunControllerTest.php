@@ -66,7 +66,7 @@ class AiRunControllerTest extends Unit
 
     public function testCleanupFilesRemovesOldFiles(): void
     {
-        $dir = Yii::getAlias('@app/storage/claude-runs');
+        $dir = Yii::getAlias('@app/storage/ai-runs');
         if (!is_dir($dir)) {
             mkdir($dir, 0o775, true);
         }
