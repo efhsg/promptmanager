@@ -16,6 +16,7 @@ use app\services\FieldService;
 use app\services\PathService;
 use app\services\ProjectService;
 use common\constants\FieldConstants;
+use common\enums\LogCategory;
 use UnexpectedValueException;
 use Yii;
 use yii\db\ActiveRecord;
@@ -186,7 +187,7 @@ class FieldController extends Controller
                 $blacklistedDirectories
             );
         } catch (UnexpectedValueException $e) {
-            Yii::error($e->getMessage(), __METHOD__);
+            Yii::error($e->getMessage(), LogCategory::APPLICATION->value);
             return ['success' => false, 'message' => 'Unable to read the project root directory.'];
         }
 

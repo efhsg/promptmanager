@@ -4,6 +4,7 @@ namespace app\services;
 
 use app\models\Note;
 use app\models\Project;
+use common\enums\LogCategory;
 use common\enums\NoteType;
 use RuntimeException;
 use Throwable;
@@ -101,7 +102,7 @@ class NoteService
         try {
             return (bool) $model->delete();
         } catch (Throwable $e) {
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             return false;
         }
     }

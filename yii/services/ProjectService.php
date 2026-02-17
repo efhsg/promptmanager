@@ -4,6 +4,7 @@ namespace app\services;
 
 use app\models\Project;
 use app\models\ProjectLinkedProject;
+use common\enums\LogCategory;
 use Yii;
 use yii\helpers\ArrayHelper;
 
@@ -42,7 +43,7 @@ class ProjectService
         // Return validation errors or log DB failure
         $errors = $project->getFirstErrors();
         if (empty($errors)) {
-            Yii::error("Failed to auto-create project '$projectName' for user $userId: DB save failed without validation errors", __METHOD__);
+            Yii::error("Failed to auto-create project '$projectName' for user $userId: DB save failed without validation errors", LogCategory::DATABASE->value);
             return ['Failed to create project due to a server error.'];
         }
 

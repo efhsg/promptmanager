@@ -4,6 +4,7 @@ namespace app\services\projectload;
 
 use PDO;
 use PDOException;
+use common\enums\LogCategory;
 use RuntimeException;
 use Yii;
 use yii\db\Connection;
@@ -50,7 +51,7 @@ class DumpImporter
 
         $fileSize = filesize($realPath);
         if ($fileSize > 100 * 1024 * 1024) {
-            Yii::warning("Groot dump-bestand: " . round($fileSize / 1024 / 1024) . "MB");
+            Yii::warning("Groot dump-bestand: " . round($fileSize / 1024 / 1024) . "MB", LogCategory::APPLICATION->value);
         }
 
         return $realPath;

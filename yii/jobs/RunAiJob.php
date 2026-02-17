@@ -7,6 +7,7 @@ use app\models\AiRun;
 use app\services\ai\AiProviderInterface;
 use app\services\ai\AiStreamingProviderInterface;
 use common\enums\AiRunStatus;
+use common\enums\LogCategory;
 use RuntimeException;
 use Throwable;
 use Yii;
@@ -30,12 +31,12 @@ class RunAiJob implements RetryableJobInterface
         $run = AiRun::findOne($this->runId);
 
         if ($run === null) {
-            Yii::warning("RunAiJob: run {$this->runId} not found, skipping", __METHOD__);
+            Yii::warning("RunAiJob: run {$this->runId} not found, skipping", LogCategory::AI->value);
             return;
         }
 
         if ($run->status !== AiRunStatus::PENDING->value) {
-            Yii::warning("RunAiJob: run {$this->runId} is not pending (status={$run->status}), skipping", __METHOD__);
+            Yii::warning("RunAiJob: run {$this->runId} is not pending (status={$run->status}), skipping", LogCategory::AI->value);
             return;
         }
 
@@ -82,7 +83,7 @@ class RunAiJob implements RetryableJobInterface
         try {
             // Claim the run atomically
             if (!$run->claimForProcessing(getmypid())) {
-                Yii::warning("RunAiJob: run {$this->runId} already claimed by another worker", __METHOD__);
+                Yii::warning("RunAiJob: run {$this->runId} already claimed by another worker", LogCategory::AI->value);
                 return;
             }
 
@@ -245,7 +246,7 @@ class RunAiJob implements RetryableJobInterface
             fwrite($doneFile, "[DONE]\n");
             fclose($doneFile);
         } else {
-            Yii::warning("Could not write [DONE] marker to stream file: {$streamFilePath}", __METHOD__);
+            Yii::warning("Could not write [DONE] marker to stream file: {$streamFilePath}", LogCategory::AI->value);
         }
     }
 
@@ -271,7 +272,7 @@ class RunAiJob implements RetryableJobInterface
         } catch (Throwable $e) {
             Yii::warning(
                 "Session summary generation failed for run {$run->id}: " . $e->getMessage(),
-                __METHOD__
+                LogCategory::AI->value
             );
         }
     }

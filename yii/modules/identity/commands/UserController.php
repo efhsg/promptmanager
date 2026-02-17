@@ -7,6 +7,7 @@ namespace app\modules\identity\commands;
 use app\modules\identity\exceptions\UserCreationException;
 use app\modules\identity\models\User;
 use app\modules\identity\services\UserService;
+use common\enums\LogCategory;
 use Throwable;
 use Yii;
 use yii\console\{Controller, ExitCode};
@@ -31,7 +32,7 @@ class UserController extends Controller
             $this->stdout("Failed to create user '$username': {$e->getMessage()}\n");
             return ExitCode::UNSPECIFIED_ERROR;
         } catch (Throwable $e) {
-            Yii::error("An unexpected error occurred: " . $e->getMessage(), __METHOD__);
+            Yii::error("An unexpected error occurred: " . $e->getMessage(), LogCategory::IDENTITY->value);
             $this->stdout("An unexpected error occurred: {$e->getMessage()}\n");
             return ExitCode::UNSPECIFIED_ERROR;
         }
@@ -73,7 +74,7 @@ class UserController extends Controller
                 return ExitCode::DATAERR;
             }
         } catch (Throwable $e) {
-            Yii::error("An error occurred while deleting user '$username': " . $e->getMessage(), __METHOD__);
+            Yii::error("An error occurred while deleting user '$username': " . $e->getMessage(), LogCategory::IDENTITY->value);
             $this->stdout("An unexpected error occurred: {$e->getMessage()}\n");
             return ExitCode::UNSPECIFIED_ERROR;
         }

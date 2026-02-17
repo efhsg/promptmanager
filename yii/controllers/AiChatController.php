@@ -16,6 +16,7 @@ use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
 use common\enums\CopyType;
 use common\enums\AiRunStatus;
+use common\enums\LogCategory;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -577,7 +578,7 @@ class AiChatController extends Controller
 
         $output = $result['output'] ?? '';
         if (!$result['success'] || !is_string($output) || trim($output) === '') {
-            Yii::warning('Summarize session failed: ' . ($result['error'] ?? 'empty output'), __METHOD__);
+            Yii::warning('Summarize session failed: ' . ($result['error'] ?? 'empty output'), LogCategory::AI->value);
             return [
                 'success' => false,
                 'error' => $result['error'] ?: 'Summarization returned empty output.',

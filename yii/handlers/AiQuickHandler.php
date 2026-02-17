@@ -3,6 +3,7 @@
 namespace app\handlers;
 
 use app\services\AiCompletionClient;
+use common\enums\LogCategory;
 use InvalidArgumentException;
 use RuntimeException;
 use Yii;
@@ -93,7 +94,7 @@ class AiQuickHandler
         ]);
 
         if (!$result['success']) {
-            Yii::warning("AiQuick [{$useCase}] failed: " . ($result['error'] ?? 'empty output'), __METHOD__);
+            Yii::warning("AiQuick [{$useCase}] failed: " . ($result['error'] ?? 'empty output'), LogCategory::AI->value);
             return [
                 'success' => false,
                 'error' => $result['error'] ?? 'AI returned empty output.',

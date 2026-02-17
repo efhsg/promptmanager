@@ -3,6 +3,7 @@
 namespace app\services;
 
 use app\models\AiRun;
+use common\enums\LogCategory;
 use Yii;
 
 /**
@@ -114,7 +115,7 @@ class AiRunCleanupService
             return $deleted;
         } catch (\Throwable $e) {
             $transaction->rollBack();
-            Yii::error('Failed to delete AiRun records: ' . $e->getMessage(), __METHOD__);
+            Yii::error('Failed to delete AiRun records: ' . $e->getMessage(), LogCategory::AI->value);
             throw $e;
         }
     }

@@ -2,6 +2,7 @@
 
 namespace app\services;
 
+use common\enums\LogCategory;
 use Yii;
 
 /**
@@ -36,7 +37,7 @@ class AiStreamRelayService
 
         $handle = fopen($filePath, 'rb');
         if ($handle === false) {
-            Yii::warning("Could not open stream file for relay: {$filePath}", __METHOD__);
+            Yii::warning("Could not open stream file for relay: {$filePath}", LogCategory::AI->value);
             return $offset;
         }
 

@@ -7,6 +7,7 @@ namespace app\modules\identity\services;
 use app\modules\identity\exceptions\UserCreationException;
 use app\modules\identity\models\User;
 use app\modules\identity\traits\ValidationErrorFormatterTrait;
+use common\enums\LogCategory;
 use Exception;
 use Throwable;
 use Yii;
@@ -48,11 +49,11 @@ class UserService
             return $user;
         } catch (UserCreationException $e) {
             $transaction->rollBack();
-            Yii::error("Validation error creating user '$username': " . $e->getMessage(), __METHOD__);
+            Yii::error("Validation error creating user '$username': " . $e->getMessage(), LogCategory::IDENTITY->value);
             throw $e;
         } catch (Throwable $e) {
             $transaction->rollBack();
-            Yii::error("Unexpected error creating user '$username': " . $e->getMessage(), __METHOD__);
+            Yii::error("Unexpected error creating user '$username': " . $e->getMessage(), LogCategory::IDENTITY->value);
             $errorMessage = "An unexpected error occurred while creating the user: " . $e->getMessage();
             throw new UserCreationException($errorMessage, 0, $e);
         }
@@ -90,7 +91,7 @@ class UserService
         try {
             return $user->save(false, [$attribute]);
         } catch (Exception $e) {
-            Yii::error("Error updating $attribute for user ID $user->id: " . $e->getMessage(), __METHOD__);
+            Yii::error("Error updating $attribute for user ID $user->id: " . $e->getMessage(), LogCategory::IDENTITY->value);
             return false;
         }
     }
@@ -102,7 +103,7 @@ class UserService
         try {
             return $user->save(false, ['password_hash']);
         } catch (Exception $e) {
-            Yii::error("Error changing password for user ID $user->id: " . $e->getMessage(), __METHOD__);
+            Yii::error("Error changing password for user ID $user->id: " . $e->getMessage(), LogCategory::IDENTITY->value);
             return false;
         }
     }
@@ -115,7 +116,7 @@ class UserService
     public function softDelete(User $user): bool
     {
         if ($user->deleted_at !== null) {
-            Yii::warning("Attempted to soft delete an already deleted record.");
+            Yii::warning("Attempted to soft delete an already deleted record.", LogCategory::IDENTITY->value);
             return false;
         }
 
@@ -125,7 +126,7 @@ class UserService
     public function restoreSoftDelete(User $user): bool
     {
         if ($user->deleted_at === null) {
-            Yii::warning("Attempted to restore a record that is not deleted.");
+            Yii::warning("Attempted to restore a record that is not deleted.", LogCategory::IDENTITY->value);
             return false;
         }
 
@@ -142,11 +143,11 @@ class UserService
                 $auth = Yii::$app->authManager;
 
                 $auth->revokeAll($user->id);
-                Yii::info("Revoked all RBAC roles and permissions from user ID {$user->id}.", __METHOD__);
+                Yii::info("Revoked all RBAC roles and permissions from user ID {$user->id}.", LogCategory::IDENTITY->value);
             }
 
             if (!$user->delete()) {
-                Yii::error("Failed to hard-delete user ID {$user->id}.", __METHOD__);
+                Yii::error("Failed to hard-delete user ID {$user->id}.", LogCategory::IDENTITY->value);
                 throw new Exception("Failed to delete user ID {$user->id}.");
             }
 
@@ -154,7 +155,7 @@ class UserService
             return true;
         } catch (Throwable $e) {
             $transaction->rollBack();
-            Yii::error("Error hard-deleting user ID {$user->id}: " . $e->getMessage(), __METHOD__);
+            Yii::error("Error hard-deleting user ID {$user->id}: " . $e->getMessage(), LogCategory::IDENTITY->value);
             return false;
         }
     }
@@ -165,7 +166,7 @@ class UserService
     private function assignUserRole(User $user): void
     {
         if (!$this->isRbacAvailable()) {
-            Yii::warning('RBAC is not configured. Skipping role assignment.', __METHOD__);
+            Yii::warning('RBAC is not configured. Skipping role assignment.', LogCategory::IDENTITY->value);
             return;
         }
 
@@ -175,7 +176,7 @@ class UserService
         if ($userRole) {
             $auth->assign($userRole, $user->id);
         } else {
-            Yii::warning("Role 'user' does not exist in the RBAC system.", __METHOD__);
+            Yii::warning("Role 'user' does not exist in the RBAC system.", LogCategory::IDENTITY->value);
         }
     }
 

@@ -2,6 +2,7 @@
 
 namespace app\services;
 
+use common\enums\LogCategory;
 use Throwable;
 use Yii;
 use yii\db\ActiveRecord;
@@ -52,7 +53,7 @@ class ModelService
             $model->delete();
             return true;
         } catch (Throwable $e) {
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             return false;
         }
     }

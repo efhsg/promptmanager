@@ -5,6 +5,7 @@ namespace app\services;
 use app\models\Field;
 use app\models\FieldOption;
 use app\models\ProjectLinkedProject;
+use common\enums\LogCategory;
 use Exception;
 use Throwable;
 use Yii;
@@ -151,7 +152,7 @@ class FieldService
             return true;
         } catch (Throwable $e) {
             $transaction->rollBack();
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             return false;
         }
     }
@@ -161,7 +162,7 @@ class FieldService
         try {
             return $field->delete();
         } catch (Throwable $e) {
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             return false;
         }
     }
@@ -189,7 +190,7 @@ class FieldService
             return true;
         } catch (Throwable $e) {
             $transaction->rollBack();
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             return false;
         }
     }

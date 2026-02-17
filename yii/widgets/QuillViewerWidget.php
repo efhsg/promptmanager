@@ -5,6 +5,7 @@ namespace app\widgets;
 use app\assets\QuillAsset;
 use app\services\CopyFormatConverter;
 use common\enums\CopyType;
+use common\enums\LogCategory;
 use Throwable;
 use Yii;
 use yii\base\InvalidArgumentException;
@@ -218,7 +219,7 @@ class QuillViewerWidget extends Widget
         try {
             $delta = Json::decode($jsonString, true, 512, JSON_THROW_ON_ERROR);
         } catch (InvalidArgumentException $e) {
-            Yii::error("Invalid QuillViewerWidget JSON: " . $e->getMessage());
+            Yii::error("Invalid QuillViewerWidget JSON: " . $e->getMessage(), LogCategory::APPLICATION->value);
             return;
         }
 

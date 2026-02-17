@@ -4,6 +4,7 @@ namespace app\services;
 
 use app\services\copyformat\MarkdownParser;
 use app\services\copyformat\QuillDeltaWriter;
+use common\enums\LogCategory;
 use RuntimeException;
 use Yii;
 
@@ -181,7 +182,7 @@ class YouTubeTranscriptService
             }
         }
 
-        Yii::error('YouTube transcript fetch failed: ' . $output, 'youtube');
+        Yii::error('YouTube transcript fetch failed: ' . $output, LogCategory::YOUTUBE->value);
         return 'Failed to fetch transcript. Please check the video ID and try again.';
     }
 }

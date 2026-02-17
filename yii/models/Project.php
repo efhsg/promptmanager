@@ -7,6 +7,7 @@ use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use app\services\CopyFormatConverter;
 use common\enums\CopyType;
+use common\enums\LogCategory;
 use app\services\ai\AiProviderInterface;
 use app\services\ai\AiWorkspaceProviderInterface;
 use Yii;
@@ -581,7 +582,7 @@ class Project extends ActiveRecord
                     $provider->syncConfig($this);
                 }
             } catch (Throwable $e) {
-                Yii::error("Failed to sync AI workspace for project {$this->id}: {$e->getMessage()}", 'application');
+                Yii::error("Failed to sync AI workspace for project {$this->id}: {$e->getMessage()}", LogCategory::APPLICATION->value);
             }
         }
     }
@@ -596,7 +597,7 @@ class Project extends ActiveRecord
                 $provider->deleteWorkspace($this);
             }
         } catch (Throwable $e) {
-            Yii::error("Failed to delete AI workspace for project {$this->id}: {$e->getMessage()}", 'application');
+            Yii::error("Failed to delete AI workspace for project {$this->id}: {$e->getMessage()}", LogCategory::APPLICATION->value);
         }
     }
 }

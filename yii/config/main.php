@@ -53,17 +53,9 @@ $config = [
             'traceLevel' => YII_DEBUG ? 3 : 0,
             'targets' => [
                 [
-                    'class' => 'yii\log\DbTarget',
-                    'enabled' => YII_ENV !== 'test',
-                    'levels' => ['error'],
-                    'categories' => ['application', 'database'],
-                    'logTable' => '{{%log}}',
-                ],
-                [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning', 'info'],
-                    'categories' => ['application', 'database'],
-                    'logFile' => '@runtime/logs/db.log',
+                    'logFile' => '@runtime/logs/app.log',
                 ],
             ],
         ],

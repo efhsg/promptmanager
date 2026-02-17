@@ -2,6 +2,7 @@
 
 namespace app\services\projectload;
 
+use common\enums\LogCategory;
 use Exception;
 use RuntimeException;
 use Yii;
@@ -264,7 +265,7 @@ class ProjectLoadService
         } catch (Exception $e) {
             $transaction->rollBack();
             $report->setProjectError($dumpProjectId, $e->getMessage());
-            Yii::error("Project load failed for dump ID {$dumpProjectId}: " . $e->getMessage());
+            Yii::error("Project load failed for dump ID {$dumpProjectId}: " . $e->getMessage(), LogCategory::APPLICATION->value);
         }
     }
 

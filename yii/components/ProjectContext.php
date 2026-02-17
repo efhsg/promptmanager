@@ -4,6 +4,7 @@ namespace app\components;
 
 use app\models\Project;
 use app\services\UserPreferenceService;
+use common\enums\LogCategory;
 use InvalidArgumentException;
 use Throwable;
 use Yii;
@@ -114,7 +115,7 @@ class ProjectContext extends BaseObject
         try {
             $this->removeUserPreferenceProjectId();
         } catch (Throwable $e) {
-            Yii::warning($e->getMessage(), __METHOD__);
+            Yii::warning($e->getMessage(), LogCategory::APPLICATION->value);
         }
 
         return null;

@@ -9,6 +9,7 @@ use app\services\ai\AiConfigProviderInterface;
 use app\services\ai\AiProviderInterface;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
+use common\enums\LogCategory;
 use Throwable;
 use Yii;
 use yii\db\ActiveRecord;
@@ -206,7 +207,7 @@ class ProjectController extends Controller
             $model->delete();
             Yii::$app->session->setFlash('success', "Project '$model->name' deleted successfully.");
         } catch (Throwable $e) {
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             Yii::$app->session->setFlash('error', 'Unable to delete the project. Please try again later.');
         }
         return $this->redirect(['index']);

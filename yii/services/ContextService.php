@@ -4,6 +4,7 @@ namespace app\services;
 
 use app\models\Context;
 use app\models\query\ContextQuery;
+use common\enums\LogCategory;
 use Throwable;
 use Yii;
 use yii\base\Component;
@@ -192,7 +193,7 @@ class ContextService extends Component
             return true;
         } catch (Throwable $e) {
             $transaction->rollBack();
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             return false;
         }
     }

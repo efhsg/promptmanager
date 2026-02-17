@@ -18,6 +18,7 @@ use app\services\NoteService;
 use app\services\PathService;
 use app\services\YouTubeTranscriptService;
 use common\enums\CopyType;
+use common\enums\LogCategory;
 use common\enums\NoteType;
 use RuntimeException;
 use Throwable;
@@ -191,7 +192,7 @@ class NoteController extends Controller
             $model->delete();
             Yii::$app->session->setFlash('success', "Note '$model->name' deleted successfully.");
         } catch (Throwable $e) {
-            Yii::error($e->getMessage(), 'database');
+            Yii::error($e->getMessage(), LogCategory::DATABASE->value);
             Yii::$app->session->setFlash('error', 'Unable to delete the note. Please try again later.');
         }
         return $this->redirect(['index']);

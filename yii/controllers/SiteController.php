@@ -4,6 +4,7 @@
 
 namespace app\controllers;
 
+use common\enums\LogCategory;
 use Exception;
 use Yii;
 use yii\filters\{AccessControl, VerbFilter};
@@ -49,7 +50,7 @@ class SiteController extends Controller
             Yii::$app->db->createCommand('SELECT 1')->execute();
             return $this->render('index');
         } catch (Exception $e) {
-            Yii::error('Database connection failed: ' . $e->getMessage(), __METHOD__);
+            Yii::error('Database connection failed: ' . $e->getMessage(), LogCategory::APPLICATION->value);
             $this->layout = 'fatal';
             return $this->render('error', [
                 'name' => 'Database Connection Error',

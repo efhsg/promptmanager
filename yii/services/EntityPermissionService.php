@@ -2,6 +2,7 @@
 
 namespace app\services;
 
+use common\enums\LogCategory;
 use Yii;
 use yii\base\Component;
 use yii\caching\TagDependency;
@@ -146,7 +147,7 @@ class EntityPermissionService extends Component
         if (!empty($missingPermissions)) {
             Yii::warning(
                 "Missing RBAC permissions for entity '$entityName': " . implode(', ', $missingPermissions),
-                __METHOD__
+                LogCategory::APPLICATION->value
             );
         }
 

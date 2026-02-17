@@ -11,6 +11,7 @@ use app\services\ai\AiWorkspaceProviderInterface;
 use app\services\CopyFormatConverter;
 use common\enums\AiPermissionMode;
 use common\enums\CopyType;
+use common\enums\LogCategory;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
@@ -76,7 +77,7 @@ class ClaudeCliProvider implements
         $configSource = $this->determineConfigSource($effectiveWorkDir, $workDir, $project);
         $command = $this->buildCommand($options, $sessionId);
 
-        Yii::debug("ClaudeCliProvider::execute cmd={$command} cwd={$containerPath}", 'claude');
+        Yii::debug("ClaudeCliProvider::execute cmd={$command} cwd={$containerPath}", LogCategory::AI->value);
 
         $descriptorSpec = [
             0 => ['pipe', 'r'],
@@ -117,7 +118,7 @@ class ClaudeCliProvider implements
             }
 
             if ((time() - $startTime) > $timeout) {
-                Yii::warning("ClaudeCliProvider timeout after {$timeout}s. stdout so far: " . mb_substr($output, 0, 500) . " | stderr so far: " . mb_substr($error, 0, 500), 'claude');
+                Yii::warning("ClaudeCliProvider timeout after {$timeout}s. stdout so far: " . mb_substr($output, 0, 500) . " | stderr so far: " . mb_substr($error, 0, 500), LogCategory::AI->value);
                 proc_terminate($process, 9);
                 fclose($pipes[1]);
                 fclose($pipes[2]);
@@ -177,7 +178,7 @@ class ClaudeCliProvider implements
     public function cancelProcess(string $streamToken): bool
     {
         if (!function_exists('posix_kill')) {
-            Yii::warning('posix_kill not available — cannot cancel Claude CLI process', __METHOD__);
+            Yii::warning('posix_kill not available — cannot cancel Claude CLI process', LogCategory::AI->value);
             return false;
         }
 
@@ -484,7 +485,7 @@ class ClaudeCliProvider implements
         $httpCode = $fetch['status'] ?? 0;
         $response = $fetch['body'] ?? '';
         if ($httpCode !== 200) {
-            Yii::warning("Claude usage API returned HTTP {$httpCode}", __METHOD__);
+            Yii::warning("Claude usage API returned HTTP {$httpCode}", LogCategory::AI->value);
             return ['success' => false, 'error' => 'API returned HTTP ' . $httpCode];
         }
 
@@ -556,7 +557,7 @@ class ClaudeCliProvider implements
         $containerPath = $this->translatePath($directory);
         $commandsDir = rtrim($containerPath, '/') . '/.claude/commands';
         if (!is_dir($commandsDir)) {
-            Yii::debug("Claude commands dir not found: '$commandsDir' (root: '$directory', mapped: '$containerPath')", 'claude');
+            Yii::debug("Claude commands dir not found: '$commandsDir' (root: '$directory', mapped: '$containerPath')", LogCategory::AI->value);
             return [];
         }
 
@@ -724,7 +725,7 @@ class ClaudeCliProvider implements
             }
             Yii::warning(
                 "Directory '{$containerPath}' exists but has no Claude config, falling through to managed workspace",
-                'claude'
+                LogCategory::AI->value
             );
         } else {
             $mappingNote = $pathMapped
@@ -732,7 +733,7 @@ class ClaudeCliProvider implements
                 : "no path mapping applied for '{$requestedDir}'";
             Yii::warning(
                 "Directory not accessible in container ({$mappingNote}), falling through to managed workspace",
-                'claude'
+                LogCategory::AI->value
             );
         }
 
