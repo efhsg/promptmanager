@@ -6,6 +6,8 @@
  */
 
 use app\components\ProjectContext;
+use app\services\ai\AiProviderInterface;
+use app\services\ai\providers\ClaudeCliProvider;
 use app\services\ClaudeWorkspaceService;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
@@ -159,6 +161,7 @@ $config = [
 
 $config['container'] = [
     'definitions' => [
+        AiProviderInterface::class => ClaudeCliProvider::class,
         'app\services\AiCompletionClient' => [
             'class' => 'app\services\ClaudeCliCompletionClient',
         ],

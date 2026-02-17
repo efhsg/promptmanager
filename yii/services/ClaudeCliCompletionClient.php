@@ -2,6 +2,8 @@
 
 namespace app\services;
 
+use app\services\ai\AiProviderInterface;
+
 /**
  * AiCompletionClient backed by the Claude CLI.
  *
@@ -10,9 +12,12 @@ namespace app\services;
  */
 class ClaudeCliCompletionClient implements AiCompletionClient
 {
-    public function __construct(
-        private readonly ClaudeCliService $claudeCliService,
-    ) {}
+    private AiProviderInterface|ClaudeCliService $claudeCliService;
+
+    public function __construct(AiProviderInterface|ClaudeCliService $claudeCliService)
+    {
+        $this->claudeCliService = $claudeCliService;
+    }
 
     public function complete(string $prompt, string $systemPromptFile, array $options = []): array
     {

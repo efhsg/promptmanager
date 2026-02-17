@@ -38,3 +38,13 @@
 - All 5 interfaces created without issues. Method signatures derived from existing `ClaudeCliService` and `ClaudeWorkspaceService`.
 - `AiConfigProviderInterface::hasConfig()` uses generic key names (`hasConfigFile`, `hasConfigDir`) instead of Claude-specific names (`hasCLAUDE_MD`, `hasClaudeDir`). The concrete `ClaudeCliProvider` can add provider-specific keys as documented in spec.
 - No deviations from plan.
+
+### P2: Create ClaudeCliProvider (2026-02-17)
+
+- `ClaudeCliProvider` implements all 5 interfaces (~750 lines). Composed from `ClaudeCliService` + `ClaudeWorkspaceService`.
+- `parseStreamResult()` new method on `AiStreamingProviderInterface` — extracts text, session_id, and metadata from NDJSON stream log. Consolidates `extractResultText`, `extractMetadata`, `extractSessionId` from `RunClaudeJob`.
+- `ClaudeCliCompletionClient` updated to accept union type `AiProviderInterface|ClaudeCliService` — allows gradual migration.
+- PID cache key prefix changed from `claude_cli_pid_` to `ai_cli_pid_` in the new provider.
+- `hasConfig()` returns both generic keys (`hasConfigFile`, `hasConfigDir`) and Claude-specific keys (`hasCLAUDE_MD`, `hasClaudeDir`) for backwards compatibility.
+- Old services (`ClaudeCliService`, `ClaudeWorkspaceService`) kept alive — will be removed in P11.
+- No deviations from plan.
