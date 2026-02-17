@@ -36,7 +36,7 @@ return [
                 'update' => 'updateProject',
                 'delete' => 'deleteProject',
                 'setCurrent' => 'setCurrentProject',
-                'claudeCommands' => 'viewProject',
+                'aiCommands' => 'viewProject',
                 'claude' => 'viewProject',
             ],
             'permissions' => [
@@ -148,7 +148,7 @@ return [
                 ],
             ],
         ],
-        'claude' => [
+        'ai-chat' => [
             'actionPermissionMap' => [
                 'index' => 'viewProject',
                 'stream' => 'viewProject',
@@ -165,7 +165,7 @@ return [
             ],
             // Permissions are defined under 'project' entity — no additional permissions needed.
         ],
-        'claudeRun' => [
+        'aiRun' => [
             'actionPermissionMap' => [
                 'view' => 'viewAiRun',
                 'cancel' => 'updateAiRun',
@@ -187,7 +187,7 @@ return [
                 'view' => 'viewNote',
                 'update' => 'updateNote',
                 'delete' => 'deleteNote',
-                'claude' => 'viewNote',
+                'ai' => 'viewNote',
                 'fetchContent' => 'viewNote',
             ],
             'permissions' => [

@@ -230,11 +230,11 @@ class ProjectController extends Controller
     }
 
     /**
-     * Returns available Claude slash commands for a project.
+     * Returns available AI slash commands for a project.
      *
      * @throws NotFoundHttpException
      */
-    public function actionClaudeCommands(int $id): array
+    public function actionAiCommands(int $id): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
@@ -252,13 +252,13 @@ class ProjectController extends Controller
     }
 
     /**
-     * @deprecated Use ClaudeController::actionIndex instead. Redirects for backward compatibility.
+     * @deprecated Use AiChatController::actionIndex instead. Redirects for backward compatibility.
      * @throws NotFoundHttpException
      */
     public function actionClaude(int $id): Response
     {
         $this->findModel($id);
-        return $this->redirect(['/claude/index', 'p' => $id]);
+        return $this->redirect(['/ai-chat/index', 'p' => $id]);
     }
 
     /**

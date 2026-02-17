@@ -38,7 +38,7 @@ class ProjectControllerTest extends Unit
 
         $controller = $this->createController();
 
-        $result = $controller->actionClaudeCommands($project->id);
+        $result = $controller->actionAiCommands($project->id);
 
         $this->assertFalse($result['success']);
         $this->assertSame([], $result['commands']);
@@ -65,7 +65,7 @@ class ProjectControllerTest extends Unit
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
 
-        $result = $controller->actionClaudeCommands($project->id);
+        $result = $controller->actionAiCommands($project->id);
 
         $this->assertTrue($result['success']);
         $this->assertCount(2, $result['commands']);
@@ -89,7 +89,7 @@ class ProjectControllerTest extends Unit
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
 
-        $result = $controller->actionClaudeCommands($project->id);
+        $result = $controller->actionAiCommands($project->id);
 
         $this->assertTrue($result['success']);
         $this->assertSame([], $result['commands']);

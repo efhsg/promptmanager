@@ -1,47 +1,55 @@
 # Implementation Progress
 
-## Status: Phase 3 complete
+## Status: Phase 7 complete
 
 ## Phases
 
 - [x] **P1**: Create interfaces (5 new files) — committed: 1e366de
 - [x] **P2**: Create ClaudeCliProvider (extract from services) — committed: 20dd7b5
-- [x] **P3**: Database migrations (3 migrations) + model/config updates for new column names
-- [ ] **P4**: Rename models + enums + RBAC rule
-- [ ] **P5**: Rename services + job + handler
-- [ ] **P6**: Rename AiPermissionMode + update Project model
-- [ ] **P7**: Rename controllers + routes + RBAC config
+- [x] **P3**: Database migrations (3 migrations) + model/config updates for new column names — committed: ca5a093
+- [x] **P4**: Rename models + enums (AiRun, AiRunQuery, AiRunSearch, AiRunStatus) — committed: c6cb258
+- [x] **P5**: Rename services + job + handler — committed: 28e09f4
+- [x] **P6**: Rename AiPermissionMode + update Project model — committed: c5e8cb1
+- [x] **P7**: Rename controllers + routes + RBAC config
 - [ ] **P8**: Update views + CSS + layouts
 - [ ] **P9**: DI wiring, config cleanup, bootstrap
 - [ ] **P10**: Rename + update tests
 - [ ] **P11**: Cleanup + delete old files
 
-## Current Phase: P3 — Database Migrations (DONE)
+## Current Phase: P7 — Rename Controllers + Routes + RBAC Config (DONE)
 
-### Migrations created
-- [x] `yii/migrations/m260217_000001_rename_claude_run_to_ai_run.php` — table rename, provider column, FK/index rename
-- [x] `yii/migrations/m260217_000002_rename_claude_columns_in_project.php` — `claude_options` → `ai_options`, `claude_context` → `ai_context`
-- [x] `yii/migrations/m260217_000003_rename_claude_rbac_to_ai.php` — RBAC permissions rename, queue channel update
+### Renamed files (git mv)
+- [x] `controllers/ClaudeController.php` → `controllers/AiChatController.php`
+- [x] `commands/ClaudeController.php` → `commands/AiController.php`
+- [x] `commands/ClaudeRunController.php` → `commands/AiRunController.php`
 
-### Additional files created/updated (needed for code to work with new schema)
-- [x] `yii/rbac/AiRunOwnerRule.php` — new RBAC rule class (needed by migration 3)
-- [x] `yii/models/ClaudeRun.php` — `tableName()` → `'{{%ai_run}}'`
-- [x] `yii/models/Project.php` — attribute references `claude_options` → `ai_options`, `claude_context` → `ai_context`
-- [x] `yii/config/rbac.php` — permission names `viewClaudeRun` → `viewAiRun`, rule class → `AiRunOwnerRule`
-- [x] `yii/config/main.php` — queue channel `'claude'` → `'ai'`
-- [x] `yii/controllers/ProjectController.php` — POST key `claude_options` → `ai_options`
-- [x] `yii/views/project/_form.php` — form field names `claude_options[...]` → `ai_options[...]`, field `claude_context` → `ai_context`
-- [x] `yii/services/projectload/EntityConfig.php` — excluded columns list
-- [x] `yii/services/projectload/ProjectLoadService.php` — warning message text
-- [x] Tests updated: ClaudeControllerTest, ClaudeWorkspaceServiceTest, SchemaInspectorTest, ProjectLoadServiceTest
+### Class renames
+- [x] `ClaudeController` (web) → `AiChatController`
+- [x] `ClaudeController` (console) → `AiController`
+- [x] `ClaudeRunController` → `AiRunController`
 
-### Deviation from plan
-- `claude_permission_mode` column does NOT exist (already merged into `claude_options` JSON in earlier migration) — skipped in migration 2
-- Additional code changes beyond "just migrations" were required: models, config, views, and tests all reference DB columns directly, so they had to be updated alongside the schema changes
+### Method renames
+- [x] `AiChatController::loadClaudeCommands()` → `loadAiCommands()`
+- [x] `ProjectController::actionClaudeCommands()` → `actionAiCommands()`
+- [x] `NoteController::actionClaude()` → `actionAi()`
+
+### Config changes
+- [x] `rbac.php`: entity key `claude` → `ai-chat`, `claudeRun` → `aiRun`
+- [x] `rbac.php`: project entity `claudeCommands` → `aiCommands`
+- [x] `rbac.php`: note entity `claude` → `ai`
+- [x] `main.php`: removed `claudeWorkspaceService` component
+- [x] `main.php`: added URL rule `claude/<action>` → `ai-chat/<action>` for backward compat
+
+### Updated callers
+- [x] `ProjectController.php`: redirect in `actionClaude` → `/ai-chat/index`
+- [x] `NoteController.php`: redirect in `actionAi` → `/ai-chat/index`
+
+### Test updates
+- [x] `ClaudeControllerTest.php`: updated class import, constructor calls, reflection helper
+- [x] `ClaudeRunControllerTest.php`: updated class import and constructor calls
+- [x] `ProjectControllerTest.php`: updated `actionClaudeCommands` → `actionAiCommands`
 
 ### Validation
-- [x] Migrations run on both schemas (yii + yii_test)
-- [x] Linter — 0 issues
 - [x] Unit tests — 1071 pass, 21 skipped, 0 failures
 
 ## Session Log
@@ -50,4 +58,8 @@
 |------|-------|--------|--------|-------|
 | 2026-02-17 | P1 | Complete | 1e366de | 5 interfaces created, linter + tests green |
 | 2026-02-17 | P2 | Complete | 20dd7b5 | ClaudeCliProvider created, DI registered, tests green |
-| 2026-02-17 | P3 | Complete | pending | 3 migrations + model/config/view updates, tests green |
+| 2026-02-17 | P3 | Complete | ca5a093 | 3 migrations + model/config/view updates, tests green |
+| 2026-02-17 | P4 | Complete | c6cb258 | 4 file renames + 15 reference edits, tests green |
+| 2026-02-17 | P5 | Complete | 28e09f4 | 4 file renames + 9 reference edits + class_alias, tests green |
+| 2026-02-17 | P6 | Complete | c5e8cb1 | 1 enum rename + 9 method renames + DI provider in afterSave/afterDelete |
+| 2026-02-17 | P7 | Complete | pending | 3 controller renames + RBAC + URL rule + 3 test updates |

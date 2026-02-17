@@ -2,7 +2,7 @@
 
 namespace tests\unit\commands;
 
-use app\commands\ClaudeRunController;
+use app\commands\AiRunController;
 use app\models\AiRun;
 use common\enums\AiRunStatus;
 use Codeception\Test\Unit;
@@ -37,7 +37,7 @@ class ClaudeRunControllerTest extends Unit
         // Create a recent running run
         $recentRun = $this->createRun(AiRunStatus::RUNNING);
 
-        $controller = new ClaudeRunController('claude-run', Yii::$app);
+        $controller = new AiRunController('ai-run', Yii::$app);
         $controller->actionCleanupStale(5);
 
         $staleRun->refresh();
@@ -57,7 +57,7 @@ class ClaudeRunControllerTest extends Unit
             ['id' => $completedRun->id]
         );
 
-        $controller = new ClaudeRunController('claude-run', Yii::$app);
+        $controller = new AiRunController('ai-run', Yii::$app);
         $controller->actionCleanupStale(5);
 
         $completedRun->refresh();
@@ -80,7 +80,7 @@ class ClaudeRunControllerTest extends Unit
         $recentFile = $dir . '/recent_test.ndjson';
         file_put_contents($recentFile, 'test data');
 
-        $controller = new ClaudeRunController('claude-run', Yii::$app);
+        $controller = new AiRunController('ai-run', Yii::$app);
         $controller->actionCleanupFiles(24);
 
         verify(file_exists($oldFile))->false();
@@ -94,7 +94,7 @@ class ClaudeRunControllerTest extends Unit
 
     public function testCleanupFilesHandlesEmptyDirectory(): void
     {
-        $controller = new ClaudeRunController('claude-run', Yii::$app);
+        $controller = new AiRunController('ai-run', Yii::$app);
         $exitCode = $controller->actionCleanupFiles(24);
 
         verify($exitCode)->equals(0); // ExitCode::OK

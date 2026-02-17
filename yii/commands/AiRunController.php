@@ -10,13 +10,13 @@ use yii\console\ExitCode;
 use yii\helpers\Console;
 
 /**
- * Manages Claude run maintenance tasks.
+ * Manages AI run maintenance tasks.
  *
  * Usage:
- *   ./yii claude-run/cleanup-stale    Mark stale runs as failed
- *   ./yii claude-run/cleanup-files    Remove old stream files
+ *   ./yii ai-run/cleanup-stale    Mark stale runs as failed
+ *   ./yii ai-run/cleanup-files    Remove old stream files
  */
-class ClaudeRunController extends Controller
+class AiRunController extends Controller
 {
     /**
      * Marks stale running runs as failed.

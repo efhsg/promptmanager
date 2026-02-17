@@ -2,7 +2,7 @@
 
 namespace tests\unit\controllers;
 
-use app\controllers\ClaudeController;
+use app\controllers\AiChatController;
 use app\handlers\AiQuickHandler;
 use app\models\AiRun;
 use app\models\Project;
@@ -509,7 +509,7 @@ class ClaudeControllerTest extends Unit
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+        $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertCount(3, $result);
         $this->assertSame('Deploy app', $result['deploy']);
@@ -534,7 +534,7 @@ class ClaudeControllerTest extends Unit
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+        $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertCount(1, $result);
         $this->assertArrayHasKey('review', $result);
@@ -565,7 +565,7 @@ class ClaudeControllerTest extends Unit
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+        $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertArrayHasKey('CI', $result);
         $this->assertArrayHasKey('Other', $result);
@@ -598,7 +598,7 @@ class ClaudeControllerTest extends Unit
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+        $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertCount(1, $result['CI']);
         $this->assertArrayNotHasKey('nonexistent', $result['CI']);
@@ -628,7 +628,7 @@ class ClaudeControllerTest extends Unit
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+        $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         // test is blacklisted so CI group only has deploy
         $this->assertCount(1, $result['CI']);
@@ -648,7 +648,7 @@ class ClaudeControllerTest extends Unit
         $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+        $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertSame([], $result);
     }
@@ -676,7 +676,7 @@ class ClaudeControllerTest extends Unit
         ]);
 
         $controller = $this->createControllerWithClaudeService($mockClaudeService);
-        $result = $this->invokeLoadClaudeCommands($controller, '/some/path', $project);
+        $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         // CI group should be dropped because its only command was blacklisted
         $this->assertArrayNotHasKey('CI', $result);
@@ -744,26 +744,26 @@ class ClaudeControllerTest extends Unit
     // Helper methods
     // ---------------------------------------------------------------
 
-    private function invokeLoadClaudeCommands(
-        ClaudeController $controller,
+    private function invokeLoadAiCommands(
+        AiChatController $controller,
         ?string $rootDirectory,
         Project $project
     ): array {
         $reflection = new ReflectionClass($controller);
-        $method = $reflection->getMethod('loadClaudeCommands');
+        $method = $reflection->getMethod('loadAiCommands');
         $method->setAccessible(true);
         return $method->invoke($controller, $rootDirectory, $project);
     }
 
-    private function createControllerWithClaudeService(ClaudeCliService $claudeService): ClaudeController
+    private function createControllerWithClaudeService(ClaudeCliService $claudeService): AiChatController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeQuickHandler = $this->createMock(AiQuickHandler::class);
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
 
-        return new ClaudeController(
-            'claude',
+        return new AiChatController(
+            'ai-chat',
             Yii::$app,
             $permissionService,
             $claudeService,
@@ -773,15 +773,15 @@ class ClaudeControllerTest extends Unit
         );
     }
 
-    private function createControllerWithQuickHandler(AiQuickHandler $quickHandler): ClaudeController
+    private function createControllerWithQuickHandler(AiQuickHandler $quickHandler): AiChatController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeCliService = new ClaudeCliService();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
 
-        return new ClaudeController(
-            'claude',
+        return new AiChatController(
+            'ai-chat',
             Yii::$app,
             $permissionService,
             $claudeCliService,

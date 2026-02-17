@@ -8,7 +8,6 @@
 use app\components\ProjectContext;
 use app\services\ai\AiProviderInterface;
 use app\services\ai\providers\ClaudeCliProvider;
-use app\services\ClaudeWorkspaceService;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ModelService;
@@ -78,6 +77,7 @@ $config = [
             'showScriptName' => false,
             'rules' => [
                 'POST api/note' => 'api/note/create',
+                'claude/<action:\w[\w-]*>' => 'ai-chat/<action>',
             ],
         ],
         'assetManager' => [
@@ -141,9 +141,6 @@ $config = [
                 $app->user
             );
         },
-        'claudeWorkspaceService' => [
-            'class' => ClaudeWorkspaceService::class,
-        ],
         'queue' => [
             'class' => \yii\queue\db\Queue::class,
             'db' => 'db',

@@ -12,13 +12,13 @@ use yii\helpers\Console;
 use Throwable;
 
 /**
- * Manages Claude workspace directories and diagnostics.
+ * Manages AI workspace directories and diagnostics.
  *
  * Usage:
- *   ./yii claude/sync-workspaces    Sync all project workspaces
- *   ./yii claude/diagnose           Check Claude CLI setup and path mappings
+ *   ./yii ai/sync-workspaces    Sync all project workspaces
+ *   ./yii ai/diagnose           Check AI CLI setup and path mappings
  */
-class ClaudeController extends Controller
+class AiController extends Controller
 {
     private ClaudeWorkspaceService $workspaceService;
     private ClaudeCliService $cliService;

@@ -20,10 +20,10 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 /**
- * Centralised Claude CLI chat interface.
+ * Centralised AI chat interface.
  * Every action operates in the context of a Project (identified by query parameter `p`).
  */
-class ClaudeController extends Controller
+class AiChatController extends Controller
 {
     private const CLAUDE_TIMEOUT = 3600;
 
@@ -239,7 +239,7 @@ class ClaudeController extends Controller
         return $this->render('index', [
             'project' => $project,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
-            'claudeCommands' => $this->loadClaudeCommands($rootDir, $project),
+            'claudeCommands' => $this->loadAiCommands($rootDir, $project),
             'gitBranch' => $rootDir ? $this->claudeCliService->getGitBranch($rootDir) : null,
             'breadcrumbs' => $breadcrumbs,
             'resumeSessionId' => $s,
@@ -964,7 +964,7 @@ class ClaudeController extends Controller
      *
      * @return array flat list or grouped structure with optgroup labels
      */
-    private function loadClaudeCommands(?string $rootDirectory, Project $project): array
+    private function loadAiCommands(?string $rootDirectory, Project $project): array
     {
         $commands = $this->claudeCliService->loadCommandsFromDirectory($rootDirectory);
         if ($commands === []) {

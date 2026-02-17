@@ -486,18 +486,18 @@ class NoteController extends Controller
     }
 
     /**
-     * @deprecated Use ClaudeController::actionIndex instead. Redirects for backward compatibility.
+     * @deprecated Use AiChatController::actionIndex instead. Redirects for backward compatibility.
      * @throws NotFoundHttpException
      */
-    public function actionClaude(int $id): Response
+    public function actionAi(int $id): Response
     {
         $model = $this->findModel($id);
 
         if ($model->project_id === null) {
-            throw new NotFoundHttpException('Claude CLI requires a project.');
+            throw new NotFoundHttpException('AI chat requires a project.');
         }
 
-        return $this->redirect(['/claude/index', 'p' => $model->project_id]);
+        return $this->redirect(['/ai-chat/index', 'p' => $model->project_id]);
     }
 
     /**
