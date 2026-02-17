@@ -2,10 +2,10 @@
 
 namespace tests\unit\services;
 
-use app\services\ClaudeStreamRelayService;
+use app\services\AiStreamRelayService;
 use Codeception\Test\Unit;
 
-class ClaudeStreamRelayServiceTest extends Unit
+class AiStreamRelayServiceTest extends Unit
 {
     private string $tempDir;
 
@@ -41,7 +41,7 @@ class ClaudeStreamRelayServiceTest extends Unit
         file_put_contents($file, implode("\n", $lines) . "\n");
 
         $received = [];
-        $service = new ClaudeStreamRelayService();
+        $service = new AiStreamRelayService();
         $newOffset = $service->relay(
             $file,
             0,
@@ -65,7 +65,7 @@ class ClaudeStreamRelayServiceTest extends Unit
         file_put_contents($file, "\n\n{\"type\":\"result\"}\n\n[DONE]\n");
 
         $received = [];
-        $service = new ClaudeStreamRelayService();
+        $service = new AiStreamRelayService();
         $service->relay(
             $file,
             0,
@@ -82,7 +82,7 @@ class ClaudeStreamRelayServiceTest extends Unit
 
     public function testRelayHandlesMissingFile(): void
     {
-        $service = new ClaudeStreamRelayService();
+        $service = new AiStreamRelayService();
         $newOffset = $service->relay(
             '/nonexistent/file.ndjson',
             0,
@@ -103,7 +103,7 @@ class ClaudeStreamRelayServiceTest extends Unit
         file_put_contents($file, $content);
 
         $received = [];
-        $service = new ClaudeStreamRelayService();
+        $service = new AiStreamRelayService();
         $offset = $service->relay(
             $file,
             0,
@@ -127,7 +127,7 @@ class ClaudeStreamRelayServiceTest extends Unit
         file_put_contents($file, $line1 . $line2 . $done);
 
         $received = [];
-        $service = new ClaudeStreamRelayService();
+        $service = new AiStreamRelayService();
         $service->relay(
             $file,
             strlen($line1), // Start after first line
@@ -148,7 +148,7 @@ class ClaudeStreamRelayServiceTest extends Unit
         file_put_contents($file, "{\"type\":\"line1\"}\n");
 
         $callCount = 0;
-        $service = new ClaudeStreamRelayService();
+        $service = new AiStreamRelayService();
         $service->relay(
             $file,
             0,

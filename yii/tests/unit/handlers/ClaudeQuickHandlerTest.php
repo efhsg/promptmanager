@@ -2,12 +2,12 @@
 
 namespace tests\unit\handlers;
 
-use app\handlers\ClaudeQuickHandler;
+use app\handlers\AiQuickHandler;
 use app\services\AiCompletionClient;
 use Codeception\Test\Unit;
 use InvalidArgumentException;
 
-class ClaudeQuickHandlerTest extends Unit
+class AiQuickHandlerTest extends Unit
 {
     public function testRunReturnsOutputOnSuccess(): void
     {
@@ -17,7 +17,7 @@ class ClaudeQuickHandlerTest extends Unit
             'output' => 'Refactor authentication to use JWT',
         ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-title', str_repeat('a', 150));
 
         $this->assertTrue($result['success']);
@@ -32,7 +32,7 @@ class ClaudeQuickHandlerTest extends Unit
             'error' => 'AI returned empty output.',
         ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-title', str_repeat('a', 150));
 
         $this->assertFalse($result['success']);
@@ -47,7 +47,7 @@ class ClaudeQuickHandlerTest extends Unit
             'error' => 'Command timed out after 60 seconds',
         ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-title', str_repeat('a', 150));
 
         $this->assertFalse($result['success']);
@@ -57,7 +57,7 @@ class ClaudeQuickHandlerTest extends Unit
     public function testRunThrowsForUnknownUseCase(): void
     {
         $client = $this->createMock(AiCompletionClient::class);
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Unknown use case: nonexistent');
@@ -70,7 +70,7 @@ class ClaudeQuickHandlerTest extends Unit
         $client = $this->createMock(AiCompletionClient::class);
         $client->expects($this->never())->method('complete');
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-title', 'short');
 
         $this->assertFalse($result['success']);
@@ -99,7 +99,7 @@ class ClaudeQuickHandlerTest extends Unit
                 'output' => 'Truncated title',
             ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-title', $longPrompt);
 
         $this->assertTrue($result['success']);
@@ -123,7 +123,7 @@ class ClaudeQuickHandlerTest extends Unit
                 'output' => 'Test title',
             ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $handler->run('prompt-title', str_repeat('x', 150));
     }
 
@@ -135,7 +135,7 @@ class ClaudeQuickHandlerTest extends Unit
             'output' => 'JWT authentication refactoring plan',
         ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('note-name', str_repeat('a', 30));
 
         $this->assertTrue($result['success']);
@@ -147,7 +147,7 @@ class ClaudeQuickHandlerTest extends Unit
         $client = $this->createMock(AiCompletionClient::class);
         $client->expects($this->never())->method('complete');
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('note-name', 'short text');
 
         $this->assertFalse($result['success']);
@@ -175,7 +175,7 @@ class ClaudeQuickHandlerTest extends Unit
                 'output' => 'Truncated name',
             ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('note-name', $longPrompt);
 
         $this->assertTrue($result['success']);
@@ -189,7 +189,7 @@ class ClaudeQuickHandlerTest extends Unit
             'output' => 'Review authentication session handling',
         ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-instance-label', str_repeat('a', 150));
 
         $this->assertTrue($result['success']);
@@ -201,7 +201,7 @@ class ClaudeQuickHandlerTest extends Unit
         $client = $this->createMock(AiCompletionClient::class);
         $client->expects($this->never())->method('complete');
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-instance-label', 'short');
 
         $this->assertFalse($result['success']);
@@ -223,7 +223,7 @@ class ClaudeQuickHandlerTest extends Unit
                 'output' => 'Test label',
             ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $handler->run('prompt-instance-label', str_repeat('x', 150));
     }
 
@@ -235,7 +235,7 @@ class ClaudeQuickHandlerTest extends Unit
             'output' => "  Title with spaces  \n",
         ]);
 
-        $handler = new ClaudeQuickHandler($client);
+        $handler = new AiQuickHandler($client);
         $result = $handler->run('prompt-title', str_repeat('a', 150));
 
         $this->assertSame('Title with spaces', $result['output']);

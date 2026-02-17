@@ -2,7 +2,7 @@
 
 namespace app\jobs;
 
-use app\handlers\ClaudeQuickHandler;
+use app\handlers\AiQuickHandler;
 use app\models\AiRun;
 use app\services\ClaudeCliService;
 use common\enums\AiRunStatus;
@@ -17,7 +17,7 @@ use yii\queue\RetryableJobInterface;
  * Writes streaming output to a NDJSON file on disk. The SSE relay endpoint
  * reads this file to forward events to the browser.
  */
-class RunClaudeJob implements RetryableJobInterface
+class RunAiJob implements RetryableJobInterface
 {
     public int $runId;
 
@@ -29,12 +29,12 @@ class RunClaudeJob implements RetryableJobInterface
         $run = AiRun::findOne($this->runId);
 
         if ($run === null) {
-            Yii::warning("RunClaudeJob: run {$this->runId} not found, skipping", __METHOD__);
+            Yii::warning("RunAiJob: run {$this->runId} not found, skipping", __METHOD__);
             return;
         }
 
         if ($run->status !== AiRunStatus::PENDING->value) {
-            Yii::warning("RunClaudeJob: run {$this->runId} is not pending (status={$run->status}), skipping", __METHOD__);
+            Yii::warning("RunAiJob: run {$this->runId} is not pending (status={$run->status}), skipping", __METHOD__);
             return;
         }
 
@@ -79,7 +79,7 @@ class RunClaudeJob implements RetryableJobInterface
         try {
             // Claim the run atomically
             if (!$run->claimForProcessing(getmypid())) {
-                Yii::warning("RunClaudeJob: run {$this->runId} already claimed by another worker", __METHOD__);
+                Yii::warning("RunAiJob: run {$this->runId} already claimed by another worker", __METHOD__);
                 return;
             }
 
@@ -290,8 +290,8 @@ class RunClaudeJob implements RetryableJobInterface
         return Yii::$container->get(ClaudeCliService::class);
     }
 
-    protected function createQuickHandler(): ClaudeQuickHandler
+    protected function createQuickHandler(): AiQuickHandler
     {
-        return Yii::$container->get(ClaudeQuickHandler::class);
+        return Yii::$container->get(AiQuickHandler::class);
     }
 }

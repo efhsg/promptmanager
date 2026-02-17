@@ -2,14 +2,14 @@
 
 namespace app\controllers;
 
-use app\handlers\ClaudeQuickHandler;
-use app\jobs\RunClaudeJob;
+use app\handlers\AiQuickHandler;
+use app\jobs\RunAiJob;
 use app\models\AiRun;
 use app\models\AiRunSearch;
 use app\models\Project;
 use app\services\ClaudeCliService;
-use app\services\ClaudeRunCleanupService;
-use app\services\ClaudeStreamRelayService;
+use app\services\AiRunCleanupService;
+use app\services\AiStreamRelayService;
 use app\services\EntityPermissionService;
 use common\enums\AiRunStatus;
 use Yii;
@@ -29,18 +29,18 @@ class ClaudeController extends Controller
 
     private readonly EntityPermissionService $permissionService;
     private readonly ClaudeCliService $claudeCliService;
-    private readonly ClaudeQuickHandler $claudeQuickHandler;
-    private readonly ClaudeStreamRelayService $streamRelayService;
-    private readonly ClaudeRunCleanupService $cleanupService;
+    private readonly AiQuickHandler $claudeQuickHandler;
+    private readonly AiStreamRelayService $streamRelayService;
+    private readonly AiRunCleanupService $cleanupService;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
         ClaudeCliService $claudeCliService,
-        ClaudeQuickHandler $claudeQuickHandler,
-        ClaudeStreamRelayService $streamRelayService,
-        ClaudeRunCleanupService $cleanupService,
+        AiQuickHandler $claudeQuickHandler,
+        AiStreamRelayService $streamRelayService,
+        AiRunCleanupService $cleanupService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
@@ -790,7 +790,7 @@ class ClaudeController extends Controller
             return null;
         }
 
-        $job = new RunClaudeJob();
+        $job = new RunAiJob();
         $job->runId = $run->id;
         Yii::$app->queue->push($job);
 

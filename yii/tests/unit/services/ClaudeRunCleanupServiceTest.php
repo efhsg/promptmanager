@@ -3,16 +3,16 @@
 namespace tests\unit\services;
 
 use app\models\AiRun;
-use app\services\ClaudeRunCleanupService;
+use app\services\AiRunCleanupService;
 use Codeception\Test\Unit;
 use tests\fixtures\ClaudeRunFixture;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 use Yii;
 
-class ClaudeRunCleanupServiceTest extends Unit
+class AiRunCleanupServiceTest extends Unit
 {
-    private ClaudeRunCleanupService $service;
+    private AiRunCleanupService $service;
     private string $tempDir;
 
     public function _fixtures(): array
@@ -27,7 +27,7 @@ class ClaudeRunCleanupServiceTest extends Unit
     protected function _before(): void
     {
         parent::_before();
-        $this->service = new ClaudeRunCleanupService();
+        $this->service = new AiRunCleanupService();
 
         // Create temp storage directory for stream files
         $this->tempDir = Yii::getAlias('@app/storage/claude-runs');

@@ -8,7 +8,7 @@ namespace app\services;
  * The worker appends lines to the file; this service reads from
  * a given byte offset and passes each non-empty line to the callback.
  */
-class ClaudeStreamRelayService
+class AiStreamRelayService
 {
     /**
      * Reads stream events from a file starting at the given byte offset.

@@ -2,8 +2,8 @@
 
 namespace tests\unit\jobs;
 
-use app\handlers\ClaudeQuickHandler;
-use app\jobs\RunClaudeJob;
+use app\handlers\AiQuickHandler;
+use app\jobs\RunAiJob;
 use app\models\AiRun;
 use app\services\ClaudeCliService;
 use common\enums\AiRunStatus;
@@ -11,7 +11,7 @@ use Codeception\Test\Unit;
 use tests\fixtures\ProjectFixture;
 use tests\fixtures\UserFixture;
 
-class RunClaudeJobTest extends Unit
+class RunAiJobTest extends Unit
 {
     public function _fixtures(): array
     {
@@ -28,7 +28,7 @@ class RunClaudeJobTest extends Unit
 
     public function testSkipsWhenRunNotFound(): void
     {
-        $job = new RunClaudeJob();
+        $job = new RunAiJob();
         $job->runId = 99999;
 
         // Should not throw — just silently skip
@@ -41,7 +41,7 @@ class RunClaudeJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::RUNNING);
 
-        $job = new RunClaudeJob();
+        $job = new RunAiJob();
         $job->runId = $run->id;
 
         $job->execute(null);
@@ -53,7 +53,7 @@ class RunClaudeJobTest extends Unit
 
     public function testCanRetryReturnsFalse(): void
     {
-        $job = new RunClaudeJob();
+        $job = new RunAiJob();
 
         verify($job->canRetry(1, new \Exception('test')))->false();
         verify($job->canRetry(5, new \Exception('test')))->false();
@@ -61,7 +61,7 @@ class RunClaudeJobTest extends Unit
 
     public function testGetTtrReturns3900(): void
     {
-        $job = new RunClaudeJob();
+        $job = new RunAiJob();
 
         verify($job->getTtr())->equals(3900);
     }
@@ -78,7 +78,7 @@ class RunClaudeJobTest extends Unit
                 return ['exitCode' => 0, 'error' => ''];
             });
 
-        $job = new class extends RunClaudeJob {
+        $job = new class extends RunAiJob {
             public \app\services\ClaudeCliService $mockService;
 
             protected function createCliService(): \app\services\ClaudeCliService
@@ -106,7 +106,7 @@ class RunClaudeJobTest extends Unit
         $mockCliService->method('executeStreaming')
             ->willReturn(['exitCode' => 1, 'error' => 'CLI timeout']);
 
-        $job = new class extends RunClaudeJob {
+        $job = new class extends RunAiJob {
             public \app\services\ClaudeCliService $mockService;
 
             protected function createCliService(): \app\services\ClaudeCliService
@@ -135,22 +135,22 @@ class RunClaudeJobTest extends Unit
                 return ['exitCode' => 0, 'error' => ''];
             });
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->expects($this->once())
             ->method('run')
             ->with('session-summary', $this->anything())
             ->willReturn(['success' => true, 'output' => 'Refactored auth to JWT']);
 
-        $job = new class extends RunClaudeJob {
+        $job = new class extends RunAiJob {
             public ClaudeCliService $mockService;
-            public ClaudeQuickHandler $mockHandler;
+            public AiQuickHandler $mockHandler;
 
             protected function createCliService(): ClaudeCliService
             {
                 return $this->mockService;
             }
 
-            protected function createQuickHandler(): ClaudeQuickHandler
+            protected function createQuickHandler(): AiQuickHandler
             {
                 return $this->mockHandler;
             }
@@ -177,20 +177,20 @@ class RunClaudeJobTest extends Unit
                 return ['exitCode' => 0, 'error' => ''];
             });
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')
             ->willThrowException(new \RuntimeException('AI service unavailable'));
 
-        $job = new class extends RunClaudeJob {
+        $job = new class extends RunAiJob {
             public ClaudeCliService $mockService;
-            public ClaudeQuickHandler $mockHandler;
+            public AiQuickHandler $mockHandler;
 
             protected function createCliService(): ClaudeCliService
             {
                 return $this->mockService;
             }
 
-            protected function createQuickHandler(): ClaudeQuickHandler
+            protected function createQuickHandler(): AiQuickHandler
             {
                 return $this->mockHandler;
             }

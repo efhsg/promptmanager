@@ -14,7 +14,7 @@ use Yii;
  * CLAUDE.md with the system prompt. The actual AI provider is abstracted behind
  * the AiCompletionClient interface.
  */
-class ClaudeQuickHandler
+class AiQuickHandler
 {
     private const WORKDIR_BASE = '@app/../.claude/workdirs';
 

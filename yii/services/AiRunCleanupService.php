@@ -8,7 +8,7 @@ use Yii;
 /**
  * Handles deletion of AiRun records and their associated stream files.
  */
-class ClaudeRunCleanupService
+class AiRunCleanupService
 {
     /**
      * Deletes all terminal runs belonging to the same session as the representative run.

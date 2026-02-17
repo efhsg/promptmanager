@@ -3,13 +3,13 @@
 namespace tests\unit\controllers;
 
 use app\controllers\ClaudeController;
-use app\handlers\ClaudeQuickHandler;
+use app\handlers\AiQuickHandler;
 use app\models\AiRun;
 use app\models\Project;
 use app\modules\identity\models\User;
 use app\services\ClaudeCliService;
-use app\services\ClaudeRunCleanupService;
-use app\services\ClaudeStreamRelayService;
+use app\services\AiRunCleanupService;
+use app\services\AiStreamRelayService;
 use app\services\EntityPermissionService;
 use Codeception\Test\Unit;
 use ReflectionClass;
@@ -286,7 +286,7 @@ class ClaudeControllerTest extends Unit
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
         $this->mockJsonRequest(['content' => 'Help me refactor the authentication module to use JWT tokens']);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')->willReturn([
             'success' => true,
             'output' => 'JWT authentication refactoring',
@@ -304,7 +304,7 @@ class ClaudeControllerTest extends Unit
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
         $this->mockJsonRequest(['content' => '']);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $controller = $this->createControllerWithQuickHandler($mockHandler);
         $result = $controller->actionSuggestName();
 
@@ -317,7 +317,7 @@ class ClaudeControllerTest extends Unit
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
         $this->mockJsonRequest(['content' => 123]);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $controller = $this->createControllerWithQuickHandler($mockHandler);
         $result = $controller->actionSuggestName();
 
@@ -330,7 +330,7 @@ class ClaudeControllerTest extends Unit
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
         $this->mockRawBody('not json');
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $controller = $this->createControllerWithQuickHandler($mockHandler);
         $result = $controller->actionSuggestName();
 
@@ -343,7 +343,7 @@ class ClaudeControllerTest extends Unit
         $this->mockAuthenticatedUser(self::TEST_USER_ID);
         $this->mockJsonRequest(['content' => 'Help me refactor the authentication module']);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')->willReturn([
             'success' => true,
             'output' => '   ',
@@ -378,7 +378,7 @@ class ClaudeControllerTest extends Unit
             'runId' => $run->id,
         ]);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')->willReturn([
             'success' => true,
             'output' => 'AI-generated title',
@@ -412,7 +412,7 @@ class ClaudeControllerTest extends Unit
             'prompt' => str_repeat('a', 120),
         ]);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')->willReturn([
             'success' => true,
             'output' => 'AI-generated title',
@@ -438,7 +438,7 @@ class ClaudeControllerTest extends Unit
             'runId' => 'not-a-number',
         ]);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')->willReturn([
             'success' => true,
             'output' => 'AI-generated title',
@@ -476,7 +476,7 @@ class ClaudeControllerTest extends Unit
             'runId' => $otherRun->id,
         ]);
 
-        $mockHandler = $this->createMock(ClaudeQuickHandler::class);
+        $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')->willReturn([
             'success' => true,
             'output' => 'AI-generated title',
@@ -758,9 +758,9 @@ class ClaudeControllerTest extends Unit
     private function createControllerWithClaudeService(ClaudeCliService $claudeService): ClaudeController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
-        $claudeQuickHandler = $this->createMock(ClaudeQuickHandler::class);
-        $streamRelayService = new ClaudeStreamRelayService();
-        $cleanupService = new ClaudeRunCleanupService();
+        $claudeQuickHandler = $this->createMock(AiQuickHandler::class);
+        $streamRelayService = new AiStreamRelayService();
+        $cleanupService = new AiRunCleanupService();
 
         return new ClaudeController(
             'claude',
@@ -773,12 +773,12 @@ class ClaudeControllerTest extends Unit
         );
     }
 
-    private function createControllerWithQuickHandler(ClaudeQuickHandler $quickHandler): ClaudeController
+    private function createControllerWithQuickHandler(AiQuickHandler $quickHandler): ClaudeController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeCliService = new ClaudeCliService();
-        $streamRelayService = new ClaudeStreamRelayService();
-        $cleanupService = new ClaudeRunCleanupService();
+        $streamRelayService = new AiStreamRelayService();
+        $cleanupService = new AiRunCleanupService();
 
         return new ClaudeController(
             'claude',

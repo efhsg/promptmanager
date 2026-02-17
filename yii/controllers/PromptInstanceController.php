@@ -7,7 +7,7 @@
 namespace app\controllers;
 
 use app\components\ProjectContext;
-use app\handlers\ClaudeQuickHandler;
+use app\handlers\AiQuickHandler;
 use app\models\PromptInstance;
 use app\models\PromptInstanceForm;
 use app\models\PromptInstanceSearch;
@@ -51,7 +51,7 @@ class PromptInstanceController extends Controller
         private readonly ContextService $contextService,
         private readonly PromptTransformationService $promptTransformationService,
         private readonly FileFieldProcessor $fileFieldProcessor,
-        private readonly ClaudeQuickHandler $claudeQuickHandler,
+        private readonly AiQuickHandler $claudeQuickHandler,
         PromptGenerationService $promptGenerationService,
         $config = []
     ) {
