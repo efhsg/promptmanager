@@ -284,6 +284,35 @@ class AiRunTest extends Unit
     }
 
     // ---------------------------------------------------------------
+    // Provider validation tests
+    // ---------------------------------------------------------------
+
+    public function testProviderDefaultsToClaude(): void
+    {
+        $run = new AiRun();
+        $run->validate(['provider']);
+
+        verify($run->provider)->equals('claude');
+    }
+
+    public function testProviderRejectsInvalidFormat(): void
+    {
+        $run = $this->createSavedRun();
+        $run->provider = 'INVALID!';
+
+        verify($run->validate(['provider']))->false();
+        verify(array_key_exists('provider', $run->errors))->true();
+    }
+
+    public function testProviderAcceptsValidIdentifier(): void
+    {
+        $run = $this->createSavedRun();
+        $run->provider = 'codex-cli';
+
+        verify($run->validate(['provider']))->true();
+    }
+
+    // ---------------------------------------------------------------
     // claimForProcessing tests
     // ---------------------------------------------------------------
 

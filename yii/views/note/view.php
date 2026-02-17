@@ -12,7 +12,7 @@ use yii\widgets\DetailView;
 
 $canRunClaude = $model->project_id !== null;
 $claudeTooltip = $canRunClaude ? 'Talk to AI' : 'Project required';
-$claudeUrl = $canRunClaude
+$aiChatUrl = $canRunClaude
     ? Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => json_encode([
         ['label' => 'Notes', 'url' => Url::to(['/note/index'])],
         ['label' => $model->name, 'url' => Url::to(['/note/view', 'id' => $model->id])],
@@ -122,7 +122,7 @@ $children ??= [];
 
 <?php
 $contentDelta = json_encode($model->content, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
-$claudeUrlJs = json_encode($claudeUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$aiChatUrlJs = json_encode($aiChatUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 // Build child deltas map
 $childDeltas = [];
@@ -140,7 +140,7 @@ $script = <<<JS
                 if (content) {
                     sessionStorage.setItem('aiPromptContent', typeof content === 'string' ? content : JSON.stringify(content));
                 }
-                window.location.href = $claudeUrlJs;
+                window.location.href = $aiChatUrlJs;
             });
         });
     JS;

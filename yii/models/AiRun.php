@@ -86,6 +86,9 @@ class AiRun extends ActiveRecord
             [['status'], 'string'],
             [['status'], 'in', 'range' => AiRunStatus::values()],
             [['status'], 'default', 'value' => AiRunStatus::PENDING->value],
+            [['provider'], 'string', 'max' => 50],
+            [['provider'], 'default', 'value' => 'claude'],
+            [['provider'], 'match', 'pattern' => '/^[a-z][a-z0-9-]{1,48}$/'],
             [['started_at', 'completed_at', 'created_at', 'updated_at'], 'string'],
             [
                 ['user_id'],

@@ -11,7 +11,7 @@ use yii\web\View;
 /** @var View $this */
 /** @var Project $project */
 /** @var array $projectList */
-/** @var array $claudeCommands */
+/** @var array $aiCommands */
 /** @var string|null $gitBranch */
 /** @var string|null $breadcrumbs */
 /** @var string|null $resumeSessionId */
@@ -26,11 +26,12 @@ $this->registerJsFile('@web/js/purify.min.js', ['position' => View::POS_HEAD]);
 $this->registerCssFile('@web/css/ai-chat.css');
 
 $pParam = ['p' => $project->id];
-$streamClaudeUrl = Url::to(array_merge(['/ai-chat/stream'], $pParam));
-$cancelClaudeUrl = Url::to(array_merge(['/ai-chat/cancel'], $pParam));
+$streamUrl = Url::to(array_merge(['/ai-chat/stream'], $pParam));
+$cancelUrl = Url::to(array_merge(['/ai-chat/cancel'], $pParam));
 $startRunUrl = Url::to(array_merge(['/ai-chat/start-run'], $pParam));
 $streamRunUrl = Url::to(['/ai-chat/stream-run']);
 $cancelRunUrl = Url::to(['/ai-chat/cancel-run']);
+$runStatusUrl = Url::to(['/ai-chat/run-status']);
 $summarizeUrl = Url::to(array_merge(['/ai-chat/summarize-session'], $pParam));
 $summarizePromptUrl = Url::to(array_merge(['/ai-chat/summarize-prompt'], $pParam));
 $summarizeResponseUrl = Url::to(array_merge(['/ai-chat/summarize-response'], $pParam));
@@ -397,7 +398,7 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
 </div>
 
 <?php
-$claudeCommandsJson = Json::encode($claudeCommands, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$aiCommandsJson = Json::encode($aiCommands, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $js = <<<JS
     (function() {
         var quill = new Quill('#claude-quill-editor', {
@@ -426,32 +427,32 @@ $js = <<<JS
         }
 
         // Build Claude command dropdown
-        var claudeCommands = $claudeCommandsJson;
+        var aiCommands = $aiCommandsJson;
         var commandDropdown = document.createElement('select');
         commandDropdown.classList.add('ql-insertClaudeCommand', 'ql-picker');
         commandDropdown.innerHTML = '<option value="" selected disabled>Command</option>';
-        var firstValue = Object.values(claudeCommands)[0];
+        var firstValue = Object.values(aiCommands)[0];
         var isGrouped = firstValue !== null && firstValue !== undefined && typeof firstValue === 'object';
 
         if (isGrouped) {
-            Object.keys(claudeCommands).forEach(function(group) {
+            Object.keys(aiCommands).forEach(function(group) {
                 var optgroup = document.createElement('optgroup');
                 optgroup.label = group;
-                Object.keys(claudeCommands[group]).forEach(function(key) {
+                Object.keys(aiCommands[group]).forEach(function(key) {
                     var option = document.createElement('option');
                     option.value = '/' + key + ' ';
                     option.textContent = key;
-                    option.title = claudeCommands[group][key];
+                    option.title = aiCommands[group][key];
                     optgroup.appendChild(option);
                 });
                 commandDropdown.appendChild(optgroup);
             });
         } else {
-            Object.keys(claudeCommands).forEach(function(key) {
+            Object.keys(aiCommands).forEach(function(key) {
                 var option = document.createElement('option');
                 option.value = '/' + key + ' ';
                 option.textContent = key;
-                option.title = claudeCommands[key];
+                option.title = aiCommands[key];
                 commandDropdown.appendChild(option);
             });
         }
@@ -651,7 +652,7 @@ $js = <<<JS
                 })
                 .catch(function(error) {
                     if (!self.streamEnded)
-                        self.onStreamError('Failed to reconnect: ' + error.message);
+                        self.onStreamError('Connection lost: ' + error.message);
                 });
             },
 
@@ -917,7 +918,7 @@ $js = <<<JS
                 this.swapResponseAboveEditor();
                 this.collapsePromptEditor();
 
-                fetch('$streamClaudeUrl', {
+                fetch('$streamUrl', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -980,7 +981,7 @@ $js = <<<JS
                 })
                 .catch(function(error) {
                     if (!self.streamEnded)
-                        self.onStreamError('Failed to execute Claude CLI: ' + error.message);
+                        self.onStreamError('Connection lost: ' + error.message);
                 });
             },
 
@@ -1145,8 +1146,8 @@ $js = <<<JS
             onStreamEvent: function(data) {
                 var type = data.type;
 
-                if (type === 'waiting')
-                    return; // Queue delay — ignore
+                if (type === 'waiting' || type === 'keepalive')
+                    return;
 
                 if (type === 'prompt_markdown') {
                     this.streamPromptMarkdown = data.markdown;
@@ -1165,6 +1166,8 @@ $js = <<<JS
                     this.onStreamAssistant(data);
                 else if (type === 'result')
                     this.onStreamResult(data);
+                else if (type === 'run_status')
+                    this.onRunStatus(data)
                 else if (type === 'server_error')
                     this.onStreamError(data.error || 'Unknown server error');
             },
@@ -1268,6 +1271,54 @@ $js = <<<JS
                 }
             },
 
+            onRunStatus: function(data) {
+                if (data.sessionId)
+                    this.sessionId = data.sessionId;
+
+                // Store error so onStreamEnd (triggered by [DONE]) can display it.
+                // Do NOT call onStreamError here — that triggers a recovery poll
+                // which finds "failed" again, causing duplicate error UI.
+                if (data.status === 'failed') {
+                    this._runStatusError = data.error || 'Run failed';
+                    return;
+                }
+
+                // If relay missed the result event, use the fallback result text
+                if (data.status === 'completed' && data.resultText != null && this.streamResultText == null)
+                    this.streamResultText = data.resultText;
+            },
+
+            /**
+             * Polls run-status and either reconnects to an active stream or
+             * recovers a completed result when the SSE connection was lost.
+             */
+            recoverFromRunStatus: function(runId) {
+                var self = this;
+                if (!runId || this.streamEnded) return;
+
+                fetch('$runStatusUrl' + '?runId=' + runId, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!data.success || self.streamEnded) return;
+
+                    if (data.status === 'completed') {
+                        if (data.resultText != null)
+                            self.streamResultText = data.resultText;
+                        if (data.sessionId)
+                            self.sessionId = data.sessionId;
+                        self.onStreamEnd();
+                    } else if (data.status === 'failed' || data.status === 'cancelled') {
+                        self.onStreamError(data.errorMessage || 'Run ' + data.status);
+                    }
+                    // If still active (pending/running), do nothing — error message stays visible
+                })
+                .catch(function() {
+                    // Network error — no retry, error message already visible
+                });
+            },
+
             /**
              * Cancels the active ReadableStream reader if present.
              */
@@ -1279,8 +1330,8 @@ $js = <<<JS
             },
 
             /**
-             * Resets the inactivity timer. If no data arrives within 90 seconds,
-             * the stream is assumed dead and onStreamError is called.
+             * Resets the inactivity timer. If no data arrives within 120 seconds,
+             * the stream is assumed dead and recovery is attempted via run-status.
              */
             resetInactivityTimer: function() {
                 var self = this;
@@ -1290,9 +1341,9 @@ $js = <<<JS
                 this.streamInactivityTimer = setTimeout(function() {
                     if (!self.streamEnded) {
                         self.cancelActiveReader();
-                        self.onStreamError('Connection lost — no data received for 90 seconds.');
+                        self.onStreamError('Connection lost — no data received for 120 seconds.');
                     }
-                }, 90000);
+                }, 120000);
             },
 
             /**
@@ -1335,6 +1386,14 @@ $js = <<<JS
                 if (this.streamEnded) return;
                 this.streamEnded = true;
                 this.currentRunId = null;
+
+                // If run_status indicated failure, delegate to error handler
+                if (this._runStatusError) {
+                    var errorMsg = this._runStatusError;
+                    this._runStatusError = null;
+                    this.onStreamError(errorMsg);
+                    return;
+                }
 
                 this.cleanupStreamUI();
 
@@ -1391,6 +1450,7 @@ $js = <<<JS
             },
 
             onStreamError: function(msg) {
+                var recoveryRunId = this.currentRunId;
                 this.streamEnded = true;
                 this.currentRunId = null;
 
@@ -1410,6 +1470,13 @@ $js = <<<JS
 
                 document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
                 this.expandPromptEditor();
+
+                // Attempt recovery: if the run completed on the server despite
+                // the SSE connection dropping, replace the error with the result
+                if (recoveryRunId) {
+                    this.streamEnded = false;
+                    this.recoverFromRunStatus(recoveryRunId);
+                }
             },
 
             cancel: function() {
@@ -1427,7 +1494,7 @@ $js = <<<JS
                         }
                     }).catch(function(e) { console.error('Cancel run request failed:', e); });
                 } else {
-                    fetch('$cancelClaudeUrl', {
+                    fetch('$cancelUrl', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

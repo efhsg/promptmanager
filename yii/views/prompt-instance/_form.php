@@ -37,7 +37,7 @@ $this->registerJsVar('quillUrlConfig', [
 
 $currentProject = (\Yii::$app->projectContext)->getCurrentProject();
 $projectCopyFormat = $currentProject?->getPromptInstanceCopyFormatEnum()->value ?? CopyType::MD->value;
-$claudeUrl = $currentProject ? Url::to(['/ai-chat/index', 'p' => $currentProject->id, 'breadcrumbs' => json_encode([
+$aiChatUrl = $currentProject ? Url::to(['/ai-chat/index', 'p' => $currentProject->id, 'breadcrumbs' => json_encode([
     ['label' => 'Generate', 'url' => null],
     ['label' => 'Prompts', 'url' => Url::to(['/prompt-instance/index'])],
     ['label' => 'Create Prompt Instance', 'url' => Url::current()],
@@ -203,8 +203,8 @@ echo $form->field($model, 'template_id')
         <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
             'class' => 'btn btn-primary me-2 d-none',
             'id' => 'claude-button',
-            'title' => $claudeUrl ? 'Talk to Claude' : 'Project required',
-            'disabled' => !$claudeUrl,
+            'title' => $aiChatUrl ? 'Talk to Claude' : 'Project required',
+            'disabled' => !$aiChatUrl,
         ]) ?>
         <?= Html::submitButton('Next', [
             'class' => 'btn btn-primary',
@@ -520,7 +520,7 @@ $script = <<<'JS'
                 }
 
                 sessionStorage.setItem('aiPromptContent', JSON.stringify(deltaObj));
-                window.location.href = claudeUrl;
+                window.location.href = aiChatUrl;
             });
 
             document.getElementById('suggest-label-btn').addEventListener('click', function() {
@@ -581,8 +581,8 @@ $script = <<<'JS'
                 });
             });
             JS;
-$claudeUrlJs = json_encode($claudeUrl, JSON_UNESCAPED_SLASHES);
-$this->registerJs("var claudeUrl = $claudeUrlJs;", View::POS_HEAD);
+$aiChatUrlJs = json_encode($aiChatUrl, JSON_UNESCAPED_SLASHES);
+$this->registerJs("var aiChatUrl = $aiChatUrlJs;", View::POS_HEAD);
 $this->registerJsVar('suggestLabelUrl', $suggestLabelUrl);
 $this->registerJs($script);
 ?>

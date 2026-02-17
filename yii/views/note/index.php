@@ -233,7 +233,7 @@ $this->params['breadcrumbs'][] = $this->title;
                             'claude' => function ($url, Note $model) {
                                 $disabled = $model->project_id === null;
                                 $tooltip = $disabled ? 'Project required' : 'Talk to AI';
-                                $claudeUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => Json::encode([
+                                $aiChatUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => Json::encode([
                                     ['label' => 'Notes', 'url' => Url::to(['/note/index'])],
                                     ['label' => $model->name, 'url' => Url::to(['/note/view', 'id' => $model->id])],
                                 ])]);
@@ -242,7 +242,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                     'title' => $tooltip,
                                     'data-bs-toggle' => 'tooltip',
                                     'data-id' => $model->id,
-                                    'data-claude-url' => $claudeUrl,
+                                    'data-ai-chat-url' => $aiChatUrl,
                                     'disabled' => $disabled,
                                 ]);
                             },
@@ -273,7 +273,7 @@ $script = <<<JS
                 if (this.disabled) return;
 
                 var id = this.dataset.id;
-                var claudeUrl = this.dataset.claudeUrl;
+                var aiChatUrl = this.dataset.aiChatUrl;
                 var button = this;
                 button.disabled = true;
 
@@ -296,13 +296,13 @@ $script = <<<JS
                             headers: {'X-Requested-With': 'XMLHttpRequest'},
                             body: formData
                         }).then(function() {
-                            window.location.href = claudeUrl;
+                            window.location.href = aiChatUrl;
                         });
                     }
-                    window.location.href = claudeUrl;
+                    window.location.href = aiChatUrl;
                 })
                 .catch(function() {
-                    window.location.href = claudeUrl;
+                    window.location.href = aiChatUrl;
                 })
                 .finally(function() {
                     button.disabled = false;

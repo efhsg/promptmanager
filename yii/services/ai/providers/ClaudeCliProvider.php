@@ -665,7 +665,7 @@ class ClaudeCliProvider implements
     }
 
     /**
-     * Generates settings.local.json content from project's claude_options.
+     * Generates settings.local.json content from project's ai_options.
      *
      * @return array Settings array suitable for JSON encoding
      */

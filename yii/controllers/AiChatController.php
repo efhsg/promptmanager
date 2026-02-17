@@ -10,7 +10,6 @@ use app\models\Project;
 use app\services\ai\AiConfigProviderInterface;
 use app\services\ai\AiProviderInterface;
 use app\services\ai\AiUsageProviderInterface;
-use app\services\ai\providers\ClaudeCliProvider;
 use app\services\AiRunCleanupService;
 use app\services\AiStreamRelayService;
 use app\services\CopyFormatConverter;
@@ -30,12 +29,12 @@ use yii\web\Response;
  */
 class AiChatController extends Controller
 {
-    private const CLAUDE_TIMEOUT = 3600;
+    private const RUN_TIMEOUT = 3600;
 
     private readonly EntityPermissionService $permissionService;
     private readonly AiProviderInterface $aiProvider;
     private readonly CopyFormatConverter $formatConverter;
-    private readonly AiQuickHandler $claudeQuickHandler;
+    private readonly AiQuickHandler $quickHandler;
     private readonly AiStreamRelayService $streamRelayService;
     private readonly AiRunCleanupService $cleanupService;
 
@@ -45,7 +44,7 @@ class AiChatController extends Controller
         EntityPermissionService $permissionService,
         AiProviderInterface $aiProvider,
         CopyFormatConverter $formatConverter,
-        AiQuickHandler $claudeQuickHandler,
+        AiQuickHandler $quickHandler,
         AiStreamRelayService $streamRelayService,
         AiRunCleanupService $cleanupService,
         $config = []
@@ -54,7 +53,7 @@ class AiChatController extends Controller
         $this->permissionService = $permissionService;
         $this->aiProvider = $aiProvider;
         $this->formatConverter = $formatConverter;
-        $this->claudeQuickHandler = $claudeQuickHandler;
+        $this->quickHandler = $quickHandler;
         $this->streamRelayService = $streamRelayService;
         $this->cleanupService = $cleanupService;
     }
@@ -247,8 +246,8 @@ class AiChatController extends Controller
         return $this->render('index', [
             'project' => $project,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
-            'claudeCommands' => $this->loadAiCommands($rootDir, $project),
-            'gitBranch' => $rootDir && $this->aiProvider instanceof ClaudeCliProvider ? $this->aiProvider->getGitBranch($rootDir) : null,
+            'aiCommands' => $this->loadAiCommands($rootDir, $project),
+            'gitBranch' => $this->getGitBranch($rootDir),
             'breadcrumbs' => $breadcrumbs,
             'resumeSessionId' => $s,
             'replayRunId' => $replayRunId,
@@ -301,7 +300,7 @@ class AiChatController extends Controller
             'pathStatus' => $configStatus['pathStatus'],
             'pathMapped' => $configStatus['pathMapped'],
             'hasPromptManagerContext' => $project->hasAiContext(),
-            'claudeContext' => $project->getAiContextAsMarkdown(),
+            'aiContext' => $project->getAiContextAsMarkdown(),
         ];
     }
 
@@ -316,7 +315,7 @@ class AiChatController extends Controller
     public function actionStream(int $p): void
     {
         $project = $this->findProject($p);
-        $prepared = $this->prepareClaudeRequest($project);
+        $prepared = $this->prepareRunRequest($project);
 
         if (isset($prepared['error'])) {
             $this->sendSseError($prepared['error']['error']);
@@ -379,7 +378,7 @@ class AiChatController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
 
         $project = $this->findProject($p);
-        $prepared = $this->prepareClaudeRequest($project);
+        $prepared = $this->prepareRunRequest($project);
 
         if (isset($prepared['error'])) {
             return $prepared['error'];
@@ -475,7 +474,7 @@ class AiChatController extends Controller
             throw new NotFoundHttpException('Run not found.');
         }
 
-        return [
+        $data = [
             'success' => true,
             'id' => $run->id,
             'status' => $run->status,
@@ -485,6 +484,12 @@ class AiChatController extends Controller
             'startedAt' => $run->started_at,
             'completedAt' => $run->completed_at,
         ];
+
+        if ($run->isTerminal()) {
+            $data['resultText'] = $run->result_text;
+        }
+
+        return $data;
     }
 
     /**
@@ -606,7 +611,7 @@ class AiChatController extends Controller
             return ['success' => false, 'error' => 'Prompt text is empty.'];
         }
 
-        $result = $this->claudeQuickHandler->run('prompt-title', $prompt);
+        $result = $this->quickHandler->run('prompt-title', $prompt);
 
         if (!$result['success']) {
             return $result;
@@ -641,7 +646,7 @@ class AiChatController extends Controller
             return ['success' => false, 'error' => 'Response text is empty.'];
         }
 
-        $result = $this->claudeQuickHandler->run('response-summary', $response);
+        $result = $this->quickHandler->run('response-summary', $response);
 
         return $result['success']
             ? ['success' => true, 'summary' => $result['output']]
@@ -663,7 +668,7 @@ class AiChatController extends Controller
             return ['success' => false, 'error' => 'Content is empty.'];
         }
 
-        $result = $this->claudeQuickHandler->run('note-name', $content);
+        $result = $this->quickHandler->run('note-name', $content);
 
         if (!$result['success']) {
             return $result;
@@ -735,7 +740,7 @@ class AiChatController extends Controller
     /**
      * @return array{markdown: string, options: array, workingDirectory: string, project: Project, sessionId: ?string, streamToken: ?string}|array{error: array}
      */
-    private function prepareClaudeRequest(Project $project): array
+    private function prepareRunRequest(Project $project): array
     {
         $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
         if (!is_array($requestOptions)) {
@@ -801,6 +806,7 @@ class AiChatController extends Controller
         $run->session_id = $prepared['sessionId'];
         $run->options = json_encode($prepared['options']);
         $run->working_directory = $prepared['workingDirectory'];
+        $run->provider = $this->aiProvider->getIdentifier();
 
         if (!$run->save()) {
             return null;
@@ -833,6 +839,7 @@ class AiChatController extends Controller
      */
     private function relayRunStream(AiRun $run, int $offset): void
     {
+        set_time_limit(0);
         ignore_user_abort(false);
 
         $this->beginSseResponse();
@@ -846,12 +853,16 @@ class AiChatController extends Controller
 
         $streamFilePath = $run->getStreamFilePath();
 
-        // Wait for stream file (max 10s)
+        // Wait for stream file (max 60s, progressive backoff)
         $waitStart = time();
-        while (!file_exists($streamFilePath) && (time() - $waitStart) < 10) {
+        $waited = 0;
+        while (!file_exists($streamFilePath) && $waited < 60) {
             echo "data: " . json_encode(['type' => 'waiting']) . "\n\n";
             flush();
-            sleep(1);
+
+            $sleepSeconds = $waited < 10 ? 1 : 2;
+            sleep($sleepSeconds);
+            $waited = time() - $waitStart;
 
             if (connection_aborted()) {
                 return;
@@ -884,10 +895,10 @@ class AiChatController extends Controller
                     return false;
                 }
 
-                // Send SSE comment keepalive every 15s to detect broken connections
-                // and reset the client-side inactivity timer
+                // Send keepalive as data event every 15s — parsed by the same
+                // SSE pipeline so it works through proxies that strip comments
                 if (time() - $lastKeepalive >= 15) {
-                    echo ": keepalive\n\n";
+                    echo "data: " . json_encode(['type' => 'keepalive']) . "\n\n";
                     flush();
                     $lastKeepalive = time();
                 }
@@ -895,7 +906,7 @@ class AiChatController extends Controller
                 $run->refresh();
                 return $run->isActive();
             },
-            self::CLAUDE_TIMEOUT
+            self::RUN_TIMEOUT
         );
 
         // DB fallback: send any lines the relay missed due to cross-container filesystem sync delays
@@ -910,6 +921,31 @@ class AiChatController extends Controller
                 echo "data: " . $line . "\n\n";
                 flush();
             }
+        }
+
+        // Synthesize a run_status event so the client always receives terminal
+        // status + result, even if individual NDJSON events were missed
+        if ($run->isTerminal()) {
+            $statusEvent = [
+                'type' => 'run_status',
+                'status' => $run->status,
+                'runId' => $run->id,
+                'sessionId' => $run->session_id,
+            ];
+            if ($run->status === AiRunStatus::FAILED->value) {
+                $statusEvent['error'] = $run->error_message ?: 'Run failed';
+            }
+            if ($run->status === AiRunStatus::COMPLETED->value) {
+                if ($run->result_text !== null) {
+                    $statusEvent['resultText'] = $run->result_text;
+                }
+                $metadata = $run->getDecodedResultMetadata();
+                if (!empty($metadata)) {
+                    $statusEvent['metadata'] = $metadata;
+                }
+            }
+            echo "data: " . json_encode($statusEvent) . "\n\n";
+            flush();
         }
 
         echo "data: [DONE]\n\n";
@@ -1033,6 +1069,33 @@ class AiChatController extends Controller
         }
 
         return $grouped;
+    }
+
+    private function getGitBranch(?string $rootDir): ?string
+    {
+        if ($rootDir === null || $rootDir === '') {
+            return null;
+        }
+
+        $pathMappings = Yii::$app->params['pathMappings'] ?? [];
+        $containerPath = $rootDir;
+        foreach ($pathMappings as $hostPrefix => $containerPrefix) {
+            if (str_starts_with($rootDir, $hostPrefix)) {
+                $containerPath = $containerPrefix . substr($rootDir, strlen($hostPrefix));
+                break;
+            }
+        }
+
+        if (!is_dir($containerPath)) {
+            return null;
+        }
+
+        $command = 'git -C ' . escapeshellarg($containerPath) . ' rev-parse --abbrev-ref HEAD 2>/dev/null';
+        $output = [];
+        $exitCode = 0;
+        exec($command, $output, $exitCode);
+
+        return ($exitCode === 0 && !empty($output[0])) ? trim($output[0]) : null;
     }
 
     /**

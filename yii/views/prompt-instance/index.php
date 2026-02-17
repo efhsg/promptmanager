@@ -149,7 +149,7 @@ echo $this->render('_breadcrumbs', [
                                 $projectId = $model->template?->project_id;
                                 $disabled = $projectId === null;
                                 $tooltip = $disabled ? 'Project required' : 'Talk to AI';
-                                $claudeUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $projectId, 'breadcrumbs' => Json::encode([
+                                $aiChatUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $projectId, 'breadcrumbs' => Json::encode([
                                     ['label' => 'Prompt Instances', 'url' => Url::to(['/prompt-instance/index'])],
                                     ['label' => $model->label ?: 'Instance #' . $model->id, 'url' => Url::to(['/prompt-instance/view', 'id' => $model->id])],
                                 ])]);
@@ -158,7 +158,7 @@ echo $this->render('_breadcrumbs', [
                                     'title' => $tooltip,
                                     'data-bs-toggle' => 'tooltip',
                                     'data-id' => $model->id,
-                                    'data-claude-url' => $claudeUrl,
+                                    'data-ai-chat-url' => $aiChatUrl,
                                     'disabled' => $disabled,
                                 ]);
                             },
@@ -179,7 +179,7 @@ $script = <<<JS
                 if (this.disabled) return;
 
                 var id = this.dataset.id;
-                var claudeUrl = this.dataset.claudeUrl;
+                var aiChatUrl = this.dataset.aiChatUrl;
                 var button = this;
                 button.disabled = true;
 
@@ -192,10 +192,10 @@ $script = <<<JS
                     if (data.success && data.content) {
                         sessionStorage.setItem('aiPromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
                     }
-                    window.location.href = claudeUrl;
+                    window.location.href = aiChatUrl;
                 })
                 .catch(function() {
-                    window.location.href = claudeUrl;
+                    window.location.href = aiChatUrl;
                 })
                 .finally(function() {
                     button.disabled = false;

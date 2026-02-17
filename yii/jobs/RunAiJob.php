@@ -77,6 +77,8 @@ class RunAiJob implements RetryableJobInterface
             }
         };
 
+        $doneWritten = false;
+
         try {
             // Claim the run atomically
             if (!$run->claimForProcessing(getmypid())) {
@@ -101,6 +103,11 @@ class RunAiJob implements RetryableJobInterface
             // Extract session_id from stream log
             $this->extractSessionId($run, $streamLog);
 
+            // Write [DONE] BEFORE marking terminal — prevents race where relay
+            // sees terminal status but [DONE] is not yet in the file
+            $this->writeDoneMarker($streamFile, $streamFilePath);
+            $doneWritten = true;
+
             if ($result['exitCode'] === 0) {
                 $resultText = $this->extractResultText($streamLog);
                 $metadata = $this->extractMetadata($streamLog, $result);
@@ -110,7 +117,10 @@ class RunAiJob implements RetryableJobInterface
                 $errorMessage = $result['error'] ?: 'Claude CLI exited with code ' . $result['exitCode'];
                 $run->markFailed($errorMessage, $streamLog);
             }
-        } catch (RuntimeException $e) {
+        } catch (Throwable $e) {
+            if (!$doneWritten) {
+                $this->writeDoneMarker($streamFile, $streamFilePath);
+            }
             $streamLog = file_get_contents($streamFilePath) ?: null;
 
             if ($run->status === AiRunStatus::CANCELLED->value) {
@@ -119,13 +129,8 @@ class RunAiJob implements RetryableJobInterface
                 $run->markFailed($e->getMessage(), $streamLog);
             }
         } finally {
-            fclose($streamFile);
-
-            // Write [DONE] marker to stream file so relay knows it's finished
-            $doneFile = fopen($streamFilePath, 'ab');
-            if ($doneFile !== false) {
-                fwrite($doneFile, "[DONE]\n");
-                fclose($doneFile);
+            if (is_resource($streamFile)) {
+                fclose($streamFile);
             }
         }
     }
@@ -216,6 +221,28 @@ class RunAiJob implements RetryableJobInterface
                 $run->setSessionIdFromResult($decoded['session_id']);
                 return;
             }
+        }
+    }
+
+    /**
+     * Closes the stream file handle and appends the [DONE] marker.
+     *
+     * Must be called BEFORE marking the run as terminal so the relay sees
+     * [DONE] in the file before it detects the terminal DB status.
+     *
+     * @param resource|null $streamFile Open file handle (closed by this method)
+     */
+    private function writeDoneMarker(&$streamFile, string $streamFilePath): void
+    {
+        if (is_resource($streamFile)) {
+            fclose($streamFile);
+            $streamFile = null;
+        }
+
+        $doneFile = fopen($streamFilePath, 'ab');
+        if ($doneFile !== false) {
+            fwrite($doneFile, "[DONE]\n");
+            fclose($doneFile);
         }
     }
 

@@ -206,6 +206,113 @@ class RunAiJobTest extends Unit
         verify($run->session_summary)->null();
     }
 
+    public function testDoneMarkerWrittenBeforeTerminalStatus(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
+            ->willReturnCallback(function ($prompt, $dir, $onLine) {
+                $onLine('{"type":"result","result":"Done test"}');
+                return ['exitCode' => 0, 'error' => ''];
+            });
+
+        $job = new class extends RunAiJob {
+            public AiStreamingProviderInterface $mockService;
+
+            protected function createStreamingProvider(): AiStreamingProviderInterface
+            {
+                return $this->mockService;
+            }
+        };
+        $job->runId = $run->id;
+        $job->mockService = $mockStreamingProvider;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
+
+        // Exactly one [DONE] marker must be present in the stream file
+        $streamFilePath = $run->getStreamFilePath();
+        verify(file_exists($streamFilePath))->true();
+        $content = file_get_contents($streamFilePath);
+        verify(substr_count($content, '[DONE]'))->equals(1);
+
+        @unlink($streamFilePath);
+    }
+
+    public function testDoneMarkerWrittenOnFailure(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
+            ->willReturn(['exitCode' => 1, 'error' => 'Process crashed']);
+
+        $job = new class extends RunAiJob {
+            public AiStreamingProviderInterface $mockService;
+
+            protected function createStreamingProvider(): AiStreamingProviderInterface
+            {
+                return $this->mockService;
+            }
+        };
+        $job->runId = $run->id;
+        $job->mockService = $mockStreamingProvider;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::FAILED->value);
+
+        $streamFilePath = $run->getStreamFilePath();
+        verify(file_exists($streamFilePath))->true();
+        $content = file_get_contents($streamFilePath);
+        verify(substr_count($content, '[DONE]'))->equals(1);
+
+        @unlink($streamFilePath);
+    }
+
+    public function testDoneMarkerWrittenOnceOnThrowableDuringExecution(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+
+        // Simulate a Throwable (TypeError, Error) thrown by executeStreaming.
+        // The catch(Throwable) block must write exactly one [DONE].
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
+            ->willReturnCallback(function ($prompt, $dir, $onLine) {
+                $onLine('{"type":"assistant","message":"partial"}');
+                throw new \Error('Unexpected type error in provider');
+            });
+
+        $job = new class extends RunAiJob {
+            public AiStreamingProviderInterface $mockService;
+
+            protected function createStreamingProvider(): AiStreamingProviderInterface
+            {
+                return $this->mockService;
+            }
+        };
+        $job->runId = $run->id;
+        $job->mockService = $mockStreamingProvider;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::FAILED->value);
+        verify($run->error_message)->equals('Unexpected type error in provider');
+
+        // Exactly one [DONE] marker — catch block writes it since $doneWritten is false
+        $streamFilePath = $run->getStreamFilePath();
+        verify(file_exists($streamFilePath))->true();
+        $content = file_get_contents($streamFilePath);
+        verify(substr_count($content, '[DONE]'))->equals(1);
+
+        @unlink($streamFilePath);
+    }
+
     private function createRun(AiRunStatus $status): AiRun
     {
         $run = new AiRun();

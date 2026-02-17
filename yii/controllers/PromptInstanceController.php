@@ -51,7 +51,7 @@ class PromptInstanceController extends Controller
         private readonly ContextService $contextService,
         private readonly PromptTransformationService $promptTransformationService,
         private readonly FileFieldProcessor $fileFieldProcessor,
-        private readonly AiQuickHandler $claudeQuickHandler,
+        private readonly AiQuickHandler $quickHandler,
         PromptGenerationService $promptGenerationService,
         $config = []
     ) {
@@ -469,7 +469,7 @@ class PromptInstanceController extends Controller
             return ['success' => false, 'error' => 'Content is empty.'];
         }
 
-        $result = $this->claudeQuickHandler->run('prompt-instance-label', $content);
+        $result = $this->quickHandler->run('prompt-instance-label', $content);
 
         if (!$result['success']) {
             return $result;

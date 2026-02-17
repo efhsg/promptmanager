@@ -6,6 +6,7 @@ use app\controllers\AiChatController;
 use app\handlers\AiQuickHandler;
 use app\models\AiRun;
 use app\models\Project;
+use common\enums\AiRunStatus;
 use app\modules\identity\models\User;
 use app\services\ai\providers\ClaudeCliProvider;
 use app\services\AiRunCleanupService;
@@ -742,6 +743,61 @@ class AiChatControllerTest extends Unit
     }
 
     // ---------------------------------------------------------------
+    // actionRunStatus tests
+    // ---------------------------------------------------------------
+
+    public function testRunStatusReturnsResultTextForCompletedRun(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $project = $this->createProject(self::TEST_USER_ID);
+
+        $run = new AiRun();
+        $run->user_id = self::TEST_USER_ID;
+        $run->project_id = $project->id;
+        $run->prompt_markdown = 'Test prompt';
+        $run->prompt_summary = 'Test';
+        $run->save(false);
+        $run->markRunning(123);
+        $run->markCompleted('Final result text', [], null);
+
+        $controller = $this->createControllerWithAiProvider(
+            $this->createMock(ClaudeCliProvider::class)
+        );
+        $controller->detachBehaviors();
+
+        $result = $controller->actionRunStatus($run->id);
+
+        verify($result['success'])->true();
+        verify($result['status'])->equals(AiRunStatus::COMPLETED->value);
+        verify($result['resultText'])->equals('Final result text');
+    }
+
+    public function testRunStatusExcludesResultTextForActiveRun(): void
+    {
+        $this->mockAuthenticatedUser(self::TEST_USER_ID);
+        $project = $this->createProject(self::TEST_USER_ID);
+
+        $run = new AiRun();
+        $run->user_id = self::TEST_USER_ID;
+        $run->project_id = $project->id;
+        $run->prompt_markdown = 'Test prompt';
+        $run->prompt_summary = 'Test';
+        $run->save(false);
+        $run->markRunning(123);
+
+        $controller = $this->createControllerWithAiProvider(
+            $this->createMock(ClaudeCliProvider::class)
+        );
+        $controller->detachBehaviors();
+
+        $result = $controller->actionRunStatus($run->id);
+
+        verify($result['success'])->true();
+        verify($result['status'])->equals(AiRunStatus::RUNNING->value);
+        verify(array_key_exists('resultText', $result))->false();
+    }
+
+    // ---------------------------------------------------------------
     // Helper methods
     // ---------------------------------------------------------------
 
@@ -759,7 +815,7 @@ class AiChatControllerTest extends Unit
     private function createControllerWithAiProvider(ClaudeCliProvider $aiProvider): AiChatController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
-        $claudeQuickHandler = $this->createMock(AiQuickHandler::class);
+        $quickHandler = $this->createMock(AiQuickHandler::class);
         $formatConverter = new CopyFormatConverter();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
@@ -770,7 +826,7 @@ class AiChatControllerTest extends Unit
             $permissionService,
             $aiProvider,
             $formatConverter,
-            $claudeQuickHandler,
+            $quickHandler,
             $streamRelayService,
             $cleanupService
         );

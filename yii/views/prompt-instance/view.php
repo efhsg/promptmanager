@@ -17,7 +17,7 @@ use yii\widgets\DetailView;
 $projectId = $model->template?->project_id;
 $canRunClaude = $projectId !== null;
 $claudeTooltip = $canRunClaude ? 'Talk to AI' : 'Project required';
-$claudeUrl = $canRunClaude
+$aiChatUrl = $canRunClaude
     ? Url::to(['/ai-chat/index', 'p' => $projectId, 'breadcrumbs' => json_encode([
         ['label' => 'Prompt Instances', 'url' => Url::to(['/prompt-instance/index'])],
         ['label' => $model->label ?: 'Instance #' . $model->id, 'url' => Url::to(['/prompt-instance/view', 'id' => $model->id])],
@@ -105,7 +105,7 @@ echo $this->render('_breadcrumbs', [
 
 <?php
 $contentDelta = json_encode($model->final_prompt, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
-$claudeUrlJs = json_encode($claudeUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$aiChatUrlJs = json_encode($aiChatUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 $script = <<<JS
         document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
@@ -115,7 +115,7 @@ $script = <<<JS
                 if (content) {
                     sessionStorage.setItem('aiPromptContent', typeof content === 'string' ? content : JSON.stringify(content));
                 }
-                window.location.href = $claudeUrlJs;
+                window.location.href = $aiChatUrlJs;
             });
         });
     JS;
