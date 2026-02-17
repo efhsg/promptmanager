@@ -104,10 +104,10 @@ class ClaudeWorkspaceService
         $lines[] = '';
 
         // Include custom context if set (stored as Delta JSON, converted to markdown)
-        if ($project->hasClaudeContext()) {
+        if ($project->hasAiContext()) {
             $lines[] = '## Project Context';
             $lines[] = '';
-            $lines[] = $project->getClaudeContextAsMarkdown();
+            $lines[] = $project->getAiContextAsMarkdown();
             $lines[] = '';
         }
 
@@ -148,7 +148,7 @@ class ClaudeWorkspaceService
      */
     public function generateSettingsJson(Project $project): array
     {
-        $options = $project->getClaudeOptions();
+        $options = $project->getAiOptions();
         $settings = [];
 
         // Map permission mode to settings

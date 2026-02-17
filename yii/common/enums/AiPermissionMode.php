@@ -2,7 +2,7 @@
 
 namespace common\enums;
 
-enum ClaudePermissionMode: string
+enum AiPermissionMode: string
 {
     case PLAN = 'plan';
     case DONT_ASK = 'dontAsk';

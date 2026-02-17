@@ -9,7 +9,7 @@ use app\services\ai\AiStreamingProviderInterface;
 use app\services\ai\AiUsageProviderInterface;
 use app\services\ai\AiWorkspaceProviderInterface;
 use app\services\CopyFormatConverter;
-use common\enums\ClaudePermissionMode;
+use common\enums\AiPermissionMode;
 use common\enums\CopyType;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -579,7 +579,7 @@ class ClaudeCliProvider implements
 
     public function getSupportedPermissionModes(): array
     {
-        return ClaudePermissionMode::values();
+        return AiPermissionMode::values();
     }
 
     // ──────────────────────────────────────────────────────────
@@ -629,10 +629,10 @@ class ClaudeCliProvider implements
         $lines[] = "Project: **{$project->name}**";
         $lines[] = '';
 
-        if ($project->hasClaudeContext()) {
+        if ($project->hasAiContext()) {
             $lines[] = '## Project Context';
             $lines[] = '';
-            $lines[] = $project->getClaudeContextAsMarkdown();
+            $lines[] = $project->getAiContextAsMarkdown();
             $lines[] = '';
         }
 
@@ -671,7 +671,7 @@ class ClaudeCliProvider implements
      */
     public function generateSettingsJson(Project $project): array
     {
-        $options = $project->getClaudeOptions();
+        $options = $project->getAiOptions();
         $settings = [];
 
         if (!empty($options['permissionMode'])) {

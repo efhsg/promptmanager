@@ -106,7 +106,7 @@ class ClaudeWorkspaceServiceTest extends Unit
             'name' => 'Test Project',
             'user_id' => 1,
         ]);
-        $project->setClaudeOptions(['permissionMode' => 'plan', 'model' => 'sonnet']);
+        $project->setAiOptions(['permissionMode' => 'plan', 'model' => 'sonnet']);
 
         $this->service->syncConfig($project);
         $path = $this->service->getWorkspacePath($project);
@@ -221,7 +221,7 @@ class ClaudeWorkspaceServiceTest extends Unit
             'name' => 'Test Project',
             'user_id' => 100,
         ]);
-        $project->setClaudeOptions(['permissionMode' => 'plan']);
+        $project->setAiOptions(['permissionMode' => 'plan']);
 
         $result = $this->service->generateSettingsJson($project);
 
@@ -235,7 +235,7 @@ class ClaudeWorkspaceServiceTest extends Unit
             'name' => 'Test Project',
             'user_id' => 100,
         ]);
-        $project->setClaudeOptions(['model' => 'sonnet']);
+        $project->setAiOptions(['model' => 'sonnet']);
 
         $result = $this->service->generateSettingsJson($project);
 
@@ -248,7 +248,7 @@ class ClaudeWorkspaceServiceTest extends Unit
             'name' => 'Test Project',
             'user_id' => 100,
         ]);
-        $project->setClaudeOptions(['allowedTools' => 'Read, Glob, Grep']);
+        $project->setAiOptions(['allowedTools' => 'Read, Glob, Grep']);
 
         $result = $this->service->generateSettingsJson($project);
 

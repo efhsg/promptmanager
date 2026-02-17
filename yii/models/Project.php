@@ -7,6 +7,8 @@ use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use app\services\CopyFormatConverter;
 use common\enums\CopyType;
+use app\services\ai\AiProviderInterface;
+use app\services\ai\AiWorkspaceProviderInterface;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -306,7 +308,7 @@ class Project extends ActiveRecord
         return CopyType::labels();
     }
 
-    public function getClaudeOptions(): array
+    public function getAiOptions(): array
     {
         if (empty($this->ai_options)) {
             return [];
@@ -317,7 +319,7 @@ class Project extends ActiveRecord
         return $this->ai_options;
     }
 
-    public function setClaudeOptions(array|string|null $value): void
+    public function setAiOptions(array|string|null $value): void
     {
         if (is_array($value)) {
             $value = array_filter($value, fn($v) => $v !== null && $v !== '');
@@ -336,14 +338,14 @@ class Project extends ActiveRecord
         }
     }
 
-    public function getClaudeOption(string $key, mixed $default = null): mixed
+    public function getAiOption(string $key, mixed $default = null): mixed
     {
-        return $this->getClaudeOptions()[$key] ?? $default;
+        return $this->getAiOptions()[$key] ?? $default;
     }
 
-    public function getClaudeCommandBlacklist(): array
+    public function getAiCommandBlacklist(): array
     {
-        $raw = $this->getClaudeOption('commandBlacklist');
+        $raw = $this->getAiOption('commandBlacklist');
         if (is_string($raw)) {
             $raw = json_decode($raw, true);
         }
@@ -353,9 +355,9 @@ class Project extends ActiveRecord
         return [];
     }
 
-    public function getClaudeCommandGroups(): array
+    public function getAiCommandGroups(): array
     {
-        $raw = $this->getClaudeOption('commandGroups');
+        $raw = $this->getAiOption('commandGroups');
         if (is_string($raw)) {
             $raw = json_decode($raw, true);
         }
@@ -369,17 +371,17 @@ class Project extends ActiveRecord
         return [];
     }
 
-    public function getClaudeContext(): ?string
+    public function getAiContext(): ?string
     {
         return $this->ai_context;
     }
 
-    public function setClaudeContext(?string $value): void
+    public function setAiContext(?string $value): void
     {
         $this->ai_context = $value === '' ? null : $value;
     }
 
-    public function hasClaudeContext(): bool
+    public function hasAiContext(): bool
     {
         return $this->ai_context !== null && trim($this->ai_context) !== '';
     }
@@ -389,9 +391,9 @@ class Project extends ActiveRecord
      *
      * Handles both Delta JSON (new format) and plain text (legacy).
      */
-    public function getClaudeContextAsMarkdown(): string
+    public function getAiContextAsMarkdown(): string
     {
-        if (!$this->hasClaudeContext()) {
+        if (!$this->hasAiContext()) {
             return '';
         }
 
@@ -561,7 +563,7 @@ class Project extends ActiveRecord
     {
         parent::afterSave($insert, $changedAttributes);
 
-        // Fields that affect Claude workspace configuration
+        // Fields that affect AI workspace configuration
         $relevantFields = [
             'ai_context',
             'ai_options',
@@ -574,9 +576,12 @@ class Project extends ActiveRecord
 
         if ($shouldSync) {
             try {
-                Yii::$app->claudeWorkspaceService->syncConfig($this);
+                $provider = Yii::$container->get(AiProviderInterface::class);
+                if ($provider instanceof AiWorkspaceProviderInterface) {
+                    $provider->syncConfig($this);
+                }
             } catch (Throwable $e) {
-                Yii::error("Failed to sync Claude workspace for project {$this->id}: {$e->getMessage()}", 'application');
+                Yii::error("Failed to sync AI workspace for project {$this->id}: {$e->getMessage()}", 'application');
             }
         }
     }
@@ -586,9 +591,12 @@ class Project extends ActiveRecord
         parent::afterDelete();
 
         try {
-            Yii::$app->claudeWorkspaceService->deleteWorkspace($this);
+            $provider = Yii::$container->get(AiProviderInterface::class);
+            if ($provider instanceof AiWorkspaceProviderInterface) {
+                $provider->deleteWorkspace($this);
+            }
         } catch (Throwable $e) {
-            Yii::error("Failed to delete Claude workspace for project {$this->id}: {$e->getMessage()}", 'application');
+            Yii::error("Failed to delete AI workspace for project {$this->id}: {$e->getMessage()}", 'application');
         }
     }
 }

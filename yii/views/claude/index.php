@@ -41,7 +41,7 @@ $importMarkdownUrl = Url::to(['/claude/import-markdown']);
 $viewUrlTemplate = Url::to(['/note/view', 'id' => '__ID__']);
 $checkConfigUrl = Url::to(array_merge(['/claude/check-config'], $pParam));
 $usageUrl = Url::to(array_merge(['/claude/usage'], $pParam));
-$projectDefaults = $project->getClaudeOptions();
+$projectDefaults = $project->getAiOptions();
 $projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $usageUrlJson = Json::encode($usageUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);

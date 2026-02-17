@@ -284,8 +284,8 @@ class ClaudeController extends Controller
             'hasAnyConfig' => $configStatus['hasAnyConfig'],
             'pathStatus' => $configStatus['pathStatus'],
             'pathMapped' => $configStatus['pathMapped'],
-            'hasPromptManagerContext' => $project->hasClaudeContext(),
-            'claudeContext' => $project->getClaudeContextAsMarkdown(),
+            'hasPromptManagerContext' => $project->hasAiContext(),
+            'claudeContext' => $project->getAiContextAsMarkdown(),
         ];
     }
 
@@ -745,7 +745,7 @@ class ClaudeController extends Controller
             return ['error' => ['success' => false, 'error' => 'Prompt is empty.']];
         }
 
-        $projectDefaults = $project->getClaudeOptions();
+        $projectDefaults = $project->getAiOptions();
 
         $allowedKeys = ['model', 'permissionMode', 'appendSystemPrompt', 'allowedTools', 'disallowedTools'];
         $options = array_merge(
@@ -971,12 +971,12 @@ class ClaudeController extends Controller
             return [];
         }
 
-        $blacklist = $project->getClaudeCommandBlacklist();
+        $blacklist = $project->getAiCommandBlacklist();
         if ($blacklist !== []) {
             $commands = array_diff_key($commands, array_flip($blacklist));
         }
 
-        $groups = $project->getClaudeCommandGroups();
+        $groups = $project->getAiCommandGroups();
         if ($groups === []) {
             return $commands;
         }

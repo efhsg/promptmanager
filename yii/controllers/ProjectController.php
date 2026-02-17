@@ -125,7 +125,7 @@ class ProjectController extends Controller
         $model = new Project(['user_id' => Yii::$app->user->id]);
 
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post())) {
-            $this->loadClaudeOptions($model);
+            $this->loadAiOptions($model);
             if ($model->save()) {
                 $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
                 return $this->redirect(['view', 'id' => $model->id]);
@@ -153,7 +153,7 @@ class ProjectController extends Controller
         $model = $this->findModel($id);
 
         if (Yii::$app->request->isPost && $model->load(Yii::$app->request->post())) {
-            $this->loadClaudeOptions($model);
+            $this->loadAiOptions($model);
             if ($model->save()) {
                 $this->projectService->syncLinkedProjects($model, $model->linkedProjectIds);
                 return $this->redirect(['view', 'id' => $model->id]);
@@ -272,10 +272,10 @@ class ProjectController extends Controller
         ])->one() ?? throw new NotFoundHttpException('The requested Project does not exist or is not yours.');
     }
 
-    private function loadClaudeOptions(Project $model): void
+    private function loadAiOptions(Project $model): void
     {
         $claudeOptions = Yii::$app->request->post('ai_options', []);
-        $model->setClaudeOptions($claudeOptions);
+        $model->setAiOptions($claudeOptions);
     }
 
 }

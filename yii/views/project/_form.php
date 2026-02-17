@@ -15,7 +15,7 @@ $projectConfigStatus ??= [];
 
 QuillAsset::register($this);
 
-$claudeOptions = $model->getClaudeOptions();
+$claudeOptions = $model->getAiOptions();
 
 $permissionModes = [
     '' => '(Use CLI default)',
@@ -167,8 +167,8 @@ $modelOptions = [
                         </div>
                     </div>
 
-                    <input type="hidden" id="claude-command-blacklist-hidden" name="ai_options[commandBlacklist]" value="<?= Html::encode(Json::encode($model->getClaudeCommandBlacklist())) ?>">
-                    <input type="hidden" id="claude-command-groups-hidden" name="ai_options[commandGroups]" value="<?= Html::encode(Json::encode($model->getClaudeCommandGroups() ?: new \stdClass())) ?>">
+                    <input type="hidden" id="claude-command-blacklist-hidden" name="ai_options[commandBlacklist]" value="<?= Html::encode(Json::encode($model->getAiCommandBlacklist())) ?>">
+                    <input type="hidden" id="claude-command-groups-hidden" name="ai_options[commandGroups]" value="<?= Html::encode(Json::encode($model->getAiCommandGroups() ?: new \stdClass())) ?>">
                 <?php endif; ?>
             </div>
         </div>
@@ -397,8 +397,8 @@ $script = <<<JS
 $this->registerJs($script);
 
 if ($model->id && !empty($model->root_directory)):
-    $commandBlacklistJson = Json::encode($model->getClaudeCommandBlacklist());
-    $commandGroupsJson = Json::encode($model->getClaudeCommandGroups() ?: new \stdClass());
+    $commandBlacklistJson = Json::encode($model->getAiCommandBlacklist());
+    $commandGroupsJson = Json::encode($model->getAiCommandGroups() ?: new \stdClass());
     $claudeCommandsUrl = Url::to(['/project/claude-commands', 'id' => $model->id]);
 
     $commandDropdownJs = <<<JS
