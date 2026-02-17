@@ -404,7 +404,7 @@ $this->registerJs($script);
 if ($model->id && !empty($model->root_directory)):
     $commandBlacklistJson = Json::encode($model->getAiCommandBlacklist());
     $commandGroupsJson = Json::encode($model->getAiCommandGroups() ?: new \stdClass());
-    $claudeCommandsUrl = Url::to(['/project/claude-commands', 'id' => $model->id]);
+    $claudeCommandsUrl = Url::to(['/project/ai-commands', 'id' => $model->id]);
 
     $commandDropdownJs = <<<JS
             (function() {

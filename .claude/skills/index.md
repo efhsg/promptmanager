@@ -51,8 +51,6 @@ Commands are thin executable wrappers that invoke skills:
 
 | Command | Invokes Skill | Purpose |
 |---------|---------------|---------|
-| `/new-model` | `skills/model.md` | Create model + query class |
-| `/new-migration` | `skills/migration.md` | Create migration |
 | `/new-branch` | `skills/new-branch.md` | Create feature/fix branch |
 | `/onboarding` | `skills/onboarding.md` | Quick start for new sessions |
 | `/refactor` | `skills/refactor.md` | Refactor code without behavior change |
