@@ -31,7 +31,7 @@ services:
       - ${YTX_PATH:-./ytx}:/opt/ytx:ro
       - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
-      - ${HOME}/.claude-config:/home/${USER_NAME}/.claude-config
+      - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
       - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
       - ${HOME}/.gitconfig:/home/${USER_NAME}/.gitconfig:ro
       - ${HOME}/.config/gh:/home/${USER_NAME}/.config/gh:ro
@@ -99,7 +99,7 @@ services:
       - ${YTX_PATH:-./ytx}:/opt/ytx:ro
       - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
-      - ${HOME}/.claude-config:/home/${USER_NAME}/.claude-config
+      - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
       - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
       - ${HOME}/.gitconfig:/home/${USER_NAME}/.gitconfig:ro
       - ${HOME}/.config/gh:/home/${USER_NAME}/.config/gh:ro

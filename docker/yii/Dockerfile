@@ -133,15 +133,12 @@ USER $USER_NAME
 ENV DISABLE_AUTOUPDATER=1
 COPY docker/yii/.gitkeep docker/yii/claude-bin* /tmp/
 RUN (curl -4 -fsSL https://claude.ai/install.sh -o /tmp/install-claude.sh && \
-    bash /tmp/install-claude.sh stable && \
+    bash /tmp/install-claude.sh latest && \
     rm -f /tmp/install-claude.sh) || \
     (test -f /tmp/claude-binary && \
      mkdir -p ~/.local/bin && \
      cp /tmp/claude-binary ~/.local/bin/claude && \
      chmod +x ~/.local/bin/claude)
-
-# Symlink Claude config from mounted directory to home (avoids Docker single-file bind mount issues)
-RUN ln -sf /home/$USER_NAME/.claude-config/.claude.json /home/$USER_NAME/.claude.json
 
 # Create the function and append it to ~/.bashrc
 RUN echo 'function test() {' >> /home/$USER_NAME/.bashrc && \
