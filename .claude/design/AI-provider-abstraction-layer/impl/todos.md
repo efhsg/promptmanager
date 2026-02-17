@@ -1,6 +1,6 @@
 # Implementation Progress
 
-## Status: Phase 8 complete
+## Status: Phase 9 complete
 
 ## Phases
 
@@ -11,8 +11,8 @@
 - [x] **P5**: Rename services + job + handler — committed: 28e09f4
 - [x] **P6**: Rename AiPermissionMode + update Project model — committed: c5e8cb1
 - [x] **P7**: Rename controllers + routes + RBAC config — committed: 3406d1b
-- [x] **P8**: Update views + CSS + layouts
-- [ ] **P9**: DI wiring, config cleanup, bootstrap
+- [x] **P8**: Update views + CSS + layouts — committed: 294199f
+- [x] **P9**: DI wiring, config cleanup, bootstrap
 - [ ] **P10**: Rename + update tests
 - [ ] **P11**: Cleanup + delete old files
 

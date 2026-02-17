@@ -102,7 +102,7 @@ $config = [
         ],
         'session' => [
             'class' => 'yii\web\Session',
-            'timeout' => 3600 * 4, // 4 hours - allows long Claude CLI sessions
+            'timeout' => 3600 * 4, // 4 hours - allows long AI CLI sessions
         ],
         'mailer' => [
             'class' => Mailer::class,
@@ -147,7 +147,7 @@ $config = [
             'tableName' => '{{%queue}}',
             'channel' => 'ai',
             'mutex' => \yii\mutex\MysqlMutex::class,
-            'ttr' => 3900,     // 65 min (> max Claude timeout 3600s)
+            'ttr' => 3900,     // 65 min (> max AI run timeout 3600s)
             'attempts' => 1,   // no retry (inference not idempotent)
         ],
 
