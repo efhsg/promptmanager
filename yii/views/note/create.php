@@ -115,7 +115,7 @@ $saveUrl = Url::to(['/note/save']);
 $savedListUrl = Url::to(['/note/index']);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
-$suggestNameUrl = Url::to(['/claude/suggest-name']);
+$suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
 
 $script = <<<JS
     window.quill = new Quill('#editor', {

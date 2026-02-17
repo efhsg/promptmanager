@@ -37,7 +37,7 @@ $this->registerJsVar('quillUrlConfig', [
 
 $currentProject = (\Yii::$app->projectContext)->getCurrentProject();
 $projectCopyFormat = $currentProject?->getPromptInstanceCopyFormatEnum()->value ?? CopyType::MD->value;
-$claudeUrl = $currentProject ? Url::to(['/claude/index', 'p' => $currentProject->id, 'breadcrumbs' => json_encode([
+$claudeUrl = $currentProject ? Url::to(['/ai-chat/index', 'p' => $currentProject->id, 'breadcrumbs' => json_encode([
     ['label' => 'Generate', 'url' => null],
     ['label' => 'Prompts', 'url' => Url::to(['/prompt-instance/index'])],
     ['label' => 'Create Prompt Instance', 'url' => Url::current()],
@@ -519,7 +519,7 @@ $script = <<<'JS'
                     return;
                 }
 
-                sessionStorage.setItem('claudePromptContent', JSON.stringify(deltaObj));
+                sessionStorage.setItem('aiPromptContent', JSON.stringify(deltaObj));
                 window.location.href = claudeUrl;
             });
 

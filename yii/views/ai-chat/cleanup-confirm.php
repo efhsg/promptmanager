@@ -7,10 +7,10 @@ use yii\helpers\Html;
 /** @var int $runCount */
 
 $this->title = 'Cleanup Sessions';
-$this->params['breadcrumbs'][] = ['label' => 'Claude Sessions', 'url' => ['runs']];
+$this->params['breadcrumbs'][] = ['label' => 'AI Sessions', 'url' => ['runs']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
-<div class="claude-cleanup-confirm container py-4">
+<div class="ai-cleanup-confirm container py-4">
 
     <div class="card">
         <div class="card-header">

@@ -1,6 +1,6 @@
 /* ===================================================================
    MOBILE RESPONSIVE STYLES
-   Primary breakpoint: 767.98px (consistent with claude-chat.css)
+   Primary breakpoint: 767.98px (consistent with ai-chat.css)
    =================================================================== */
 
 /* ---------------------------------------------------------------------
@@ -463,9 +463,9 @@ body.keyboard-open .mobile-bottom-nav {
         -webkit-overflow-scrolling: touch;
     }
 
-    /* Claude button touch target */
+    /* AI button touch target */
     .btn-claude,
-    .btn[title*="Claude"] {
+    .btn[title*="AI"] {
         min-width: 44px;
         min-height: 44px;
     }

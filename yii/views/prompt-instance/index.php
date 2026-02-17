@@ -148,8 +148,8 @@ echo $this->render('_breadcrumbs', [
                             'claude' => function ($url, PromptInstance $model) {
                                 $projectId = $model->template?->project_id;
                                 $disabled = $projectId === null;
-                                $tooltip = $disabled ? 'Project required' : 'Talk to Claude';
-                                $claudeUrl = $disabled ? '#' : Url::to(['/claude/index', 'p' => $projectId, 'breadcrumbs' => Json::encode([
+                                $tooltip = $disabled ? 'Project required' : 'Talk to AI';
+                                $claudeUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $projectId, 'breadcrumbs' => Json::encode([
                                     ['label' => 'Prompt Instances', 'url' => Url::to(['/prompt-instance/index'])],
                                     ['label' => $model->label ?: 'Instance #' . $model->id, 'url' => Url::to(['/prompt-instance/view', 'id' => $model->id])],
                                 ])]);
@@ -190,7 +190,7 @@ $script = <<<JS
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success && data.content) {
-                        sessionStorage.setItem('claudePromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
+                        sessionStorage.setItem('aiPromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
                     }
                     window.location.href = claudeUrl;
                 })

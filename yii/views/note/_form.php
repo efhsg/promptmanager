@@ -126,7 +126,7 @@ $saveUrl = Url::to(['/note/save']);
 $updateUrlTemplate = Url::to(['/note/update', 'id' => '__ID__']);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
-$suggestNameUrl = Url::to(['/claude/suggest-name']);
+$suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
 
 // Build project data for export (need to know which projects have root_directory)
 $projectDataForExport = [];

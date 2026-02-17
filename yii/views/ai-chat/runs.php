@@ -15,25 +15,25 @@ use yii\widgets\ActiveForm;
 /** @var array $projectList id => name */
 /** @var int|null $defaultProjectId */
 
-$this->title = 'Claude Sessions';
+$this->title = 'AI Sessions';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 
-<div class="claude-runs-index container py-4">
+<div class="ai-runs-index container py-4">
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
         <?php if (count($projectList) === 1): ?>
             <?= Html::a(
                 '<i class="bi bi-plus-lg"></i> New dialog',
-                ['/claude/index', 'p' => array_key_first($projectList)],
+                ['/ai-chat/index', 'p' => array_key_first($projectList)],
                 ['class' => 'btn btn-primary']
             ) ?>
         <?php elseif ($defaultProjectId !== null && count($projectList) > 1): ?>
             <div class="btn-group">
                 <?= Html::a(
                     '<i class="bi bi-plus-lg"></i> New dialog',
-                    ['/claude/index', 'p' => $defaultProjectId],
+                    ['/ai-chat/index', 'p' => $defaultProjectId],
                     ['class' => 'btn btn-primary']
                 ) ?>
                 <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
@@ -46,7 +46,7 @@ $this->params['breadcrumbs'][] = $this->title;
                         } ?>
                         <li><?= Html::a(
                             Html::encode($pName),
-                            ['/claude/index', 'p' => $pId],
+                            ['/ai-chat/index', 'p' => $pId],
                             ['class' => 'dropdown-item']
                         ) ?></li>
                     <?php endforeach; ?>
@@ -61,7 +61,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     <?php foreach ($projectList as $pId => $pName): ?>
                         <li><?= Html::a(
                             Html::encode($pName),
-                            ['/claude/index', 'p' => $pId],
+                            ['/ai-chat/index', 'p' => $pId],
                             ['class' => 'dropdown-item']
                         ) ?></li>
                     <?php endforeach; ?>
@@ -139,7 +139,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 'emptyText' => 'No sessions yet.',
                 'rowOptions' => fn(AiRun $model) => [
                     'data-url' => Url::to(array_filter([
-                        '/claude/index',
+                        '/ai-chat/index',
                         'p' => $model->project_id,
                         's' => $model->session_id,
                         'run' => $model->getSessionLastRunId(),
@@ -242,15 +242,15 @@ $js = <<<'JS'
     btn.addEventListener('click', function () {
         if (timer) {
             stop();
-            sessionStorage.removeItem('claude-runs-auto-refresh');
+            sessionStorage.removeItem('ai-runs-auto-refresh');
         } else {
             start();
-            sessionStorage.setItem('claude-runs-auto-refresh', '1');
+            sessionStorage.setItem('ai-runs-auto-refresh', '1');
         }
     });
 
     // Resume auto-refresh after reload
-    if (sessionStorage.getItem('claude-runs-auto-refresh') === '1')
+    if (sessionStorage.getItem('ai-runs-auto-refresh') === '1')
         start();
 })();
 JS;

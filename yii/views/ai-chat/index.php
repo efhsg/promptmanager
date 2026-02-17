@@ -23,24 +23,24 @@ QuillAsset::register($this);
 HighlightAsset::register($this);
 $this->registerJsFile('@web/js/marked.min.js', ['position' => View::POS_HEAD]);
 $this->registerJsFile('@web/js/purify.min.js', ['position' => View::POS_HEAD]);
-$this->registerCssFile('@web/css/claude-chat.css');
+$this->registerCssFile('@web/css/ai-chat.css');
 
 $pParam = ['p' => $project->id];
-$streamClaudeUrl = Url::to(array_merge(['/claude/stream'], $pParam));
-$cancelClaudeUrl = Url::to(array_merge(['/claude/cancel'], $pParam));
-$startRunUrl = Url::to(array_merge(['/claude/start-run'], $pParam));
-$streamRunUrl = Url::to(['/claude/stream-run']);
-$cancelRunUrl = Url::to(['/claude/cancel-run']);
-$summarizeUrl = Url::to(array_merge(['/claude/summarize-session'], $pParam));
-$summarizePromptUrl = Url::to(array_merge(['/claude/summarize-prompt'], $pParam));
-$summarizeResponseUrl = Url::to(array_merge(['/claude/summarize-response'], $pParam));
-$saveUrl = Url::to(['/claude/save']);
-$suggestNameUrl = Url::to(['/claude/suggest-name']);
-$importTextUrl = Url::to(['/claude/import-text']);
-$importMarkdownUrl = Url::to(['/claude/import-markdown']);
+$streamClaudeUrl = Url::to(array_merge(['/ai-chat/stream'], $pParam));
+$cancelClaudeUrl = Url::to(array_merge(['/ai-chat/cancel'], $pParam));
+$startRunUrl = Url::to(array_merge(['/ai-chat/start-run'], $pParam));
+$streamRunUrl = Url::to(['/ai-chat/stream-run']);
+$cancelRunUrl = Url::to(['/ai-chat/cancel-run']);
+$summarizeUrl = Url::to(array_merge(['/ai-chat/summarize-session'], $pParam));
+$summarizePromptUrl = Url::to(array_merge(['/ai-chat/summarize-prompt'], $pParam));
+$summarizeResponseUrl = Url::to(array_merge(['/ai-chat/summarize-response'], $pParam));
+$saveUrl = Url::to(['/ai-chat/save']);
+$suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
+$importTextUrl = Url::to(['/ai-chat/import-text']);
+$importMarkdownUrl = Url::to(['/ai-chat/import-markdown']);
 $viewUrlTemplate = Url::to(['/note/view', 'id' => '__ID__']);
-$checkConfigUrl = Url::to(array_merge(['/claude/check-config'], $pParam));
-$usageUrl = Url::to(array_merge(['/claude/usage'], $pParam));
+$checkConfigUrl = Url::to(array_merge(['/ai-chat/check-config'], $pParam));
+$usageUrl = Url::to(array_merge(['/ai-chat/usage'], $pParam));
 $projectDefaults = $project->getAiOptions();
 $projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
@@ -83,7 +83,7 @@ if ($breadcrumbs !== null) {
 $this->params['breadcrumbs'][] = 'Claude CLI';
 ?>
 
-<div class="claude-chat-page container">
+<div class="ai-chat-page container">
     <!-- Page Header -->
     <div class="d-none d-md-flex justify-content-between align-items-center mb-4">
         <div>
@@ -467,9 +467,9 @@ $js = <<<JS
             }
         });
 
-        var storedContent = sessionStorage.getItem('claudePromptContent');
+        var storedContent = sessionStorage.getItem('aiPromptContent');
         var initialDelta = storedContent ? JSON.parse(storedContent) : {"ops":[]};
-        sessionStorage.removeItem('claudePromptContent');
+        sessionStorage.removeItem('aiPromptContent');
         quill.setContents(initialDelta);
 
         // Configure marked with custom renderer for code highlighting
@@ -750,7 +750,7 @@ $js = <<<JS
                         e.preventDefault();
                         self.toggleFocusMode();
                     }
-                    if (e.key === 'Escape' && document.querySelector('.claude-chat-page').classList.contains('claude-focus-mode')) {
+                    if (e.key === 'Escape' && document.querySelector('.ai-chat-page').classList.contains('ai-focus-mode')) {
                         e.preventDefault();
                         self.toggleFocusMode();
                     }
@@ -769,7 +769,7 @@ $js = <<<JS
                     }
                 });
 
-                document.querySelector('.claude-chat-page').addEventListener('click', function(e) {
+                document.querySelector('.ai-chat-page').addEventListener('click', function(e) {
                     var copyBtn = e.target.closest('.claude-message__copy');
                     if (copyBtn) self.handleCopyClick(copyBtn);
 
@@ -2598,9 +2598,9 @@ $js = <<<JS
             },
 
             toggleFocusMode: function() {
-                var page = document.querySelector('.claude-chat-page');
-                var entering = !page.classList.contains('claude-focus-mode');
-                page.classList.toggle('claude-focus-mode');
+                var page = document.querySelector('.ai-chat-page');
+                var entering = !page.classList.contains('ai-focus-mode');
+                page.classList.toggle('ai-focus-mode');
                 if (entering) {
                     this.expandPromptEditor();
                     this.focusEditor();

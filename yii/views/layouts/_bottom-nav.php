@@ -1,7 +1,7 @@
 <?php
 /**
  * Mobile bottom navigation bar
- * Displayed on screens < 768px, except on Claude chat page
+ * Displayed on screens < 768px, except on AI chat page
  *
  * @var yii\web\View $this
  */
@@ -31,10 +31,10 @@ $isActive = static fn(string $controller, ?string $action = null): string =>
             </a>
         </li>
         <li class="mobile-bottom-nav__item">
-            <a href="<?= Url::to(['/claude/runs']) ?>"
-               class="mobile-bottom-nav__link <?= $isActive('claude') ?>">
+            <a href="<?= Url::to(['/ai-chat/runs']) ?>"
+               class="mobile-bottom-nav__link <?= $isActive('ai-chat') ?>">
                 <i class="bi bi-chat-dots mobile-bottom-nav__icon"></i>
-                <span class="mobile-bottom-nav__label">Claude</span>
+                <span class="mobile-bottom-nav__label">AI Chat</span>
             </a>
         </li>
         <li class="mobile-bottom-nav__item">

@@ -61,7 +61,7 @@ QuillAsset::register($this);
 $templateBody = json_encode($model->content);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
-$suggestNameUrl = Url::to(['/claude/suggest-name']);
+$suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
 
 // Build project data for export
 $projectDataForExport = [];

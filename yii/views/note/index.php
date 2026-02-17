@@ -232,8 +232,8 @@ $this->params['breadcrumbs'][] = $this->title;
                         'buttons' => [
                             'claude' => function ($url, Note $model) {
                                 $disabled = $model->project_id === null;
-                                $tooltip = $disabled ? 'Project required' : 'Talk to Claude';
-                                $claudeUrl = $disabled ? '#' : Url::to(['/claude/index', 'p' => $model->project_id, 'breadcrumbs' => Json::encode([
+                                $tooltip = $disabled ? 'Project required' : 'Talk to AI';
+                                $claudeUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => Json::encode([
                                     ['label' => 'Notes', 'url' => Url::to(['/note/index'])],
                                     ['label' => $model->name, 'url' => Url::to(['/note/view', 'id' => $model->id])],
                                 ])]);
@@ -284,7 +284,7 @@ $script = <<<JS
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.success && data.content) {
-                        sessionStorage.setItem('claudePromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
+                        sessionStorage.setItem('aiPromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
                     }
                     // Set project context to note's project before navigating to Claude
                     if (data.success && data.projectId) {

@@ -8,7 +8,7 @@ $formatOptions = CopyType::labels();
 $convertFormatUrl = Url::to(['/note/convert-format']);
 $exportToFileUrl = Url::to(['/export/to-file']);
 $pathListUrl = Url::to(['/field/path-list']);
-$suggestNameUrl = Url::to(['/claude/suggest-name']);
+$suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
 ?>
 
 <div class="modal fade" id="exportModal" tabindex="-1" aria-labelledby="exportModalLabel" aria-hidden="true">

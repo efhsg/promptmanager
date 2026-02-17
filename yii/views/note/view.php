@@ -11,9 +11,9 @@ use yii\widgets\DetailView;
 /** @var app\models\Note[] $children */
 
 $canRunClaude = $model->project_id !== null;
-$claudeTooltip = $canRunClaude ? 'Talk to Claude' : 'Project required';
+$claudeTooltip = $canRunClaude ? 'Talk to AI' : 'Project required';
 $claudeUrl = $canRunClaude
-    ? Url::to(['/claude/index', 'p' => $model->project_id, 'breadcrumbs' => json_encode([
+    ? Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => json_encode([
         ['label' => 'Notes', 'url' => Url::to(['/note/index'])],
         ['label' => $model->name, 'url' => Url::to(['/note/view', 'id' => $model->id])],
     ])])
@@ -138,7 +138,7 @@ $script = <<<JS
                 if (this.disabled) return;
                 var content = deltas[this.dataset.delta];
                 if (content) {
-                    sessionStorage.setItem('claudePromptContent', typeof content === 'string' ? content : JSON.stringify(content));
+                    sessionStorage.setItem('aiPromptContent', typeof content === 'string' ? content : JSON.stringify(content));
                 }
                 window.location.href = $claudeUrlJs;
             });

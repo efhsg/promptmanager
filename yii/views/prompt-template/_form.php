@@ -51,7 +51,7 @@ $projectFieldsJson = json_encode($projectFieldsMap, JSON_UNESCAPED_UNICODE | JSO
 $externalFieldsJson = json_encode($externalFieldsMap, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
-$suggestNameUrl = Url::to(['/claude/suggest-name']);
+$suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
 
 // Build project data for export
 $projectDataForExport = [];

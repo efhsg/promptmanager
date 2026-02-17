@@ -61,10 +61,10 @@ echo Nav::widget([
             'options' => ['id' => 'nav-notes'],
         ],
         [
-            'label' => 'Claude',
-            'url' => ['/claude/runs'],
-            'options' => ['id' => 'nav-claude'],
-            'active' => (Yii::$app->controller->id === 'claude' && Yii::$app->controller->action->id === 'runs'),
+            'label' => 'AI Chat',
+            'url' => ['/ai-chat/runs'],
+            'options' => ['id' => 'nav-ai-chat'],
+            'active' => (Yii::$app->controller->id === 'ai-chat' && Yii::$app->controller->action->id === 'runs'),
         ],
     ],
 ]);
@@ -154,9 +154,9 @@ if (!Yii::$app->user->isGuest) {
 <?php endif; ?>
 
 <?php
-// Bottom navigation bar: show on all pages except Claude chat (which has its own sticky input)
-$isClaudeChatPage = Yii::$app->controller->id === 'claude' && Yii::$app->controller->action->id !== 'runs';
-if (!Yii::$app->user->isGuest && !$isClaudeChatPage):
+// Bottom navigation bar: show on all pages except AI chat (which has its own sticky input)
+$isAiChatPage = Yii::$app->controller->id === 'ai-chat' && Yii::$app->controller->action->id !== 'runs';
+if (!Yii::$app->user->isGuest && !$isAiChatPage):
 ?>
     <?= $this->render('_bottom-nav') ?>
     <?= $this->render('_mobile-search-overlay') ?>
@@ -194,7 +194,7 @@ if (!Yii::$app->user->isGuest && !$isClaudeChatPage):
 
         const isDesktop = window.innerWidth >= 992; // Bootstrap lg breakpoint
         if (isDesktop) {
-            const notesLink = document.querySelector('#nav-claude a') || document.querySelector('#nav-notes a');
+            const notesLink = document.querySelector('#nav-ai-chat a') || document.querySelector('#nav-notes a');
             if (notesLink) {
                 const linkRect = notesLink.getBoundingClientRect();
                 const wrapperHeight = wrapper.offsetHeight;
