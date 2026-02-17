@@ -6,6 +6,7 @@ use app\models\query\ProjectQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use app\services\CopyFormatConverter;
+use common\enums\ColorScheme;
 use common\enums\CopyType;
 use common\enums\LogCategory;
 use app\services\ai\AiProviderInterface;
@@ -32,6 +33,7 @@ use Throwable;
  * @property string|null $ai_options
  * @property string|null $ai_context
  * @property string|null $label
+ * @property string|null $color_scheme
  * @property string $created_at
  * @property string $updated_at
  * @property string|null $deleted_at
@@ -102,6 +104,8 @@ class Project extends ActiveRecord
             [['ai_options'], 'safe'],
             [['ai_context'], 'string'],
             [['label'], 'string', 'max' => 64],
+            [['color_scheme'], 'string', 'max' => 32],
+            [['color_scheme'], 'in', 'range' => ColorScheme::values()],
             [
                 ['label'],
                 'unique',
@@ -143,6 +147,7 @@ class Project extends ActiveRecord
             'ai_options' => 'AI CLI Options',
             'ai_context' => 'AI Project Context',
             'label' => 'Label',
+            'color_scheme' => 'Color Scheme',
             'linkedProjectIds' => 'Linked Projects',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',

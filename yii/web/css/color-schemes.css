@@ -1,0 +1,44 @@
+/* Color Scheme Overrides
+ * Each scheme sets CSS custom properties used by the override rules below.
+ * Default (Spacelab blue) needs no overrides — it uses the base theme as-is.
+ */
+
+/* --- Scheme definitions --- */
+
+body.color-scheme-green {
+    --pm-primary: #2e8b57;
+    --pm-primary-hover: #267347;
+}
+
+body.color-scheme-red {
+    --pm-primary: #c0392b;
+    --pm-primary-hover: #a93226;
+}
+
+body.color-scheme-purple {
+    --pm-primary: #6f42c1;
+    --pm-primary-hover: #5a32a3;
+}
+
+body.color-scheme-orange {
+    --pm-primary: #e67e22;
+    --pm-primary-hover: #cf711c;
+}
+
+body.color-scheme-dark {
+    --pm-primary: #343a40;
+    --pm-primary-hover: #23272b;
+}
+
+body.color-scheme-teal {
+    --pm-primary: #20c997;
+    --pm-primary-hover: #1aa87c;
+}
+
+/* --- Override: navbar background only --- */
+
+body[class*="color-scheme-"] .navbar.bg-primary {
+    background-color: var(--pm-primary) !important;
+    background-image: none !important;
+    border-color: var(--pm-primary-hover) !important;
+}

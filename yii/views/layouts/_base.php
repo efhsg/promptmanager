@@ -25,7 +25,25 @@ $this->registerCssFile('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font
     <?php $this->head() ?>
 </head>
 
-<body class="d-flex flex-column h-100">
+<?php
+$projectSchemeValue = '';
+if (!Yii::$app->user->isGuest) {
+    $project = Yii::$app->projectContext->getCurrentProject();
+    if ($project !== null && $project->color_scheme !== null) {
+        $projectSchemeValue = $project->color_scheme;
+    }
+}
+?>
+<body class="d-flex flex-column h-100" data-project-scheme="<?= Html::encode($projectSchemeValue) ?>">
+    <script>
+    (function() {
+        var tab = sessionStorage.getItem('pm_color_scheme');
+        var project = document.body.getAttribute('data-project-scheme');
+        var scheme = tab || project || '';
+        if (scheme && scheme !== 'default')
+            document.body.classList.add('color-scheme-' + scheme);
+    })();
+    </script>
     <?php $this->beginBody() ?>
     <?= $content ?>
     <?php $this->endBody() ?>

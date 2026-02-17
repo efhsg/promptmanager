@@ -6,6 +6,7 @@
 
 use app\components\ProjectContext;
 use app\widgets\Alert;
+use common\enums\ColorScheme;
 use yii\bootstrap5\{Breadcrumbs, Html, Nav, NavBar};
 
 $this->beginContent('@app/views/layouts/_base.php'); ?>
@@ -100,6 +101,23 @@ echo Nav::widget([
                     'encode' => false,
                 ],
                 '<hr class="dropdown-divider">',
+                '<div class="px-3 py-1 small text-muted"><i class="bi bi-palette me-1"></i>Color Scheme</div>',
+                ...array_map(static function (ColorScheme $scheme) {
+                    $dot = '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'
+                        . $scheme->primaryColor() . ';vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,0.15);"></span>';
+
+                    return [
+                        'label' => $dot . Html::encode($scheme->label()) . '<span class="cs-check d-none"> <i class="bi bi-check2 ms-1"></i></span>',
+                        'url' => '#',
+                        'encode' => false,
+                        'linkOptions' => [
+                            'class' => 'color-scheme-option',
+                            'data-scheme' => $scheme->value,
+                            'onclick' => 'setColorScheme("' . $scheme->value . '"); return false;',
+                        ],
+                    ];
+                }, ColorScheme::cases()),
+                '<hr class="dropdown-divider">',
                 [
                     'label' => '<i class="bi bi-box-arrow-right"></i> ' . Yii::t('app', 'Logout'),
                     'url' => ['/identity/auth/logout'],
@@ -164,6 +182,32 @@ if (!Yii::$app->user->isGuest && !$isAiChatPage):
 
 <script>
 (function() {
+    window.setColorScheme = function(scheme) {
+        // Remove existing color-scheme-* class
+        document.body.className = document.body.className.replace(/\bcolor-scheme-\S+/g, '').trim();
+        if (scheme && scheme !== 'default') {
+            document.body.classList.add('color-scheme-' + scheme);
+            sessionStorage.setItem('pm_color_scheme', scheme);
+        } else {
+            sessionStorage.removeItem('pm_color_scheme');
+        }
+        highlightActiveScheme();
+    };
+
+    function highlightActiveScheme() {
+        var active = sessionStorage.getItem('pm_color_scheme') || 'default';
+        document.querySelectorAll('.color-scheme-option').forEach(function(el) {
+            var check = el.querySelector('.cs-check');
+            if (el.getAttribute('data-scheme') === active) {
+                el.classList.add('fw-bold');
+                if (check) check.classList.remove('d-none');
+            } else {
+                el.classList.remove('fw-bold');
+                if (check) check.classList.add('d-none');
+            }
+        });
+    }
+
     window.updateProjectInUrl = function(projectId) {
         const url = new URL(window.location.href);
         if (projectId && parseInt(projectId) > 0) {
@@ -307,6 +351,7 @@ if (!Yii::$app->user->isGuest && !$isAiChatPage):
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        highlightActiveScheme();
         initMobileSearch();
         initKeyboardDetection();
     });

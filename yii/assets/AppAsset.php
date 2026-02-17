@@ -11,6 +11,7 @@ class AppAsset extends AssetBundle
     public $css = [
         'css/spacelab.min.css',
         'css/site.css',
+        'css/color-schemes.css',
         'css/mobile.css',
     ];
     public $js       = [

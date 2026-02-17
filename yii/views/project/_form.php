@@ -1,5 +1,6 @@
 <?php /** @noinspection JSUnresolvedReference */
 use app\assets\QuillAsset;
+use common\enums\ColorScheme;
 use conquer\select2\Select2Widget;
 use yii\helpers\Html;
 use yii\helpers\Json;
@@ -45,6 +46,10 @@ $modelOptions = [
     <?= $form->field($model, 'label')
         ->textInput(['maxlength' => true, 'placeholder' => 'Short identifier'])
         ->hint('Optional short code or label for quick identification.') ?>
+
+    <?= $form->field($model, 'color_scheme')
+        ->dropDownList(ColorScheme::labels(), ['prompt' => 'No color scheme'])
+        ->hint('Sets the navbar color for this project. Can be overridden per browser tab.') ?>
 
     <?= $form->field($model, 'root_directory')->textInput(['maxlength' => true]) ?>
 
