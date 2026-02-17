@@ -315,23 +315,36 @@ window.QuillToolbar = (function() {
         });
     };
 
-    const copyToClipboard = (text) => {
-        if (navigator.clipboard && navigator.clipboard.writeText)
-            return navigator.clipboard.writeText(text);
-        return new Promise((resolve, reject) => {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
+    const execCommandCopy = (text) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand('copy');
+        textarea.remove();
+        return ok;
+    };
+
+    const copyToClipboard = async (text) => {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
             try {
-                document.execCommand('copy') ? resolve() : reject(new Error('execCommand failed'));
-            } catch (err) {
-                reject(err);
+                await Promise.race([
+                    navigator.clipboard.writeText(text),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Clipboard timeout')), 3000)
+                    )
+                ]);
+                return;
+            } catch (e) {
+                // writeText failed or timed out — fall through to execCommand
             }
-            document.body.removeChild(textarea);
-        });
+        }
+        if (!execCommandCopy(text)) {
+            throw new Error('Could not copy to clipboard');
+        }
     };
 
     const DEFAULT_CONVERT_FORMAT_URL = '/note/convert-format';
