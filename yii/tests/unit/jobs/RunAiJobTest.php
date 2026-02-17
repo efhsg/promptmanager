@@ -5,7 +5,7 @@ namespace tests\unit\jobs;
 use app\handlers\AiQuickHandler;
 use app\jobs\RunAiJob;
 use app\models\AiRun;
-use app\services\ClaudeCliService;
+use app\services\ai\AiStreamingProviderInterface;
 use common\enums\AiRunStatus;
 use Codeception\Test\Unit;
 use tests\fixtures\ProjectFixture;
@@ -70,8 +70,8 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockCliService = $this->createMock(\app\services\ClaudeCliService::class);
-        $mockCliService->method('executeStreaming')
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
             ->willReturnCallback(function ($prompt, $dir, $onLine) {
                 $onLine('{"type":"assistant","message":"hello"}');
                 $onLine('{"type":"result","result":"Final answer","session_id":"ses-1"}');
@@ -79,15 +79,15 @@ class RunAiJobTest extends Unit
             });
 
         $job = new class extends RunAiJob {
-            public \app\services\ClaudeCliService $mockService;
+            public AiStreamingProviderInterface $mockService;
 
-            protected function createCliService(): \app\services\ClaudeCliService
+            protected function createStreamingProvider(): AiStreamingProviderInterface
             {
                 return $this->mockService;
             }
         };
         $job->runId = $run->id;
-        $job->mockService = $mockCliService;
+        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -102,20 +102,20 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockCliService = $this->createMock(\app\services\ClaudeCliService::class);
-        $mockCliService->method('executeStreaming')
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
             ->willReturn(['exitCode' => 1, 'error' => 'CLI timeout']);
 
         $job = new class extends RunAiJob {
-            public \app\services\ClaudeCliService $mockService;
+            public AiStreamingProviderInterface $mockService;
 
-            protected function createCliService(): \app\services\ClaudeCliService
+            protected function createStreamingProvider(): AiStreamingProviderInterface
             {
                 return $this->mockService;
             }
         };
         $job->runId = $run->id;
-        $job->mockService = $mockCliService;
+        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -128,8 +128,8 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockCliService = $this->createMock(ClaudeCliService::class);
-        $mockCliService->method('executeStreaming')
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
             ->willReturnCallback(function ($prompt, $dir, $onLine) {
                 $onLine('{"type":"result","result":"Refactored the auth module to use JWT tokens"}');
                 return ['exitCode' => 0, 'error' => ''];
@@ -142,10 +142,10 @@ class RunAiJobTest extends Unit
             ->willReturn(['success' => true, 'output' => 'Refactored auth to JWT']);
 
         $job = new class extends RunAiJob {
-            public ClaudeCliService $mockService;
+            public AiStreamingProviderInterface $mockService;
             public AiQuickHandler $mockHandler;
 
-            protected function createCliService(): ClaudeCliService
+            protected function createStreamingProvider(): AiStreamingProviderInterface
             {
                 return $this->mockService;
             }
@@ -156,7 +156,7 @@ class RunAiJobTest extends Unit
             }
         };
         $job->runId = $run->id;
-        $job->mockService = $mockCliService;
+        $job->mockService = $mockStreamingProvider;
         $job->mockHandler = $mockHandler;
 
         $job->execute(null);
@@ -170,8 +170,8 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockCliService = $this->createMock(ClaudeCliService::class);
-        $mockCliService->method('executeStreaming')
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
             ->willReturnCallback(function ($prompt, $dir, $onLine) {
                 $onLine('{"type":"result","result":"Implemented feature X with full test coverage"}');
                 return ['exitCode' => 0, 'error' => ''];
@@ -182,10 +182,10 @@ class RunAiJobTest extends Unit
             ->willThrowException(new \RuntimeException('AI service unavailable'));
 
         $job = new class extends RunAiJob {
-            public ClaudeCliService $mockService;
+            public AiStreamingProviderInterface $mockService;
             public AiQuickHandler $mockHandler;
 
-            protected function createCliService(): ClaudeCliService
+            protected function createStreamingProvider(): AiStreamingProviderInterface
             {
                 return $this->mockService;
             }
@@ -196,7 +196,7 @@ class RunAiJobTest extends Unit
             }
         };
         $job->runId = $run->id;
-        $job->mockService = $mockCliService;
+        $job->mockService = $mockStreamingProvider;
         $job->mockHandler = $mockHandler;
 
         $job->execute(null);

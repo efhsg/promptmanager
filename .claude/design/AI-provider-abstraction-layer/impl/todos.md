@@ -1,6 +1,6 @@
 # Implementation Progress
 
-## Status: Phase 11 complete (all phases done)
+## Status: Caller migration complete — all legacy services deleted
 
 ## Phases
 
@@ -14,33 +14,44 @@
 - [x] **P8**: Update views + CSS + layouts — committed: 294199f
 - [x] **P9**: DI wiring, config cleanup, bootstrap — committed: 8281154
 - [x] **P10**: Rename + update tests — committed: 4334bb9
-- [x] **P11**: Cleanup + delete old files
+- [x] **P11**: Cleanup + delete old files — committed: 2cadc2e
+- [x] **P12**: Migrate callers to provider interfaces + delete legacy services
 
-## Current Phase: P11 — Cleanup + Delete Old Files (DONE)
+## Current Phase: P12 — Caller Migration (DONE)
 
-### Storage directory rename
-- [x] `storage/claude-runs/` → `storage/ai-runs/` (5 PHP references updated)
-- [x] `.gitignore` comment updated
+### Callers migrated (4 files)
+- [x] `controllers/AiChatController.php` — inject `AiProviderInterface` + `CopyFormatConverter`, 7 call sites updated
+- [x] `controllers/ProjectController.php` — inject `AiProviderInterface`, 2 call sites updated
+- [x] `commands/AiController.php` — inject `AiProviderInterface`, 2 call sites updated
+- [x] `jobs/RunAiJob.php` — `createStreamingProvider(): AiStreamingProviderInterface`, 1 call site updated
 
-### Files NOT deleted (still actively used)
-These services are still directly imported by controllers, commands, and jobs.
-Callers haven't been migrated to use provider interfaces yet.
-- `services/ClaudeCliService.php` — imported by 5 non-test files
-- `services/ClaudeWorkspaceService.php` — imported by AiController
-- `services/ClaudeCliCompletionClient.php` — registered in DI config
-- `rbac/ClaudeRunOwnerRule.php` — migration safeDown() dependency
+### Tests updated (3 files)
+- [x] `tests/unit/controllers/AiChatControllerTest.php` — mock `ClaudeCliProvider`, rename methods
+- [x] `tests/unit/controllers/ProjectControllerTest.php` — mock `ClaudeCliProvider`, rename methods
+- [x] `tests/unit/jobs/RunAiJobTest.php` — mock `AiStreamingProviderInterface`, rename factory method
 
-### Remaining `Claude` references (categorized)
-1. **Provider-specific (correct)**: `ClaudeCliProvider.php` — IS the Claude provider, name is intentional
-2. **Old services (future work)**: `ClaudeCliService`, `ClaudeWorkspaceService`, `ClaudeCliCompletionClient` — need caller migration before deletion
-3. **RBAC rule (migration dep)**: `ClaudeRunOwnerRule` — kept for migration rollback safety
-4. **UI labels (correct)**: "Claude CLI", "Claude thinking" etc. in views — product name, not code naming
-5. **Comments/docblocks (correct)**: References to "Claude CLI" in services/jobs — describes the tool being used
+### Legacy files deleted (4 files)
+- [x] `services/ClaudeCliService.php` — DELETED
+- [x] `services/ClaudeWorkspaceService.php` — DELETED
+- [x] `tests/unit/services/ClaudeCliServiceTest.php` — DELETED
+- [x] `tests/unit/services/ClaudeWorkspaceServiceTest.php` — DELETED
+
+### Files kept (correct)
+- `services/ClaudeCliCompletionClient.php` — already uses `AiProviderInterface`, implements `AiCompletionClient`
+- `rbac/ClaudeRunOwnerRule.php` — migration `safeDown()` dependency
+- `services/ai/providers/ClaudeCliProvider.php` — IS the Claude-specific provider
+
+### Remaining `Claude` references (all correct)
+1. **Provider-specific**: `ClaudeCliProvider.php` — IS the Claude provider
+2. **Completion client**: `ClaudeCliCompletionClient` — Claude-specific impl of `AiCompletionClient`
+3. **RBAC rule**: `ClaudeRunOwnerRule` — migration rollback safety
+4. **UI labels**: "Claude CLI", "Claude thinking" in views — product name
+5. **Docblocks**: Historical references in `ClaudeCliProvider` — describes provenance
 
 ### Validation
-- [x] Unit tests — 1071 pass, 21 skipped, 0 failures
-- [x] No remaining `claude-runs` storage path references in PHP code
-- [x] No broken `use` imports
+- [x] Linter — 0 fixes needed on all 7 changed files
+- [x] Unit tests — 1002 pass, 21 skipped, 0 failures (69 tests removed with deleted files)
+- [x] No remaining `ClaudeCliService` or `ClaudeWorkspaceService` imports in production code
 
 ## Session Log
 
@@ -56,4 +67,5 @@ Callers haven't been migrated to use provider interfaces yet.
 | 2026-02-17 | P8 | Complete | 294199f | 2 renames + 16 view edits + 2 CSS edits, all routes updated |
 | 2026-02-17 | P9 | Complete | 8281154 | 2 comment updates in main.php, DI already wired |
 | 2026-02-17 | P10 | Complete | 4334bb9 | 14 test file renames + 4 class/reference updates |
-| 2026-02-17 | P11 | Complete | pending | Storage dir rename + cleanup documentation |
+| 2026-02-17 | P11 | Complete | 2cadc2e | Storage dir rename + cleanup documentation |
+| 2026-02-17 | P12 | Complete | pending | 4 callers migrated, 4 legacy files deleted, 1002 tests green |

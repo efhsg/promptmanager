@@ -5,7 +5,8 @@ namespace app\controllers;
 use app\components\ProjectContext;
 use app\models\Project;
 use app\models\ProjectSearch;
-use app\services\ClaudeCliService;
+use app\services\ai\AiConfigProviderInterface;
+use app\services\ai\AiProviderInterface;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
 use Throwable;
@@ -29,20 +30,20 @@ class ProjectController extends Controller
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
     private readonly ProjectService $projectService;
-    private readonly ClaudeCliService $claudeCliService;
+    private readonly AiProviderInterface $aiProvider;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
         ProjectService $projectService,
-        ClaudeCliService $claudeCliService,
+        AiProviderInterface $aiProvider,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->projectService = $projectService;
-        $this->claudeCliService = $claudeCliService;
+        $this->aiProvider = $aiProvider;
         // Load the permission mapping for "project" actions
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('project');
     }
@@ -168,8 +169,12 @@ class ProjectController extends Controller
         $availableProjects = $this->projectService->fetchAvailableProjectsForLinking($model->id, Yii::$app->user->id);
 
         $projectConfigStatus = [];
-        if (!empty($model->root_directory)) {
-            $projectConfigStatus = $this->claudeCliService->checkClaudeConfigForPath($model->root_directory);
+        if (!empty($model->root_directory) && $this->aiProvider instanceof AiConfigProviderInterface) {
+            $configStatus = $this->aiProvider->checkConfig($model->root_directory);
+            $projectConfigStatus = array_merge($configStatus, [
+                'hasCLAUDE_MD' => $configStatus['hasConfigFile'] ?? false,
+                'hasClaudeDir' => $configStatus['hasConfigDir'] ?? false,
+            ]);
         }
 
         return $this->render('update', [
@@ -247,7 +252,9 @@ class ProjectController extends Controller
 
         return [
             'success' => true,
-            'commands' => $this->claudeCliService->loadCommandsFromDirectory($model->root_directory),
+            'commands' => $this->aiProvider instanceof AiConfigProviderInterface
+                ? $this->aiProvider->loadCommands($model->root_directory)
+                : [],
         ];
     }
 

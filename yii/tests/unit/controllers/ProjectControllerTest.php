@@ -5,7 +5,7 @@ namespace tests\unit\controllers;
 use app\controllers\ProjectController;
 use app\models\Project;
 use app\modules\identity\models\User;
-use app\services\ClaudeCliService;
+use app\services\ai\providers\ClaudeCliProvider;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
 use Codeception\Test\Unit;
@@ -55,15 +55,15 @@ class ProjectControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')
             ->with('/some/path')
             ->willReturn([
                 'deploy' => 'Deploy app',
                 'review' => 'Review code',
             ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
 
         $result = $controller->actionAiCommands($project->id);
 
@@ -84,10 +84,10 @@ class ProjectControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([]);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
 
         $result = $controller->actionAiCommands($project->id);
 
@@ -99,18 +99,18 @@ class ProjectControllerTest extends Unit
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $projectService = Yii::$container->get(ProjectService::class);
-        $claudeCliService = new ClaudeCliService();
+        $aiProvider = $this->createMock(ClaudeCliProvider::class);
 
         return new ProjectController(
             'project',
             Yii::$app,
             $permissionService,
             $projectService,
-            $claudeCliService
+            $aiProvider
         );
     }
 
-    private function createControllerWithClaudeService(ClaudeCliService $claudeService): ProjectController
+    private function createControllerWithAiProvider(ClaudeCliProvider $aiProvider): ProjectController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $projectService = Yii::$container->get(ProjectService::class);
@@ -120,7 +120,7 @@ class ProjectControllerTest extends Unit
             Yii::$app,
             $permissionService,
             $projectService,
-            $claudeService
+            $aiProvider
         );
     }
 

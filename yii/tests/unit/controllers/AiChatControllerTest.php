@@ -7,9 +7,10 @@ use app\handlers\AiQuickHandler;
 use app\models\AiRun;
 use app\models\Project;
 use app\modules\identity\models\User;
-use app\services\ClaudeCliService;
+use app\services\ai\providers\ClaudeCliProvider;
 use app\services\AiRunCleanupService;
 use app\services\AiStreamRelayService;
+use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
 use Codeception\Test\Unit;
 use ReflectionClass;
@@ -48,7 +49,7 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $controller = $this->createControllerWithClaudeService(new ClaudeCliService());
+        $controller = $this->createControllerWithAiProvider($this->createMock(ClaudeCliProvider::class));
 
         $result = $controller->actionCheckConfig($project->id);
 
@@ -67,10 +68,10 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('checkClaudeConfigForPath')->willReturn([
-            'hasCLAUDE_MD' => true,
-            'hasClaudeDir' => false,
+        $mockProvider = $this->createMock(ClaudeCliProvider::class);
+        $mockProvider->method('checkConfig')->willReturn([
+            'hasConfigFile' => true,
+            'hasConfigDir' => false,
             'hasAnyConfig' => true,
             'pathStatus' => 'has_config',
             'pathMapped' => false,
@@ -78,7 +79,7 @@ class AiChatControllerTest extends Unit
             'effectivePath' => '/some/path',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockProvider);
 
         $result = $controller->actionCheckConfig($project->id);
 
@@ -101,10 +102,10 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('checkClaudeConfigForPath')->willReturn([
-            'hasCLAUDE_MD' => false,
-            'hasClaudeDir' => false,
+        $mockProvider = $this->createMock(ClaudeCliProvider::class);
+        $mockProvider->method('checkConfig')->willReturn([
+            'hasConfigFile' => false,
+            'hasConfigDir' => false,
             'hasAnyConfig' => false,
             'pathStatus' => 'no_config',
             'pathMapped' => false,
@@ -112,7 +113,7 @@ class AiChatControllerTest extends Unit
             'effectivePath' => '/some/path',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockProvider);
 
         $result = $controller->actionCheckConfig($project->id);
 
@@ -136,7 +137,7 @@ class AiChatControllerTest extends Unit
             'conversation' => "## You\n\nHello\n\n---\n\n## Claude\n\nHi there",
         ]);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
         $mockClaudeService->method('execute')->willReturn([
             'success' => true,
             'output' => '## Context & Goal\nTest summary',
@@ -146,7 +147,7 @@ class AiChatControllerTest extends Unit
             'model' => 'sonnet',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
 
         $result = $controller->actionSummarizeSession($project->id);
 
@@ -164,8 +165,8 @@ class AiChatControllerTest extends Unit
 
         $this->mockJsonRequest(['conversation' => '   ']);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
 
         $result = $controller->actionSummarizeSession($project->id);
 
@@ -183,7 +184,7 @@ class AiChatControllerTest extends Unit
             'conversation' => "## You\n\nHello\n\n---\n\n## Claude\n\nHi",
         ]);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
         $mockClaudeService->method('execute')->willReturn([
             'success' => false,
             'output' => '',
@@ -191,7 +192,7 @@ class AiChatControllerTest extends Unit
             'exitCode' => 1,
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
 
         $result = $controller->actionSummarizeSession($project->id);
 
@@ -209,7 +210,7 @@ class AiChatControllerTest extends Unit
             'conversation' => "## You\n\nHello\n\n---\n\n## Claude\n\nHi",
         ]);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
         $mockClaudeService->method('execute')->willReturn([
             'success' => true,
             'output' => '',
@@ -217,7 +218,7 @@ class AiChatControllerTest extends Unit
             'exitCode' => 0,
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
 
         $result = $controller->actionSummarizeSession($project->id);
 
@@ -237,7 +238,7 @@ class AiChatControllerTest extends Unit
 
         $capturedOptions = null;
         $capturedSessionId = null;
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
         $mockClaudeService->method('execute')
             ->willReturnCallback(function ($prompt, $dir, $timeout, $options, $project, $sessionId) use (&$capturedOptions, &$capturedSessionId) {
                 $capturedOptions = $options;
@@ -250,7 +251,7 @@ class AiChatControllerTest extends Unit
                 ];
             });
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $controller->actionSummarizeSession($project->id);
 
         $this->assertSame('sonnet', $capturedOptions['model']);
@@ -268,8 +269,8 @@ class AiChatControllerTest extends Unit
 
         $this->mockRawBody('"just a string"');
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
 
         $result = $controller->actionSummarizeSession($project->id);
 
@@ -501,14 +502,14 @@ class AiChatControllerTest extends Unit
 
         $project = $this->createProject(self::TEST_USER_ID);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([
             'deploy' => 'Deploy app',
             'review' => 'Review code',
             'test' => 'Run tests',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertCount(3, $result);
@@ -526,14 +527,14 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([
             'deploy' => 'Deploy app',
             'review' => 'Review code',
             'test' => 'Run tests',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertCount(1, $result);
@@ -557,14 +558,14 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([
             'deploy' => 'Deploy app',
             'review' => 'Review code',
             'test' => 'Run tests',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertArrayHasKey('CI', $result);
@@ -591,13 +592,13 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([
             'review' => 'Review code',
             'test' => 'Run tests',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertCount(1, $result['CI']);
@@ -620,14 +621,14 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([
             'deploy' => 'Deploy app',
             'review' => 'Review code',
             'test' => 'Run tests',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         // test is blacklisted so CI group only has deploy
@@ -644,10 +645,10 @@ class AiChatControllerTest extends Unit
 
         $project = $this->createProject(self::TEST_USER_ID);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([]);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         $this->assertSame([], $result);
@@ -669,13 +670,13 @@ class AiChatControllerTest extends Unit
         ]);
         $project->save(false);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $mockClaudeService->method('loadCommandsFromDirectory')->willReturn([
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $mockClaudeService->method('loadCommands')->willReturn([
             'review' => 'Review code',
             'test' => 'Run tests',
         ]);
 
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $result = $this->invokeLoadAiCommands($controller, '/some/path', $project);
 
         // CI group should be dropped because its only command was blacklisted
@@ -700,8 +701,8 @@ class AiChatControllerTest extends Unit
         $mockSession->expects($this->once())->method('close');
         Yii::$app->set('session', $mockSession);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $controller->detachBehaviors();
 
         $action = $this->createMock(\yii\base\Action::class);
@@ -730,8 +731,8 @@ class AiChatControllerTest extends Unit
         $mockSession->expects($this->never())->method('close');
         Yii::$app->set('session', $mockSession);
 
-        $mockClaudeService = $this->createMock(ClaudeCliService::class);
-        $controller = $this->createControllerWithClaudeService($mockClaudeService);
+        $mockClaudeService = $this->createMock(ClaudeCliProvider::class);
+        $controller = $this->createControllerWithAiProvider($mockClaudeService);
         $controller->detachBehaviors();
 
         $action = $this->createMock(\yii\base\Action::class);
@@ -755,10 +756,11 @@ class AiChatControllerTest extends Unit
         return $method->invoke($controller, $rootDirectory, $project);
     }
 
-    private function createControllerWithClaudeService(ClaudeCliService $claudeService): AiChatController
+    private function createControllerWithAiProvider(ClaudeCliProvider $aiProvider): AiChatController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $claudeQuickHandler = $this->createMock(AiQuickHandler::class);
+        $formatConverter = new CopyFormatConverter();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
 
@@ -766,7 +768,8 @@ class AiChatControllerTest extends Unit
             'ai-chat',
             Yii::$app,
             $permissionService,
-            $claudeService,
+            $aiProvider,
+            $formatConverter,
             $claudeQuickHandler,
             $streamRelayService,
             $cleanupService
@@ -776,7 +779,8 @@ class AiChatControllerTest extends Unit
     private function createControllerWithQuickHandler(AiQuickHandler $quickHandler): AiChatController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
-        $claudeCliService = new ClaudeCliService();
+        $aiProvider = $this->createMock(ClaudeCliProvider::class);
+        $formatConverter = new CopyFormatConverter();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
 
@@ -784,7 +788,8 @@ class AiChatControllerTest extends Unit
             'ai-chat',
             Yii::$app,
             $permissionService,
-            $claudeCliService,
+            $aiProvider,
+            $formatConverter,
             $quickHandler,
             $streamRelayService,
             $cleanupService

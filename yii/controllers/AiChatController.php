@@ -7,10 +7,15 @@ use app\jobs\RunAiJob;
 use app\models\AiRun;
 use app\models\AiRunSearch;
 use app\models\Project;
-use app\services\ClaudeCliService;
+use app\services\ai\AiConfigProviderInterface;
+use app\services\ai\AiProviderInterface;
+use app\services\ai\AiUsageProviderInterface;
+use app\services\ai\providers\ClaudeCliProvider;
 use app\services\AiRunCleanupService;
 use app\services\AiStreamRelayService;
+use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
+use common\enums\CopyType;
 use common\enums\AiRunStatus;
 use Yii;
 use yii\filters\AccessControl;
@@ -28,7 +33,8 @@ class AiChatController extends Controller
     private const CLAUDE_TIMEOUT = 3600;
 
     private readonly EntityPermissionService $permissionService;
-    private readonly ClaudeCliService $claudeCliService;
+    private readonly AiProviderInterface $aiProvider;
+    private readonly CopyFormatConverter $formatConverter;
     private readonly AiQuickHandler $claudeQuickHandler;
     private readonly AiStreamRelayService $streamRelayService;
     private readonly AiRunCleanupService $cleanupService;
@@ -37,7 +43,8 @@ class AiChatController extends Controller
         $id,
         $module,
         EntityPermissionService $permissionService,
-        ClaudeCliService $claudeCliService,
+        AiProviderInterface $aiProvider,
+        CopyFormatConverter $formatConverter,
         AiQuickHandler $claudeQuickHandler,
         AiStreamRelayService $streamRelayService,
         AiRunCleanupService $cleanupService,
@@ -45,7 +52,8 @@ class AiChatController extends Controller
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
-        $this->claudeCliService = $claudeCliService;
+        $this->aiProvider = $aiProvider;
+        $this->formatConverter = $formatConverter;
         $this->claudeQuickHandler = $claudeQuickHandler;
         $this->streamRelayService = $streamRelayService;
         $this->cleanupService = $cleanupService;
@@ -240,7 +248,7 @@ class AiChatController extends Controller
             'project' => $project,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
             'claudeCommands' => $this->loadAiCommands($rootDir, $project),
-            'gitBranch' => $rootDir ? $this->claudeCliService->getGitBranch($rootDir) : null,
+            'gitBranch' => $rootDir && $this->aiProvider instanceof ClaudeCliProvider ? $this->aiProvider->getGitBranch($rootDir) : null,
             'breadcrumbs' => $breadcrumbs,
             'resumeSessionId' => $s,
             'replayRunId' => $replayRunId,
@@ -257,7 +265,11 @@ class AiChatController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
         $this->findProject($p);
 
-        return $this->claudeCliService->getSubscriptionUsage();
+        if ($this->aiProvider instanceof AiUsageProviderInterface) {
+            return $this->aiProvider->getUsage();
+        }
+
+        return ['success' => false, 'error' => 'Provider does not support usage tracking'];
     }
 
     /**
@@ -275,12 +287,16 @@ class AiChatController extends Controller
             ];
         }
 
-        $configStatus = $this->claudeCliService->checkClaudeConfigForPath($project->root_directory);
+        if (!$this->aiProvider instanceof AiConfigProviderInterface) {
+            return ['success' => false, 'error' => 'Provider does not support config checking'];
+        }
+
+        $configStatus = $this->aiProvider->checkConfig($project->root_directory);
 
         return [
             'success' => true,
-            'hasCLAUDE_MD' => $configStatus['hasCLAUDE_MD'],
-            'hasClaudeDir' => $configStatus['hasClaudeDir'],
+            'hasCLAUDE_MD' => $configStatus['hasConfigFile'] ?? false,
+            'hasClaudeDir' => $configStatus['hasConfigDir'] ?? false,
             'hasAnyConfig' => $configStatus['hasAnyConfig'],
             'pathStatus' => $configStatus['pathStatus'],
             'pathMapped' => $configStatus['pathMapped'],
@@ -341,7 +357,7 @@ class AiChatController extends Controller
             return ['success' => true, 'cancelled' => false];
         }
 
-        $cancelled = $this->claudeCliService->cancelRunningProcess($streamToken);
+        $cancelled = $this->aiProvider->cancelProcess($streamToken);
 
         return [
             'success' => true,
@@ -545,7 +561,7 @@ class AiChatController extends Controller
             'appendSystemPrompt' => $this->buildSummarizerSystemPrompt(),
         ];
 
-        $result = $this->claudeCliService->execute(
+        $result = $this->aiProvider->execute(
             $conversation,
             $workingDirectory,
             120,
@@ -736,7 +752,7 @@ class AiChatController extends Controller
         if ($customPrompt !== null) {
             $markdown = $customPrompt;
         } elseif ($contentDelta !== null) {
-            $markdown = $this->claudeCliService->convertToMarkdown($contentDelta);
+            $markdown = $this->formatConverter->convertFromQuillDelta($contentDelta, CopyType::MD);
         } else {
             return ['error' => ['success' => false, 'error' => 'No prompt content provided.']];
         }
@@ -976,7 +992,11 @@ class AiChatController extends Controller
      */
     private function loadAiCommands(?string $rootDirectory, Project $project): array
     {
-        $commands = $this->claudeCliService->loadCommandsFromDirectory($rootDirectory);
+        if (!$this->aiProvider instanceof AiConfigProviderInterface) {
+            return [];
+        }
+
+        $commands = $this->aiProvider->loadCommands($rootDirectory);
         if ($commands === []) {
             return [];
         }

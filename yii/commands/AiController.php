@@ -3,8 +3,10 @@
 namespace app\commands;
 
 use app\models\Project;
-use app\services\ClaudeCliService;
-use app\services\ClaudeWorkspaceService;
+use app\services\ai\AiConfigProviderInterface;
+use app\services\ai\AiProviderInterface;
+use app\services\ai\AiWorkspaceProviderInterface;
+use RuntimeException;
 use Yii;
 use yii\console\Controller;
 use yii\console\ExitCode;
@@ -20,19 +22,16 @@ use Throwable;
  */
 class AiController extends Controller
 {
-    private ClaudeWorkspaceService $workspaceService;
-    private ClaudeCliService $cliService;
+    private AiProviderInterface $aiProvider;
 
     public function __construct(
         $id,
         $module,
-        ?ClaudeWorkspaceService $workspaceService = null,
-        ?ClaudeCliService $cliService = null,
+        ?AiProviderInterface $aiProvider = null,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
-        $this->workspaceService = $workspaceService ?? new ClaudeWorkspaceService();
-        $this->cliService = $cliService ?? new ClaudeCliService();
+        $this->aiProvider = $aiProvider ?? Yii::$container->get(AiProviderInterface::class);
     }
 
     /**
@@ -51,7 +50,10 @@ class AiController extends Controller
 
         foreach ($projects as $project) {
             try {
-                $this->workspaceService->syncConfig($project);
+                if (!$this->aiProvider instanceof AiWorkspaceProviderInterface) {
+                    throw new RuntimeException('Provider does not support workspace management');
+                }
+                $this->aiProvider->syncConfig($project);
                 $this->stdout("  [OK] ", Console::FG_GREEN);
                 $this->stdout("Project {$project->id}: {$project->name}\n");
                 $count++;
@@ -127,8 +129,13 @@ class AiController extends Controller
             $this->stdout("  No projects with root_directory configured.\n");
         }
 
+        if (!empty($projects) && !$this->aiProvider instanceof AiConfigProviderInterface) {
+            $this->stderr("  [ERR] Provider does not support config checking\n", Console::FG_RED);
+            return ExitCode::UNSPECIFIED_ERROR;
+        }
+
         foreach ($projects as $project) {
-            $status = $this->cliService->checkClaudeConfigForPath($project->root_directory);
+            $status = $this->aiProvider->checkConfig($project->root_directory);
             $label = match ($status['pathStatus']) {
                 'has_config' => ['  [OK] ', Console::FG_GREEN],
                 'no_config' => ['  [--] ', Console::FG_YELLOW],

@@ -4,7 +4,8 @@ namespace app\jobs;
 
 use app\handlers\AiQuickHandler;
 use app\models\AiRun;
-use app\services\ClaudeCliService;
+use app\services\ai\AiProviderInterface;
+use app\services\ai\AiStreamingProviderInterface;
 use common\enums\AiRunStatus;
 use RuntimeException;
 use Throwable;
@@ -50,7 +51,7 @@ class RunAiJob implements RetryableJobInterface
             return;
         }
 
-        $cliService = $this->createCliService();
+        $streamingProvider = $this->createStreamingProvider();
         $options = $run->getDecodedOptions();
         $project = $run->project;
 
@@ -83,7 +84,7 @@ class RunAiJob implements RetryableJobInterface
                 return;
             }
 
-            $result = $cliService->executeStreaming(
+            $result = $streamingProvider->executeStreaming(
                 $run->prompt_markdown,
                 $run->working_directory ?? '',
                 $onLine,
@@ -285,9 +286,9 @@ class RunAiJob implements RetryableJobInterface
         return $dialog;
     }
 
-    protected function createCliService(): ClaudeCliService
+    protected function createStreamingProvider(): AiStreamingProviderInterface
     {
-        return Yii::$container->get(ClaudeCliService::class);
+        return Yii::$container->get(AiProviderInterface::class);
     }
 
     protected function createQuickHandler(): AiQuickHandler
