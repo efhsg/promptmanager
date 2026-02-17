@@ -142,10 +142,10 @@ echo $this->render('_breadcrumbs', [
                             $id = is_array($model) ? $model['id'] : $model->id;
                             return Url::toRoute([$action, 'id' => $id]);
                         },
-                        'template' => '{claude} {update} {delete}',
+                        'template' => '{ai} {update} {delete}',
                         'buttonOptions' => ['data-confirm' => false],
                         'buttons' => [
-                            'claude' => function ($url, PromptInstance $model) {
+                            'ai' => function ($url, PromptInstance $model) {
                                 $projectId = $model->template?->project_id;
                                 $disabled = $projectId === null;
                                 $tooltip = $disabled ? 'Project required' : 'Talk to AI';
@@ -154,7 +154,7 @@ echo $this->render('_breadcrumbs', [
                                     ['label' => $model->label ?: 'Instance #' . $model->id, 'url' => Url::to(['/prompt-instance/view', 'id' => $model->id])],
                                 ])]);
                                 return Html::button('<i class="bi bi-terminal-fill"></i>', [
-                                    'class' => 'btn btn-link p-0 claude-launch-btn' . ($disabled ? ' disabled text-muted' : ''),
+                                    'class' => 'btn btn-link p-0 ai-launch-btn' . ($disabled ? ' disabled text-muted' : ''),
                                     'title' => $tooltip,
                                     'data-bs-toggle' => 'tooltip',
                                     'data-id' => $model->id,
@@ -173,7 +173,7 @@ echo $this->render('_breadcrumbs', [
 <?php
 $fetchUrl = Json::encode(Url::to(['/prompt-instance/fetch-content']));
 $script = <<<JS
-        document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+        document.querySelectorAll('.ai-launch-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (this.disabled) return;

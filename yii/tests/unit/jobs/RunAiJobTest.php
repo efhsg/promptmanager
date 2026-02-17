@@ -313,6 +313,40 @@ class RunAiJobTest extends Unit
         @unlink($streamFilePath);
     }
 
+    public function testHandlesDeletedStreamFileGracefully(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+
+        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
+        $mockStreamingProvider->method('executeStreaming')
+            ->willReturnCallback(function ($prompt, $dir, $onLine) use ($run) {
+                $onLine('{"type":"assistant","message":"hello"}');
+                // Simulate concurrent cleanup deleting the stream file mid-run
+                @unlink($run->getStreamFilePath());
+                return ['exitCode' => 0, 'error' => ''];
+            });
+
+        $job = new class extends RunAiJob {
+            public AiStreamingProviderInterface $mockService;
+
+            protected function createStreamingProvider(): AiStreamingProviderInterface
+            {
+                return $this->mockService;
+            }
+        };
+        $job->runId = $run->id;
+        $job->mockService = $mockStreamingProvider;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
+        verify($run->stream_log)->null();
+        verify($run->error_message)->null();
+
+        @unlink($run->getStreamFilePath());
+    }
+
     private function createRun(AiRunStatus $status): AiRun
     {
         $run = new AiRun();

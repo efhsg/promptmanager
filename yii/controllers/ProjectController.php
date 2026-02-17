@@ -281,8 +281,8 @@ class ProjectController extends Controller
 
     private function loadAiOptions(Project $model): void
     {
-        $claudeOptions = Yii::$app->request->post('ai_options', []);
-        $model->setAiOptions($claudeOptions);
+        $aiOptions = Yii::$app->request->post('ai_options', []);
+        $model->setAiOptions($aiOptions);
     }
 
 }

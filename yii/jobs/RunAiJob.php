@@ -13,7 +13,7 @@ use Yii;
 use yii\queue\RetryableJobInterface;
 
 /**
- * Background job that executes a Claude CLI inference run.
+ * Background job that executes an AI CLI inference run.
  *
  * Writes streaming output to a NDJSON file on disk. The SSE relay endpoint
  * reads this file to forward events to the browser.
@@ -97,8 +97,9 @@ class RunAiJob implements RetryableJobInterface
                 null
             );
 
-            // Read the full stream log for DB storage
-            $streamLog = file_get_contents($streamFilePath) ?: null;
+            // Read the full stream log for DB storage (file may have been
+            // removed by a concurrent cleanup while the run was in progress)
+            $streamLog = @file_get_contents($streamFilePath) ?: null;
 
             // Extract session_id from stream log
             $this->extractSessionId($run, $streamLog);
@@ -114,14 +115,14 @@ class RunAiJob implements RetryableJobInterface
                 $run->markCompleted($resultText, $metadata, $streamLog);
                 $this->generateSessionSummary($run);
             } else {
-                $errorMessage = $result['error'] ?: 'Claude CLI exited with code ' . $result['exitCode'];
+                $errorMessage = $result['error'] ?: 'AI CLI exited with code ' . $result['exitCode'];
                 $run->markFailed($errorMessage, $streamLog);
             }
         } catch (Throwable $e) {
             if (!$doneWritten) {
                 $this->writeDoneMarker($streamFile, $streamFilePath);
             }
-            $streamLog = file_get_contents($streamFilePath) ?: null;
+            $streamLog = @file_get_contents($streamFilePath) ?: null;
 
             if ($run->status === AiRunStatus::CANCELLED->value) {
                 $run->markCancelled($streamLog);
@@ -137,7 +138,7 @@ class RunAiJob implements RetryableJobInterface
 
     public function getTtr(): int
     {
-        return 3900; // 65 min (> max Claude timeout 3600s)
+        return 3900; // 65 min (> max AI run timeout 3600s)
     }
 
     public function canRetry($attempt, $error): bool
@@ -239,7 +240,7 @@ class RunAiJob implements RetryableJobInterface
             $streamFile = null;
         }
 
-        $doneFile = fopen($streamFilePath, 'ab');
+        $doneFile = @fopen($streamFilePath, 'ab');
         if ($doneFile !== false) {
             fwrite($doneFile, "[DONE]\n");
             fclose($doneFile);

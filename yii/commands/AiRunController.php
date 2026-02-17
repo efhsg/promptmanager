@@ -28,7 +28,7 @@ class AiRunController extends Controller
      */
     public function actionCleanupStale(int $thresholdMinutes = 5): int
     {
-        $this->stdout("Checking for stale Claude runs (threshold: {$thresholdMinutes} min)...\n", Console::FG_CYAN);
+        $this->stdout("Checking for stale AI runs (threshold: {$thresholdMinutes} min)...\n", Console::FG_CYAN);
 
         $staleRuns = AiRun::find()->stale($thresholdMinutes)->all();
 

@@ -10,9 +10,9 @@ use yii\widgets\DetailView;
 /** @var app\models\Note $model */
 /** @var app\models\Note[] $children */
 
-$canRunClaude = $model->project_id !== null;
-$claudeTooltip = $canRunClaude ? 'Talk to AI' : 'Project required';
-$aiChatUrl = $canRunClaude
+$canRunAi = $model->project_id !== null;
+$aiTooltip = $canRunAi ? 'Talk to AI' : 'Project required';
+$aiChatUrl = $canRunAi
     ? Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => json_encode([
         ['label' => 'Notes', 'url' => Url::to(['/note/index'])],
         ['label' => $model->name, 'url' => Url::to(['/note/view', 'id' => $model->id])],
@@ -28,12 +28,12 @@ $children ??= [];
     <div class="d-flex justify-content-between align-items-start mb-4">
         <h1 class="h3 mb-0 me-3"><?= Html::encode($model->name) ?></h1>
         <div class="d-flex flex-shrink-0">
-            <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
-                'class' => 'btn btn-outline-primary me-2 claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
-                'title' => $claudeTooltip ?: null,
-                'data-bs-toggle' => $claudeTooltip ? 'tooltip' : null,
+            <?= Html::button('<i class="bi bi-terminal-fill"></i> AI', [
+                'class' => 'btn btn-outline-primary me-2 ai-launch-btn' . (!$canRunAi ? ' disabled' : ''),
+                'title' => $aiTooltip ?: null,
+                'data-bs-toggle' => $aiTooltip ? 'tooltip' : null,
                 'data-delta' => 'content',
-                'disabled' => !$canRunClaude,
+                'disabled' => !$canRunAi,
             ]) ?>
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
@@ -100,10 +100,10 @@ $children ??= [];
                     <strong><?= Html::encode($child->name) ?></strong>
                 </div>
                 <div class="d-flex gap-2">
-                    <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
-                            'class' => 'btn btn-primary btn-sm text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
+                    <?= Html::button('<i class="bi bi-terminal-fill"></i> AI', [
+                            'class' => 'btn btn-primary btn-sm text-nowrap ai-launch-btn' . (!$canRunAi ? ' disabled' : ''),
                             'data-delta' => 'child-' . $child->id,
-                            'disabled' => !$canRunClaude,
+                            'disabled' => !$canRunAi,
                         ]) ?>
                     <?= Html::a('Edit', ['/note/update', 'id' => $child->id], ['class' => 'btn btn-outline-primary btn-sm']) ?>
                 </div>
@@ -133,7 +133,7 @@ $childDeltasJs = json_encode($childDeltas, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG
 
 $script = <<<JS
         var deltas = Object.assign({content: $contentDelta}, $childDeltasJs);
-        document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+        document.querySelectorAll('.ai-launch-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (this.disabled) return;
                 var content = deltas[this.dataset.delta];

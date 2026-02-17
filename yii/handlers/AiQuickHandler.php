@@ -93,7 +93,7 @@ class AiQuickHandler
         ]);
 
         if (!$result['success']) {
-            Yii::warning("ClaudeQuick [{$useCase}] failed: " . ($result['error'] ?? 'empty output'), __METHOD__);
+            Yii::warning("AiQuick [{$useCase}] failed: " . ($result['error'] ?? 'empty output'), __METHOD__);
             return [
                 'success' => false,
                 'error' => $result['error'] ?? 'AI returned empty output.',

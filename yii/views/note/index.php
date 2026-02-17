@@ -227,10 +227,10 @@ $this->params['breadcrumbs'][] = $this->title;
                     [
                         'class' => ActionColumn::class,
                         'urlCreator' => fn($action, $model) => Url::toRoute([$action, 'id' => $model->id]),
-                        'template' => '{claude} {update} {delete}',
+                        'template' => '{ai} {update} {delete}',
                         'buttonOptions' => ['data-confirm' => false],
                         'buttons' => [
-                            'claude' => function ($url, Note $model) {
+                            'ai' => function ($url, Note $model) {
                                 $disabled = $model->project_id === null;
                                 $tooltip = $disabled ? 'Project required' : 'Talk to AI';
                                 $aiChatUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => Json::encode([
@@ -238,7 +238,7 @@ $this->params['breadcrumbs'][] = $this->title;
                                     ['label' => $model->name, 'url' => Url::to(['/note/view', 'id' => $model->id])],
                                 ])]);
                                 return Html::button('<i class="bi bi-terminal-fill"></i>', [
-                                    'class' => 'btn btn-link p-0 claude-launch-btn' . ($disabled ? ' disabled text-muted' : ''),
+                                    'class' => 'btn btn-link p-0 ai-launch-btn' . ($disabled ? ' disabled text-muted' : ''),
                                     'title' => $tooltip,
                                     'data-bs-toggle' => 'tooltip',
                                     'data-id' => $model->id,
@@ -267,7 +267,7 @@ $setProjectUrl = Json::encode(Url::to(['/project/set-current']));
 $csrfParam = Json::encode(Yii::$app->request->csrfParam);
 $csrfToken = Json::encode(Yii::$app->request->csrfToken);
 $script = <<<JS
-        document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+        document.querySelectorAll('.ai-launch-btn').forEach(function(btn) {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (this.disabled) return;

@@ -15,9 +15,9 @@ use yii\widgets\DetailView;
 /** @var app\models\PromptInstance $model */
 
 $projectId = $model->template?->project_id;
-$canRunClaude = $projectId !== null;
-$claudeTooltip = $canRunClaude ? 'Talk to AI' : 'Project required';
-$aiChatUrl = $canRunClaude
+$canRunAi = $projectId !== null;
+$aiTooltip = $canRunAi ? 'Talk to AI' : 'Project required';
+$aiChatUrl = $canRunAi
     ? Url::to(['/ai-chat/index', 'p' => $projectId, 'breadcrumbs' => json_encode([
         ['label' => 'Prompt Instances', 'url' => Url::to(['/prompt-instance/index'])],
         ['label' => $model->label ?: 'Instance #' . $model->id, 'url' => Url::to(['/prompt-instance/view', 'id' => $model->id])],
@@ -33,11 +33,11 @@ echo $this->render('_breadcrumbs', [
 <div class="container py-4">
     <div class="d-flex justify-content-end align-items-center mb-4">
         <div>
-            <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
-                'class' => 'btn btn-primary me-2 text-nowrap claude-launch-btn' . (!$canRunClaude ? ' disabled' : ''),
-                'title' => $claudeTooltip,
+            <?= Html::button('<i class="bi bi-terminal-fill"></i> AI', [
+                'class' => 'btn btn-primary me-2 text-nowrap ai-launch-btn' . (!$canRunAi ? ' disabled' : ''),
+                'title' => $aiTooltip,
                 'data-bs-toggle' => 'tooltip',
-                'disabled' => !$canRunClaude,
+                'disabled' => !$canRunAi,
             ]) ?>
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
@@ -108,7 +108,7 @@ $contentDelta = json_encode($model->final_prompt, JSON_UNESCAPED_UNICODE | JSON_
 $aiChatUrlJs = json_encode($aiChatUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
 $script = <<<JS
-        document.querySelectorAll('.claude-launch-btn').forEach(function(btn) {
+        document.querySelectorAll('.ai-launch-btn').forEach(function(btn) {
             btn.addEventListener('click', function() {
                 if (this.disabled) return;
                 var content = $contentDelta;

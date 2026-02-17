@@ -14,7 +14,7 @@ class EntityPermissionService extends Component
     private const CACHE_TAG = 'user_permissions';
     private const RBAC_VERSION_KEY = 'rbac_version';
 
-    private const MODEL_BASED_ACTIONS = ['view', 'update', 'delete', 'renumber', 'run-claude', 'stream-claude', 'cancel-claude', 'claude', 'check-claude-config', 'claude-commands', 'claude-usage', 'summarize-session', 'summarize-prompt', 'fetch-content'];
+    private const MODEL_BASED_ACTIONS = ['view', 'update', 'delete', 'renumber', 'ai-commands', 'claude', 'summarize-session', 'summarize-prompt', 'fetch-content'];
 
     /**
      * Returns the permission mapping for the given entity.
