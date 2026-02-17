@@ -242,8 +242,8 @@ Workspace for prompt composition and editing. Supports parent/child hierarchy.
 
 ---
 
-#### ClaudeRun (`yii/models/ClaudeRun.php`)
-Background Claude CLI execution record with session grouping and streaming support.
+#### AiRun (`yii/models/AiRun.php`)
+Background AI CLI execution record with session grouping and streaming support.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -251,7 +251,7 @@ Background Claude CLI execution record with session grouping and streaming suppo
 | `user_id` | int | Owner reference |
 | `project_id` | int | Parent project |
 | `session_id` | string\|null | Groups related runs into a session |
-| `status` | string | Run status (ClaudeRunStatus enum) |
+| `status` | string | Run status (AiRunStatus enum) |
 | `prompt_markdown` | string | Original prompt text |
 | `prompt_summary` | string\|null | Short summary of prompt |
 | `session_summary` | string\|null | AI-generated session summary |
@@ -271,7 +271,7 @@ Background Claude CLI execution record with session grouping and streaming suppo
 - Atomic claim-for-processing with race condition protection
 - Session grouping with aggregate virtual columns
 - Status transitions: pending → running → completed/failed/cancelled
-- Stream file storage at `@app/storage/claude-runs/{id}.ndjson`
+- Stream file storage at `@app/storage/ai-runs/{id}.ndjson`
 
 **Relationships:**
 - `belongsTo User`
@@ -357,13 +357,13 @@ prioritizeNameMatch(string $term): self
 orderedByCreated(): self
 ```
 
-#### ClaudeRunQuery (`yii/models/query/ClaudeRunQuery.php`)
+#### AiRunQuery (`yii/models/query/AiRunQuery.php`)
 ```php
 forUser(int $userId): self
 forProject(int $projectId): self
 active(): self
 terminal(): self
-withStatus(ClaudeRunStatus $status): self
+withStatus(AiRunStatus $status): self
 forSession(string $sessionId): self
 stale(int $thresholdMinutes = 5): self
 ```
@@ -377,7 +377,7 @@ Search models handle GridView/ListView filtering by extending base models:
 - `PromptTemplateSearch` - Filter templates by project, name
 - `PromptInstanceSearch` - Filter instances by template, label
 - `NoteSearch` - Filter notes by project, name
-- `ClaudeRunSearch` - Filter Claude runs by project, status, session
+- `AiRunSearch` - Filter AI runs by project, status, session
 
 ### Form Models
 
@@ -548,8 +548,8 @@ convertFromPlainText(string $content, CopyType $type): string
 #### CopyType (`yii/common/enums/CopyType.php`)
 Output format options for copying generated prompts (see CopyFormatConverter above).
 
-#### ClaudePermissionMode (`yii/common/enums/ClaudePermissionMode.php`)
-Permission mode options for Claude CLI execution.
+#### AiPermissionMode (`yii/common/enums/AiPermissionMode.php`)
+Permission mode options for AI CLI execution.
 
 | Mode | Value | Description |
 |------|-------|-------------|
@@ -559,8 +559,8 @@ Permission mode options for Claude CLI execution.
 | Accept Edits | `acceptEdits` | Auto-accept edits only |
 | Default | `default` | Interactive |
 
-#### ClaudeRunStatus (`yii/common/enums/ClaudeRunStatus.php`)
-Status lifecycle for Claude CLI runs.
+#### AiRunStatus (`yii/common/enums/AiRunStatus.php`)
+Status lifecycle for AI CLI runs.
 
 | Status | Value | Description |
 |--------|-------|-------------|
@@ -630,15 +630,29 @@ convertToQuillDelta(array $transcriptData): string
 
 ---
 
+### AI Provider Abstraction (`yii/services/ai/`)
+
+| Interface | Purpose |
+|-----------|---------|
+| `AiProviderInterface` | Base provider interface (display name, health check) |
+| `AiInferenceInterface` | Execute prompts, stream output, cancel runs |
+| `AiCompletionInterface` | Single-shot completions for name suggestions etc. |
+| `AiWorkspaceInterface` | Workspace management, config checks, diagnostics |
+| `AiCommandsInterface` | Slash command discovery and API usage |
+
+| Provider | Purpose |
+|----------|---------|
+| `ClaudeCliProvider` | Claude CLI implementation of all AI provider interfaces |
+
 ### Other Services
 
 | Service | Purpose |
 |---------|---------|
-| `ClaudeCliService` | Execute Claude CLI commands with workspace and format conversion |
-| `ClaudeCliCompletionClient` | Claude CLI completion client for AI inference |
-| `ClaudeRunCleanupService` | Delete Claude run records and associated stream files |
-| `ClaudeStreamRelayService` | Relay NDJSON stream events from file to callback |
-| `ClaudeWorkspaceService` | Manage persistent Claude workspace directories per project |
+| `ClaudeCliService` | Execute Claude CLI commands (legacy, not yet migrated to provider) |
+| `ClaudeCliCompletionClient` | Claude CLI completion client (legacy, not yet migrated) |
+| `AiRunCleanupService` | Delete AI run records and associated stream files |
+| `AiStreamRelayService` | Relay NDJSON stream events from file to callback |
+| `ClaudeWorkspaceService` | Manage persistent Claude workspace directories (legacy) |
 | `EntityPermissionService` | RBAC permission checking for controller actions |
 | `FileExportService` | Export content to files with path validation and format conversion |
 | `FileFieldProcessor` | Process file/directory field values |
@@ -759,7 +773,7 @@ generateAuthKey(): void
 | `PromptTemplateOwnerRule` | Check if user owns the template (via project) |
 | `PromptInstanceOwnerRule` | Check if user owns the instance (via template->project) |
 | `NoteOwnerRule` | Check if user owns the note |
-| `ClaudeRunOwnerRule` | Check if user owns the Claude run |
+| `AiRunOwnerRule` | Check if user owns the AI run |
 
 ---
 
@@ -775,9 +789,9 @@ generateAuthKey(): void
 | `FieldController` | Field CRUD with options |
 | `PromptTemplateController` | Template CRUD |
 | `PromptInstanceController` | Instance generation and management |
-| `NoteController` | Note CRUD, content management, Claude chat |
+| `NoteController` | Note CRUD, content management, AI chat |
 | `SearchController` | AJAX search endpoints (quick and advanced) |
-| `ClaudeController` | Claude CLI run management, streaming, sessions |
+| `AiChatController` | AI CLI run management, streaming, sessions |
 | `ExportController` | File export with format conversion |
 
 ### PromptInstanceController Actions
@@ -884,7 +898,7 @@ try {
 │  │  SiteController, ProjectController, ContextController,    │  │
 │  │  FieldController, PromptTemplateController,               │  │
 │  │  PromptInstanceController, NoteController,                │  │
-│  │  SearchController, ClaudeController                       │  │
+│  │  SearchController, AiChatController                       │  │
 │  └───────────────────────────┬──────────────────────────────┘  │
 │                              │                                  │
 │  ┌───────────────────────────┴──────────────────────────────┐  │
@@ -910,7 +924,7 @@ try {
 ├─────────────────────────────────────────────────────────────────┤
 │  RBAC: ProjectOwnerRule, ContextOwnerRule, FieldOwnerRule,      │
 │        PromptTemplateOwnerRule, PromptInstanceOwnerRule,        │
-│        NoteOwnerRule, ClaudeRunOwnerRule                        │
+│        NoteOwnerRule, AiRunOwnerRule                            │
 ├─────────────────────────────────────────────────────────────────┤
 │  Infrastructure: Docker (pma_yii, pma_mysql, pma_nginx, pma_npm)│
 └─────────────────────────────────────────────────────────────────┘
@@ -960,7 +974,7 @@ yii/tests/
 | `prompt_instance` | Generated prompt instances |
 | `note` | Note workspaces |
 | `user_preference` | User preferences |
-| `claude_run` | Claude CLI execution records |
+| `ai_run` | AI CLI execution records |
 
 ---
 
