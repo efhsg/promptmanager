@@ -24,13 +24,19 @@ Post / Bewerk / Skip?
 Akkoord met de aanpak? (Ja / Nee / Aanpassen)
 ```
 
+```
+Geen verbeterpunten — door naar Front-end Developer / Aanpassen?
+```
+(Context vóór `—` wordt gestript → buttons: `door naar Front-end Developer`, `Aanpassen`)
+
 ### Regels slash-syntax
 
 | Regel | Detail |
 |-------|--------|
 | Separator | ` / ` (spatie-slash-spatie) |
 | Aantal opties | 2-4 |
-| Max lengte per optie | 30 tekens |
+| Max lengte per optie | 80 tekens |
+| Context-prefix | Tekst vóór `—` / `–` wordt gestript: `Context — Keuze / Optie2` → buttons `Keuze`, `Optie2` |
 | Parentheses | Optioneel: `vraag? (A / B / C)` |
 | Trailing `?` | Optioneel, wordt gestript |
 
@@ -42,7 +48,7 @@ Akkoord met de aanpak? (Ja / Nee / Aanpassen)
 [E] Handmatig bewerken
 ```
 
-Gebruikt wanneer opties een letter-code nodig hebben of langer zijn dan 30 tekens. De bracket-lines moeten de **laatste opeenvolgende non-empty lines** zijn.
+Gebruikt wanneer opties een letter-code nodig hebben of meer dan 4 opties. De bracket-lines moeten de **laatste opeenvolgende non-empty lines** zijn.
 
 Inline variant op één regel wordt ook herkend:
 

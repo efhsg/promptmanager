@@ -1032,21 +1032,19 @@ $js = <<<JS
                     var cleaned = choicePart.replace(/\??\s*$/, '').trim();
                     var parts = cleaned.split(' / ');
 
+                    // Strip context prefix: "Geen verbeterpunten — door naar Architect / Aanpassen"
+                    if (parts.length >= 2 && parts[0].match(/[\u2014\u2013]\s/))
+                        parts[0] = parts[0].replace(/^.*[\u2014\u2013]\s+/, '');
+
                     if (parts.length >= 2 && parts.length <= 4) {
-                        var valid = true;
+                        var options = [];
                         for (var j = 0; j < parts.length; j++) {
-                            if (!parts[j] || parts[j].length > 30) { valid = false; break; }
+                            var label = stripMd(parts[j]);
+                            if (!label || label.length > 80) return null;
+                            var action = editWords.indexOf(label.toLowerCase()) !== -1 ? 'edit' : 'send';
+                            options.push({ label: label, action: action });
                         }
-                        if (valid) {
-                            var options = [];
-                            for (var k = 0; k < parts.length; k++) {
-                                var label = stripMd(parts[k]);
-                                if (!label) return null;
-                                var action = editWords.indexOf(label.toLowerCase()) !== -1 ? 'edit' : 'send';
-                                options.push({ label: label, action: action });
-                            }
-                            return options;
-                        }
+                        return options;
                     }
                 }
 
