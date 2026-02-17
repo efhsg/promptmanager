@@ -1,10 +1,10 @@
-# Code Review Context
+# Code Review Context — Ronde 2
 
 ## Change
-Volledige implementatie van de AI Provider Abstraction Layer: hardcoded Claude-afhankelijkheden zijn geabstraheerd naar een interface-gebaseerd provider systeem. Dit omvat 5 nieuwe interfaces, een concrete ClaudeCliProvider, 3 database migraties, hernoemde models/services/controllers/views/tests, en DI-wiring.
+Volledige implementatie van de AI Provider Abstraction Layer: hardcoded Claude-afhankelijkheden zijn geabstraheerd naar een interface-gebaseerd provider systeem. Alle wijzigingen uit review ronde 1 zijn verwerkt en gecommit.
 
 ## Scope
-84 bestanden gewijzigd (3701+, 3049-):
+92 bestanden gewijzigd (5221+, 3274-):
 - Interfaces (5 nieuw): AiProviderInterface, AiStreamingProviderInterface, AiWorkspaceProviderInterface, AiUsageProviderInterface, AiConfigProviderInterface
 - Provider (1 nieuw): ClaudeCliProvider — refactor van ClaudeCliService + ClaudeWorkspaceService
 - Migraties (3 nieuw): Tabel/kolom rename, RBAC rename
@@ -30,3 +30,6 @@ Full-stack refactoring
 4. Front-end Developer
 5. Developer
 6. Tester
+
+## Diff range
+a505607..87c2a11

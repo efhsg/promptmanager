@@ -1,126 +1,128 @@
-# Review Resultaten
+# Review Resultaten — Ronde 2
 
 ## Review: Reviewer — 2026-02-17
 
-### Score: 8/10
+### Score: 7/10
 
 ### Goed
-- Owner-scoping: alle AiRun queries gebruiken forUser() scope
-- RBAC: entity keys correct bijgewerkt, permissions hernoemd, owner rule werkt
-- Interface-segregatie: ISP netjes toegepast — 1 verplichte + 4 optionele interfaces
-- DI-patronen: controller constructor injection, Project::afterSave() via DI + instanceof
-- Migraties: correcte safeUp()/safeDown(), FK's en indexes in juiste volgorde
-- Queue backward-compat: class_alias in bootstrap
-- URL backward-compat: route rule claude/* → ai-chat/*
+- Interface-segregatie: ISP correct — 1 verplichte + 4 optionele interfaces
+- Owner-scoping: alle AiRun queries via forUser()
+- RBAC: entity keys en permissions correct bijgewerkt
+- DI-patronen: constructor injection consequent
+- Migraties, queue backward-compat, URL backward-compat correct
 
 ### Wijzigingen doorgevoerd
-- `CLAUDE_TIMEOUT` → `RUN_TIMEOUT` in AiChatController
-- `$claudeQuickHandler` → `$quickHandler` in AiChatController (property, constructor, alle referenties)
-- Test `AiChatControllerTest` bijgewerkt voor nieuwe parameternaam
-- PHPDoc `generateSettingsJson` bijgewerkt: `claude_options` → `ai_options`
+- `EntityPermissionService::MODEL_BASED_ACTIONS`: oude claude-actienamen verwijderd (dood gewicht: `run-claude`, `stream-claude`, `cancel-claude`, `check-claude-config`, `claude-commands`, `claude-usage`)
+- `ProjectController::loadAiOptions()`: `$claudeOptions` → `$aiOptions`
+- `AiQuickHandler`: log label `"ClaudeQuick"` → `"AiQuick"`
+- `AiRunController`: stdout `"stale Claude runs"` → `"stale AI runs"`
+- `RunAiJob`: error string `"Claude CLI exited"` → `"AI CLI exited"`
+- `actionClaude()` bewust niet hernoemd — is backward-compat redirect
 
-### Openstaand voor latere reviews
-- Duplicatie NDJSON parsing in RunAiJob vs parseStreamResult() (punt 4) — Developer review
+### Testresultaat
+1010 tests, 0 failures
 
 ## Review: Architect — 2026-02-17
 
-### Score: 7/10
+### Score: 8/10
 
 ### Goed
-- Interface-hiërarchie helder: ISP correct, 1 verplicht + 4 optioneel
-- DI-registratie minimaal: alleen basis-interface, optionele via instanceof
-- Query-logica in AiRunQuery, niet in services/controllers
-- Project::afterSave()/afterDelete() via DI-resolutie + instanceof
-- Folder-structuur correct: services/ai/ + services/ai/providers/
-- Migratie-opzet solide: 3 afzonderlijke migraties met safeDown()
+- Interface-hiërarchie: ISP correct, goed gedocumenteerd met @see referenties
+- Folder-structuur: services/ai/ voor interfaces, services/ai/providers/ voor implementaties
+- DI-registratie minimaal: alleen AiProviderInterface geregistreerd
+- Query-logica consequent in AiRunQuery
+- Project::afterSave()/afterDelete(): DI-resolutie + instanceof
+- RunAiJob factory methods voor testbaarheid
 
 ### Wijzigingen doorgevoerd
-- `getGitBranch()` verplaatst van ClaudeCliProvider naar private helper in AiChatController — `use ClaudeCliProvider` import verwijderd, controller is nu volledig provider-agnostisch
-- View variabele `claudeCommands` → `aiCommands` in controller en view (index.php)
-- JS variabele `claudeCommands` → `aiCommands` in ai-chat/index.php
-- HTML IDs `claudeCommandsCollapse` in project/_form.php bewust niet hernoemd (conform spec-beslissing)
+- RunAiJob docblock: `"Claude CLI inference run"` → `"AI CLI inference run"`
+- RunAiJob comment: `"max Claude timeout"` → `"max AI run timeout"`
 
-### Nog open
-- ClaudeCliProvider is 1123 regels (boven 300-regel richtlijn) — acceptabel als eerste stap, maar bij toekomstige uitbreiding splitsen op verantwoordelijkheid
+### Nog open (follow-up)
+- ClaudeCliProvider 1123 regels — splitsing bij toekomstige uitbreiding
 
 ## Review: Security — 2026-02-17
+
+### Score: 9/10
+
+### Goed
+- Owner-scoping: alle AiRun queries via forUser()
+- RBAC: AiRunOwnerRule met type-coercion
+- VerbFilter op alle muterende endpoints
+- escapeshellarg() consequent in buildCommand()
+- UUID regex validatie op stream tokens
+- Provider identifier match pattern op AiRun model
+- PID cache per-user key voorkomt cross-user process kill
+- Credential path via server-side config
+- Stream file via integer PK — geen path traversal
+
+### Wijzigingen doorgevoerd
+Geen — security-implementatie is compleet en correct
+
+## Review: Front-end Developer — 2026-02-17
 
 ### Score: 8/10
 
 ### Goed
-- Owner-scoping op alle AiRun queries via forUser()
-- RBAC correct met AiRunOwnerRule, entity keys ai-chat en aiRun
-- VerbFilter op alle muterende endpoints
-- Stream file path via integer PK — geen path traversal
-- escapeshellarg() in buildCommand() en getGitBranch()
-- UUID regex validatie op stream tokens
-- Credential path via server-side config, niet user input
-- RBAC migratie in correcte volgorde
-
-### Wijzigingen doorgevoerd
-- Provider validatieregels toegevoegd aan AiRun model: `match` pattern `/^[a-z][a-z0-9-]{1,48}$/`, `default` value `'claude'`, `max` 50
-
-### Nog open
-- Geen
-
-## Review: Front-end Developer — 2026-02-17
-
-### Score: 7/10
-
-### Goed
-- sessionStorage keys correct hernoemd met fallback-patroon
 - URLs correct bijgewerkt naar /ai-chat/
-- CSS-klassen terecht niet hernoemd (conform spec FR-7)
-- HTML IDs in project/_form.php terecht behouden (conform spec edge case)
-- Navigatie-labels correct: bottom nav "AI Chat", breadcrumbs werken
+- CSS-bestand hernoemd naar ai-chat.css
 - View directory hernoemd van views/claude/ naar views/ai-chat/
+- sessionStorage keys correct hernoemd met fallback
+- CSS-klassen terecht niet hernoemd (FR-7)
+- Json::encode() correct gebruikt voor JS-variabelen
 
 ### Wijzigingen doorgevoerd
-- `$streamClaudeUrl` → `$streamUrl` en `$cancelClaudeUrl` → `$cancelUrl` in ai-chat/index.php (definitie + 2 JS-referenties)
-- `$claudeUrl` → `$aiChatUrl` in prompt-instance/_form.php, index.php, view.php en note/index.php, view.php (PHP variabelen)
-- `$claudeUrlJs` → `$aiChatUrlJs` in prompt-instance/_form.php, view.php en note/view.php
-- JS variabele `claudeUrl` → `aiChatUrl` in prompt-instance/index.php, note/index.php (lokale variabelen die data-attribute uitlezen)
+- `note/view.php`: `$canRunClaude` → `$canRunAi`, `$claudeTooltip` → `$aiTooltip`
+- `prompt-instance/view.php`: `$canRunClaude` → `$canRunAi`, `$claudeTooltip` → `$aiTooltip`
+- `note/index.php`: GridView template `{claude}` → `{ai}`, array key hernoemd
+- `prompt-instance/index.php`: GridView template `{claude}` → `{ai}`, array key hernoemd
 
-### Nog open
-- Geen
+### Testresultaat
+1011 tests, 0 failures
 
 ## Review: Developer — 2026-02-17
 
 ### Score: 8/10
 
 ### Goed
-- Constructor injection consequent in AiChatController
-- AiRun model: atomaire claimForProcessing(), duidelijke status-transities, TimestampTrait hergebruik
-- RunAiJob: lineair flow, heartbeat + cancellation check, stream file lifecycle correct
-- Interface-contract minimaal en helder
-- Query scoping consequent: forUser(), forSession(), active()
-- Protected factory methods in RunAiJob voor testbaarheid
+- Constructor injection consequent in AiChatController (6 dependencies)
+- AiRun model: atomaire claimForProcessing() via updateAll met status-guard
+- RunAiJob: lineaire flow, heartbeat + cancellation check elke 30s
+- Stream file lifecycle correct: open → write → flush → close → [DONE] append
+- Protected factory methods voor testbaarheid
+- @file_get_contents met comment waarom error suppression nodig is
+- writeDoneMarker sequencing voorkomt race condition in SSE relay
+- buildSessionDialog trunceert van begin zodat recente context behouden blijft
 
 ### Wijzigingen doorgevoerd
-- `prepareClaudeRequest()` → `prepareRunRequest()` in AiChatController (definitie + 2 call-sites)
-- JSON response key `'claudeContext'` → `'aiContext'` in actionCheckConfig()
-- `$run->provider = $this->aiProvider->getIdentifier()` expliciet gezet in createRun()
+Geen — implementatie is clean en consistent
 
 ### Nog open (follow-up)
-- NDJSON parsing duplicatie in RunAiJob (extractResultText/extractMetadata/extractSessionId) vs ClaudeCliProvider::parseStreamResult() — refactoring als apart PR
+- NDJSON parsing duplicatie RunAiJob vs ClaudeCliProvider::parseStreamResult() — refactoring als apart PR
 
 ## Review: Tester — 2026-02-17
 
-### Score: 7/10
+### Score: 8/10
 
 ### Goed
-- 11 test files dekken het volledige feature-oppervlak
-- 1005 tests slagen, 0 fouten (was 1002 voor deze review)
-- AiRunTest (33 methods): uitgebreide dekking van status-transities, atomaire claim, heartbeat, session_id, display summary
-- AiChatControllerTest (38 methods): config checks, summarization, name suggestions, command loading
-- RunAiJobTest (8 methods): happy path, niet-pending skip, non-zero exit code, summary generatie
-- AiRunQueryTest (10 methods): alle query scopes getest inclusief stale-run detectie
-- AiRunOwnerRuleTest (4 methods): eigenaar-verificatie inclusief type-coercion edge case
+- Bestaande testsuite: 12 tests in RunAiJobTest dekken happy path, failure, retryable, TTR, [DONE] marker, session summary, stream file cleanup
+- Factory-method patroon maakt mocking effectief
+- Fixture-based DB state via AiRunFixture
 
-### Wijzigingen doorgevoerd
-- 3 provider validatie tests toegevoegd aan AiRunTest: default value, invalid format rejection, valid identifier acceptance
+### Test-gaps gevonden
+1. **Cancellation flow** — geen test voor cancel mid-run
+2. **Session ID extractie** — geen test voor extractSessionId (system- en result-type lines)
+3. **Fallback error message** — bestaande test gebruikt provider error, raakt nooit de `'AI CLI exited with code X'` fallback
+4. **EntityPermissionService MODEL_BASED_ACTIONS** — geen regressietest (niet geïmplementeerd, advies)
 
-### Nog open (follow-up)
-- Cancellation flow in RunAiJob niet getest
-- session_id extractie in RunAiJob niet getest
-- Streaming endpoints (stream, start-run, cancel-run) niet getest (SSE moeilijk unit-testbaar)
+### Tests toegevoegd (4 methodes)
+- `testCancellationMidRunMarksRunAsCancelled` — exception path verificatie + [DONE] marker
+- `testSessionIdExtractedFromResultLine` — session_id uit result-type NDJSON line
+- `testSessionIdExtractedFromSystemLine` — session_id uit system-type line (heeft prioriteit)
+- `testFallbackErrorMessageWhenProviderErrorIsEmpty` — fallback 'AI CLI exited with code 42'
+
+### Design-notitie
+Cancellation test is pragmatisch: de mock-boundary voorkomt dat de interne `$onLine` callback de `$run->refresh()` uitvoert die de CANCELLED status detecteert. Test verifieert de exception-handling path en [DONE] marker, niet de volledige cancellation flow.
+
+### Testresultaat
+16 tests, 42 assertions, 0 failures
