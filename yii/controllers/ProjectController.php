@@ -139,6 +139,7 @@ class ProjectController extends Controller
         return $this->render('create', [
             'model' => $model,
             'availableProjects' => $availableProjects,
+            'providers' => $this->buildProviderViewData(),
         ]);
     }
 
@@ -187,6 +188,7 @@ class ProjectController extends Controller
             'model' => $model,
             'availableProjects' => $availableProjects,
             'projectConfigStatus' => $projectConfigStatus,
+            'providers' => $this->buildProviderViewData(),
         ]);
     }
 
@@ -288,6 +290,27 @@ class ProjectController extends Controller
             'id' => $id,
             'user_id' => Yii::$app->user->id,
         ])->one() ?? throw new NotFoundHttpException('The requested Project does not exist or is not yours.');
+    }
+
+    /**
+     * @return array<string, array{name: string, models: array, permissionModes: array, configSchema: array}>
+     */
+    private function buildProviderViewData(): array
+    {
+        $data = [];
+        foreach ($this->providerRegistry->all() as $id => $provider) {
+            if (!$provider instanceof AiConfigProviderInterface) {
+                continue;
+            }
+            $data[$id] = [
+                'name' => $provider->getName(),
+                'models' => $provider->getSupportedModels(),
+                'permissionModes' => $provider->getSupportedPermissionModes(),
+                'configSchema' => $provider->getConfigSchema(),
+            ];
+        }
+
+        return $data;
     }
 
     private function loadAiOptions(Project $model): void
