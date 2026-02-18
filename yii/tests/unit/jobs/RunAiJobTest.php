@@ -5,6 +5,7 @@ namespace tests\unit\jobs;
 use app\handlers\AiQuickHandler;
 use app\jobs\RunAiJob;
 use app\models\AiRun;
+use app\services\ai\AiProviderInterface;
 use app\services\ai\AiStreamingProviderInterface;
 use common\enums\AiRunStatus;
 use Codeception\Test\Unit;
@@ -70,24 +71,14 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) {
-                $onLine('{"type":"assistant","message":"hello"}');
-                $onLine('{"type":"result","result":"Final answer","session_id":"ses-1"}');
-                return ['exitCode' => 0, 'error' => ''];
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"assistant","message":"hello"}');
+            $onLine('{"type":"result","result":"Final answer","session_id":"ses-1"}');
+            return ['exitCode' => 0, 'error' => ''];
+        });
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -102,20 +93,10 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturn(['exitCode' => 1, 'error' => 'CLI timeout']);
+        $mockProvider = $this->createStreamingProviderMock(null, ['exitCode' => 1, 'error' => 'CLI timeout']);
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -128,12 +109,10 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) {
-                $onLine('{"type":"result","result":"Refactored the auth module to use JWT tokens"}');
-                return ['exitCode' => 0, 'error' => ''];
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"result","result":"Refactored the auth module to use JWT tokens"}');
+            return ['exitCode' => 0, 'error' => ''];
+        });
 
         $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->expects($this->once())
@@ -141,23 +120,8 @@ class RunAiJobTest extends Unit
             ->with('session-summary', $this->anything())
             ->willReturn(['success' => true, 'output' => 'Refactored auth to JWT']);
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-            public AiQuickHandler $mockHandler;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-
-            protected function createQuickHandler(): AiQuickHandler
-            {
-                return $this->mockHandler;
-            }
-        };
+        $job = $this->createJobWithProviderAndHandler($mockProvider, $mockHandler);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
-        $job->mockHandler = $mockHandler;
 
         $job->execute(null);
 
@@ -170,34 +134,17 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) {
-                $onLine('{"type":"result","result":"Implemented feature X with full test coverage"}');
-                return ['exitCode' => 0, 'error' => ''];
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"result","result":"Implemented feature X with full test coverage"}');
+            return ['exitCode' => 0, 'error' => ''];
+        });
 
         $mockHandler = $this->createMock(AiQuickHandler::class);
         $mockHandler->method('run')
             ->willThrowException(new \RuntimeException('AI service unavailable'));
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-            public AiQuickHandler $mockHandler;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-
-            protected function createQuickHandler(): AiQuickHandler
-            {
-                return $this->mockHandler;
-            }
-        };
+        $job = $this->createJobWithProviderAndHandler($mockProvider, $mockHandler);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
-        $job->mockHandler = $mockHandler;
 
         $job->execute(null);
 
@@ -210,23 +157,13 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) {
-                $onLine('{"type":"result","result":"Done test"}');
-                return ['exitCode' => 0, 'error' => ''];
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"result","result":"Done test"}');
+            return ['exitCode' => 0, 'error' => ''];
+        });
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -246,20 +183,10 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturn(['exitCode' => 1, 'error' => 'Process crashed']);
+        $mockProvider = $this->createStreamingProviderMock(null, ['exitCode' => 1, 'error' => 'Process crashed']);
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -278,25 +205,13 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        // Simulate a Throwable (TypeError, Error) thrown by executeStreaming.
-        // The catch(Throwable) block must write exactly one [DONE].
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) {
-                $onLine('{"type":"assistant","message":"partial"}');
-                throw new \Error('Unexpected type error in provider');
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"assistant","message":"partial"}');
+            throw new \Error('Unexpected type error in provider');
+        });
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -317,25 +232,15 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) use ($run) {
-                $onLine('{"type":"assistant","message":"hello"}');
-                // Simulate concurrent cleanup deleting the stream file mid-run
-                @unlink($run->getStreamFilePath());
-                return ['exitCode' => 0, 'error' => ''];
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) use ($run) {
+            $onLine('{"type":"assistant","message":"hello"}');
+            // Simulate concurrent cleanup deleting the stream file mid-run
+            @unlink($run->getStreamFilePath());
+            return ['exitCode' => 0, 'error' => ''];
+        });
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -352,58 +257,21 @@ class RunAiJobTest extends Unit
         $run = $this->createRun(AiRunStatus::PENDING);
         $runId = $run->id;
 
-        // The cancellation flow in production:
-        // 1. $onLine callback is invoked by executeStreaming for each output line
-        // 2. User cancels via cancel endpoint → DB status set to CANCELLED
-        // 3. $onLine heartbeat check: $run->refresh() sees CANCELLED, throws RuntimeException
-        // 4. Catch block checks $run->status (in-memory, now CANCELLED) → calls markCancelled
-        //
-        // To test this, we use the $onLine callback parameter that executeStreaming receives.
-        // We call $onLine multiple times: first normally, then after setting DB to CANCELLED.
-        // The heartbeat check in $onLine has a 30s guard, so we call $onLine 31 times
-        // with 1-second sleeps... that's too slow for a unit test.
-        //
-        // Instead, we test the catch block's branching directly: when the in-memory $run
-        // has status=CANCELLED, the catch block should call markCancelled (not markFailed).
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) use ($runId) {
-                $onLine('{"type":"assistant","message":"working on it"}');
-                // Cancel the run in DB (simulates cancel endpoint)
-                AiRun::updateAll(
-                    ['status' => AiRunStatus::CANCELLED->value],
-                    ['id' => $runId]
-                );
-                // The $onLine callback captures the job's internal $run object.
-                // We need to call it in a way that triggers the heartbeat check.
-                // Since we can't control the 30s timer, we throw as the production
-                // cancellation check would — but from executeStreaming context.
-                // This means the catch block will see $run->status = RUNNING (in-memory).
-                //
-                // Pragmatic alternative: verify that a run already in CANCELLED state
-                // in the DB is handled correctly when the catch block refreshes.
-                throw new \RuntimeException('Run cancelled by user');
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) use ($runId) {
+            $onLine('{"type":"assistant","message":"working on it"}');
+            AiRun::updateAll(
+                ['status' => AiRunStatus::CANCELLED->value],
+                ['id' => $runId]
+            );
+            throw new \RuntimeException('Run cancelled by user');
+        });
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $runId;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
         $run->refresh();
-        // The catch block sees in-memory status=RUNNING (from claimForProcessing),
-        // so it calls markFailed with the exception message.
-        // The cancellation flow relies on $onLine's heartbeat refreshing the internal
-        // $run to CANCELLED — which can't be triggered through the mock boundary.
-        // This test verifies that the exception path works and [DONE] is written.
         verify($run->error_message)->equals('Run cancelled by user');
 
         $streamFilePath = $run->getStreamFilePath();
@@ -419,23 +287,13 @@ class RunAiJobTest extends Unit
         $run = $this->createRun(AiRunStatus::PENDING);
         verify($run->session_id)->null();
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) {
-                $onLine('{"type":"result","result":"Done","session_id":"ses-from-result"}');
-                return ['exitCode' => 0, 'error' => ''];
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"result","result":"Done","session_id":"ses-from-result"}');
+            return ['exitCode' => 0, 'error' => ''];
+        });
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -451,24 +309,14 @@ class RunAiJobTest extends Unit
         $run = $this->createRun(AiRunStatus::PENDING);
         verify($run->session_id)->null();
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturnCallback(function ($prompt, $dir, $onLine) {
-                $onLine('{"type":"system","session_id":"ses-from-system","message":"init"}');
-                $onLine('{"type":"result","result":"Done","session_id":"ses-from-result"}');
-                return ['exitCode' => 0, 'error' => ''];
-            });
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"system","session_id":"ses-from-system","message":"init"}');
+            $onLine('{"type":"result","result":"Done","session_id":"ses-from-result"}');
+            return ['exitCode' => 0, 'error' => ''];
+        });
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -484,20 +332,10 @@ class RunAiJobTest extends Unit
     {
         $run = $this->createRun(AiRunStatus::PENDING);
 
-        $mockStreamingProvider = $this->createMock(AiStreamingProviderInterface::class);
-        $mockStreamingProvider->method('executeStreaming')
-            ->willReturn(['exitCode' => 42, 'error' => '']);
+        $mockProvider = $this->createStreamingProviderMock(null, ['exitCode' => 42, 'error' => '']);
 
-        $job = new class extends RunAiJob {
-            public AiStreamingProviderInterface $mockService;
-
-            protected function createStreamingProvider(): AiStreamingProviderInterface
-            {
-                return $this->mockService;
-            }
-        };
+        $job = $this->createJobWithProvider($mockProvider);
         $job->runId = $run->id;
-        $job->mockService = $mockStreamingProvider;
 
         $job->execute(null);
 
@@ -508,7 +346,82 @@ class RunAiJobTest extends Unit
         @unlink($run->getStreamFilePath());
     }
 
-    private function createRun(AiRunStatus $status): AiRun
+    public function testProviderNotFoundMarksRunAsFailed(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING, 'removed-provider');
+
+        $job = new RunAiJob();
+        $job->runId = $run->id;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::FAILED->value);
+        verify($run->error_message)->equals("Provider 'removed-provider' is not configured");
+
+        $streamFilePath = $run->getStreamFilePath();
+        verify(file_exists($streamFilePath))->true();
+        $content = file_get_contents($streamFilePath);
+        verify(substr_count($content, '[DONE]'))->equals(1);
+
+        @unlink($streamFilePath);
+    }
+
+    public function testNonStreamingProviderUsesSyncFallback(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+
+        // Create a mock that only implements AiProviderInterface (not AiStreamingProviderInterface)
+        $mockProvider = $this->createMock(AiProviderInterface::class);
+        $mockProvider->method('execute')
+            ->willReturn([
+                'success' => true,
+                'output' => 'sync result',
+                'error' => '',
+                'exitCode' => 0,
+            ]);
+
+        $job = $this->createJobWithProvider($mockProvider);
+        $job->runId = $run->id;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
+        verify($run->result_text)->equals('sync result');
+
+        $streamFilePath = $run->getStreamFilePath();
+        verify(file_exists($streamFilePath))->true();
+        $content = file_get_contents($streamFilePath);
+        verify($content)->stringContainsString('"type":"result"');
+        verify($content)->stringContainsString('"result":"sync result"');
+        verify(substr_count($content, '[DONE]'))->equals(1);
+
+        @unlink($streamFilePath);
+    }
+
+    public function testStreamingProviderUsesExecuteStreaming(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+
+        $mockProvider = $this->createStreamingProviderMock(function ($prompt, $dir, $onLine) {
+            $onLine('{"type":"result","result":"streaming result"}');
+            return ['exitCode' => 0, 'error' => ''];
+        });
+
+        $job = $this->createJobWithProvider($mockProvider);
+        $job->runId = $run->id;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
+        verify($run->result_text)->equals('streaming result');
+
+        @unlink($run->getStreamFilePath());
+    }
+
+    private function createRun(AiRunStatus $status, string $provider = 'claude'): AiRun
     {
         $run = new AiRun();
         $run->user_id = 100;
@@ -517,8 +430,61 @@ class RunAiJobTest extends Unit
         $run->prompt_summary = 'Test';
         $run->status = $status->value;
         $run->working_directory = '/tmp';
+        $run->provider = $provider;
         $run->save(false);
 
         return $run;
+    }
+
+    /**
+     * Creates a mock that implements both AiProviderInterface and AiStreamingProviderInterface.
+     */
+    private function createStreamingProviderMock(?callable $callback = null, ?array $returnValue = null): AiProviderInterface
+    {
+        $mock = $this->createMockForIntersectionOfInterfaces([
+            AiProviderInterface::class,
+            AiStreamingProviderInterface::class,
+        ]);
+        if ($callback !== null) {
+            $mock->method('executeStreaming')->willReturnCallback($callback);
+        } elseif ($returnValue !== null) {
+            $mock->method('executeStreaming')->willReturn($returnValue);
+        }
+        return $mock;
+    }
+
+    private function createJobWithProvider(AiProviderInterface $provider): RunAiJob
+    {
+        $job = new class extends RunAiJob {
+            public AiProviderInterface $mockProvider;
+
+            protected function resolveProvider(AiRun $run): AiProviderInterface
+            {
+                return $this->mockProvider;
+            }
+        };
+        $job->mockProvider = $provider;
+        return $job;
+    }
+
+    private function createJobWithProviderAndHandler(AiProviderInterface $provider, AiQuickHandler $handler): RunAiJob
+    {
+        $job = new class extends RunAiJob {
+            public AiProviderInterface $mockProvider;
+            public AiQuickHandler $mockHandler;
+
+            protected function resolveProvider(AiRun $run): AiProviderInterface
+            {
+                return $this->mockProvider;
+            }
+
+            protected function createQuickHandler(): AiQuickHandler
+            {
+                return $this->mockHandler;
+            }
+        };
+        $job->mockProvider = $provider;
+        $job->mockHandler = $handler;
+        return $job;
     }
 }

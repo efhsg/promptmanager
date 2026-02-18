@@ -34,4 +34,11 @@ interface AiConfigProviderInterface
      * @return string[] List of supported permission mode values
      */
     public function getSupportedPermissionModes(): array;
+
+    /**
+     * Returns the models supported by this provider.
+     *
+     * @return array<string, string> Model value => display label
+     */
+    public function getSupportedModels(): array;
 }

@@ -9,14 +9,16 @@ use app\models\AiRunSearch;
 use app\models\Project;
 use app\services\ai\AiConfigProviderInterface;
 use app\services\ai\AiProviderInterface;
+use app\services\ai\AiProviderRegistry;
 use app\services\ai\AiUsageProviderInterface;
 use app\services\AiRunCleanupService;
 use app\services\AiStreamRelayService;
 use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
 use app\services\PathService;
-use common\enums\CopyType;
+use common\enums\AiPermissionMode;
 use common\enums\AiRunStatus;
+use common\enums\CopyType;
 use common\enums\LogCategory;
 use Yii;
 use yii\filters\AccessControl;
@@ -34,7 +36,7 @@ class AiChatController extends Controller
     private const RUN_TIMEOUT = 3600;
 
     private readonly EntityPermissionService $permissionService;
-    private readonly AiProviderInterface $aiProvider;
+    private readonly AiProviderRegistry $providerRegistry;
     private readonly CopyFormatConverter $formatConverter;
     private readonly AiQuickHandler $quickHandler;
     private readonly AiStreamRelayService $streamRelayService;
@@ -45,7 +47,7 @@ class AiChatController extends Controller
         $id,
         $module,
         EntityPermissionService $permissionService,
-        AiProviderInterface $aiProvider,
+        AiProviderRegistry $providerRegistry,
         CopyFormatConverter $formatConverter,
         AiQuickHandler $quickHandler,
         AiStreamRelayService $streamRelayService,
@@ -55,7 +57,7 @@ class AiChatController extends Controller
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
-        $this->aiProvider = $aiProvider;
+        $this->providerRegistry = $providerRegistry;
         $this->formatConverter = $formatConverter;
         $this->quickHandler = $quickHandler;
         $this->streamRelayService = $streamRelayService;
@@ -248,6 +250,8 @@ class AiChatController extends Controller
             }
         }
 
+        $providerData = $this->buildProviderData();
+
         return $this->render('index', [
             'project' => $project,
             'projectList' => Yii::$app->projectService->fetchProjectsList(Yii::$app->user->id),
@@ -258,6 +262,8 @@ class AiChatController extends Controller
             'replayRunId' => $replayRunId,
             'replayRunSummary' => $replayRunSummary,
             'sessionHistory' => $sessionHistory,
+            'providerData' => $providerData,
+            'defaultProvider' => $this->providerRegistry->getDefaultIdentifier(),
         ]);
     }
 
@@ -269,8 +275,14 @@ class AiChatController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
         $this->findProject($p);
 
-        if ($this->aiProvider instanceof AiUsageProviderInterface) {
-            return $this->aiProvider->getUsage();
+        $provider = $this->resolveProviderFromRequest();
+        if ($provider === null) {
+            Yii::$app->response->statusCode = 400;
+            return ['success' => false, 'error' => 'Invalid provider selection'];
+        }
+
+        if ($provider instanceof AiUsageProviderInterface) {
+            return $provider->getUsage();
         }
 
         return ['success' => false, 'error' => 'Provider does not support usage tracking'];
@@ -291,11 +303,17 @@ class AiChatController extends Controller
             ];
         }
 
-        if (!$this->aiProvider instanceof AiConfigProviderInterface) {
+        $provider = $this->resolveProviderFromRequest();
+        if ($provider === null) {
+            Yii::$app->response->statusCode = 400;
+            return ['success' => false, 'error' => 'Invalid provider selection'];
+        }
+
+        if (!$provider instanceof AiConfigProviderInterface) {
             return ['success' => false, 'error' => 'Provider does not support config checking'];
         }
 
-        $configStatus = $this->aiProvider->checkConfig($project->root_directory);
+        $configStatus = $provider->checkConfig($project->root_directory);
 
         return [
             'success' => true,
@@ -327,6 +345,8 @@ class AiChatController extends Controller
             return;
         }
 
+        $provider = $prepared['provider'];
+
         $userId = Yii::$app->user->id;
         $activeCount = AiRun::find()->forUser($userId)->active()->count();
         if ($activeCount >= AiRun::MAX_CONCURRENT_RUNS) {
@@ -334,7 +354,7 @@ class AiChatController extends Controller
             return;
         }
 
-        $run = $this->createRun($project, $prepared);
+        $run = $this->createRun($project, $prepared, $provider);
         if ($run === null) {
             $this->sendSseError('Failed to create run.');
             return;
@@ -361,7 +381,13 @@ class AiChatController extends Controller
             return ['success' => true, 'cancelled' => false];
         }
 
-        $cancelled = $this->aiProvider->cancelProcess($streamToken);
+        $cancelled = false;
+        foreach ($this->providerRegistry->all() as $provider) {
+            if ($provider->cancelProcess($streamToken)) {
+                $cancelled = true;
+                break;
+            }
+        }
 
         return [
             'success' => true,
@@ -389,6 +415,8 @@ class AiChatController extends Controller
             return $prepared['error'];
         }
 
+        $provider = $prepared['provider'];
+
         $userId = Yii::$app->user->id;
         $activeCount = AiRun::find()->forUser($userId)->active()->count();
 
@@ -400,7 +428,7 @@ class AiChatController extends Controller
             ];
         }
 
-        $run = $this->createRun($project, $prepared);
+        $run = $this->createRun($project, $prepared, $provider);
         if ($run === null) {
             return [
                 'success' => false,
@@ -454,6 +482,10 @@ class AiChatController extends Controller
 
         if (!$run->isActive()) {
             return ['success' => true, 'cancelled' => false, 'reason' => 'Run is not active.'];
+        }
+
+        if ($this->providerRegistry->has($run->provider)) {
+            $this->providerRegistry->get($run->provider)->cancelProcess($run->stream_token ?? '');
         }
 
         $run->markCancelled();
@@ -565,13 +597,23 @@ class AiChatController extends Controller
 
         $workingDirectory = !empty($project->root_directory) ? $project->root_directory : '';
 
+        $defaultProvider = $this->providerRegistry->getDefault();
         $options = [
-            'model' => 'sonnet',
-            'permissionMode' => 'plan',
             'appendSystemPrompt' => $this->buildSummarizerSystemPrompt(),
         ];
 
-        $result = $this->aiProvider->execute(
+        if ($defaultProvider instanceof AiConfigProviderInterface) {
+            $supportedModels = $defaultProvider->getSupportedModels();
+            if (isset($supportedModels['sonnet'])) {
+                $options['model'] = 'sonnet';
+            }
+            $supportedModes = $defaultProvider->getSupportedPermissionModes();
+            if (in_array('plan', $supportedModes, true)) {
+                $options['permissionMode'] = 'plan';
+            }
+        }
+
+        $result = $defaultProvider->execute(
             $conversation,
             $workingDirectory,
             120,
@@ -743,13 +785,38 @@ class AiChatController extends Controller
     }
 
     /**
-     * @return array{markdown: string, options: array, workingDirectory: string, project: Project, sessionId: ?string, streamToken: ?string}|array{error: array}
+     * @return array{markdown: string, options: array, workingDirectory: string, project: Project, sessionId: ?string, streamToken: ?string, provider: AiProviderInterface}|array{error: array}
      */
     private function prepareRunRequest(Project $project): array
     {
         $requestOptions = json_decode(Yii::$app->request->rawBody, true) ?? [];
         if (!is_array($requestOptions)) {
             return ['error' => ['success' => false, 'error' => 'Invalid request format.']];
+        }
+
+        // Resolve provider from request (default: registry default)
+        $providerIdentifier = $requestOptions['provider'] ?? $this->providerRegistry->getDefaultIdentifier();
+        if (!is_string($providerIdentifier) || !$this->providerRegistry->has($providerIdentifier)) {
+            $userId = Yii::$app->user->id;
+            Yii::warning("Unknown provider attempted: {$providerIdentifier}, user: {$userId}", LogCategory::AI->value);
+            Yii::$app->response->statusCode = 400;
+            return ['error' => ['success' => false, 'error' => 'Invalid provider selection']];
+        }
+        $provider = $this->providerRegistry->get($providerIdentifier);
+
+        // Cross-provider session check
+        $sessionId = $requestOptions['sessionId'] ?? null;
+        if ($sessionId !== null && is_string($sessionId)) {
+            $userId = Yii::$app->user->id;
+            $firstRun = AiRun::find()
+                ->forUser($userId)
+                ->forSession($sessionId)
+                ->orderedByCreatedAsc()
+                ->one();
+            if ($firstRun !== null && $firstRun->provider !== $providerIdentifier) {
+                Yii::warning("Cross-provider session attempt: {$providerIdentifier} vs {$firstRun->provider}, user: {$userId}", LogCategory::AI->value);
+                $sessionId = null;
+            }
         }
 
         $customPrompt = $requestOptions['prompt'] ?? null;
@@ -789,10 +856,11 @@ class AiChatController extends Controller
             'options' => $options,
             'workingDirectory' => $workingDirectory,
             'project' => $project,
-            'sessionId' => $requestOptions['sessionId'] ?? null,
+            'sessionId' => $sessionId,
             'streamToken' => $this->sanitizeStreamToken(
                 is_string($requestOptions['streamToken'] ?? null) ? $requestOptions['streamToken'] : null
             ),
+            'provider' => $provider,
         ];
     }
 
@@ -801,7 +869,7 @@ class AiChatController extends Controller
      *
      * @return AiRun|null The saved run, or null on validation failure
      */
-    private function createRun(Project $project, array $prepared): ?AiRun
+    private function createRun(Project $project, array $prepared, AiProviderInterface $provider): ?AiRun
     {
         $run = new AiRun();
         $run->user_id = Yii::$app->user->id;
@@ -811,7 +879,7 @@ class AiChatController extends Controller
         $run->session_id = $prepared['sessionId'];
         $run->options = json_encode($prepared['options']);
         $run->working_directory = $prepared['workingDirectory'];
-        $run->provider = $this->aiProvider->getIdentifier();
+        $run->provider = $provider->getIdentifier();
 
         if (!$run->save()) {
             return null;
@@ -1033,11 +1101,12 @@ class AiChatController extends Controller
      */
     private function loadAiCommands(?string $rootDirectory, Project $project): array
     {
-        if ($rootDirectory === null || !$this->aiProvider instanceof AiConfigProviderInterface) {
+        $defaultProvider = $this->providerRegistry->getDefault();
+        if ($rootDirectory === null || !$defaultProvider instanceof AiConfigProviderInterface) {
             return [];
         }
 
-        $commands = $this->aiProvider->loadCommands($rootDirectory);
+        $commands = $defaultProvider->loadCommands($rootDirectory);
         if ($commands === []) {
             return [];
         }
@@ -1094,6 +1163,53 @@ class AiChatController extends Controller
         exec($command, $output, $exitCode);
 
         return ($exitCode === 0 && !empty($output[0])) ? trim($output[0]) : null;
+    }
+
+    /**
+     * Resolves the provider from query parameter or default.
+     * Used by GET endpoints (usage, check-config).
+     */
+    private function resolveProviderFromRequest(): ?AiProviderInterface
+    {
+        $identifier = Yii::$app->request->get('provider', $this->providerRegistry->getDefaultIdentifier());
+        if (!is_string($identifier) || !$this->providerRegistry->has($identifier)) {
+            $userId = Yii::$app->user->id;
+            Yii::warning("Unknown provider attempted: {$identifier}, user: {$userId}", LogCategory::AI->value);
+            return null;
+        }
+
+        return $this->providerRegistry->get($identifier);
+    }
+
+    /**
+     * Builds provider data array for the view (pre-rendered as JS object).
+     */
+    private function buildProviderData(): array
+    {
+        $providerData = [];
+        foreach ($this->providerRegistry->all() as $id => $provider) {
+            $entry = [
+                'name' => $provider->getName(),
+                'identifier' => $id,
+                'supportsUsage' => false,
+                'supportsConfig' => false,
+            ];
+            if ($provider instanceof AiConfigProviderInterface) {
+                $entry['models'] = array_merge(['' => '(Use default)'], $provider->getSupportedModels());
+                $supportedModes = $provider->getSupportedPermissionModes();
+                $allLabels = AiPermissionMode::labels();
+                $filteredLabels = array_intersect_key($allLabels, array_flip($supportedModes));
+                $entry['permissionModes'] = array_merge(['' => '(Use default)'], $filteredLabels);
+                $entry['supportsConfig'] = true;
+            } else {
+                $entry['models'] = ['' => '(Use default)'];
+                $entry['permissionModes'] = [];
+            }
+            $entry['supportsUsage'] = $provider instanceof AiUsageProviderInterface;
+            $providerData[$id] = $entry;
+        }
+
+        return $providerData;
     }
 
     /**

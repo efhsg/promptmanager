@@ -586,6 +586,15 @@ class ClaudeCliProvider implements
         return AiPermissionMode::values();
     }
 
+    public function getSupportedModels(): array
+    {
+        return [
+            'sonnet' => 'Sonnet',
+            'opus' => 'Opus',
+            'haiku' => 'Haiku',
+        ];
+    }
+
     // ──────────────────────────────────────────────────────────
     // Public helpers (Claude-specific, not on interface)
     // ──────────────────────────────────────────────────────────

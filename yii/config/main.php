@@ -7,6 +7,7 @@
 
 use app\components\ProjectContext;
 use app\services\ai\AiProviderInterface;
+use app\services\ai\AiProviderRegistry;
 use app\services\ai\providers\ClaudeCliProvider;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
@@ -150,12 +151,22 @@ $config = [
 ];
 
 $config['container'] = [
+    'singletons' => [
+        'aiProvider.claude' => ClaudeCliProvider::class,
+        AiProviderRegistry::class => function () {
+            return new AiProviderRegistry([
+                Yii::$container->get('aiProvider.claude'),
+            ]);
+        },
+    ],
     'definitions' => [
         PathService::class => [
             'class' => PathService::class,
             '__construct()' => [$params['pathMappings'] ?? []],
         ],
-        AiProviderInterface::class => ClaudeCliProvider::class,
+        AiProviderInterface::class => function () {
+            return Yii::$container->get(AiProviderRegistry::class)->getDefault();
+        },
         'app\services\AiCompletionClient' => [
             'class' => 'app\services\ClaudeCliCompletionClient',
         ],

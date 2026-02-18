@@ -18,6 +18,8 @@ use yii\web\View;
 /** @var int|null $replayRunId */
 /** @var string|null $replayRunSummary */
 /** @var array $sessionHistory */
+/** @var array $providerData */
+/** @var string $defaultProvider */
 
 QuillAsset::register($this);
 HighlightAsset::register($this);
@@ -52,24 +54,20 @@ $resumeSessionIdJson = Json::encode($resumeSessionId, JSON_UNESCAPED_UNICODE | J
 $replayRunIdJson = Json::encode($replayRunId, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $replayRunSummaryJson = Json::encode($replayRunSummary, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $sessionHistoryJson = Json::encode($sessionHistory ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$providerDataJson = Json::encode($providerData, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$defaultProviderJson = Json::encode($defaultProvider, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
-$permissionModes = [
-    '' => '(Use default)',
-    'plan' => 'Plan (restricted to planning)',
-    'dontAsk' => 'Don\'t Ask (fail on permission needed)',
-    'bypassPermissions' => 'Bypass Permissions (auto-approve all)',
-    'acceptEdits' => 'Accept Edits (auto-accept edits only)',
-    'default' => 'Default (interactive, may hang)',
-];
+$defaultProviderData = $providerData[$defaultProvider] ?? [];
+$defaultProviderName = $defaultProviderData['name'] ?? 'AI';
+$models = $defaultProviderData['models'] ?? ['' => '(Use default)'];
+$permissionModes = $defaultProviderData['permissionModes'] ?? [];
+$showProviderSelector = count($providerData) > 1;
+$providerOptions = [];
+foreach ($providerData as $id => $pd) {
+    $providerOptions[$id] = Html::encode($pd['name']);
+}
 
-$models = [
-    '' => '(Use default)',
-    'sonnet' => 'Sonnet',
-    'opus' => 'Opus',
-    'haiku' => 'Haiku',
-];
-
-$this->title = 'Claude CLI';
+$this->title = Html::encode($defaultProviderName) . ' CLI';
 if ($breadcrumbs !== null) {
     foreach (json_decode($breadcrumbs, true) ?? [] as $crumb) {
         if (isset($crumb['label'])) {
@@ -81,16 +79,17 @@ if ($breadcrumbs !== null) {
     $this->params['breadcrumbs'][] = ['label' => 'Projects', 'url' => ['/project/index']];
     $this->params['breadcrumbs'][] = ['label' => Html::encode($project->name), 'url' => ['/project/view', 'id' => $project->id]];
 }
-$this->params['breadcrumbs'][] = 'Claude CLI';
+$this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
 ?>
 
 <div class="ai-chat-page container">
     <!-- Page Header -->
     <div class="d-none d-md-flex justify-content-between align-items-center mb-4">
         <div>
-            <h1 class="h3 mb-0"><i class="bi bi-terminal-fill me-2"></i>Claude CLI</h1>
+            <h1 class="h3 mb-0"><i class="bi bi-terminal-fill me-2"></i><?= Html::encode($defaultProviderName) ?> CLI</h1>
         </div>
     </div>
+    <div id="ai-provider-status" class="visually-hidden" aria-live="polite"></div>
 
     <!-- Combined bar (settings badges | usage summary) — always on top -->
     <div id="claude-combined-bar" class="claude-combined-bar claude-combined-bar--loading mb-3" role="button">
@@ -124,18 +123,36 @@ $this->params['breadcrumbs'][] = 'Claude CLI';
                 </div>
 
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label for="claude-model" class="form-label">Model</label>
-                        <?= Html::dropDownList('claude-model', '', $models, [
-                            'id' => 'claude-model',
+                    <?php if ($showProviderSelector): ?>
+                    <div class="col-md-4">
+                        <label for="ai-provider" class="form-label">Provider</label>
+                        <?= Html::dropDownList('ai-provider', $defaultProvider, $providerOptions, [
+                            'id' => 'ai-provider',
                             'class' => 'form-select',
+                            'aria-label' => 'Select AI provider',
                         ]) ?>
                     </div>
+                    <div class="col-md-4">
+                    <?php else: ?>
                     <div class="col-md-6">
-                        <label for="claude-permission-mode" class="form-label">Permission Mode</label>
-                        <?= Html::dropDownList('claude-permission-mode', '', $permissionModes, [
-                            'id' => 'claude-permission-mode',
+                    <?php endif; ?>
+                        <label for="ai-model" class="form-label">Model</label>
+                        <?= Html::dropDownList('ai-model', '', $models, [
+                            'id' => 'ai-model',
                             'class' => 'form-select',
+                            'aria-label' => 'Select AI model',
+                        ]) ?>
+                    </div>
+                    <?php if ($showProviderSelector): ?>
+                    <div class="col-md-4">
+                    <?php else: ?>
+                    <div class="col-md-6">
+                    <?php endif; ?>
+                        <label for="ai-permission-mode" class="form-label">Permission Mode</label>
+                        <?= Html::dropDownList('ai-permission-mode', '', $permissionModes, [
+                            'id' => 'ai-permission-mode',
+                            'class' => 'form-select',
+                            'aria-label' => 'Select permission mode',
                         ]) ?>
                     </div>
                 </div>
@@ -543,6 +560,8 @@ $js = <<<JS
             usageUrl: $usageUrlJson,
             projectName: $projectNameJson,
             gitBranch: $gitBranchJson,
+            providerData: $providerDataJson,
+            defaultProvider: $defaultProviderJson,
             maxContext: 200000,
             summarizing: false,
             replayRunId: $replayRunIdJson,
@@ -658,8 +677,10 @@ $js = <<<JS
 
             prefillFromDefaults: function() {
                 var d = this.projectDefaults;
-                document.getElementById('claude-model').value = d.model || '';
-                document.getElementById('claude-permission-mode').value = d.permissionMode || '';
+                var modelEl = document.getElementById('ai-model');
+                var permEl = document.getElementById('ai-permission-mode');
+                if (modelEl) modelEl.value = d.model || '';
+                if (permEl) permEl.value = d.permissionMode || '';
             },
 
             checkConfigStatus: function() {
@@ -668,7 +689,12 @@ $js = <<<JS
 
                 if (!this.checkConfigUrl) return;
 
-                fetch(this.checkConfigUrl, {
+                var providerEl = document.getElementById('ai-provider');
+                var provider = providerEl ? providerEl.value : this.defaultProvider;
+                var sep = this.checkConfigUrl.indexOf('?') > -1 ? '&' : '?';
+                var url = this.checkConfigUrl + sep + 'provider=' + encodeURIComponent(provider);
+
+                fetch(url, {
                     method: 'GET',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
@@ -844,19 +870,97 @@ $js = <<<JS
                 document.getElementById('claude-summarize-auto-btn').addEventListener('click', function() {
                     self.summarizeAndContinue(false);
                 });
+
+                var providerEl = document.getElementById('ai-provider');
+                if (providerEl) {
+                    providerEl.addEventListener('change', function() {
+                        var id = this.value;
+                        if (!Object.hasOwn(self.providerData, id)) return;
+                        var data = self.providerData[id];
+                        self.repopulateSelect('ai-model', data.models);
+                        self.repopulateSelect('ai-permission-mode', data.permissionModes);
+                        var appSuffix = document.title.indexOf(' - ') > -1
+                            ? ' - ' + document.title.split(' - ').slice(1).join(' - ')
+                            : '';
+                        document.title = data.name + ' CLI' + appSuffix;
+                        var h1 = document.querySelector('.ai-chat-page h1');
+                        if (h1) h1.textContent = data.name + ' CLI';
+                        if (self.sessionId)
+                            self.showProviderSwitchWarning(data.name);
+                        self.updateSettingsSummary();
+                        self.updateCapabilityBadges(data);
+                        var statusEl = document.getElementById('ai-provider-status');
+                        if (statusEl) statusEl.textContent = 'Model and permission options updated for ' + data.name;
+                    });
+                }
             },
 
             getOptions: function() {
+                var providerEl = document.getElementById('ai-provider');
                 return {
-                    model: document.getElementById('claude-model').value,
-                    permissionMode: document.getElementById('claude-permission-mode').value
+                    provider: providerEl ? providerEl.value : this.defaultProvider,
+                    model: document.getElementById('ai-model').value,
+                    permissionMode: document.getElementById('ai-permission-mode').value
                 };
+            },
+
+            repopulateSelect: function(id, options) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                el.innerHTML = '';
+                Object.keys(options).forEach(function(key) {
+                    var opt = document.createElement('option');
+                    opt.value = key;
+                    opt.textContent = options[key];
+                    el.appendChild(opt);
+                });
+            },
+
+            showProviderSwitchWarning: function(providerName) {
+                var existing = document.getElementById('ai-provider-switch-warning');
+                if (existing) existing.remove();
+                var alert = document.createElement('div');
+                alert.id = 'ai-provider-switch-warning';
+                alert.className = 'alert alert-warning alert-dismissible py-2 mb-2';
+                alert.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>' +
+                    'Switching to <strong>' + this.escapeHtml(providerName) + '</strong> will start a new session. ' +
+                    'The current session context will not carry over.' +
+                    '<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button>';
+                var promptCard = document.querySelector('.claude-prompt-card-sticky');
+                if (promptCard && promptCard.parentNode)
+                    promptCard.parentNode.insertBefore(alert, promptCard);
+            },
+
+            updateCapabilityBadges: function(data) {
+                var badge = document.getElementById('claude-config-badge');
+                if (!data.supportsConfig) {
+                    if (badge) {
+                        badge.className = 'badge bg-secondary';
+                        badge.textContent = 'Config N/A';
+                        badge.title = 'This provider does not support config checking';
+                        badge.classList.remove('d-none');
+                    }
+                } else {
+                    this.checkConfigStatus();
+                }
+
+                if (!data.supportsUsage) {
+                    var usageSummary = document.getElementById('claude-combined-usage');
+                    if (usageSummary)
+                        usageSummary.innerHTML = '<span class="text-muted small">Usage not available for ' + this.escapeHtml(data.name) + '</span>';
+                } else {
+                    this.fetchSubscriptionUsage();
+                }
             },
 
             send: function() {
                 var self = this;
                 var options = this.getOptions();
                 var sendBtn = document.getElementById('claude-send-btn');
+
+                // Dismiss provider switch warning on first send
+                var switchWarning = document.getElementById('ai-provider-switch-warning');
+                if (switchWarning) switchWarning.remove();
 
                 this.streamToken = this.generateUUID();
                 options.streamToken = this.streamToken;
@@ -2190,7 +2294,11 @@ $js = <<<JS
             fetchSubscriptionUsage: function() {
                 if (!this.usageUrl) return;
                 var self = this;
-                fetch(this.usageUrl)
+                var providerEl = document.getElementById('ai-provider');
+                var provider = providerEl ? providerEl.value : this.defaultProvider;
+                var sep = this.usageUrl.indexOf('?') > -1 ? '&' : '?';
+                var url = this.usageUrl + sep + 'provider=' + encodeURIComponent(provider);
+                fetch(url)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         if (data.success && data.data)
@@ -2729,8 +2837,8 @@ $js = <<<JS
 
             updateSettingsSummary: function() {
                 var summary = document.getElementById('claude-combined-settings');
-                var modelEl = document.getElementById('claude-model');
-                var permEl = document.getElementById('claude-permission-mode');
+                var modelEl = document.getElementById('ai-model');
+                var permEl = document.getElementById('ai-permission-mode');
 
                 summary.innerHTML = '';
 
@@ -2750,6 +2858,13 @@ $js = <<<JS
 
                 if (this.gitBranch)
                     addBadge('bi-signpost-split', this.gitBranch, 'Git branch');
+
+                var providerEl = document.getElementById('ai-provider');
+                if (providerEl) {
+                    var providerName = providerEl.options[providerEl.selectedIndex]?.text || '';
+                    if (providerName)
+                        addBadge('bi-robot', providerName, 'Provider', 'badge-setting');
+                }
 
                 if (this.configBadgeLabel)
                     addBadge(this.configBadgeIcon, this.configBadgeLabel, this.configBadgeTitle, this.configBadgeBg);

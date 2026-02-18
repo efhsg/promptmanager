@@ -5,9 +5,11 @@ namespace app\jobs;
 use app\handlers\AiQuickHandler;
 use app\models\AiRun;
 use app\services\ai\AiProviderInterface;
+use app\services\ai\AiProviderRegistry;
 use app\services\ai\AiStreamingProviderInterface;
 use common\enums\AiRunStatus;
 use common\enums\LogCategory;
+use InvalidArgumentException;
 use RuntimeException;
 use Throwable;
 use Yii;
@@ -52,7 +54,17 @@ class RunAiJob implements RetryableJobInterface
             return;
         }
 
-        $streamingProvider = $this->createStreamingProvider();
+        try {
+            $provider = $this->resolveProvider($run);
+        } catch (InvalidArgumentException $e) {
+            $run->markFailed("Provider '{$run->provider}' is not configured");
+            $this->writeDoneMarker($streamFile, $streamFilePath);
+            if (is_resource($streamFile)) {
+                fclose($streamFile);
+            }
+            return;
+        }
+
         $options = $run->getDecodedOptions();
         $project = $run->project;
 
@@ -87,16 +99,46 @@ class RunAiJob implements RetryableJobInterface
                 return;
             }
 
-            $result = $streamingProvider->executeStreaming(
-                $run->prompt_markdown,
-                $run->working_directory ?? '',
-                $onLine,
-                3600,
-                $options,
-                $project,
-                $run->session_id,
-                null
-            );
+            if ($provider instanceof AiStreamingProviderInterface) {
+                $result = $provider->executeStreaming(
+                    $run->prompt_markdown,
+                    $run->working_directory ?? '',
+                    $onLine,
+                    3600,
+                    $options,
+                    $project,
+                    $run->session_id,
+                    null
+                );
+            } else {
+                // Sync fallback for non-streaming providers
+                $syncResult = $provider->execute(
+                    $run->prompt_markdown,
+                    $run->working_directory ?? '',
+                    3600,
+                    $options,
+                    $project,
+                    $run->session_id
+                );
+                // Write result as NDJSON (include metadata so extractMetadata/extractSessionId can find it)
+                $ndjsonEvent = [
+                    'type' => 'result',
+                    'result' => $syncResult['output'] ?? '',
+                ];
+                foreach (['session_id', 'duration_ms', 'num_turns', 'modelUsage'] as $key) {
+                    if (isset($syncResult[$key])) {
+                        $ndjsonEvent[$key] = $syncResult[$key];
+                    }
+                }
+                $ndjsonResult = json_encode($ndjsonEvent);
+                fwrite($streamFile, $ndjsonResult . "\n");
+                fflush($streamFile);
+
+                $result = [
+                    'exitCode' => $syncResult['exitCode'],
+                    'error' => $syncResult['error'] ?? '',
+                ];
+            }
 
             // Read the full stream log for DB storage (file may have been
             // removed by a concurrent cleanup while the run was in progress)
@@ -286,6 +328,7 @@ class RunAiJob implements RetryableJobInterface
 
         if ($run->session_id !== null) {
             $runs = AiRun::find()
+                ->forUser($run->user_id)
                 ->forSession($run->session_id)
                 ->orderedByCreatedAsc()
                 ->all();
@@ -317,9 +360,13 @@ class RunAiJob implements RetryableJobInterface
         return $dialog;
     }
 
-    protected function createStreamingProvider(): AiStreamingProviderInterface
+    /**
+     * @throws InvalidArgumentException When provider is not configured
+     */
+    protected function resolveProvider(AiRun $run): AiProviderInterface
     {
-        return Yii::$container->get(AiProviderInterface::class);
+        $registry = Yii::$container->get(AiProviderRegistry::class);
+        return $registry->get($run->provider);
     }
 
     protected function createQuickHandler(): AiQuickHandler

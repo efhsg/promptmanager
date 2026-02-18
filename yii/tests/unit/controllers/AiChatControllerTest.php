@@ -8,6 +8,7 @@ use app\models\AiRun;
 use app\models\Project;
 use common\enums\AiRunStatus;
 use app\modules\identity\models\User;
+use app\services\ai\AiProviderRegistry;
 use app\services\ai\providers\ClaudeCliProvider;
 use app\services\AiRunCleanupService;
 use app\services\AiStreamRelayService;
@@ -816,18 +817,21 @@ class AiChatControllerTest extends Unit
 
     private function createControllerWithAiProvider(ClaudeCliProvider $aiProvider): AiChatController
     {
+        $this->configureProviderMockDefaults($aiProvider);
+
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $quickHandler = $this->createMock(AiQuickHandler::class);
         $formatConverter = new CopyFormatConverter();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
         $pathService = new PathService();
+        $registry = new AiProviderRegistry([$aiProvider]);
 
         return new AiChatController(
             'ai-chat',
             Yii::$app,
             $permissionService,
-            $aiProvider,
+            $registry,
             $formatConverter,
             $quickHandler,
             $streamRelayService,
@@ -840,22 +844,39 @@ class AiChatControllerTest extends Unit
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $aiProvider = $this->createMock(ClaudeCliProvider::class);
+        $this->configureProviderMockDefaults($aiProvider);
         $formatConverter = new CopyFormatConverter();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
         $pathService = new PathService();
+        $registry = new AiProviderRegistry([$aiProvider]);
 
         return new AiChatController(
             'ai-chat',
             Yii::$app,
             $permissionService,
-            $aiProvider,
+            $registry,
             $formatConverter,
             $quickHandler,
             $streamRelayService,
             $cleanupService,
             $pathService
         );
+    }
+
+    private function configureProviderMockDefaults(ClaudeCliProvider $mock): void
+    {
+        $mock->method('getIdentifier')->willReturn('claude');
+        $mock->method('getName')->willReturn('Claude');
+        $mock->method('getSupportedModels')->willReturn([
+            '' => '(Use default)',
+            'sonnet' => 'Sonnet',
+            'opus' => 'Opus',
+            'haiku' => 'Haiku',
+        ]);
+        $mock->method('getSupportedPermissionModes')->willReturn([
+            'plan', 'dontAsk', 'bypassPermissions', 'acceptEdits', 'default',
+        ]);
     }
 
     private function createProject(int $userId): Project
