@@ -158,6 +158,17 @@ class DirectorySelector {
         return div.innerHTML;
     }
 
+    _setLoadingState(loading) {
+        if (loading) {
+            this._originalPlaceholder = this.input.placeholder;
+            this.input.placeholder = 'Loading directories\u2026';
+            this.input.disabled = true;
+        } else {
+            this.input.placeholder = this._originalPlaceholder || this.placeholder;
+            this.input.disabled = false;
+        }
+    }
+
     /**
      * Load directories for a project
      * @param {string|number} projectId - The project ID
@@ -171,6 +182,7 @@ class DirectorySelector {
         }
 
         this.isLoading = true;
+        this._setLoadingState(true);
 
         try {
             // Check if pathListUrl already has query params
@@ -193,6 +205,7 @@ class DirectorySelector {
             return { paths: [], error: 'Failed to load directories' };
         } finally {
             this.isLoading = false;
+            this._setLoadingState(false);
         }
     }
 

@@ -233,13 +233,13 @@ class PathServiceTest extends Unit
 
     public function testCollectPathsWithMultipleBlacklistRulesAndExceptions(): void
     {
-        $vendor = new vfsStreamDirectory('vendor');
-        $vendorBin = new vfsStreamDirectory('bin');
-        $vendorLib = new vfsStreamDirectory('lib');
-        $vendorBin->addChild(new vfsStreamFile('tool'));
-        $vendorLib->addChild(new vfsStreamFile('library.php'));
-        $vendor->addChild($vendorBin);
-        $vendor->addChild($vendorLib);
+        $packages = new vfsStreamDirectory('packages');
+        $packagesBin = new vfsStreamDirectory('bin');
+        $packagesLib = new vfsStreamDirectory('lib');
+        $packagesBin->addChild(new vfsStreamFile('tool'));
+        $packagesLib->addChild(new vfsStreamFile('library.php'));
+        $packages->addChild($packagesBin);
+        $packages->addChild($packagesLib);
 
         $tests = new vfsStreamDirectory('tests');
         $testsUnit = new vfsStreamDirectory('unit');
@@ -249,19 +249,58 @@ class PathServiceTest extends Unit
         $tests->addChild($testsUnit);
         $tests->addChild($testsOutput);
 
-        $this->root->addChild($vendor);
+        $this->root->addChild($packages);
         $this->root->addChild($tests);
 
         $blacklist = [
-            ['path' => 'vendor', 'exceptions' => ['bin']],
+            ['path' => 'packages', 'exceptions' => ['bin']],
             ['path' => 'tests', 'exceptions' => ['unit']],
         ];
 
         $paths = $this->service->collectPaths($this->root->url(), false, [], $blacklist);
 
-        $this->assertContains('vendor/bin/tool', $paths);
-        $this->assertNotContains('vendor/lib/library.php', $paths);
+        $this->assertContains('packages/bin/tool', $paths);
+        $this->assertNotContains('packages/lib/library.php', $paths);
         $this->assertContains('tests/unit/Test.php', $paths);
         $this->assertNotContains('tests/_output/coverage.xml', $paths);
+    }
+
+    public function testCollectPathsAlwaysSkipsBuiltInDirectories(): void
+    {
+        $vendor = new vfsStreamDirectory('vendor');
+        $vendor->addChild(new vfsStreamFile('autoload.php'));
+        $nodeModules = new vfsStreamDirectory('node_modules');
+        $nodeModules->addChild(new vfsStreamFile('package.json'));
+        $git = new vfsStreamDirectory('.git');
+        $git->addChild(new vfsStreamFile('HEAD'));
+        $svn = new vfsStreamDirectory('.svn');
+        $svn->addChild(new vfsStreamFile('entries'));
+        $hg = new vfsStreamDirectory('.hg');
+        $hg->addChild(new vfsStreamFile('dirstate'));
+        $idea = new vfsStreamDirectory('.idea');
+        $idea->addChild(new vfsStreamFile('workspace.xml'));
+        $vscode = new vfsStreamDirectory('.vscode');
+        $vscode->addChild(new vfsStreamFile('settings.json'));
+        $src = new vfsStreamDirectory('src');
+        $src->addChild(new vfsStreamFile('App.php'));
+        $this->root->addChild($vendor);
+        $this->root->addChild($nodeModules);
+        $this->root->addChild($git);
+        $this->root->addChild($svn);
+        $this->root->addChild($hg);
+        $this->root->addChild($idea);
+        $this->root->addChild($vscode);
+        $this->root->addChild($src);
+
+        $paths = $this->service->collectPaths($this->root->url(), false);
+
+        $this->assertContains('src/App.php', $paths);
+        $this->assertNotContains('vendor/autoload.php', $paths);
+        $this->assertNotContains('node_modules/package.json', $paths);
+        $this->assertNotContains('.git/HEAD', $paths);
+        $this->assertNotContains('.svn/entries', $paths);
+        $this->assertNotContains('.hg/dirstate', $paths);
+        $this->assertNotContains('.idea/workspace.xml', $paths);
+        $this->assertNotContains('.vscode/settings.json', $paths);
     }
 }

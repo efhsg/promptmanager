@@ -8,6 +8,17 @@ class PathService
 {
     private const PATH_LIST_MAX_DEPTH = 10;
 
+    /** Directories always skipped during traversal (VCS, package managers, IDE, build output). */
+    private const ALWAYS_SKIPPED_DIRECTORIES = [
+        '.git',
+        '.svn',
+        '.hg',
+        'node_modules',
+        'vendor',
+        '.idea',
+        '.vscode',
+    ];
+
     public function __construct(private readonly array $pathMappings = []) {}
 
     /**
@@ -54,6 +65,11 @@ class PathService
                 $relative = $this->makeRelativePath($normalizedBase, $childPath);
 
                 $isDir = is_dir($childPath);
+
+                if ($isDir && in_array(strtolower($child), self::ALWAYS_SKIPPED_DIRECTORIES, true)) {
+                    continue;
+                }
+
                 $isBlacklisted = $relative !== '/' && $this->isBlacklistedPath($relative, $normalizedBlacklist);
                 $shouldTraverse = !$isBlacklisted || $this->hasWhitelistExceptions($relative, $normalizedBlacklist);
 
