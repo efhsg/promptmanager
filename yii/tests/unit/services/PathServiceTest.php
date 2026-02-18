@@ -167,35 +167,68 @@ class PathServiceTest extends Unit
 
     public function testTranslatePathAppliesMapping(): void
     {
-        $mappings = [
+        $service = new PathService([
             '/home/user/projects' => '/projects',
             '/c/www' => '/projects_2',
-        ];
+        ]);
 
-        $this->assertSame('/projects/my-app', $this->service->translatePath('/home/user/projects/my-app', $mappings));
-        $this->assertSame('/projects_2/ice/lvs-bes', $this->service->translatePath('/c/www/ice/lvs-bes', $mappings));
+        $this->assertSame('/projects/my-app', $service->translatePath('/home/user/projects/my-app'));
+        $this->assertSame('/projects_2/ice/lvs-bes', $service->translatePath('/c/www/ice/lvs-bes'));
     }
 
     public function testTranslatePathReturnsOriginalWhenNoMappingMatches(): void
     {
-        $mappings = ['/home/user/projects' => '/projects'];
+        $service = new PathService(['/home/user/projects' => '/projects']);
 
-        $this->assertSame('/other/path', $this->service->translatePath('/other/path', $mappings));
+        $this->assertSame('/other/path', $service->translatePath('/other/path'));
     }
 
     public function testTranslatePathWithEmptyMappings(): void
     {
-        $this->assertSame('/some/path', $this->service->translatePath('/some/path', []));
+        $this->assertSame('/some/path', $this->service->translatePath('/some/path'));
     }
 
     public function testTranslatePathUsesFirstMatchingMapping(): void
     {
-        $mappings = [
+        $service = new PathService([
             '/home/user' => '/mapped_user',
             '/home/user/projects' => '/mapped_projects',
-        ];
+        ]);
 
-        $this->assertSame('/mapped_user/projects/app', $this->service->translatePath('/home/user/projects/app', $mappings));
+        $this->assertSame('/mapped_user/projects/app', $service->translatePath('/home/user/projects/app'));
+    }
+
+    public function testCollectPathsTranslatesRootDirectoryAutomatically(): void
+    {
+        $this->root->addChild(new vfsStreamFile('file.txt'));
+
+        $service = new PathService(['/host/project' => $this->root->url()]);
+
+        $paths = $service->collectPaths('/host/project', false);
+
+        $this->assertSame(['file.txt'], $paths);
+    }
+
+    public function testResolveRequestedPathTranslatesRootDirectoryAutomatically(): void
+    {
+        $dir = new vfsStreamDirectory('sub');
+        $dir->addChild(new vfsStreamFile('readme.md'));
+        $this->root->addChild($dir);
+
+        $service = new PathService(['/host/project' => $this->root->url()]);
+
+        $resolved = $service->resolveRequestedPath('/host/project', 'sub/readme.md');
+
+        $this->assertSame($this->root->url() . '/sub/readme.md', $resolved);
+    }
+
+    public function testTranslatePathReturnsPathUnchangedWhenAlreadyTranslated(): void
+    {
+        $service = new PathService(['/host/project' => '/container/project']);
+
+        $translated = $service->translatePath('/container/project/src/file.php');
+
+        $this->assertSame('/container/project/src/file.php', $translated);
     }
 
     public function testCollectPathsWithMultipleBlacklistRulesAndExceptions(): void

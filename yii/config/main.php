@@ -11,6 +11,7 @@ use app\services\ai\providers\ClaudeCliProvider;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ModelService;
+use app\services\PathService;
 use app\services\ProjectService;
 use app\services\PromptTemplateService;
 use app\services\UserPreferenceService;
@@ -150,6 +151,10 @@ $config = [
 
 $config['container'] = [
     'definitions' => [
+        PathService::class => [
+            'class' => PathService::class,
+            '__construct()' => [$params['pathMappings'] ?? []],
+        ],
         AiProviderInterface::class => ClaudeCliProvider::class,
         'app\services\AiCompletionClient' => [
             'class' => 'app\services\ClaudeCliCompletionClient',

@@ -13,6 +13,7 @@ use app\services\AiRunCleanupService;
 use app\services\AiStreamRelayService;
 use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
+use app\services\PathService;
 use Codeception\Test\Unit;
 use ReflectionClass;
 use Yii;
@@ -820,6 +821,7 @@ class AiChatControllerTest extends Unit
         $formatConverter = new CopyFormatConverter();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
+        $pathService = new PathService();
 
         return new AiChatController(
             'ai-chat',
@@ -829,7 +831,8 @@ class AiChatControllerTest extends Unit
             $formatConverter,
             $quickHandler,
             $streamRelayService,
-            $cleanupService
+            $cleanupService,
+            $pathService
         );
     }
 
@@ -840,6 +843,7 @@ class AiChatControllerTest extends Unit
         $formatConverter = new CopyFormatConverter();
         $streamRelayService = new AiStreamRelayService();
         $cleanupService = new AiRunCleanupService();
+        $pathService = new PathService();
 
         return new AiChatController(
             'ai-chat',
@@ -849,7 +853,8 @@ class AiChatControllerTest extends Unit
             $formatConverter,
             $quickHandler,
             $streamRelayService,
-            $cleanupService
+            $cleanupService,
+            $pathService
         );
     }
 

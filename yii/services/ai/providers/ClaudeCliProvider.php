@@ -9,6 +9,7 @@ use app\services\ai\AiStreamingProviderInterface;
 use app\services\ai\AiUsageProviderInterface;
 use app\services\ai\AiWorkspaceProviderInterface;
 use app\services\CopyFormatConverter;
+use app\services\PathService;
 use common\enums\AiPermissionMode;
 use common\enums\CopyType;
 use common\enums\LogCategory;
@@ -37,10 +38,12 @@ class ClaudeCliProvider implements
 
     private const WORKSPACE_BASE = '@app/storage/projects';
 
+    private readonly PathService $pathService;
     private CopyFormatConverter $formatConverter;
 
-    public function __construct(?CopyFormatConverter $formatConverter = null)
+    public function __construct(PathService $pathService, ?CopyFormatConverter $formatConverter = null)
     {
+        $this->pathService = $pathService;
         $this->formatConverter = $formatConverter ?? new CopyFormatConverter();
     }
 
@@ -63,7 +66,7 @@ class ClaudeCliProvider implements
         $usedFallback = ($effectiveWorkDir !== $workDir);
         $containerPath = $skipWorkspaceResolution
             ? $effectiveWorkDir
-            : $this->translatePath($effectiveWorkDir);
+            : $this->pathService->translatePath($effectiveWorkDir);
 
         if (!is_dir($containerPath)) {
             return [
@@ -226,7 +229,7 @@ class ClaudeCliProvider implements
         ?string $streamToken = null
     ): array {
         $effectiveWorkDir = $this->determineWorkingDirectory($workDir, $project);
-        $containerPath = $this->translatePath($effectiveWorkDir);
+        $containerPath = $this->pathService->translatePath($effectiveWorkDir);
 
         if (!is_dir($containerPath)) {
             throw new RuntimeException('Working directory does not exist: ' . $effectiveWorkDir);
@@ -521,7 +524,7 @@ class ClaudeCliProvider implements
 
     public function checkConfig(string $path): array
     {
-        $containerPath = $this->translatePath($path);
+        $containerPath = $this->pathService->translatePath($path);
         $pathMapped = ($containerPath !== $path);
 
         $base = [
@@ -554,7 +557,7 @@ class ClaudeCliProvider implements
             return [];
         }
 
-        $containerPath = $this->translatePath($directory);
+        $containerPath = $this->pathService->translatePath($directory);
         $commandsDir = rtrim($containerPath, '/') . '/.claude/commands';
         if (!is_dir($commandsDir)) {
             Yii::debug("Claude commands dir not found: '$commandsDir' (root: '$directory', mapped: '$containerPath')", LogCategory::AI->value);
@@ -600,7 +603,7 @@ class ClaudeCliProvider implements
      */
     public function getGitBranch(string $hostPath): ?string
     {
-        $containerPath = $this->translatePath($hostPath);
+        $containerPath = $this->pathService->translatePath($hostPath);
 
         if (!is_dir($containerPath)) {
             return null;
@@ -702,20 +705,9 @@ class ClaudeCliProvider implements
     // Private helpers
     // ──────────────────────────────────────────────────────────
 
-    private function translatePath(string $hostPath): string
-    {
-        $mappings = Yii::$app->params['pathMappings'] ?? [];
-        foreach ($mappings as $hostPrefix => $containerPrefix) {
-            if (str_starts_with($hostPath, $hostPrefix)) {
-                return $containerPrefix . substr($hostPath, strlen($hostPrefix));
-            }
-        }
-        return $hostPath;
-    }
-
     private function determineWorkingDirectory(string $requestedDir, ?Project $project): string
     {
-        $containerPath = $this->translatePath($requestedDir);
+        $containerPath = $this->pathService->translatePath($requestedDir);
         $pathMapped = ($containerPath !== $requestedDir);
 
         if (is_dir($containerPath)) {
@@ -973,7 +965,7 @@ class ClaudeCliProvider implements
     private function determineConfigSource(string $effectiveDir, string $requestedDir, ?Project $project): string
     {
         if ($effectiveDir === $requestedDir) {
-            $containerPath = $this->translatePath($effectiveDir);
+            $containerPath = $this->pathService->translatePath($effectiveDir);
             $configStatus = $this->hasConfig($containerPath);
             if ($configStatus['hasAnyConfig']) {
                 $parts = [];

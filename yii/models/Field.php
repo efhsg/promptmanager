@@ -218,12 +218,7 @@ class Field extends ActiveRecord
             return;
         }
 
-        if (!is_dir($project->root_directory)) {
-            $this->addError('project_id', 'The configured project root directory is not accessible.');
-            return;
-        }
-
-        $pathService = new PathService();
+        $pathService = Yii::$container->get(PathService::class);
         $absolutePath = $pathService->resolveRequestedPath(
             $project->root_directory,
             $relativePath,

@@ -185,10 +185,7 @@ class FieldController extends Controller
             return ['success' => false, 'message' => 'The selected project has no root directory configured.'];
         }
 
-        $pathMappings = Yii::$app->params['pathMappings'] ?? [];
-        $effectiveRoot = $this->pathService->translatePath($project->root_directory, $pathMappings);
-
-        if (!is_dir($effectiveRoot)) {
+        if (!is_dir($this->pathService->translatePath($project->root_directory))) {
             return ['success' => false, 'message' => 'The configured root directory is not accessible.'];
         }
 
@@ -197,7 +194,7 @@ class FieldController extends Controller
 
         try {
             $paths = $this->pathService->collectPaths(
-                $effectiveRoot,
+                $project->root_directory,
                 $type === 'directory',
                 $allowedExtensions,
                 $blacklistedDirectories
@@ -236,11 +233,8 @@ class FieldController extends Controller
             return ['success' => false, 'message' => 'Invalid file path.'];
         }
 
-        $pathMappings = Yii::$app->params['pathMappings'] ?? [];
-        $effectiveRoot = $this->pathService->translatePath($field->project->root_directory, $pathMappings);
-
         $absolutePath = $this->pathService->resolveRequestedPath(
-            $effectiveRoot,
+            $field->project->root_directory,
             $path,
             $field->project->getBlacklistedDirectories()
         );

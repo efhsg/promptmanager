@@ -14,6 +14,7 @@ use app\services\AiRunCleanupService;
 use app\services\AiStreamRelayService;
 use app\services\CopyFormatConverter;
 use app\services\EntityPermissionService;
+use app\services\PathService;
 use common\enums\CopyType;
 use common\enums\AiRunStatus;
 use common\enums\LogCategory;
@@ -38,6 +39,7 @@ class AiChatController extends Controller
     private readonly AiQuickHandler $quickHandler;
     private readonly AiStreamRelayService $streamRelayService;
     private readonly AiRunCleanupService $cleanupService;
+    private readonly PathService $pathService;
 
     public function __construct(
         $id,
@@ -48,6 +50,7 @@ class AiChatController extends Controller
         AiQuickHandler $quickHandler,
         AiStreamRelayService $streamRelayService,
         AiRunCleanupService $cleanupService,
+        PathService $pathService,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
@@ -57,6 +60,7 @@ class AiChatController extends Controller
         $this->quickHandler = $quickHandler;
         $this->streamRelayService = $streamRelayService;
         $this->cleanupService = $cleanupService;
+        $this->pathService = $pathService;
     }
 
     public function behaviors(): array
@@ -1078,14 +1082,7 @@ class AiChatController extends Controller
             return null;
         }
 
-        $pathMappings = Yii::$app->params['pathMappings'] ?? [];
-        $containerPath = $rootDir;
-        foreach ($pathMappings as $hostPrefix => $containerPrefix) {
-            if (str_starts_with($rootDir, $hostPrefix)) {
-                $containerPath = $containerPrefix . substr($rootDir, strlen($hostPrefix));
-                break;
-            }
-        }
+        $containerPath = $this->pathService->translatePath($rootDir);
 
         if (!is_dir($containerPath)) {
             return null;

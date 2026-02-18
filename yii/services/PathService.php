@@ -8,6 +8,8 @@ class PathService
 {
     private const PATH_LIST_MAX_DEPTH = 10;
 
+    public function __construct(private readonly array $pathMappings = []) {}
+
     /**
      * @throws UnexpectedValueException
      */
@@ -17,6 +19,7 @@ class PathService
         array $allowedFileExtensions = [],
         array $blacklistedDirectories = []
     ): array {
+        $rootDirectory = $this->translatePath($rootDirectory);
         $resolvedRoot = $this->resolveRootDirectory($rootDirectory);
         if (!is_dir($resolvedRoot)) {
             throw new UnexpectedValueException('Root directory does not exist or is not accessible.');
@@ -99,6 +102,7 @@ class PathService
         string $relativePath,
         array $blacklistedDirectories = []
     ): ?string {
+        $rootDirectory = $this->translatePath($rootDirectory);
         $base = $this->resolveRootDirectory($rootDirectory);
         $normalizedBase = str_replace('\\', '/', $base);
         $normalizedRelative = ltrim(str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $relativePath), DIRECTORY_SEPARATOR);
@@ -133,9 +137,9 @@ class PathService
     /**
      * Translate a host path to its container path using the configured path mappings.
      */
-    public function translatePath(string $path, array $pathMappings): string
+    public function translatePath(string $path): string
     {
-        foreach ($pathMappings as $hostPrefix => $containerPrefix) {
+        foreach ($this->pathMappings as $hostPrefix => $containerPrefix) {
             if (str_starts_with($path, $hostPrefix)) {
                 return $containerPrefix . substr($path, strlen($hostPrefix));
             }
