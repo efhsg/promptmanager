@@ -32,6 +32,7 @@ services:
       - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
       - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
+      - ${HOME}/.codex:/home/${USER_NAME}/.codex
       - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
       - ${HOME}/.gitconfig:/home/${USER_NAME}/.gitconfig:ro
       - ${HOME}/.config/gh:/home/${USER_NAME}/.config/gh:ro
@@ -100,6 +101,7 @@ services:
       - ${PROJECTS_ROOT}:/projects:rw
       - ${HOME}/.claude:/home/${USER_NAME}/.claude
       - ${HOME}/.claude.json:/home/${USER_NAME}/.claude.json
+      - ${HOME}/.codex:/home/${USER_NAME}/.codex
       - ${HOME}/.ssh:/home/${USER_NAME}/.ssh:ro
       - ${HOME}/.gitconfig:/home/${USER_NAME}/.gitconfig:ro
       - ${HOME}/.config/gh:/home/${USER_NAME}/.config/gh:ro

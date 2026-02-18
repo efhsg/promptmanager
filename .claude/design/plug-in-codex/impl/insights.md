@@ -44,6 +44,21 @@
 - PHP CS Fixer adjusted heredoc indentation in `_form_provider_options.php` to match parent scope. The JS in heredocs must be indented to match PHP indentation level.
 - No new tests needed for P3 — this is a pure view-layer change with no backend logic changes. The existing `ProjectControllerTest` validates controller behavior, and form rendering is integration-level (Codeception acceptance tests, which are out of scope).
 
+## P4 Decisions
+
+- **Per-provider projectDefaults**: Changed `$projectDefaults` from a flat map (via `getAiOptions()`) to a per-provider map keyed by provider ID (via `getAiOptionsForProvider()`). This enables correct prefilling when the user switches providers in the chat UI.
+- **Dynamic custom field rendering**: `renderProviderCustomFields(providerId)` reads `configSchema` from `providerData` and generates form elements with `data-option-key` attributes. `getOptions()` collects these dynamically — no hardcoded field knowledge needed.
+- **Event router pattern**: `onStreamEvent()` handles meta events (connection status, errors, sync results) first, then dispatches to `_eventHandlers[activeProvider]` for provider-specific event parsing. Falls back to Claude handler for unknown providers.
+- **Codex NDJSON event mapping**: `thread.started` → session init (stores session ID), `item.completed` → content display (code blocks for `code_input`, text for `message`), `turn.completed` → run complete with token usage.
+- **Config badge labels**: Replaced hardcoded "CLAUDE.md" / "`.claude/`" with generic "config file" / "config dir" since these are now provider-specific concepts.
+- **Docker Codex support**: Node.js 22 LTS installed via nodesource before `USER` switch (needs root). Codex CLI installed globally via npm with `|| true` to not fail the build if registry is unreachable. `~/.codex/` mounted as volume for API key persistence.
+
+## P4 Findings
+
+- No new tests needed for P4 — all changes are in the view layer (JavaScript) and Docker configuration. The existing unit tests (1129 pass) validate backend behavior. Frontend integration testing would require browser-level tests (out of scope).
+- The `prefillCustomFields()` method handles the case where defaults don't exist for a provider gracefully (empty object fallback), so switching to a newly-added provider doesn't error.
+- Codex `item.completed` events contain nested structure: `item.content[0].text` for messages, `item.content[0].input` for code. The handler checks `item.type` to distinguish between `message` and `function_call` items.
+
 ## Pitfalls
 
-- **P4 chat view** must render `configSchema` fields dynamically and include their values in `getOptions()` for the provider-driven option flow to work.
+- All four phases complete. Future work: acceptance tests for multi-provider form flow and chat event handling.

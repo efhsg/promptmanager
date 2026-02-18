@@ -127,6 +127,14 @@ pm.min_spare_servers = 2
 pm.max_spare_servers = 8
 EOF
 
+# Install Node.js LTS (required for Codex CLI)
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Codex CLI globally
+RUN npm install -g @openai/codex 2>/dev/null || true
+
 USER $USER_NAME
 
 # Install Claude Code: curl install with local binary fallback for WSL2

@@ -44,8 +44,11 @@ $importMarkdownUrl = Url::to(['/ai-chat/import-markdown']);
 $viewUrlTemplate = Url::to(['/note/view', 'id' => '__ID__']);
 $checkConfigUrl = Url::to(array_merge(['/ai-chat/check-config'], $pParam));
 $usageUrl = Url::to(array_merge(['/ai-chat/usage'], $pParam));
-$projectDefaults = $project->getAiOptions();
-$projectDefaultsJson = Json::encode($projectDefaults, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+$projectDefaultsPerProvider = [];
+foreach ($providerData as $pid => $pd) {
+    $projectDefaultsPerProvider[$pid] = $project->getAiOptionsForProvider($pid);
+}
+$projectDefaultsJson = Json::encode($projectDefaultsPerProvider, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $checkConfigUrlJson = Json::encode($checkConfigUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $usageUrlJson = Json::encode($usageUrl, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $gitBranchJson = Json::encode($gitBranch, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
@@ -156,6 +159,8 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
                         ]) ?>
                     </div>
                 </div>
+
+                <div class="row g-3 mt-1" id="provider-custom-fields"></div>
 
             </div>
         </div>
@@ -676,11 +681,15 @@ $js = <<<JS
             },
 
             prefillFromDefaults: function() {
-                var d = this.projectDefaults;
+                var providerEl = document.getElementById('ai-provider');
+                var provider = providerEl ? providerEl.value : this.defaultProvider;
+                var d = this.projectDefaults[provider] || {};
                 var modelEl = document.getElementById('ai-model');
                 var permEl = document.getElementById('ai-permission-mode');
                 if (modelEl) modelEl.value = d.model || '';
                 if (permEl) permEl.value = d.permissionMode || '';
+                this.renderProviderCustomFields(provider);
+                this.prefillCustomFields(provider);
             },
 
             checkConfigStatus: function() {
@@ -714,8 +723,8 @@ $js = <<<JS
                     } else if (ps === 'has_config') {
                         icon = 'bi-check-circle'; bg = 'badge-config';
                         var parts = [];
-                        if (data.hasCLAUDE_MD) parts.push('CLAUDE.md');
-                        if (data.hasClaudeDir) parts.push('.claude/');
+                        if (data.hasCLAUDE_MD) parts.push('config file');
+                        if (data.hasClaudeDir) parts.push('config dir');
                         label = 'Configured';
                         title = 'Project config: ' + parts.join(' + ');
                     } else if (ps === 'no_config' && data.hasPromptManagerContext) {
@@ -879,6 +888,8 @@ $js = <<<JS
                         var data = self.providerData[id];
                         self.repopulateSelect('ai-model', data.models);
                         self.repopulateSelect('ai-permission-mode', data.permissionModes);
+                        self.renderProviderCustomFields(id);
+                        self.prefillCustomFields(id);
                         var appSuffix = document.title.indexOf(' - ') > -1
                             ? ' - ' + document.title.split(' - ').slice(1).join(' - ')
                             : '';
@@ -897,11 +908,17 @@ $js = <<<JS
 
             getOptions: function() {
                 var providerEl = document.getElementById('ai-provider');
-                return {
+                var options = {
                     provider: providerEl ? providerEl.value : this.defaultProvider,
                     model: document.getElementById('ai-model').value,
                     permissionMode: document.getElementById('ai-permission-mode').value
                 };
+                var customFields = document.querySelectorAll('#provider-custom-fields [data-option-key]');
+                customFields.forEach(function(el) {
+                    var key = el.dataset.optionKey;
+                    options[key] = el.type === 'checkbox' ? el.checked : el.value;
+                });
+                return options;
             },
 
             repopulateSelect: function(id, options) {
@@ -913,6 +930,109 @@ $js = <<<JS
                     opt.value = key;
                     opt.textContent = options[key];
                     el.appendChild(opt);
+                });
+            },
+
+            renderProviderCustomFields: function(providerId) {
+                var container = document.getElementById('provider-custom-fields');
+                if (!container) return;
+                container.innerHTML = '';
+                var data = this.providerData[providerId];
+                if (!data || !data.configSchema) return;
+                var schema = data.configSchema;
+                var keys = Object.keys(schema);
+                if (keys.length === 0) return;
+
+                keys.forEach(function(key) {
+                    var field = schema[key];
+                    var type = field.type || 'text';
+                    var fieldId = 'ai-custom-' + key;
+                    var col = document.createElement('div');
+                    col.className = type === 'textarea' ? 'col-12' : 'col-md-6';
+
+                    var label = document.createElement('label');
+                    label.className = 'form-label';
+                    label.setAttribute('for', fieldId);
+                    label.textContent = field.label || key;
+                    col.appendChild(label);
+
+                    var input;
+                    if (type === 'select') {
+                        input = document.createElement('select');
+                        input.className = 'form-select';
+                        var emptyOpt = document.createElement('option');
+                        emptyOpt.value = '';
+                        emptyOpt.textContent = '(Use default)';
+                        input.appendChild(emptyOpt);
+                        if (field.options) {
+                            Object.keys(field.options).forEach(function(optKey) {
+                                var opt = document.createElement('option');
+                                opt.value = optKey;
+                                opt.textContent = field.options[optKey];
+                                input.appendChild(opt);
+                            });
+                        }
+                    } else if (type === 'textarea') {
+                        input = document.createElement('textarea');
+                        input.className = 'form-control';
+                        input.rows = 2;
+                        if (field.placeholder) input.placeholder = field.placeholder;
+                    } else if (type === 'checkbox') {
+                        var wrapper = document.createElement('div');
+                        wrapper.className = 'form-check mt-2';
+                        input = document.createElement('input');
+                        input.type = 'checkbox';
+                        input.className = 'form-check-input';
+                        input.id = fieldId;
+                        input.dataset.optionKey = key;
+                        var checkLabel = document.createElement('label');
+                        checkLabel.className = 'form-check-label';
+                        checkLabel.setAttribute('for', fieldId);
+                        checkLabel.textContent = field.label || key;
+                        wrapper.appendChild(input);
+                        wrapper.appendChild(checkLabel);
+                        col.innerHTML = '';
+                        col.appendChild(wrapper);
+                        if (field.hint) {
+                            var hint = document.createElement('div');
+                            hint.className = 'form-text';
+                            hint.textContent = field.hint;
+                            col.appendChild(hint);
+                        }
+                        container.appendChild(col);
+                        return;
+                    } else {
+                        input = document.createElement('input');
+                        input.type = 'text';
+                        input.className = 'form-control';
+                        if (field.placeholder) input.placeholder = field.placeholder;
+                    }
+
+                    input.id = fieldId;
+                    input.dataset.optionKey = key;
+                    col.appendChild(input);
+
+                    if (field.hint) {
+                        var hint = document.createElement('div');
+                        hint.className = 'form-text';
+                        hint.textContent = field.hint;
+                        col.appendChild(hint);
+                    }
+
+                    container.appendChild(col);
+                });
+            },
+
+            prefillCustomFields: function(providerId) {
+                var defaults = this.projectDefaults[providerId] || {};
+                var customFields = document.querySelectorAll('#provider-custom-fields [data-option-key]');
+                customFields.forEach(function(el) {
+                    var key = el.dataset.optionKey;
+                    var val = defaults[key];
+                    if (el.type === 'checkbox')
+                        el.checked = !!val;
+                    else
+                        el.value = val || '';
                 });
             },
 
@@ -1248,9 +1368,9 @@ $js = <<<JS
             onStreamEvent: function(data) {
                 var type = data.type;
 
+                // Meta events (provider-agnostic)
                 if (type === 'waiting' || type === 'keepalive')
                     return;
-
                 if (type === 'prompt_markdown') {
                     this.streamPromptMarkdown = data.markdown;
                     if (data.runId)
@@ -1259,19 +1379,42 @@ $js = <<<JS
                         this.summarizePromptTitle(this._pendingSummarize.itemId, this._pendingSummarize.promptText);
                         this._pendingSummarize = null;
                     }
+                    return;
                 }
-                else if (type === 'system' && data.subtype === 'init')
-                    this.onStreamInit(data);
-                else if (type === 'stream_event')
-                    this.onStreamDelta(data.event);
-                else if (type === 'assistant' && !data.isSidechain)
-                    this.onStreamAssistant(data);
-                else if (type === 'result')
-                    this.onStreamResult(data);
-                else if (type === 'run_status')
-                    this.onRunStatus(data)
-                else if (type === 'server_error')
-                    this.onStreamError(data.error || 'Unknown server error');
+                if (type === 'run_status') { this.onRunStatus(data); return; }
+                if (type === 'server_error') { this.onStreamError(data.error || 'Unknown server error'); return; }
+                if (type === 'sync_result') { this.onStreamResult(data); return; }
+
+                // Provider-specific event dispatch
+                var providerEl = document.getElementById('ai-provider');
+                var activeProvider = providerEl ? providerEl.value : this.defaultProvider;
+                var handler = this._eventHandlers[activeProvider] || this._eventHandlers['claude'];
+                if (handler) handler.call(this, data);
+            },
+
+            _eventHandlers: {
+                claude: function(data) {
+                    var type = data.type;
+                    if (type === 'system' && data.subtype === 'init')
+                        this.onStreamInit(data);
+                    else if (type === 'stream_event')
+                        this.onStreamDelta(data.event);
+                    else if (type === 'assistant' && !data.isSidechain)
+                        this.onStreamAssistant(data);
+                    else if (type === 'result')
+                        this.onStreamResult(data);
+                },
+                codex: function(data) {
+                    var type = data.type;
+                    if (type === 'thread.started')
+                        this.onCodexThreadStarted(data);
+                    else if (type === 'item.completed')
+                        this.onCodexItemCompleted(data);
+                    else if (type === 'turn.completed')
+                        this.onCodexTurnCompleted(data);
+                    else if (type === 'error')
+                        this.onStreamError(data.message || 'Codex error');
+                }
             },
 
             onStreamInit: function(data) {
@@ -1370,6 +1513,43 @@ $js = <<<JS
                         if (info && info.contextWindow)
                             this.maxContext = info.contextWindow;
                     }
+                }
+            },
+
+            // --- Codex-specific stream event handlers ---
+
+            onCodexThreadStarted: function(data) {
+                if (data.thread_id)
+                    this.sessionId = data.thread_id;
+            },
+
+            onCodexItemCompleted: function(data) {
+                var item = data.item;
+                if (!item) return;
+                if (item.type === 'agent_message' || item.type === 'message') {
+                    var content = item.content || [];
+                    for (var i = 0; i < content.length; i++) {
+                        if (content[i].type === 'output_text' || content[i].type === 'text') {
+                            this.streamBuffer += content[i].text || '';
+                            this.streamReceivedText = true;
+                            if (!this.streamLabelSwitched) {
+                                this.streamLabelSwitched = true;
+                                this.updateStreamStatusLabel('responding');
+                            }
+                        }
+                    }
+                    this.scheduleStreamRender();
+                } else if (item.type === 'tool_call' || item.type === 'function_call') {
+                    var toolName = item.name || item.function?.name || 'tool';
+                    var uses = [toolName];
+                    this.streamMeta.tool_uses = (this.streamMeta.tool_uses || []).concat(uses);
+                }
+            },
+
+            onCodexTurnCompleted: function(data) {
+                if (data.usage) {
+                    this.streamMeta.input_tokens = data.usage.input_tokens || 0;
+                    this.streamMeta.output_tokens = data.usage.output_tokens || 0;
                 }
             },
 

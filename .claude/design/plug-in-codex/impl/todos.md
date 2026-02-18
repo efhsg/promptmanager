@@ -1,12 +1,12 @@
 # Implementation Todos
 
-## Status: Phase 3 complete — ready to commit
+## Status: Phase 4 complete — ready to commit
 
 ## Phases
 - [x] **P1**: Backend Foundation — Interface, Model, Config, RunAiJob Refactor
 - [x] **P2**: Controllers & CodexCliProvider
 - [x] **P3**: Project Form View — Per-Provider Tabs
-- [ ] **P4**: Chat View Frontend — Dynamic Options, Event Router, Docker
+- [x] **P4**: Chat View Frontend — Dynamic Options, Event Router, Docker
 
 ## Completed Phase: P1 — Backend Foundation
 
@@ -56,10 +56,31 @@
 - [x] Run linter + fix issues (1 auto-fixed indentation in _form_provider_options.php)
 - [x] Run unit tests (1129 pass, 0 fail, 21 skipped)
 
+## Completed Phase: P4 — Chat View Frontend — Dynamic Options, Event Router, Docker
+
+- [x] Change `$projectDefaults` from flat `getAiOptions()` to per-provider map via `getAiOptionsForProvider()`
+- [x] Add `#provider-custom-fields` container div in chat HTML
+- [x] Update `prefillFromDefaults()` to be provider-aware + render/prefill custom fields
+- [x] Update `getOptions()` to include custom field values from `data-option-key` elements
+- [x] Add `renderProviderCustomFields(providerId)` — dynamic select/text/textarea/checkbox from `configSchema`
+- [x] Add `prefillCustomFields(providerId)` — prefill custom fields from per-provider defaults
+- [x] Update provider change handler to render/prefill custom fields on switch
+- [x] Implement event router in `onStreamEvent()` — meta events first, then `_eventHandlers` dispatch
+- [x] Add Claude handler in `_eventHandlers` (system/init, stream_event, assistant, result)
+- [x] Add Codex handler in `_eventHandlers` (thread.started, item.completed, turn.completed, error)
+- [x] Add `onCodexThreadStarted()`, `onCodexItemCompleted()`, `onCodexTurnCompleted()` handlers
+- [x] Update config badge from hardcoded "CLAUDE.md"/"claude/" to generic "config file"/"config dir"
+- [x] Add `~/.codex/` volume mount to `pma_yii` and `pma_queue` in `docker-compose.yml`
+- [x] Add Node.js 22 LTS installation to Dockerfile
+- [x] Add `npm install -g @openai/codex` to Dockerfile
+- [x] Run linter (0 issues)
+- [x] Run unit tests (1129 pass, 0 fail, 21 skipped)
+
 ## Session Log
 
 | Date | Phase | Commit | Notes |
 |------|-------|--------|-------|
 | 2026-02-18 | P1 | be24d55 | All steps complete, linter clean, tests green |
 | 2026-02-18 | P2 | 9eef61f | All steps complete, linter clean, tests green |
-| 2026-02-18 | P3 | pending | All steps complete, linter clean, tests green |
+| 2026-02-18 | P3 | c127395 | All steps complete, linter clean, tests green |
+| 2026-02-18 | P4 | pending | All steps complete, linter clean, tests green |
