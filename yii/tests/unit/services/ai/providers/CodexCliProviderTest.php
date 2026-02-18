@@ -50,16 +50,11 @@ class CodexCliProviderTest extends Unit
 
     // ── Config schema ─────────────────────────────────────────
 
-    public function testGetConfigSchemaReturnsApprovalMode(): void
+    public function testGetConfigSchemaReturnsEmptyArray(): void
     {
         $schema = $this->provider->getConfigSchema();
 
-        verify($schema)->arrayHasKey('approvalMode');
-        verify($schema['approvalMode']['type'])->equals('select');
-        verify($schema['approvalMode']['label'])->equals('Approval Mode');
-        verify($schema['approvalMode']['options'])->arrayHasKey('suggest');
-        verify($schema['approvalMode']['options'])->arrayHasKey('auto-edit');
-        verify($schema['approvalMode']['options'])->arrayHasKey('full-auto');
+        verify($schema)->equals([]);
     }
 
     // ── Models & permission modes ─────────────────────────────
