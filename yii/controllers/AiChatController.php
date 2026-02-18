@@ -1029,7 +1029,7 @@ class AiChatController extends Controller
      */
     private function loadAiCommands(?string $rootDirectory, Project $project): array
     {
-        if (!$this->aiProvider instanceof AiConfigProviderInterface) {
+        if ($rootDirectory === null || !$this->aiProvider instanceof AiConfigProviderInterface) {
             return [];
         }
 
