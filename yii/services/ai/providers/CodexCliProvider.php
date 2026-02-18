@@ -379,6 +379,8 @@ class CodexCliProvider implements
             'hasConfigFile' => false,
             'hasConfigDir' => false,
             'hasAnyConfig' => false,
+            'configFileName' => 'codex.md',
+            'configDirName' => '.codex/',
             'pathMapped' => $pathMapped,
             'requestedPath' => $path,
             'effectivePath' => $containerPath,

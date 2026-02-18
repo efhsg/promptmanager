@@ -76,6 +76,8 @@ class AiChatControllerTest extends Unit
             'hasConfigFile' => true,
             'hasConfigDir' => false,
             'hasAnyConfig' => true,
+            'configFileName' => 'CLAUDE.md',
+            'configDirName' => '.claude/',
             'pathStatus' => 'has_config',
             'pathMapped' => false,
             'requestedPath' => '/some/path',
@@ -87,8 +89,9 @@ class AiChatControllerTest extends Unit
         $result = $controller->actionCheckConfig($project->id);
 
         $this->assertTrue($result['success']);
-        $this->assertTrue($result['hasCLAUDE_MD']);
-        $this->assertFalse($result['hasClaudeDir']);
+        $this->assertTrue($result['hasConfigFile']);
+        $this->assertFalse($result['hasConfigDir']);
+        $this->assertSame('CLAUDE.md', $result['configFileName']);
         $this->assertTrue($result['hasAnyConfig']);
         $this->assertSame('has_config', $result['pathStatus']);
     }

@@ -13,8 +13,8 @@ foreach ($projectConfigStatus as $providerId => $status) {
         $hasAnyProviderConfig = true;
         $providerName = Html::encode($status['providerName'] ?? $providerId);
         $parts = array_filter([
-            !empty($status['hasConfigFile']) ? '<code>' . $providerName . ' config file</code>' : null,
-            !empty($status['hasConfigDir']) ? '<code>' . $providerName . ' config dir</code>' : null,
+            !empty($status['hasConfigFile']) ? '<code>' . Html::encode($status['configFileName'] ?? 'config file') . '</code>' : null,
+            !empty($status['hasConfigDir']) ? '<code>' . Html::encode($status['configDirName'] ?? 'config dir') . '</code>' : null,
         ]);
         if ($parts !== []) {
             $configSummaryParts[] = implode(' + ', $parts);
@@ -54,8 +54,8 @@ foreach ($projectConfigStatus as $providerId => $status):
             <strong><?= $providerName ?>:</strong>
             This project's directory already has its own config
             (<?= implode(' + ', array_filter([
-                !empty($status['hasConfigFile']) ? '<code>config file</code>' : null,
-                !empty($status['hasConfigDir']) ? '<code>config dir</code>' : null,
+                !empty($status['hasConfigFile']) ? '<code>' . Html::encode($status['configFileName'] ?? 'config file') . '</code>' : null,
+                !empty($status['hasConfigDir']) ? '<code>' . Html::encode($status['configDirName'] ?? 'config dir') . '</code>' : null,
             ])) ?>).
         </div>
     <?php endif; ?>

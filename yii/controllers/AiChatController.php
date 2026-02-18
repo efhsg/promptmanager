@@ -317,8 +317,10 @@ class AiChatController extends Controller
 
         return [
             'success' => true,
-            'hasCLAUDE_MD' => $configStatus['hasConfigFile'] ?? false,
-            'hasClaudeDir' => $configStatus['hasConfigDir'] ?? false,
+            'hasConfigFile' => $configStatus['hasConfigFile'] ?? false,
+            'hasConfigDir' => $configStatus['hasConfigDir'] ?? false,
+            'configFileName' => $configStatus['configFileName'] ?? 'config file',
+            'configDirName' => $configStatus['configDirName'] ?? 'config dir',
             'hasAnyConfig' => $configStatus['hasAnyConfig'],
             'pathStatus' => $configStatus['pathStatus'],
             'pathMapped' => $configStatus['pathMapped'],

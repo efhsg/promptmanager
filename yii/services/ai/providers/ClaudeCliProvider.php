@@ -524,9 +524,6 @@ class ClaudeCliProvider implements
             'hasConfigFile' => $hasCLAUDE_MD,
             'hasConfigDir' => $hasClaudeDir,
             'hasAnyConfig' => $hasCLAUDE_MD || $hasClaudeDir,
-            // Claude-specific keys for backwards compatibility
-            'hasCLAUDE_MD' => $hasCLAUDE_MD,
-            'hasClaudeDir' => $hasClaudeDir,
         ];
     }
 
@@ -539,6 +536,8 @@ class ClaudeCliProvider implements
             'hasConfigFile' => false,
             'hasConfigDir' => false,
             'hasAnyConfig' => false,
+            'configFileName' => 'CLAUDE.md',
+            'configDirName' => '.claude/',
             'pathMapped' => $pathMapped,
             'requestedPath' => $path,
             'effectivePath' => $containerPath,

@@ -177,8 +177,6 @@ class ProjectController extends Controller
                     $configStatus = $provider->checkConfig($model->root_directory);
                     $projectConfigStatus[$id] = array_merge($configStatus, [
                         'providerName' => $provider->getName(),
-                        'hasCLAUDE_MD' => $configStatus['hasConfigFile'] ?? false,
-                        'hasClaudeDir' => $configStatus['hasConfigDir'] ?? false,
                     ]);
                 }
             }

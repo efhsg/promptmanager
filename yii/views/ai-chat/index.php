@@ -723,8 +723,8 @@ $js = <<<JS
                     } else if (ps === 'has_config') {
                         icon = 'bi-check-circle'; bg = 'badge-config';
                         var parts = [];
-                        if (data.hasCLAUDE_MD) parts.push('config file');
-                        if (data.hasClaudeDir) parts.push('config dir');
+                        if (data.hasConfigFile) parts.push(data.configFileName || 'config file');
+                        if (data.hasConfigDir) parts.push(data.configDirName || 'config dir');
                         label = 'Configured';
                         title = 'Project config: ' + parts.join(' + ');
                     } else if (ps === 'no_config' && data.hasPromptManagerContext) {
