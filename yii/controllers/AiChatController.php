@@ -129,7 +129,7 @@ class AiChatController extends Controller
             return false;
         }
 
-        $sessionFreeActions = ['stream', 'start-run', 'stream-run', 'cancel-run', 'run-status', 'active-runs'];
+        $sessionFreeActions = ['stream', 'start-run', 'stream-run', 'cancel-run', 'run-status', 'active-runs', 'suggest-name'];
         if (in_array($action->id, $sessionFreeActions, true)) {
             Yii::$app->session->close();
         }

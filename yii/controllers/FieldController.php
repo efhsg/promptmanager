@@ -47,6 +47,19 @@ class FieldController extends Controller
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('field');
     }
 
+    public function beforeAction($action): bool
+    {
+        if (!parent::beforeAction($action)) {
+            return false;
+        }
+
+        if (in_array($action->id, ['path-list', 'path-preview'], true)) {
+            Yii::$app->session->close();
+        }
+
+        return true;
+    }
+
     public function behaviors(): array
     {
         return [

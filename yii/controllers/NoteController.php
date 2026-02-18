@@ -66,6 +66,19 @@ class NoteController extends Controller
         $this->projectContext = Yii::$app->projectContext;
     }
 
+    public function beforeAction($action): bool
+    {
+        if (!parent::beforeAction($action)) {
+            return false;
+        }
+
+        if ($action->id === 'convert-format') {
+            Yii::$app->session->close();
+        }
+
+        return true;
+    }
+
     public function behaviors(): array
     {
         return [

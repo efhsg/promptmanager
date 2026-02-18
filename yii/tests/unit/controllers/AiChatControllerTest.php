@@ -721,6 +721,7 @@ class AiChatControllerTest extends Unit
             'cancel-run' => ['cancel-run'],
             'run-status' => ['run-status'],
             'active-runs' => ['active-runs'],
+            'suggest-name' => ['suggest-name'],
         ];
     }
 

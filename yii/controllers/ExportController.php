@@ -21,6 +21,19 @@ class ExportController extends Controller
         parent::__construct($id, $module, $config);
     }
 
+    public function beforeAction($action): bool
+    {
+        if (!parent::beforeAction($action)) {
+            return false;
+        }
+
+        if ($action->id === 'to-file') {
+            Yii::$app->session->close();
+        }
+
+        return true;
+    }
+
     public function behaviors(): array
     {
         return [

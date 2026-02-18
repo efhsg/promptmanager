@@ -21,6 +21,14 @@ $suggestNameUrl = Url::to(['/ai-chat/suggest-name']);
             <div class="modal-body">
                 <div class="alert alert-danger d-none" id="export-error-alert"></div>
 
+                <div class="d-none" id="export-manual-copy-wrapper">
+                    <div class="alert alert-warning mb-2">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Clipboard access failed. Select the text below and copy manually (Ctrl+C).
+                    </div>
+                    <textarea class="form-control font-monospace" id="export-manual-copy-textarea" rows="8" readonly></textarea>
+                </div>
+
                 <div class="mb-3">
                     <label class="form-label fw-bold">Destination</label>
                     <div class="btn-group w-100" role="group" aria-label="Export destination">
@@ -118,6 +126,8 @@ window.ExportModal = (function() {
         pathList: '<?= $pathListUrl ?>',
         suggestName: '<?= $suggestNameUrl ?>'
     };
+    const EXPORTING_BUTTON_HTML = '<span class="spinner-border spinner-border-sm"></span> Exporting...';
+    const EXPORT_SAFETY_TIMEOUT_MS = 15000;
 
     let currentConfig = {
         projectId: null,
@@ -128,10 +138,19 @@ window.ExportModal = (function() {
     };
 
     let directorySelector = null;
+    let submitButtonDefaultHtml = null;
+    let isExportInProgress = false;
 
     const getCsrfToken = () => {
         const meta = document.querySelector('meta[name="csrf-token"]');
         return meta ? (meta.content || meta.getAttribute('content')) : '';
+    };
+
+    const fetchWithTimeout = (url, options = {}, timeoutMs = 10000) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        return fetch(url, { ...options, signal: controller.signal })
+            .finally(() => clearTimeout(timer));
     };
 
     const showToast = (message, type) => {
@@ -162,7 +181,9 @@ window.ExportModal = (function() {
         overwriteWarning: document.getElementById('export-overwrite-warning'),
         overwriteCheckbox: document.getElementById('export-overwrite-confirm'),
         suggestBtn: document.getElementById('export-suggest-name-btn'),
-        submitBtn: document.getElementById('export-submit-btn')
+        submitBtn: document.getElementById('export-submit-btn'),
+        manualCopyWrapper: document.getElementById('export-manual-copy-wrapper'),
+        manualCopyTextarea: document.getElementById('export-manual-copy-textarea')
     });
 
     const getSelectedDestination = () => {
@@ -258,7 +279,7 @@ window.ExportModal = (function() {
         el.filenameError.classList.add('d-none');
 
         try {
-            const response = await fetch(URLS.suggestName, {
+            const response = await fetchWithTimeout(URLS.suggestName, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -277,7 +298,9 @@ window.ExportModal = (function() {
                 el.filenameError.classList.remove('d-none');
             }
         } catch (err) {
-            el.filenameError.textContent = 'Request failed.';
+            el.filenameError.textContent = err.name === 'AbortError'
+                ? 'Request timed out. Please try again.'
+                : 'Request failed.';
             el.filenameError.classList.remove('d-none');
         } finally {
             el.suggestBtn.disabled = false;
@@ -285,72 +308,105 @@ window.ExportModal = (function() {
         }
     };
 
-    const execCommandCopy = (text) => {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.opacity = '0';
-        const modal = document.getElementById('exportModal');
-        (modal || document.body).appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        const ok = document.execCommand('copy');
-        textarea.remove();
-        return ok;
+    const ensureSubmitButtonDefaultHtml = (submitButton) => {
+        if (submitButtonDefaultHtml === null) {
+            submitButtonDefaultHtml = submitButton.innerHTML;
+        }
+    };
+
+    const resetSubmitButton = (submitButton) => {
+        ensureSubmitButtonDefaultHtml(submitButton);
+        submitButton.disabled = false;
+        submitButton.innerHTML = submitButtonDefaultHtml;
+    };
+
+    const runWithSubmitLoading = async (el, handler) => {
+        if (isExportInProgress) {
+            return;
+        }
+
+        ensureSubmitButtonDefaultHtml(el.submitBtn);
+        isExportInProgress = true;
+        el.submitBtn.disabled = true;
+        el.submitBtn.innerHTML = EXPORTING_BUTTON_HTML;
+
+        const safetyTimer = setTimeout(() => {
+            if (!isExportInProgress) {
+                return;
+            }
+            isExportInProgress = false;
+            resetSubmitButton(el.submitBtn);
+            el.errorAlert.textContent = 'Export timed out. Please try again.';
+            el.errorAlert.classList.remove('d-none');
+        }, EXPORT_SAFETY_TIMEOUT_MS);
+
+        try {
+            await handler();
+        } finally {
+            clearTimeout(safetyTimer);
+            if (isExportInProgress) {
+                isExportInProgress = false;
+                resetSubmitButton(el.submitBtn);
+            }
+        }
     };
 
     const copyToClipboard = async (text) => {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            try {
-                await Promise.race([
-                    navigator.clipboard.writeText(text),
-                    new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Clipboard timeout')), 3000)
-                    )
-                ]);
-                return;
-            } catch (e) {
-                // writeText failed or timed out — fall through to execCommand
-            }
+        if (!(navigator.clipboard && navigator.clipboard.writeText)) {
+            throw new Error('Clipboard API unavailable');
         }
-        if (!execCommandCopy(text)) {
-            throw new Error('Could not copy to clipboard');
-        }
+
+        await Promise.race([
+            navigator.clipboard.writeText(text),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Clipboard timeout')), 3000)
+            )
+        ]);
+    };
+
+    const showManualCopyFallback = (el, text) => {
+        el.manualCopyTextarea.value = text;
+        el.manualCopyWrapper.classList.remove('d-none');
+        el.manualCopyTextarea.focus();
+        el.manualCopyTextarea.select();
     };
 
     const exportToClipboard = async (deltaContent, format) => {
         const el = getElements();
-        const originalHtml = el.submitBtn.innerHTML;
-        el.submitBtn.disabled = true;
-        el.submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Exporting...';
+        await runWithSubmitLoading(el, async () => {
+            try {
+                const response = await fetchWithTimeout(URLS.convertFormat, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ content: deltaContent, format: format })
+                });
 
-        try {
-            const response = await fetch(URLS.convertFormat, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ content: deltaContent, format: format })
-            });
-
-            const data = await response.json();
-            if (data.success && data.content !== undefined) {
-                await copyToClipboard(data.content);
-                bootstrap.Modal.getInstance(el.modal).hide();
-                showToast('Content copied to clipboard', 'success');
-            } else {
-                el.errorAlert.textContent = data.message || 'Failed to convert format.';
+                const data = await response.json();
+                if (data.success && data.content !== undefined) {
+                    try {
+                        await copyToClipboard(data.content);
+                        bootstrap.Modal.getInstance(el.modal).hide();
+                        showToast('Content copied to clipboard', 'success');
+                    } catch (clipErr) {
+                        showManualCopyFallback(el, data.content);
+                        el.errorAlert.textContent = 'Clipboard access failed. Copy manually below.';
+                        el.errorAlert.classList.remove('d-none');
+                    }
+                } else {
+                    el.errorAlert.textContent = data.message || 'Failed to convert format.';
+                    el.errorAlert.classList.remove('d-none');
+                }
+            } catch (err) {
+                el.errorAlert.textContent = err.name === 'AbortError'
+                    ? 'Export timed out. Please try again.'
+                    : 'Export failed.';
                 el.errorAlert.classList.remove('d-none');
             }
-        } catch (err) {
-            el.errorAlert.textContent = 'Export failed.';
-            el.errorAlert.classList.remove('d-none');
-        } finally {
-            el.submitBtn.disabled = false;
-            el.submitBtn.innerHTML = originalHtml;
-        }
+        });
     };
 
     const exportToDownload = async (deltaContent, format) => {
@@ -366,47 +422,44 @@ window.ExportModal = (function() {
 
         el.filenameError.classList.add('d-none');
 
-        const originalHtml = el.submitBtn.innerHTML;
-        el.submitBtn.disabled = true;
-        el.submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Exporting...';
+        await runWithSubmitLoading(el, async () => {
+            try {
+                const response = await fetchWithTimeout(URLS.convertFormat, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ content: deltaContent, format: format })
+                });
 
-        try {
-            const response = await fetch(URLS.convertFormat, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({ content: deltaContent, format: format })
-            });
+                const data = await response.json();
+                if (data.success && data.content !== undefined) {
+                    const formatInfo = FORMAT_MAP[format] || { ext: '.txt', mime: 'text/plain' };
+                    const blob = new Blob([data.content], { type: formatInfo.mime });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = sanitizeFilename(filename) + formatInfo.ext;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
 
-            const data = await response.json();
-            if (data.success && data.content !== undefined) {
-                const formatInfo = FORMAT_MAP[format] || { ext: '.txt', mime: 'text/plain' };
-                const blob = new Blob([data.content], { type: formatInfo.mime });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = sanitizeFilename(filename) + formatInfo.ext;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                bootstrap.Modal.getInstance(el.modal).hide();
-                showToast('Downloaded ' + sanitizeFilename(filename) + formatInfo.ext, 'success');
-            } else {
-                el.errorAlert.textContent = data.message || 'Failed to convert format.';
+                    bootstrap.Modal.getInstance(el.modal).hide();
+                    showToast('Downloaded ' + sanitizeFilename(filename) + formatInfo.ext, 'success');
+                } else {
+                    el.errorAlert.textContent = data.message || 'Failed to convert format.';
+                    el.errorAlert.classList.remove('d-none');
+                }
+            } catch (err) {
+                el.errorAlert.textContent = err.name === 'AbortError'
+                    ? 'Export timed out. Please try again.'
+                    : 'Export failed.';
                 el.errorAlert.classList.remove('d-none');
             }
-        } catch (err) {
-            el.errorAlert.textContent = 'Export failed.';
-            el.errorAlert.classList.remove('d-none');
-        } finally {
-            el.submitBtn.disabled = false;
-            el.submitBtn.innerHTML = originalHtml;
-        }
+        });
     };
 
     const exportToFile = async (deltaContent, format) => {
@@ -424,50 +477,48 @@ window.ExportModal = (function() {
 
         el.filenameError.classList.add('d-none');
 
-        const originalHtml = el.submitBtn.innerHTML;
-        el.submitBtn.disabled = true;
-        el.submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Exporting...';
+        await runWithSubmitLoading(el, async () => {
+            try {
+                const response = await fetchWithTimeout(URLS.exportToFile, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({
+                        content: deltaContent,
+                        format: format,
+                        filename: sanitizeFilename(filename),
+                        directory: directory,
+                        project_id: currentConfig.projectId,
+                        overwrite: overwrite
+                    })
+                });
 
-        try {
-            const response = await fetch(URLS.exportToFile, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-Token': getCsrfToken(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    content: deltaContent,
-                    format: format,
-                    filename: sanitizeFilename(filename),
-                    directory: directory,
-                    project_id: currentConfig.projectId,
-                    overwrite: overwrite
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                bootstrap.Modal.getInstance(el.modal).hide();
-                showToast('Saved to ' + data.path, 'success');
-            } else if (data.exists) {
-                el.overwriteWarning.classList.remove('d-none');
-            } else {
-                el.errorAlert.textContent = data.message || 'Export failed.';
+                const data = await response.json();
+                if (data.success) {
+                    bootstrap.Modal.getInstance(el.modal).hide();
+                    showToast('Saved to ' + data.path, 'success');
+                } else if (data.exists) {
+                    el.overwriteWarning.classList.remove('d-none');
+                } else {
+                    el.errorAlert.textContent = data.message || 'Export failed.';
+                    el.errorAlert.classList.remove('d-none');
+                }
+            } catch (err) {
+                el.errorAlert.textContent = err.name === 'AbortError'
+                    ? 'Export timed out. Please try again.'
+                    : 'Export failed.';
                 el.errorAlert.classList.remove('d-none');
             }
-        } catch (err) {
-            el.errorAlert.textContent = 'Export failed.';
-            el.errorAlert.classList.remove('d-none');
-        } finally {
-            el.submitBtn.disabled = false;
-            el.submitBtn.innerHTML = originalHtml;
-        }
+        });
     };
 
     const handleExport = async () => {
         const el = getElements();
         el.errorAlert.classList.add('d-none');
+        el.manualCopyWrapper.classList.add('d-none');
 
         if (!currentConfig.getContent) {
             el.errorAlert.textContent = 'No content provider configured.';
@@ -504,12 +555,16 @@ window.ExportModal = (function() {
 
         // Reset state
         el.errorAlert.classList.add('d-none');
+        el.manualCopyWrapper.classList.add('d-none');
+        el.manualCopyTextarea.value = '';
         el.filenameError.classList.add('d-none');
         el.overwriteWarning.classList.add('d-none');
         el.overwriteCheckbox.checked = false;
         el.destClipboard.checked = true;
         el.formatSelect.value = 'md';
         el.filenameInput.value = sanitizeFilename(currentConfig.entityName);
+        isExportInProgress = false;
+        resetSubmitButton(el.submitBtn);
 
         // Reset directory selector
         if (directorySelector) {
@@ -548,6 +603,7 @@ window.ExportModal = (function() {
 
     const init = () => {
         const el = getElements();
+        ensureSubmitButtonDefaultHtml(el.submitBtn);
 
         el.destClipboard.addEventListener('change', toggleDestinationOptions);
         el.destDownload.addEventListener('change', toggleDestinationOptions);
