@@ -461,6 +461,7 @@ class CodexCliProvider implements
         }
 
         $cmd .= ' --json';
+        $cmd .= ' --sandbox danger-full-access';
 
         if (!empty($options['approvalMode'])) {
             $cmd .= ' --approval-mode ' . escapeshellarg($options['approvalMode']);
