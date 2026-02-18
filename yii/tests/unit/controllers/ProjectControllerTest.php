@@ -5,6 +5,8 @@ namespace tests\unit\controllers;
 use app\controllers\ProjectController;
 use app\models\Project;
 use app\modules\identity\models\User;
+use app\services\ai\AiProviderInterface;
+use app\services\ai\AiProviderRegistry;
 use app\services\ai\providers\ClaudeCliProvider;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
@@ -99,28 +101,34 @@ class ProjectControllerTest extends Unit
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $projectService = Yii::$container->get(ProjectService::class);
-        $aiProvider = $this->createMock(ClaudeCliProvider::class);
+        $mockProvider = $this->createMock(ClaudeCliProvider::class);
+        $mockProvider->method('getIdentifier')->willReturn('claude');
+        $mockProvider->method('getName')->willReturn('Claude');
+        $registry = new AiProviderRegistry([$mockProvider]);
 
         return new ProjectController(
             'project',
             Yii::$app,
             $permissionService,
             $projectService,
-            $aiProvider
+            $registry
         );
     }
 
-    private function createControllerWithAiProvider(ClaudeCliProvider $aiProvider): ProjectController
+    private function createControllerWithAiProvider(AiProviderInterface $aiProvider): ProjectController
     {
         $permissionService = Yii::$container->get(EntityPermissionService::class);
         $projectService = Yii::$container->get(ProjectService::class);
+        $aiProvider->method('getIdentifier')->willReturn('claude');
+        $aiProvider->method('getName')->willReturn('Claude');
+        $registry = new AiProviderRegistry([$aiProvider]);
 
         return new ProjectController(
             'project',
             Yii::$app,
             $permissionService,
             $projectService,
-            $aiProvider
+            $registry
         );
     }
 

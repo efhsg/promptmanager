@@ -13,6 +13,21 @@
 - `RunAiJob` test mock helper needed inline `parseStreamResult()` implementation since the mock can't reference `ClaudeCliProvider` directly. Used the same NDJSON parsing logic.
 - The `ClaudeCliProvider::generateSettingsJson()` method still calls `$project->getAiOptions()` (flat accessor). This will need attention in P2 when provider-specific options flow through — it should use `getAiOptionsForProvider('claude')` once controllers send namespaced data.
 
+## P2 Decisions
+
+- **allowedKeys whitelist removal**: Replaced the hardcoded `allowedKeys` whitelist in `prepareRunRequest()` with exclusion of non-option keys (`provider`, `sessionId`, `streamToken`, `prompt`, `contentDelta`). All other keys pass through to the provider's `buildCommand()` which translates only known keys. This is provider-driven validation per spec FR-4.
+- **ProjectController::loadAiOptions() per-provider**: Now iterates POST `ai_options` array by provider key, validates each key against `AiProviderRegistry::has()`, and calls `setAiOptionsForProvider()`. Unknown provider keys are silently ignored.
+- **projectConfigStatus now per-provider**: `actionUpdate()` builds a per-provider config status map instead of a single flat status. Each entry is keyed by provider identifier and includes `providerName` for display.
+- **Codeception verify() doesn't support isInstanceOf()**: Tests use PHPUnit's `$this->assertInstanceOf()` instead.
+- **ProjectControllerTest mock update**: Changed from passing mock `ClaudeCliProvider` directly to wrapping it in `AiProviderRegistry`. Both `createController()` and `createControllerWithAiProvider()` helpers updated.
+
+## P2 Findings
+
+- `ClaudeCliProvider::generateSettingsJson()` still calls `$project->getAiOptions()`. Since `getAiOptions()` returns default provider's options in namespaced mode, and Claude is the default, this continues to work correctly. No change needed — the method is provider-specific and reads its own namespace implicitly via the default.
+- CodexCliProvider uses `codex exec --json --approval-mode {mode} --model {model} -p -` command structure. Session resume uses `codex exec resume {session_id}`.
+- Codex doesn't support slash commands (`loadCommands()` returns `[]`) or permission modes (`getSupportedPermissionModes()` returns `[]`). It uses `approval-mode` instead, exposed via `getConfigSchema()`.
+
 ## Pitfalls
 
-- **Don't forget**: `ClaudeCliProvider::generateSettingsJson()` reads from `getAiOptions()` which returns the default provider's options in namespaced mode. This is correct for now but should be made explicit in P2 by using `getAiOptionsForProvider('claude')`.
+- **P3 form view** must handle the new per-provider `projectConfigStatus` structure (keyed by provider id) instead of the previous flat structure.
+- **P4 chat view** must render `configSchema` fields dynamically and include their values in `getOptions()` for the provider-driven option flow to work.

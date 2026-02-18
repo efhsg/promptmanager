@@ -838,16 +838,14 @@ class AiChatController extends Controller
             return ['error' => ['success' => false, 'error' => 'Prompt is empty.']];
         }
 
-        $projectDefaults = $project->getAiOptions();
+        $projectDefaults = $project->getAiOptionsForProvider($providerIdentifier);
 
-        $allowedKeys = ['model', 'permissionMode', 'appendSystemPrompt', 'allowedTools', 'disallowedTools'];
-        $options = array_merge(
-            $projectDefaults,
-            array_filter(
-                array_intersect_key($requestOptions, array_flip($allowedKeys)),
-                fn($v) => $v !== null && $v !== ''
-            )
-        );
+        // Non-option keys sent by the frontend that should not be forwarded to the provider
+        $excludeKeys = ['provider', 'sessionId', 'streamToken', 'prompt', 'contentDelta'];
+        $runtimeOptions = array_diff_key($requestOptions, array_flip($excludeKeys));
+        $runtimeOptions = array_filter($runtimeOptions, fn($v) => $v !== null && $v !== '');
+
+        $options = array_merge($projectDefaults, $runtimeOptions);
 
         $workingDirectory = !empty($project->root_directory) ? $project->root_directory : '';
 
@@ -1200,10 +1198,12 @@ class AiChatController extends Controller
                 $allLabels = AiPermissionMode::labels();
                 $filteredLabels = array_intersect_key($allLabels, array_flip($supportedModes));
                 $entry['permissionModes'] = array_merge(['' => '(Use default)'], $filteredLabels);
+                $entry['configSchema'] = $provider->getConfigSchema();
                 $entry['supportsConfig'] = true;
             } else {
                 $entry['models'] = ['' => '(Use default)'];
                 $entry['permissionModes'] = [];
+                $entry['configSchema'] = [];
             }
             $entry['supportsUsage'] = $provider instanceof AiUsageProviderInterface;
             $providerData[$id] = $entry;

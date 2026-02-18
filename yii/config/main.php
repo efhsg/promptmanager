@@ -9,6 +9,7 @@ use app\components\ProjectContext;
 use app\services\ai\AiProviderInterface;
 use app\services\ai\AiProviderRegistry;
 use app\services\ai\providers\ClaudeCliProvider;
+use app\services\ai\providers\CodexCliProvider;
 use app\services\EntityPermissionService;
 use app\services\FieldService;
 use app\services\ModelService;
@@ -153,9 +154,11 @@ $config = [
 $config['container'] = [
     'singletons' => [
         'aiProvider.claude' => ClaudeCliProvider::class,
+        'aiProvider.codex' => CodexCliProvider::class,
         AiProviderRegistry::class => function () {
             return new AiProviderRegistry([
                 Yii::$container->get('aiProvider.claude'),
+                Yii::$container->get('aiProvider.codex'),
             ]);
         },
     ],

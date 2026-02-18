@@ -1,10 +1,10 @@
 # Implementation Todos
 
-## Status: Phase 1 complete — ready to commit
+## Status: Phase 2 complete — ready to commit
 
 ## Phases
 - [x] **P1**: Backend Foundation — Interface, Model, Config, RunAiJob Refactor
-- [ ] **P2**: Controllers & CodexCliProvider
+- [x] **P2**: Controllers & CodexCliProvider
 - [ ] **P3**: Project Form View — Per-Provider Tabs
 - [ ] **P4**: Chat View Frontend — Dynamic Options, Event Router, Docker
 
@@ -24,8 +24,24 @@
 - [x] Run linter + fix issues (0 issues)
 - [x] Run unit tests + fix failures (1108 pass, 0 fail, 21 skipped)
 
+## Completed Phase: P2 — Controllers & CodexCliProvider
+
+- [x] Refactor `ProjectController` DI: `AiProviderInterface` → `AiProviderRegistry`
+- [x] Make `ProjectController::loadAiOptions()` per-provider via `setAiOptionsForProvider()`
+- [x] Make `ProjectController::actionAiCommands()` accept optional `provider` parameter
+- [x] Make `ProjectController::actionUpdate()` config status provider-aware (per-provider check)
+- [x] Refactor `AiChatController::prepareRunRequest()`: remove `allowedKeys` whitelist, use `getAiOptionsForProvider()`
+- [x] Add `configSchema` to `AiChatController::buildProviderData()`
+- [x] Create `CodexCliProvider` implementing `AiProviderInterface`, `AiStreamingProviderInterface`, `AiConfigProviderInterface`
+- [x] Register `CodexCliProvider` in `yii/config/main.php` as `aiProvider.codex`
+- [x] Create `CodexCliProviderTest` (21 tests)
+- [x] Update `ProjectControllerTest` for `AiProviderRegistry` constructor change
+- [x] Run linter (0 issues)
+- [x] Run unit tests (1129 pass, 0 fail, 21 skipped)
+
 ## Session Log
 
 | Date | Phase | Commit | Notes |
 |------|-------|--------|-------|
-| 2026-02-18 | P1 | pending | All steps complete, linter clean, tests green |
+| 2026-02-18 | P1 | be24d55 | All steps complete, linter clean, tests green |
+| 2026-02-18 | P2 | pending | All steps complete, linter clean, tests green |

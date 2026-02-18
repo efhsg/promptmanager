@@ -6,7 +6,7 @@ use app\components\ProjectContext;
 use app\models\Project;
 use app\models\ProjectSearch;
 use app\services\ai\AiConfigProviderInterface;
-use app\services\ai\AiProviderInterface;
+use app\services\ai\AiProviderRegistry;
 use app\services\EntityPermissionService;
 use app\services\ProjectService;
 use common\enums\LogCategory;
@@ -31,20 +31,20 @@ class ProjectController extends Controller
     private array $actionPermissionMap;
     private readonly EntityPermissionService $permissionService;
     private readonly ProjectService $projectService;
-    private readonly AiProviderInterface $aiProvider;
+    private readonly AiProviderRegistry $providerRegistry;
 
     public function __construct(
         $id,
         $module,
         EntityPermissionService $permissionService,
         ProjectService $projectService,
-        AiProviderInterface $aiProvider,
+        AiProviderRegistry $providerRegistry,
         $config = []
     ) {
         parent::__construct($id, $module, $config);
         $this->permissionService = $permissionService;
         $this->projectService = $projectService;
-        $this->aiProvider = $aiProvider;
+        $this->providerRegistry = $providerRegistry;
         // Load the permission mapping for "project" actions
         $this->actionPermissionMap = $this->permissionService->getActionPermissionMap('project');
     }
@@ -170,12 +170,17 @@ class ProjectController extends Controller
         $availableProjects = $this->projectService->fetchAvailableProjectsForLinking($model->id, Yii::$app->user->id);
 
         $projectConfigStatus = [];
-        if (!empty($model->root_directory) && $this->aiProvider instanceof AiConfigProviderInterface) {
-            $configStatus = $this->aiProvider->checkConfig($model->root_directory);
-            $projectConfigStatus = array_merge($configStatus, [
-                'hasCLAUDE_MD' => $configStatus['hasConfigFile'] ?? false,
-                'hasClaudeDir' => $configStatus['hasConfigDir'] ?? false,
-            ]);
+        if (!empty($model->root_directory)) {
+            foreach ($this->providerRegistry->all() as $id => $provider) {
+                if ($provider instanceof AiConfigProviderInterface) {
+                    $configStatus = $provider->checkConfig($model->root_directory);
+                    $projectConfigStatus[$id] = array_merge($configStatus, [
+                        'providerName' => $provider->getName(),
+                        'hasCLAUDE_MD' => $configStatus['hasConfigFile'] ?? false,
+                        'hasClaudeDir' => $configStatus['hasConfigDir'] ?? false,
+                    ]);
+                }
+            }
         }
 
         return $this->render('update', [
@@ -240,7 +245,7 @@ class ProjectController extends Controller
      *
      * @throws NotFoundHttpException
      */
-    public function actionAiCommands(int $id): array
+    public function actionAiCommands(int $id, ?string $provider = null): array
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
@@ -251,10 +256,15 @@ class ProjectController extends Controller
             return ['success' => false, 'commands' => []];
         }
 
+        $resolved = $this->providerRegistry->getDefault();
+        if ($provider !== null && $this->providerRegistry->has($provider)) {
+            $resolved = $this->providerRegistry->get($provider);
+        }
+
         return [
             'success' => true,
-            'commands' => $this->aiProvider instanceof AiConfigProviderInterface
-                ? $this->aiProvider->loadCommands($model->root_directory)
+            'commands' => $resolved instanceof AiConfigProviderInterface
+                ? $resolved->loadCommands($model->root_directory)
                 : [],
         ];
     }
@@ -283,7 +293,12 @@ class ProjectController extends Controller
     private function loadAiOptions(Project $model): void
     {
         $aiOptions = Yii::$app->request->post('ai_options', []);
-        $model->setAiOptions($aiOptions);
+
+        foreach ($aiOptions as $providerId => $providerOptions) {
+            if (is_array($providerOptions) && $this->providerRegistry->has($providerId)) {
+                $model->setAiOptionsForProvider($providerId, $providerOptions);
+            }
+        }
     }
 
 }
