@@ -130,6 +130,20 @@ class PathService
         return $normalizedCandidate;
     }
 
+    /**
+     * Translate a host path to its container path using the configured path mappings.
+     */
+    public function translatePath(string $path, array $pathMappings): string
+    {
+        foreach ($pathMappings as $hostPrefix => $containerPrefix) {
+            if (str_starts_with($path, $hostPrefix)) {
+                return $containerPrefix . substr($path, strlen($hostPrefix));
+            }
+        }
+
+        return $path;
+    }
+
     private function resolveRootDirectory(string $rootDirectory): string
     {
         $resolved = realpath($rootDirectory);

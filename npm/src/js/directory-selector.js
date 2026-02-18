@@ -118,9 +118,13 @@ class DirectorySelector {
     }
 
     _filterAndShow() {
-        const query = this.input.value.trim().toLowerCase();
+        const raw = this.input.value.trim().toLowerCase();
+        const query = raw.replace(/^\/+/, '');
         const matches = this.cache
-            .filter(p => p.toLowerCase().includes(query))
+            .filter(p => {
+                const normalized = p === '/' ? '' : p.toLowerCase();
+                return query === '' || normalized.includes(query);
+            })
             .slice(0, this.maxResults);
 
         if (matches.length === 0 && query) {

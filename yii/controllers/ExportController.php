@@ -92,7 +92,8 @@ class ExportController extends Controller
             $directory,
             $projectId,
             Yii::$app->user->id,
-            $overwrite
+            $overwrite,
+            Yii::$app->params['pathMappings'] ?? []
         );
     }
 }

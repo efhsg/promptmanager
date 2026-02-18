@@ -165,6 +165,39 @@ class PathServiceTest extends Unit
         $this->assertNull($resolvedAsset);
     }
 
+    public function testTranslatePathAppliesMapping(): void
+    {
+        $mappings = [
+            '/home/user/projects' => '/projects',
+            '/c/www' => '/projects_2',
+        ];
+
+        $this->assertSame('/projects/my-app', $this->service->translatePath('/home/user/projects/my-app', $mappings));
+        $this->assertSame('/projects_2/ice/lvs-bes', $this->service->translatePath('/c/www/ice/lvs-bes', $mappings));
+    }
+
+    public function testTranslatePathReturnsOriginalWhenNoMappingMatches(): void
+    {
+        $mappings = ['/home/user/projects' => '/projects'];
+
+        $this->assertSame('/other/path', $this->service->translatePath('/other/path', $mappings));
+    }
+
+    public function testTranslatePathWithEmptyMappings(): void
+    {
+        $this->assertSame('/some/path', $this->service->translatePath('/some/path', []));
+    }
+
+    public function testTranslatePathUsesFirstMatchingMapping(): void
+    {
+        $mappings = [
+            '/home/user' => '/mapped_user',
+            '/home/user/projects' => '/mapped_projects',
+        ];
+
+        $this->assertSame('/mapped_user/projects/app', $this->service->translatePath('/home/user/projects/app', $mappings));
+    }
+
     public function testCollectPathsWithMultipleBlacklistRulesAndExceptions(): void
     {
         $vendor = new vfsStreamDirectory('vendor');

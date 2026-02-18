@@ -35,7 +35,8 @@ class FileExportService
         string $directory,
         int $projectId,
         int $userId,
-        bool $overwrite = false
+        bool $overwrite = false,
+        array $pathMappings = []
     ): array {
         $project = Project::find()->findUserProject($projectId, $userId);
         if ($project === null) {
@@ -45,6 +46,8 @@ class FileExportService
         if (empty($project->root_directory)) {
             return ['success' => false, 'message' => 'Project has no root directory configured.'];
         }
+
+        $effectiveRoot = $this->pathService->translatePath($project->root_directory, $pathMappings);
 
         $sanitizedFilename = $this->sanitizeFilename($filename);
         if ($sanitizedFilename === '') {
@@ -56,7 +59,7 @@ class FileExportService
 
         $relativePath = rtrim($directory, '/') . '/' . $fullFilename;
         $absolutePath = $this->pathService->resolveRequestedPath(
-            $project->root_directory,
+            $effectiveRoot,
             $relativePath,
             $project->getBlacklistedDirectories()
         );
