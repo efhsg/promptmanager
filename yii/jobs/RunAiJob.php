@@ -110,6 +110,27 @@ class RunAiJob implements RetryableJobInterface
                     $run->session_id,
                     null
                 );
+
+                // Read the full stream log for DB storage (file may have been
+                // removed by a concurrent cleanup while the run was in progress)
+                $streamLog = @file_get_contents($streamFilePath) ?: null;
+
+                // Delegate result extraction to provider
+                $parsed = $provider->parseStreamResult($streamLog);
+                if ($run->session_id === null && $parsed['session_id'] !== null) {
+                    $run->setSessionIdFromResult($parsed['session_id']);
+                }
+
+                $this->writeDoneMarker($streamFile, $streamFilePath);
+                $doneWritten = true;
+
+                if ($result['exitCode'] === 0) {
+                    $run->markCompleted($parsed['text'], $parsed['metadata'], $streamLog);
+                    $this->generateSessionSummary($run);
+                } else {
+                    $errorMessage = $result['error'] ?: 'AI CLI exited with code ' . $result['exitCode'];
+                    $run->markFailed($errorMessage, $streamLog);
+                }
             } else {
                 // Sync fallback for non-streaming providers
                 $syncResult = $provider->execute(
@@ -120,46 +141,36 @@ class RunAiJob implements RetryableJobInterface
                     $project,
                     $run->session_id
                 );
-                // Write result as NDJSON (include metadata so extractMetadata/extractSessionId can find it)
-                $ndjsonEvent = [
-                    'type' => 'result',
-                    'result' => $syncResult['output'] ?? '',
-                ];
-                foreach (['session_id', 'duration_ms', 'num_turns', 'modelUsage'] as $key) {
-                    if (isset($syncResult[$key])) {
-                        $ndjsonEvent[$key] = $syncResult[$key];
-                    }
-                }
-                $ndjsonResult = json_encode($ndjsonEvent);
-                fwrite($streamFile, $ndjsonResult . "\n");
+
+                // Write sync result event for SSE relay
+                $syncEvent = json_encode([
+                    'type' => 'sync_result',
+                    'text' => $syncResult['output'] ?? '',
+                ]);
+                fwrite($streamFile, $syncEvent . "\n");
                 fflush($streamFile);
 
-                $result = [
-                    'exitCode' => $syncResult['exitCode'],
-                    'error' => $syncResult['error'] ?? '',
-                ];
-            }
+                $streamLog = @file_get_contents($streamFilePath) ?: null;
 
-            // Read the full stream log for DB storage (file may have been
-            // removed by a concurrent cleanup while the run was in progress)
-            $streamLog = @file_get_contents($streamFilePath) ?: null;
+                if ($run->session_id === null && !empty($syncResult['session_id'])) {
+                    $run->setSessionIdFromResult($syncResult['session_id']);
+                }
 
-            // Extract session_id from stream log
-            $this->extractSessionId($run, $streamLog);
+                $this->writeDoneMarker($streamFile, $streamFilePath);
+                $doneWritten = true;
 
-            // Write [DONE] BEFORE marking terminal — prevents race where relay
-            // sees terminal status but [DONE] is not yet in the file
-            $this->writeDoneMarker($streamFile, $streamFilePath);
-            $doneWritten = true;
-
-            if ($result['exitCode'] === 0) {
-                $resultText = $this->extractResultText($streamLog);
-                $metadata = $this->extractMetadata($streamLog, $result);
-                $run->markCompleted($resultText, $metadata, $streamLog);
-                $this->generateSessionSummary($run);
-            } else {
-                $errorMessage = $result['error'] ?: 'AI CLI exited with code ' . $result['exitCode'];
-                $run->markFailed($errorMessage, $streamLog);
+                if ($syncResult['exitCode'] === 0) {
+                    $metadata = array_filter([
+                        'duration_ms' => $syncResult['duration_ms'] ?? null,
+                        'num_turns' => $syncResult['num_turns'] ?? null,
+                        'modelUsage' => $syncResult['modelUsage'] ?? null,
+                    ], fn($v) => $v !== null);
+                    $run->markCompleted($syncResult['output'] ?? '', $metadata, $streamLog);
+                    $this->generateSessionSummary($run);
+                } else {
+                    $errorMessage = $syncResult['error'] ?: 'AI CLI exited with code ' . $syncResult['exitCode'];
+                    $run->markFailed($errorMessage, $streamLog);
+                }
             }
         } catch (Throwable $e) {
             if (!$doneWritten) {
@@ -187,85 +198,6 @@ class RunAiJob implements RetryableJobInterface
     public function canRetry($attempt, $error): bool
     {
         return false; // Inference is not idempotent
-    }
-
-    /**
-     * Extracts the result text from the NDJSON stream log.
-     */
-    private function extractResultText(?string $streamLog): string
-    {
-        if ($streamLog === null || $streamLog === '') {
-            return '';
-        }
-
-        $lines = explode("\n", $streamLog);
-        foreach (array_reverse($lines) as $line) {
-            $line = trim($line);
-            if ($line === '' || $line === '[DONE]') {
-                continue;
-            }
-            $decoded = json_decode($line, true);
-            if (($decoded['type'] ?? null) === 'result') {
-                return $decoded['result'] ?? '';
-            }
-        }
-
-        return '';
-    }
-
-    /**
-     * Extracts metadata from the NDJSON stream log.
-     */
-    private function extractMetadata(?string $streamLog, array $cliResult): array
-    {
-        $metadata = [];
-
-        if ($streamLog !== null && $streamLog !== '') {
-            $lines = explode("\n", $streamLog);
-            foreach (array_reverse($lines) as $line) {
-                $line = trim($line);
-                if ($line === '' || $line === '[DONE]') {
-                    continue;
-                }
-                $decoded = json_decode($line, true);
-                if (($decoded['type'] ?? null) === 'result') {
-                    $metadata['duration_ms'] = $decoded['duration_ms'] ?? null;
-                    $metadata['session_id'] = $decoded['session_id'] ?? null;
-                    $metadata['num_turns'] = $decoded['num_turns'] ?? null;
-                    $metadata['modelUsage'] = $decoded['modelUsage'] ?? null;
-                    break;
-                }
-            }
-        }
-
-        return $metadata;
-    }
-
-    /**
-     * Extracts the session_id from the stream log and updates the run.
-     */
-    private function extractSessionId(AiRun $run, ?string $streamLog): void
-    {
-        if ($streamLog === null || $run->session_id !== null) {
-            return;
-        }
-
-        $lines = explode("\n", $streamLog);
-        foreach ($lines as $line) {
-            $line = trim($line);
-            if ($line === '') {
-                continue;
-            }
-            $decoded = json_decode($line, true);
-            if (($decoded['type'] ?? null) === 'system' && isset($decoded['session_id'])) {
-                $run->setSessionIdFromResult($decoded['session_id']);
-                return;
-            }
-            if (($decoded['type'] ?? null) === 'result' && isset($decoded['session_id'])) {
-                $run->setSessionIdFromResult($decoded['session_id']);
-                return;
-            }
-        }
     }
 
     /**

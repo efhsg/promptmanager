@@ -16,6 +16,7 @@ use common\enums\LogCategory;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
+use Throwable;
 use Yii;
 
 /**
@@ -440,7 +441,14 @@ class ClaudeCliProvider implements
 
     public function getWorkspacePath(Project $project): string
     {
-        return Yii::getAlias(self::WORKSPACE_BASE) . '/' . $project->id;
+        $base = Yii::getAlias(self::WORKSPACE_BASE) . '/' . $project->id;
+        $newPath = $base . '/claude';
+
+        if (!is_dir($newPath) && is_dir($base) && file_exists($base . '/CLAUDE.md')) {
+            $this->migrateWorkspace($base, $newPath);
+        }
+
+        return $newPath;
     }
 
     public function getDefaultWorkspacePath(): string
@@ -592,6 +600,30 @@ class ClaudeCliProvider implements
             'sonnet' => 'Sonnet',
             'opus' => 'Opus',
             'haiku' => 'Haiku',
+        ];
+    }
+
+    public function getConfigSchema(): array
+    {
+        return [
+            'allowedTools' => [
+                'type' => 'text',
+                'label' => 'Allowed Tools',
+                'hint' => 'Comma-separated list of tools Claude is allowed to use (e.g. Read,Glob,Grep)',
+                'placeholder' => 'Read,Glob,Grep',
+            ],
+            'disallowedTools' => [
+                'type' => 'text',
+                'label' => 'Disallowed Tools',
+                'hint' => 'Comma-separated list of tools Claude is not allowed to use (e.g. Bash,Write)',
+                'placeholder' => 'Bash,Write',
+            ],
+            'appendSystemPrompt' => [
+                'type' => 'textarea',
+                'label' => 'Append System Prompt',
+                'hint' => 'Additional instructions appended to the system prompt for every run',
+                'placeholder' => 'Additional instructions for Claude...',
+            ],
         ];
     }
 
@@ -1098,6 +1130,36 @@ class ClaudeCliProvider implements
     {
         if (!mkdir($path, 0o755, true) && !is_dir($path)) {
             throw new RuntimeException("Failed to create directory: {$path}");
+        }
+    }
+
+    private function migrateWorkspace(string $oldPath, string $newPath): void
+    {
+        try {
+            $this->createDirectory($newPath);
+
+            $items = scandir($oldPath);
+            if ($items === false) {
+                return;
+            }
+
+            foreach ($items as $item) {
+                if ($item === '.' || $item === '..') {
+                    continue;
+                }
+
+                $source = $oldPath . '/' . $item;
+                // Skip subdirectories that are other provider workspaces
+                if (is_dir($source) && $item !== '.claude') {
+                    continue;
+                }
+
+                rename($source, $newPath . '/' . $item);
+            }
+
+            Yii::debug("Migrated workspace from {$oldPath} to {$newPath}", LogCategory::AI->value);
+        } catch (Throwable $e) {
+            Yii::warning("Workspace migration failed from {$oldPath} to {$newPath}: {$e->getMessage()}", LogCategory::AI->value);
         }
     }
 

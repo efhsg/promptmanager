@@ -41,4 +41,11 @@ interface AiConfigProviderInterface
      * @return array<string, string> Model value => display label
      */
     public function getSupportedModels(): array;
+
+    /**
+     * Returns the provider-specific configuration schema for dynamic form rendering.
+     *
+     * @return array<string, array{type: string, label: string, hint?: string, placeholder?: string, options?: array<string, string>, default?: mixed, group?: string}>
+     */
+    public function getConfigSchema(): array;
 }

@@ -393,8 +393,8 @@ class RunAiJobTest extends Unit
         $streamFilePath = $run->getStreamFilePath();
         verify(file_exists($streamFilePath))->true();
         $content = file_get_contents($streamFilePath);
-        verify($content)->stringContainsString('"type":"result"');
-        verify($content)->stringContainsString('"result":"sync result"');
+        verify($content)->stringContainsString('"type":"sync_result"');
+        verify($content)->stringContainsString('"text":"sync result"');
         verify(substr_count($content, '[DONE]'))->equals(1);
 
         @unlink($streamFilePath);
@@ -438,6 +438,9 @@ class RunAiJobTest extends Unit
 
     /**
      * Creates a mock that implements both AiProviderInterface and AiStreamingProviderInterface.
+     *
+     * parseStreamResult() delegates to the real ClaudeCliProvider logic by default,
+     * parsing NDJSON stream logs for result text, session_id and metadata.
      */
     private function createStreamingProviderMock(?callable $callback = null, ?array $returnValue = null): AiProviderInterface
     {
@@ -450,6 +453,50 @@ class RunAiJobTest extends Unit
         } elseif ($returnValue !== null) {
             $mock->method('executeStreaming')->willReturn($returnValue);
         }
+        // Default parseStreamResult: parse NDJSON like ClaudeCliProvider does
+        $mock->method('parseStreamResult')->willReturnCallback(function (?string $streamLog): array {
+            $default = ['text' => '', 'session_id' => null, 'metadata' => []];
+            if ($streamLog === null || $streamLog === '') {
+                return $default;
+            }
+
+            $lines = explode("\n", $streamLog);
+            $text = '';
+            $sessionId = null;
+            $metadata = [];
+
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if ($line === '') {
+                    continue;
+                }
+                $decoded = json_decode($line, true);
+                if (($decoded['type'] ?? null) === 'system' && isset($decoded['session_id'])) {
+                    $sessionId = $decoded['session_id'];
+                    break;
+                }
+            }
+
+            foreach (array_reverse($lines) as $line) {
+                $line = trim($line);
+                if ($line === '' || $line === '[DONE]') {
+                    continue;
+                }
+                $decoded = json_decode($line, true);
+                if (($decoded['type'] ?? null) === 'result') {
+                    $text = $decoded['result'] ?? '';
+                    $metadata['duration_ms'] = $decoded['duration_ms'] ?? null;
+                    $metadata['num_turns'] = $decoded['num_turns'] ?? null;
+                    $metadata['modelUsage'] = $decoded['modelUsage'] ?? null;
+                    if ($sessionId === null && isset($decoded['session_id'])) {
+                        $sessionId = $decoded['session_id'];
+                    }
+                    break;
+                }
+            }
+
+            return ['text' => $text, 'session_id' => $sessionId, 'metadata' => $metadata];
+        });
         return $mock;
     }
 

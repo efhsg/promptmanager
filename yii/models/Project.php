@@ -9,7 +9,7 @@ use app\services\CopyFormatConverter;
 use common\enums\ColorScheme;
 use common\enums\CopyType;
 use common\enums\LogCategory;
-use app\services\ai\AiProviderInterface;
+use app\services\ai\AiProviderRegistry;
 use app\services\ai\AiWorkspaceProviderInterface;
 use Yii;
 use yii\db\ActiveQuery;
@@ -319,10 +319,106 @@ class Project extends ActiveRecord
         if (empty($this->ai_options)) {
             return [];
         }
-        if (is_string($this->ai_options)) {
-            return json_decode($this->ai_options, true) ?? [];
+        $options = is_string($this->ai_options)
+            ? (json_decode($this->ai_options, true) ?? [])
+            : $this->ai_options;
+
+        if ($this->isNamespacedOptions($options)) {
+            return $this->getAiOptionsForProvider($this->getDefaultProvider());
         }
-        return $this->ai_options;
+
+        return $options;
+    }
+
+    public function getAiOptionsForProvider(string $identifier): array
+    {
+        if (empty($this->ai_options)) {
+            return [];
+        }
+
+        $options = is_string($this->ai_options)
+            ? (json_decode($this->ai_options, true) ?? [])
+            : $this->ai_options;
+
+        if (!$this->isNamespacedOptions($options)) {
+            return $identifier === $this->getDefaultProvider() ? $options : [];
+        }
+
+        return $options[$identifier] ?? [];
+    }
+
+    public function setAiOptionsForProvider(string $identifier, array $providerOptions): void
+    {
+        $options = is_string($this->ai_options)
+            ? (json_decode($this->ai_options, true) ?? [])
+            : ($this->ai_options ?? []);
+
+        // Migrate legacy flat format to namespaced
+        if (!empty($options) && !$this->isNamespacedOptions($options)) {
+            $defaultProvider = $this->getDefaultProvider();
+            $legacyOptions = $options;
+            $options = [$defaultProvider => $legacyOptions];
+            if (isset($legacyOptions['_default'])) {
+                $options['_default'] = $legacyOptions['_default'];
+                unset($options[$defaultProvider]['_default']);
+            }
+        }
+
+        // Filter empty values (consistent with setAiOptions)
+        $filtered = array_filter($providerOptions, fn($v) => $v !== null && $v !== '');
+        // Decode JSON string values (e.g. commandBlacklist, commandGroups)
+        foreach ($filtered as $k => $v) {
+            if (is_string($v) && ($v[0] === '[' || $v[0] === '{')) {
+                $decoded = json_decode($v, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $filtered[$k] = $decoded;
+                }
+            }
+        }
+
+        if ($filtered === []) {
+            unset($options[$identifier]);
+        } else {
+            $options[$identifier] = $filtered;
+        }
+
+        $this->ai_options = empty($options) ? null : json_encode($options);
+    }
+
+    public function getDefaultProvider(): string
+    {
+        if (empty($this->ai_options)) {
+            return 'claude';
+        }
+
+        $options = is_string($this->ai_options)
+            ? (json_decode($this->ai_options, true) ?? [])
+            : $this->ai_options;
+
+        return $options['_default'] ?? 'claude';
+    }
+
+    private function isNamespacedOptions(array $options): bool
+    {
+        if ($options === []) {
+            return false;
+        }
+
+        foreach ($options as $key => $value) {
+            if ($key === '_default') {
+                continue;
+            }
+
+            if (is_array($value) && is_string($key) && preg_match('/^[a-z][a-z0-9-]*$/', $key)) {
+                return true;
+            }
+
+            if (!is_array($value)) {
+                return false;
+            }
+        }
+
+        return false;
     }
 
     public function setAiOptions(array|string|null $value): void
@@ -349,21 +445,28 @@ class Project extends ActiveRecord
         return $this->getAiOptions()[$key] ?? $default;
     }
 
-    public function getAiCommandBlacklist(): array
+    public function getAiCommandBlacklist(?string $provider = null): array
     {
-        $raw = $this->getAiOption('commandBlacklist');
+        $options = $provider !== null
+            ? $this->getAiOptionsForProvider($provider)
+            : $this->getAiOptions();
+        $raw = $options['commandBlacklist'] ?? null;
         if (is_string($raw)) {
             $raw = json_decode($raw, true);
         }
         if (is_array($raw)) {
             return array_values(array_filter($raw, static fn($v): bool => is_string($v) && $v !== ''));
         }
+
         return [];
     }
 
-    public function getAiCommandGroups(): array
+    public function getAiCommandGroups(?string $provider = null): array
     {
-        $raw = $this->getAiOption('commandGroups');
+        $options = $provider !== null
+            ? $this->getAiOptionsForProvider($provider)
+            : $this->getAiOptions();
+        $raw = $options['commandGroups'] ?? null;
         if (is_string($raw)) {
             $raw = json_decode($raw, true);
         }
@@ -582,9 +685,11 @@ class Project extends ActiveRecord
 
         if ($shouldSync) {
             try {
-                $provider = Yii::$container->get(AiProviderInterface::class);
-                if ($provider instanceof AiWorkspaceProviderInterface) {
-                    $provider->syncConfig($this);
+                $registry = Yii::$container->get(AiProviderRegistry::class);
+                foreach ($registry->all() as $provider) {
+                    if ($provider instanceof AiWorkspaceProviderInterface) {
+                        $provider->syncConfig($this);
+                    }
                 }
             } catch (Throwable $e) {
                 Yii::error("Failed to sync AI workspace for project {$this->id}: {$e->getMessage()}", LogCategory::APPLICATION->value);
@@ -597,9 +702,11 @@ class Project extends ActiveRecord
         parent::afterDelete();
 
         try {
-            $provider = Yii::$container->get(AiProviderInterface::class);
-            if ($provider instanceof AiWorkspaceProviderInterface) {
-                $provider->deleteWorkspace($this);
+            $registry = Yii::$container->get(AiProviderRegistry::class);
+            foreach ($registry->all() as $provider) {
+                if ($provider instanceof AiWorkspaceProviderInterface) {
+                    $provider->deleteWorkspace($this);
+                }
             }
         } catch (Throwable $e) {
             Yii::error("Failed to delete AI workspace for project {$this->id}: {$e->getMessage()}", LogCategory::APPLICATION->value);
