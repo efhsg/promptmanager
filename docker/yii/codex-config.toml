@@ -1,0 +1,6 @@
+# Codex CLI configuration for Docker container
+# This file is mounted read-only over ~/.codex/config.toml to avoid
+# host-specific settings (e.g., MCP_DOCKER) causing warnings.
+
+[projects."/var/www/html"]
+trust_level = "trusted"
