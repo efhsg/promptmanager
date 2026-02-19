@@ -165,7 +165,7 @@ class EntityLoader
      * Deletes a local project and all related entities via raw SQL.
      *
      * Uses raw SQL instead of ActiveRecord to avoid triggering
-     * Project::afterDelete() → claudeWorkspaceService->deleteWorkspace().
+     * Project::afterDelete() → aiWorkspaceService->deleteWorkspace().
      */
     public function deleteLocalProject(int $projectId): void
     {

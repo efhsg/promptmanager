@@ -464,7 +464,7 @@ body.keyboard-open .mobile-bottom-nav {
     }
 
     /* AI button touch target */
-    .btn-claude,
+    .btn-ai-chat,
     .btn[title*="AI"] {
         min-width: 44px;
         min-height: 44px;

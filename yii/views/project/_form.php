@@ -177,7 +177,7 @@ $defaultProvider = $model->getDefaultProvider();
 
 <?php
 $templateBody = json_encode($model->description);
-$claudeContextBody = json_encode($model->ai_context);
+$aiContextBody = json_encode($model->ai_context);
 $importTextUrl = Url::to(['/note/import-text']);
 $importMarkdownUrl = Url::to(['/note/import-markdown']);
 $script = <<<JS
@@ -236,16 +236,16 @@ $script = <<<JS
     }
 
     try {
-        var contextData = JSON.parse($claudeContextBody);
+        var contextData = JSON.parse($aiContextBody);
         if (contextData && contextData.ops) {
             contextQuill.setContents(contextData);
-        } else if ($claudeContextBody && $claudeContextBody.trim() !== '' && $claudeContextBody !== 'null') {
+        } else if ($aiContextBody && $aiContextBody.trim() !== '' && $aiContextBody !== 'null') {
             // Backward compat: plain text that isn't Delta JSON
-            contextQuill.setText($claudeContextBody);
+            contextQuill.setText($aiContextBody);
         }
     } catch (error) {
         // Backward compat: existing plain-text content that isn't valid JSON
-        var plainText = $claudeContextBody;
+        var plainText = $aiContextBody;
         if (plainText && plainText !== 'null') {
             contextQuill.setText(plainText);
         }

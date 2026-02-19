@@ -5,6 +5,7 @@ namespace tests\unit\jobs;
 use app\handlers\AiQuickHandler;
 use app\jobs\RunAiJob;
 use app\models\AiRun;
+use app\services\ai\AiConfigProviderInterface;
 use app\services\ai\AiProviderInterface;
 use app\services\ai\AiStreamingProviderInterface;
 use common\enums\AiRunStatus;
@@ -500,6 +501,67 @@ class RunAiJobTest extends Unit
         return $mock;
     }
 
+    public function testSubstitutesSlashCommandsWhenProviderDoesNotSupportThem(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+        $run->prompt_markdown = 'Please run /deploy for this project';
+        $run->save(false);
+
+        $capturedPrompt = null;
+
+        $mockProvider = $this->createConfigAwareStreamingProviderMock(
+            supportsSlashCommands: false,
+            callback: function ($prompt, $dir, $onLine) use (&$capturedPrompt) {
+                $capturedPrompt = $prompt;
+                $onLine('{"type":"result","result":"Done"}');
+                return ['exitCode' => 0, 'error' => ''];
+            }
+        );
+
+        $commandContents = ['deploy' => "---\nname: deploy\n---\nDeploy the application to production.\n\n\$ARGUMENTS"];
+
+        $job = $this->createJobWithProviderAndCommands($mockProvider, $commandContents);
+        $job->runId = $run->id;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
+        verify($capturedPrompt)->stringNotContainsString('/deploy');
+        verify($capturedPrompt)->stringContainsString('Deploy the application to production.');
+
+        @unlink($run->getStreamFilePath());
+    }
+
+    public function testSkipsSubstitutionWhenProviderSupportsSlashCommands(): void
+    {
+        $run = $this->createRun(AiRunStatus::PENDING);
+        $run->prompt_markdown = 'Please run /deploy for this project';
+        $run->save(false);
+
+        $capturedPrompt = null;
+
+        $mockProvider = $this->createConfigAwareStreamingProviderMock(
+            supportsSlashCommands: true,
+            callback: function ($prompt, $dir, $onLine) use (&$capturedPrompt) {
+                $capturedPrompt = $prompt;
+                $onLine('{"type":"result","result":"Done"}');
+                return ['exitCode' => 0, 'error' => ''];
+            }
+        );
+
+        $job = $this->createJobWithProvider($mockProvider);
+        $job->runId = $run->id;
+
+        $job->execute(null);
+
+        $run->refresh();
+        verify($run->status)->equals(AiRunStatus::COMPLETED->value);
+        verify($capturedPrompt)->stringContainsString('/deploy');
+
+        @unlink($run->getStreamFilePath());
+    }
+
     private function createJobWithProvider(AiProviderInterface $provider): RunAiJob
     {
         $job = new class extends RunAiJob {
@@ -532,6 +594,77 @@ class RunAiJobTest extends Unit
         };
         $job->mockProvider = $provider;
         $job->mockHandler = $handler;
+        return $job;
+    }
+
+    /**
+     * Creates a mock implementing AiProviderInterface, AiStreamingProviderInterface,
+     * and AiConfigProviderInterface for testing the command substitution path.
+     */
+    private function createConfigAwareStreamingProviderMock(
+        bool $supportsSlashCommands,
+        ?callable $callback = null,
+        ?array $returnValue = null,
+    ): AiProviderInterface {
+        $mock = $this->createMockForIntersectionOfInterfaces([
+            AiProviderInterface::class,
+            AiStreamingProviderInterface::class,
+            AiConfigProviderInterface::class,
+        ]);
+
+        $mock->method('supportsSlashCommands')->willReturn($supportsSlashCommands);
+
+        if ($callback !== null) {
+            $mock->method('executeStreaming')->willReturnCallback($callback);
+        } elseif ($returnValue !== null) {
+            $mock->method('executeStreaming')->willReturn($returnValue);
+        }
+
+        $mock->method('parseStreamResult')->willReturnCallback(function (?string $streamLog): array {
+            $default = ['text' => '', 'session_id' => null, 'metadata' => []];
+            if ($streamLog === null || $streamLog === '') {
+                return $default;
+            }
+
+            $lines = explode("\n", $streamLog);
+            foreach (array_reverse($lines) as $line) {
+                $line = trim($line);
+                if ($line === '' || $line === '[DONE]') {
+                    continue;
+                }
+                $decoded = json_decode($line, true);
+                if (($decoded['type'] ?? null) === 'result') {
+                    return ['text' => $decoded['result'] ?? '', 'session_id' => $decoded['session_id'] ?? null, 'metadata' => []];
+                }
+            }
+            return $default;
+        });
+
+        return $mock;
+    }
+
+    /**
+     * @param array<string, string> $commandContents
+     */
+    private function createJobWithProviderAndCommands(AiProviderInterface $provider, array $commandContents): RunAiJob
+    {
+        $job = new class extends RunAiJob {
+            public AiProviderInterface $mockProvider;
+            /** @var array<string, string> */
+            public array $mockCommandContents = [];
+
+            protected function resolveProvider(AiRun $run): AiProviderInterface
+            {
+                return $this->mockProvider;
+            }
+
+            protected function loadCommandContents(AiRun $run): array
+            {
+                return $this->mockCommandContents;
+            }
+        };
+        $job->mockProvider = $provider;
+        $job->mockCommandContents = $commandContents;
         return $job;
     }
 }

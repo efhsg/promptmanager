@@ -185,7 +185,7 @@ a.desc:after {
 .ql-toolbar .ql-picker.ql-insertGeneralField,
 .ql-toolbar .ql-picker.ql-insertProjectField,
 .ql-toolbar .ql-picker.ql-insertExternalField,
-.ql-toolbar .ql-picker.ql-insertClaudeCommand {
+.ql-toolbar .ql-picker.ql-insertAiCommand {
     width: auto;
     padding: 2px 2px;
     margin: 8px 0 4px 8px;

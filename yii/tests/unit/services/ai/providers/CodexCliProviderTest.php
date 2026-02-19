@@ -8,15 +8,21 @@ use app\services\ai\AiStreamingProviderInterface;
 use app\services\ai\providers\CodexCliProvider;
 use app\services\PathService;
 use Codeception\Test\Unit;
+use ReflectionMethod;
 
 class CodexCliProviderTest extends Unit
 {
+    private const TEST_MODELS = [
+        'gpt-5.3-codex' => 'GPT 5.3 Codex',
+        'gpt-5.2-codex' => 'GPT 5.2 Codex',
+    ];
+
     private CodexCliProvider $provider;
 
     protected function _before(): void
     {
         $pathService = new PathService([]);
-        $this->provider = new CodexCliProvider($pathService);
+        $this->provider = new CodexCliProvider($pathService, self::TEST_MODELS);
     }
 
     // ── Identity ──────────────────────────────────────────────
@@ -50,22 +56,30 @@ class CodexCliProviderTest extends Unit
 
     // ── Config schema ─────────────────────────────────────────
 
-    public function testGetConfigSchemaReturnsEmptyArray(): void
+    public function testGetConfigSchemaReturnsReasoningField(): void
     {
         $schema = $this->provider->getConfigSchema();
 
-        verify($schema)->equals([]);
+        verify($schema)->arrayHasKey('reasoning');
+        verify($schema['reasoning']['type'])->equals('select');
+        verify($schema['reasoning']['options'])->arrayHasKey('low');
+        verify($schema['reasoning']['options'])->arrayHasKey('medium');
+        verify($schema['reasoning']['options'])->arrayHasKey('high');
+        verify($schema['reasoning']['options'])->arrayHasKey('extra_high');
     }
 
     // ── Models & permission modes ─────────────────────────────
 
-    public function testGetSupportedModelsReturnsCodexModels(): void
+    public function testGetSupportedModelsReturnsInjectedModels(): void
     {
-        $models = $this->provider->getSupportedModels();
+        verify($this->provider->getSupportedModels())->equals(self::TEST_MODELS);
+    }
 
-        verify($models)->arrayHasKey('codex-mini-latest');
-        verify($models)->arrayHasKey('o4-mini');
-        verify($models)->arrayHasKey('o3');
+    public function testGetSupportedModelsReturnsEmptyWhenNoneInjected(): void
+    {
+        $provider = new CodexCliProvider(new PathService([]));
+
+        verify($provider->getSupportedModels())->equals([]);
     }
 
     public function testGetSupportedPermissionModesReturnsEmpty(): void
@@ -88,6 +102,38 @@ class CodexCliProviderTest extends Unit
         verify($result['hasAnyConfig'])->true();
 
         unlink($tmpDir . '/codex.md');
+        rmdir($tmpDir);
+    }
+
+    public function testHasConfigDetectsCodexMdUppercase(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/codex_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+        file_put_contents($tmpDir . '/CODEX.md', '# Codex');
+
+        $result = $this->provider->hasConfig($tmpDir);
+
+        verify($result['hasConfigFile'])->true();
+        verify($result['hasConfigDir'])->false();
+        verify($result['hasAnyConfig'])->true();
+
+        unlink($tmpDir . '/CODEX.md');
+        rmdir($tmpDir);
+    }
+
+    public function testHasConfigDetectsAgentsMd(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/codex_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+        file_put_contents($tmpDir . '/AGENTS.md', '# Agents');
+
+        $result = $this->provider->hasConfig($tmpDir);
+
+        verify($result['hasConfigFile'])->true();
+        verify($result['hasConfigDir'])->false();
+        verify($result['hasAnyConfig'])->true();
+
+        unlink($tmpDir . '/AGENTS.md');
         rmdir($tmpDir);
     }
 
@@ -120,6 +166,13 @@ class CodexCliProviderTest extends Unit
         rmdir($tmpDir);
     }
 
+    // ── Slash command support ────────────────────────────────
+
+    public function testSupportsSlashCommandsReturnsFalse(): void
+    {
+        verify($this->provider->supportsSlashCommands())->false();
+    }
+
     // ── Commands ──────────────────────────────────────────────
 
     public function testLoadCommandsReturnsEmpty(): void
@@ -132,10 +185,10 @@ class CodexCliProviderTest extends Unit
     public function testParseStreamResultHandlesEmptyStream(): void
     {
         $result = $this->provider->parseStreamResult(null);
-        verify($result)->equals(['text' => '', 'session_id' => null, 'metadata' => []]);
+        verify($result)->equals(['text' => '', 'session_id' => null, 'metadata' => [], 'error' => null]);
 
         $result = $this->provider->parseStreamResult('');
-        verify($result)->equals(['text' => '', 'session_id' => null, 'metadata' => []]);
+        verify($result)->equals(['text' => '', 'session_id' => null, 'metadata' => [], 'error' => null]);
     }
 
     public function testParseStreamResultExtractsSessionIdFromThreadStarted(): void
@@ -156,6 +209,21 @@ class CodexCliProviderTest extends Unit
         $result = $this->provider->parseStreamResult($streamLog);
 
         verify($result['text'])->equals("First part\nSecond part");
+    }
+
+    public function testParseStreamResultExtractsFlatTextFromItemCompleted(): void
+    {
+        $streamLog = '{"type":"thread.started","thread_id":"019c71d9-5911-7353-82ae-77c8f858a5e6"}' . "\n"
+            . '{"type":"turn.started"}' . "\n"
+            . '{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"Hello."}}' . "\n"
+            . '{"type":"turn.completed","usage":{"input_tokens":7833,"cached_input_tokens":6528,"output_tokens":6}}';
+
+        $result = $this->provider->parseStreamResult($streamLog);
+
+        verify($result['text'])->equals('Hello.');
+        verify($result['session_id'])->equals('019c71d9-5911-7353-82ae-77c8f858a5e6');
+        verify($result['metadata']['input_tokens'])->equals(7833);
+        verify($result['metadata']['output_tokens'])->equals(6);
     }
 
     public function testParseStreamResultExtractsUsageFromTurnCompleted(): void
@@ -209,7 +277,66 @@ class CodexCliProviderTest extends Unit
         verify($result['text'])->equals('Valid');
     }
 
-    // ── buildCommand (tested via execute with non-existent dir) ──
+    public function testParseStreamResultExtractsErrorFromStreamEvents(): void
+    {
+        $streamLog = '{"type":"thread.started","thread_id":"019c71e8-2f5d-7620-8ab9-5e65b92e7922"}' . "\n"
+            . '{"type":"item.completed","item":{"id":"item_0","type":"error","message":"Model metadata for `codex-mini-latest` not found."}}' . "\n"
+            . '{"type":"turn.started"}' . "\n"
+            . '{"type":"error","message":"The \'codex-mini-latest\' model is not supported."}' . "\n"
+            . '{"type":"turn.failed","error":{"message":"The \'codex-mini-latest\' model is not supported."}}';
+
+        $result = $this->provider->parseStreamResult($streamLog);
+
+        verify($result['text'])->equals('');
+        verify($result['session_id'])->equals('019c71e8-2f5d-7620-8ab9-5e65b92e7922');
+        verify($result['error'])->stringContainsString('Model metadata for `codex-mini-latest` not found.');
+        verify($result['error'])->stringContainsString('not supported');
+    }
+
+    public function testParseStreamResultReturnsNullErrorWhenNoErrors(): void
+    {
+        $streamLog = '{"type":"item.completed","item":{"type":"agent_message","text":"Hello."}}';
+
+        $result = $this->provider->parseStreamResult($streamLog);
+
+        verify($result['error'])->null();
+    }
+
+    // ── buildCommand ───────────────────────────────────────────
+
+    public function testBuildCommandBypassesSandboxAndSkipsGitCheck(): void
+    {
+        $cmd = $this->invokeBuildCommand([], null);
+
+        verify($cmd)->stringContainsString('--dangerously-bypass-approvals-and-sandbox');
+        verify($cmd)->stringContainsString('--skip-git-repo-check');
+        verify($cmd)->stringNotContainsString('resume');
+    }
+
+    public function testBuildCommandIncludesResumeForExistingSession(): void
+    {
+        $cmd = $this->invokeBuildCommand([], 'session-abc-123');
+
+        verify($cmd)->stringContainsString('resume');
+        verify($cmd)->stringContainsString('session-abc-123');
+    }
+
+    public function testBuildCommandIncludesModelOption(): void
+    {
+        $cmd = $this->invokeBuildCommand(['model' => 'gpt-5.3-codex'], null);
+
+        verify($cmd)->stringContainsString("--model 'gpt-5.3-codex'");
+    }
+
+    public function testBuildCommandIncludesReasoningOption(): void
+    {
+        $cmd = $this->invokeBuildCommand(['reasoning' => 'extra_high'], null);
+
+        verify($cmd)->stringContainsString('-c');
+        verify($cmd)->stringContainsString('reasoning=extra-high');
+    }
+
+    // ── execute ──────────────────────────────────────────────────
 
     public function testExecuteReturnsErrorForNonExistentDirectory(): void
     {
@@ -218,5 +345,14 @@ class CodexCliProviderTest extends Unit
         verify($result['success'])->false();
         verify($result['exitCode'])->equals(1);
         verify($result['error'])->stringContainsString('does not exist');
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────
+
+    private function invokeBuildCommand(array $options, ?string $sessionId): string
+    {
+        $method = new ReflectionMethod(CodexCliProvider::class, 'buildCommand');
+
+        return $method->invoke($this->provider, $options, $sessionId);
     }
 }

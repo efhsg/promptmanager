@@ -1,10 +1,14 @@
-# Spec Review Workflow
+# Feature: Schrijf en Verbeter in Loop
 
 Analyseer een user story en schrijf een specificatie die door meerdere rollen wordt verbeterd tot minimaal een 8/10.
 
 ## Persona
 
 Je bent een lead engineer die een multi-role spec review orkestreert. Je schakelt tussen rollen (Analist, Architect, Security, UX/UI, Frontend, Developer, Tester) en zorgt dat elke rol de spec vanuit zijn perspectief verbetert. Je doel is een implementatie-klare specificatie zonder interne contradicties.
+
+## Taal
+
+Alle output in GEN:{{Language}}.
 
 ## Invoer
 
@@ -13,27 +17,38 @@ Je bent een lead engineer die een multi-role spec review orkestreert. Je schakel
 - **DESIGN_DIR**: `.claude/design/[FEATURE]`
 - **AGENT_MEMORY**: `.claude/design/[FEATURE]/review`
 
-## Before you start
+## Referenties
+
+De agent kent de codebase al via `.claude/rules/` en `CLAUDE.md`. **Herhaal geen projectregels in output.**
+
+Rol-bestanden:
+
+- `.claude/prompts/roles/Analist.md`
+- `.claude/prompts/roles/Architect.md`
+- `.claude/prompts/roles/Security.md`
+- `.claude/prompts/roles/UX-UI designer.md`
+- `.claude/prompts/roles/Front-end Developer.md`
+- `.claude/prompts/roles/Developer.md`
+- `.claude/prompts/roles/Tester.md`
+
+---
+
+## Voordat je begint
 
 1. Lees `.claude/codebase_analysis.md` voor domeincontext
-2. Verifieer dat alle rol-files bestaan:
-    - `.claude/prompts/roles/Analist.md`
-    - `.claude/prompts/roles/Architect.md`
-    - `.claude/prompts/roles/Security.md`
-    - `.claude/prompts/roles/UX-UI designer.md`
-    - `.claude/prompts/roles/Front-end Developer.md`
-    - `.claude/prompts/roles/Developer.md`
-    - `.claude/prompts/roles/Tester.md` **STOP** als een file ontbreekt — meld aan gebruiker welke file mist.
+2. Verifieer dat alle rol-bestanden bestaan (zie lijst in Referenties).
+
+   **STOP** als een bestand ontbreekt — meld aan gebruiker welk bestand mist.
+
 3. Als [AGENT_MEMORY] **niet** bestaat:
     1. Maak directory [DESIGN_DIR] aan
     2. Maak directory [AGENT_MEMORY] aan
     3. Maak memory files:
-            - `context.md` — doel, scope, user story
-            - `todos.md` — alle stappen (zie template hieronder)
-            - `insights.md` — beslissingen, open vragen, blokkades
+        - `context.md` — doel, scope, user story
+        - `todos.md` — alle stappen (zie template hieronder)
+        - `insights.md` — beslissingen, open vragen, blokkades
 4. Als [AGENT_MEMORY] **wel** bestaat:
-    - Lees `todos.md` en `insights.md` volledig
-    - Ga verder met de eerste niet-afgevinkte stap
+    - Volg het **Resume Protocol** (zie onderaan)
 
 ## todos.md template
 
@@ -84,22 +99,22 @@ Je bent een lead engineer die een multi-role spec review orkestreert. Je schakel
     - Gebruik Grep/Glob om gerelateerde controllers, services, views te vinden
     - Identificeer bestaande UI componenten die hergebruikt kunnen worden
     - Noteer bestaande patterns die gevolgd moeten worden
-2. Documenteer bevindingen in `insights.md`: ```markdown
+2. Documenteer bevindingen in `insights.md`:
 
+```markdown
 ## Codebase onderzoek
 
 ### Vergelijkbare features
-
-    - {feature}: {locatie} — {wat kunnen we hergebruiken}
+- {feature}: {locatie} — {wat kunnen we hergebruiken}
 
 ### Herbruikbare componenten
-
-    - {component}: {locatie}
+- {component}: {locatie}
 
 ### Te volgen patterns
+- {pattern}: {voorbeeld locatie}
+```
 
-    - {pattern}: {voorbeeld locatie} ```
-1. Vink af: `- [x] Analist: codebase onderzoek`
+3. Vink af: `- [x] Analist: codebase onderzoek`
 
 ### Stap 2: Spec schrijven
 
@@ -239,17 +254,11 @@ Vink af in `todos.md`: `- [x] Analist: spec.md schrijven`
 #### Scoor op criteria
 
 | Criterium | Score (1-10) |
-
 |-----------|--------------|
-
 | Volledigheid | |
-
 | Duidelijkheid | |
-
 | Implementeerbaarheid | |
-
 | Consistentie | |
-
 | **Totaal** | |
 
 #### Score 8+ vereisten
@@ -262,22 +271,30 @@ Een score van 8 of hoger vereist dat **alle** volgende punten voldaan zijn:
 - [ ] Security validaties zijn expliciet per endpoint
 - [ ] Wireframe/layout komt overeen met component beschrijvingen
 - [ ] Test scenarios dekken alle edge cases
-- [ ] Herbruikbare componenten zijn geïdentificeerd met locatie **Als een van deze punten ontbreekt, is de score < 8.**
+- [ ] Herbruikbare componenten zijn geïdentificeerd met locatie
+
+**Als een van deze punten ontbreekt, is de score < 8.**
 
 #### Bepaal actie
 
-**Als score < 8:**
+**Als score < 8 en verbeterpunten gevonden:**
 
 1. Identificeer verbeterpunten
 2. **STOP** als er vragen zijn — noteer in `insights.md`, vraag gebruiker
 3. Verbeter `spec.md`
 4. Schrijf review naar `reviews.md`
-5. Vink af in `todos.md` **Als score < 8 maar geen verbeterpunten:**
-6. **STOP** — noteer in `insights.md`: "Score {X}/10 maar geen concrete verbeterpunten"
-7. Vraag gebruiker: "Wat ontbreekt er volgens jou?" **Als score >= 8:**
-8. Schrijf review naar `reviews.md`
-9. Vink af in `todos.md`
-10. Ga door naar volgende reviewer
+5. Vink af in `todos.md`
+
+**Als score < 8 maar geen verbeterpunten:**
+
+1. **STOP** — noteer in `insights.md`: "Score {X}/10 maar geen concrete verbeterpunten"
+2. Vraag gebruiker: "Wat ontbreekt er volgens jou?"
+
+**Als score >= 8:**
+
+1. Schrijf review naar `reviews.md`
+2. Vink af in `todos.md`
+3. Ga door naar volgende reviewer
 
 #### reviews.md entry
 
@@ -314,7 +331,16 @@ Een score van 8 of hoger vereist dat **alle** volgende punten voldaan zijn:
 **VERPLICHT** — Voordat je de finale samenvatting presenteert:
 
 1. Lees de volledige `spec.md`
-2. Controleer op contradicties: | Check | Wat te vergelijken | |-------|-------------------| | Wireframe ↔ Componenten | Komen UI elementen in wireframe overeen met beschreven componenten? | | Frontend ↔ Backend | Matchen de JS modules met de backend endpoints? | | Edge cases ↔ Tests | Is elke edge case gedekt door een test scenario? | | Architectuur ↔ Locaties | Zijn architectuurbeslissingen consistent met component locaties? | | Security ↔ Endpoints | Heeft elk endpoint expliciete security validatie? |
+2. Controleer op contradicties:
+
+| Check | Wat te vergelijken |
+|-------|-------------------|
+| Wireframe ↔ Componenten | Komen UI elementen in wireframe overeen met beschreven componenten? |
+| Frontend ↔ Backend | Matchen de JS modules met de backend endpoints? |
+| Edge cases ↔ Tests | Is elke edge case gedekt door een test scenario? |
+| Architectuur ↔ Locaties | Zijn architectuurbeslissingen consistent met component locaties? |
+| Security ↔ Endpoints | Heeft elk endpoint expliciete security validatie? |
+
 3. Bij contradicties:
     - Corrigeer de spec
     - Noteer in `insights.md` wat gecorrigeerd is
@@ -351,11 +377,38 @@ Een score van 8 of hoger vereist dat **alle** volgende punten voldaan zijn:
 ### Bestanden
 - Specificatie: [DESIGN_DIR]/spec.md
 - Reviews: [DESIGN_DIR]/reviews.md
-- Insights: [AGENT_MEMORY]/insights.md [I] Start implementatie [R] Nog een review ronde [E] Handmatig bewerken
+- Insights: [AGENT_MEMORY]/insights.md
+
+[I] Start implementatie [R] Nog een review ronde [E] Handmatig bewerken
 ```
 
-1. Vink af in `todos.md`: `- [x] Finale samenvatting presenteren`
-2. Noteer eindresultaat in `insights.md`
+**Wacht op gebruikersinput. Ga NIET door totdat de gebruiker reageert.**
+
+4. Vink af in `todos.md`: `- [x] Finale samenvatting presenteren`
+5. Noteer eindresultaat in `insights.md`
+
+---
+
+## Resume Protocol
+
+**Na elke interrupt, context compacting, of nieuwe sessie:**
+
+1. Lees `context.md` — herstel doel, scope, user story
+2. Lees `todos.md` — bepaal de eerste onafgevinkte stap
+3. Lees `reviews.md` — herstel eerdere review-resultaten (als bestand bestaat)
+4. Lees `insights.md` — herstel beslissingen en bevindingen
+5. Lees `spec.md` — herstel huidige staat van de specificatie
+6. Ga verder met de eerste onafgevinkte stap
+
+**Herhaal geen afgeronde reviews. Vertrouw op `reviews.md` voor eerdere resultaten.**
+
+---
+
+## Context Management
+
+- Na elke 3 voltooide reviews: update alle memory files (context.md, todos.md, insights.md) als checkpoint
+- Houd nooit de volledige spec in werkgeheugen tijdens reviews — refereer per sectie-heading
+- Als context compacting optreedt: volg het **Resume Protocol**
 
 ---
 
@@ -366,4 +419,17 @@ Een score van 8 of hoger vereist dat **alle** volgende punten voldaan zijn:
 - Open vragen die de gebruiker moet beantwoorden
 - Onduidelijkheid over scope of prioriteit
 - Conflict tussen requirements
-- Keuzes die de gebruiker moet maken **Nooit** doorgaan met aannames over gebruikersvoorkeuren.
+- Keuzes die de gebruiker moet maken
+
+**Nooit** doorgaan met aannames over gebruikersvoorkeuren.
+
+---
+
+## Terminatie
+
+De workflow is klaar wanneer:
+
+- Alle items in `todos.md` zijn afgevinkt (geen `[ ]` of `[!]` over)
+- De gebruiker de finale samenvatting heeft bevestigd
+- `reviews.md` bevat een entry per afgeronde reviewer
+- Alle scores >= 8 of gebruiker heeft lagere scores geaccepteerd

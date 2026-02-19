@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use app\components\ProjectContext;
 use app\handlers\AiQuickHandler;
 use app\jobs\RunAiJob;
 use app\models\AiRun;
@@ -146,25 +147,42 @@ class AiChatController extends Controller
     public function actionRuns(): string
     {
         $userId = Yii::$app->user->id;
+        $currentProject = Yii::$app->projectContext->getCurrentProject();
+        $isAllProjects = Yii::$app->projectContext->isAllProjectsContext();
+
         $searchModel = new AiRunSearch();
         $dataProvider = $searchModel->search(
             Yii::$app->request->queryParams,
-            $userId
+            $userId,
+            $currentProject?->id,
+            $isAllProjects
         );
 
         $projectList = Yii::$app->projectService->fetchProjectsList($userId);
-        $defaultProjectId = Yii::$app->projectContext->getCurrentProject()?->id;
+        $projectOptions = [ProjectContext::ALL_PROJECTS_ID => 'All Projects'] + $projectList;
 
+        $defaultProjectId = $currentProject?->id;
         // Fall back to first project if context project is not in the list
         if ($defaultProjectId === null || !isset($projectList[$defaultProjectId])) {
             $defaultProjectId = array_key_first($projectList);
         }
 
+        $providerList = [];
+        foreach ($this->providerRegistry->all() as $id => $provider) {
+            $providerList[$id] = $provider->getName();
+        }
+        $defaultProvider = $this->providerRegistry->getDefaultIdentifier();
+
         return $this->render('runs', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
+            'currentProject' => $currentProject,
+            'isAllProjects' => $isAllProjects,
             'projectList' => $projectList,
+            'projectOptions' => $projectOptions,
             'defaultProjectId' => $defaultProjectId,
+            'providerList' => $providerList,
+            'defaultProvider' => $defaultProvider,
         ]);
     }
 
@@ -211,7 +229,7 @@ class AiChatController extends Controller
     /**
      * @throws NotFoundHttpException
      */
-    public function actionIndex(int $p, ?string $breadcrumbs = null, ?string $s = null, ?int $run = null): string
+    public function actionIndex(int $p, ?string $breadcrumbs = null, ?string $s = null, ?int $run = null, ?string $provider = null): string
     {
         $project = $this->findProject($p);
         $rootDir = $project->root_directory;
@@ -219,6 +237,7 @@ class AiChatController extends Controller
         $replayRunId = null;
         $replayRunSummary = null;
         $sessionHistory = [];
+        $sessionProvider = null;
         if ($run !== null) {
             $userId = Yii::$app->user->id;
             $replayRun = AiRun::find()
@@ -228,6 +247,7 @@ class AiChatController extends Controller
             if ($replayRun !== null) {
                 $replayRunSummary = $replayRun->prompt_summary;
                 $sessionId = $replayRun->session_id ?? $s;
+                $sessionProvider = $replayRun->provider;
 
                 if ($sessionId !== null) {
                     $allRuns = AiRun::find()
@@ -251,6 +271,10 @@ class AiChatController extends Controller
         }
 
         $providerData = $this->buildProviderData();
+        $resolvedProvider = $sessionProvider ?? $provider;
+        $effectiveProvider = ($resolvedProvider !== null && $this->providerRegistry->has($resolvedProvider))
+            ? $resolvedProvider
+            : $this->providerRegistry->getDefaultIdentifier();
 
         return $this->render('index', [
             'project' => $project,
@@ -263,7 +287,7 @@ class AiChatController extends Controller
             'replayRunSummary' => $replayRunSummary,
             'sessionHistory' => $sessionHistory,
             'providerData' => $providerData,
-            'defaultProvider' => $this->providerRegistry->getDefaultIdentifier(),
+            'defaultProvider' => $effectiveProvider,
         ]);
     }
 
@@ -1095,7 +1119,7 @@ class AiChatController extends Controller
     }
 
     /**
-     * Loads available Claude slash commands, applies blacklist and grouping from project config.
+     * Loads available AI slash commands, applies blacklist and grouping from project config.
      *
      * @return array flat list or grouped structure with optgroup labels
      */

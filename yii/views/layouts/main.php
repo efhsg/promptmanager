@@ -62,7 +62,7 @@ echo Nav::widget([
             'options' => ['id' => 'nav-notes'],
         ],
         [
-            'label' => 'AI Chat',
+            'label' => 'Dialogs',
             'url' => ['/ai-chat/runs'],
             'options' => ['id' => 'nav-ai-chat'],
             'active' => (Yii::$app->controller->id === 'ai-chat' && Yii::$app->controller->action->id === 'runs'),

@@ -200,10 +200,10 @@ echo $form->field($model, 'template_id')
             'class' => 'btn btn-secondary me-2 d-none',
             'id' => 'edit-button',
         ]) ?>
-        <?= Html::button('<i class="bi bi-terminal-fill"></i> Claude', [
+        <?= Html::button('<i class="bi bi-terminal-fill"></i> AI Chat', [
             'class' => 'btn btn-primary me-2 d-none',
-            'id' => 'claude-button',
-            'title' => $aiChatUrl ? 'Talk to Claude' : 'Project required',
+            'id' => 'ai-chat-button',
+            'title' => $aiChatUrl ? 'Open AI Chat' : 'Project required',
             'disabled' => !$aiChatUrl,
         ]) ?>
         <?= Html::submitButton('Next', [
@@ -221,7 +221,7 @@ $script = <<<'JS'
             var $nextButton = $('#form-submit-button');
             var $prevButton = $('#previous-button');
             var $editButton = $('#edit-button');
-            var $claudeButton = $('#claude-button');
+            var $aiChatButton = $('#ai-chat-button');
             var $finalPromptContainer = $('#final-prompt-container');
             var $labelContainer = $('#label-input-container');
             var $labelInput = $('#prompt-instance-label');
@@ -233,17 +233,17 @@ $script = <<<'JS'
                     $nextButton.text('Next').attr('data-action', 'next');
                     $prevButton.addClass('d-none');
                     $editButton.addClass('d-none');
-                    $claudeButton.addClass('d-none');
+                    $aiChatButton.addClass('d-none');
                 } else if (step === 2) {
                     $nextButton.text('Next').attr('data-action', 'next');
                     $prevButton.removeClass('d-none');
                     $editButton.addClass('d-none');
-                    $claudeButton.addClass('d-none');
+                    $aiChatButton.addClass('d-none');
                 } else if (step === 3) {
                     $nextButton.text('Save').attr('data-action', 'save');
                     $prevButton.removeClass('d-none');
                     $editButton.removeClass('d-none');
-                    $claudeButton.removeClass('d-none');
+                    $aiChatButton.removeClass('d-none');
                 }
             }
 
@@ -507,7 +507,7 @@ $script = <<<'JS'
                 }
             });
 
-            $claudeButton.on('click', function() {
+            $aiChatButton.on('click', function() {
                 if ($(this).prop('disabled')) return;
 
                 const deltaObj = (typeof quillEditor !== 'undefined' && quillEditor)
@@ -515,7 +515,7 @@ $script = <<<'JS'
                     : $finalPromptContainer.data('deltaObj') || {};
 
                 if (!deltaObj || !deltaObj.ops || !deltaObj.ops.length) {
-                    alert('No prompt content to send to Claude.');
+                    alert('No prompt content to send.');
                     return;
                 }
 

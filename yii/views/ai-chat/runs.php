@@ -1,5 +1,6 @@
 <?php
 
+use app\components\ProjectContext;
 use app\models\AiRun;
 use app\models\AiRunSearch;
 use common\enums\AiRunStatus;
@@ -12,8 +13,13 @@ use yii\widgets\ActiveForm;
 /** @var yii\web\View $this */
 /** @var AiRunSearch $searchModel */
 /** @var yii\data\ActiveDataProvider $dataProvider */
+/** @var app\models\Project|null $currentProject */
+/** @var bool $isAllProjects */
 /** @var array $projectList id => name */
+/** @var array $projectOptions */
 /** @var int|null $defaultProjectId */
+/** @var array $providerList identifier => name */
+/** @var string $defaultProvider */
 
 $this->title = 'AI Sessions';
 $this->params['breadcrumbs'][] = $this->title;
@@ -23,57 +29,48 @@ $this->params['breadcrumbs'][] = $this->title;
 
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0"><?= Html::encode($this->title) ?></h1>
-        <?php if (count($projectList) === 1): ?>
-            <?= Html::a(
-                '<i class="bi bi-plus-lg"></i> New dialog',
-                ['/ai-chat/index', 'p' => array_key_first($projectList)],
-                ['class' => 'btn btn-primary']
-            ) ?>
-        <?php elseif ($defaultProjectId !== null && count($projectList) > 1): ?>
-            <div class="btn-group">
+        <?php if ($defaultProjectId !== null): ?>
+            <?php if (count($providerList) <= 1): ?>
                 <?= Html::a(
                     '<i class="bi bi-plus-lg"></i> New dialog',
                     ['/ai-chat/index', 'p' => $defaultProjectId],
                     ['class' => 'btn btn-primary']
                 ) ?>
-                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
-                    <span class="visually-hidden">Choose project</span>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <?php foreach ($projectList as $pId => $pName): ?>
-                        <?php if ($pId === $defaultProjectId) {
-                            continue;
-                        } ?>
-                        <li><?= Html::a(
-                            Html::encode($pName),
-                            ['/ai-chat/index', 'p' => $pId],
-                            ['class' => 'dropdown-item']
-                        ) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php elseif (count($projectList) > 1): ?>
-            <div class="dropdown">
-                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-plus-lg"></i> New dialog
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <?php foreach ($projectList as $pId => $pName): ?>
-                        <li><?= Html::a(
-                            Html::encode($pName),
-                            ['/ai-chat/index', 'p' => $pId],
-                            ['class' => 'dropdown-item']
-                        ) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
+            <?php else: ?>
+                <div class="btn-group">
+                    <?= Html::a(
+                        '<i class="bi bi-plus-lg"></i> New dialog',
+                        ['/ai-chat/index', 'p' => $defaultProjectId, 'provider' => $defaultProvider],
+                        ['class' => 'btn btn-primary']
+                    ) ?>
+                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                        <span class="visually-hidden">Choose provider</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <?php foreach ($providerList as $providerId => $providerName): ?>
+                            <?php if ($providerId === $defaultProvider) continue; ?>
+                            <li><?= Html::a(
+                                Html::encode($providerName),
+                                ['/ai-chat/index', 'p' => $defaultProjectId, 'provider' => $providerId],
+                                ['class' => 'dropdown-item']
+                            ) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
+
+    <?php if ($isAllProjects): ?>
+        <div class="alert alert-info">
+            Showing sessions from all projects.
+        </div>
+    <?php endif; ?>
 
     <div class="card">
         <div class="card-header">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <strong class="mb-0">All Sessions</strong>
+                <strong class="mb-0">Sessions</strong>
                 <?php $form = ActiveForm::begin([
                     'action' => ['runs'],
                     'method' => 'get',
@@ -94,9 +91,23 @@ $this->params['breadcrumbs'][] = $this->title;
                             'prompt' => 'All Statuses',
                         ]
                     )->label(false) ?>
+                    <?= $form->field($searchModel, 'project_id', [
+                        'options' => ['class' => 'mb-0'],
+                    ])->dropDownList(
+                        $projectOptions,
+                        [
+                            'class' => 'form-select',
+                        ]
+                    )->label(false) ?>
+                    <?php
+                    $contextDefaultProjectId = $isAllProjects
+                        ? ProjectContext::ALL_PROJECTS_ID
+                        : ($currentProject?->id);
+                    $projectChanged = $searchModel->project_id !== $contextDefaultProjectId;
+                    ?>
                     <div class="d-flex align-items-center gap-2">
                         <?= Html::submitButton('Search', ['class' => 'btn btn-outline-primary']) ?>
-                        <?php if ($searchModel->q !== null || ($searchModel->status !== null && $searchModel->status !== '')): ?>
+                        <?php if ($searchModel->q !== null || ($searchModel->status !== null && $searchModel->status !== '') || $projectChanged): ?>
                             <?= Html::a('Reset', ['runs'], ['class' => 'btn btn-link px-2']) ?>
                         <?php endif; ?>
                         <?= Html::button(
@@ -143,12 +154,14 @@ $this->params['breadcrumbs'][] = $this->title;
                         'p' => $model->project_id,
                         's' => $model->session_id,
                         'run' => $model->getSessionLastRunId(),
+                        'provider' => $model->provider !== 'claude' ? $model->provider : null,
                     ])),
                     'onclick' => 'if (!event.target.closest("[data-method]")) window.location.href = this.dataset.url;',
                     'style' => 'cursor: pointer;',
                 ],
                 'columns' => [
                     [
+                        'attribute' => 'session_latest_status',
                         'label' => 'Status',
                         'format' => 'raw',
                         'value' => static function (AiRun $model): string {
@@ -158,17 +171,34 @@ $this->params['breadcrumbs'][] = $this->title;
                         },
                     ],
                     [
+                        'attribute' => 'project_name',
                         'label' => 'Project',
                         'value' => static fn(AiRun $model): string => Html::encode($model->project?->name ?? '-'),
                         'format' => 'raw',
                     ],
                     [
+                        'attribute' => 'provider',
+                        'label' => 'Provider',
+                        'format' => 'raw',
+                        'value' => static function (AiRun $model): string {
+                            $provider = $model->provider ?? 'claude';
+                            $badgeClass = match ($provider) {
+                                'claude' => 'badge-provider-claude',
+                                'codex' => 'badge-provider-codex',
+                                default => 'bg-secondary',
+                            };
+                            return Html::tag('span', Html::encode(ucfirst($provider)), ['class' => "badge $badgeClass"]);
+                        },
+                    ],
+                    [
+                        'attribute' => 'prompt_summary',
                         'label' => 'Summary',
                         'value' => static fn(AiRun $model): string
                             => Html::encode(StringHelper::truncate($model->getDisplaySummary(), 80, '...')),
                         'format' => 'raw',
                     ],
                     [
+                        'attribute' => 'session_run_count',
                         'label' => 'Runs',
                         'value' => static fn(AiRun $model): int => $model->getSessionRunCount(),
                         'contentOptions' => ['class' => 'text-center'],
@@ -180,6 +210,7 @@ $this->params['breadcrumbs'][] = $this->title;
                         'format' => ['datetime', 'php:Y-m-d H:i'],
                     ],
                     [
+                        'attribute' => 'session_total_duration',
                         'label' => 'Duration',
                         'value' => static fn(AiRun $model): string => $model->getFormattedSessionDuration(),
                     ],
@@ -261,6 +292,14 @@ $css = <<<'CSS'
 }
 #auto-refresh-btn .auto-refresh-icon {
     display: inline-block;
+}
+.badge.badge-provider-claude {
+    background-color: #d97757;
+    color: #fff;
+}
+.badge.badge-provider-codex {
+    background-color: #10a37f;
+    color: #fff;
 }
 CSS;
 $this->registerJs($js);

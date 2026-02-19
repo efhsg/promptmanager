@@ -270,16 +270,6 @@ class ProjectController extends Controller
     }
 
     /**
-     * @deprecated Use AiChatController::actionIndex instead. Redirects for backward compatibility.
-     * @throws NotFoundHttpException
-     */
-    public function actionClaude(int $id): Response
-    {
-        $this->findModel($id);
-        return $this->redirect(['/ai-chat/index', 'p' => $id]);
-    }
-
-    /**
      * @throws NotFoundHttpException
      */
     protected function findModel(int $id): ActiveRecord

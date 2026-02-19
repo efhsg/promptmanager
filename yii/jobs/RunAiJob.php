@@ -4,9 +4,12 @@ namespace app\jobs;
 
 use app\handlers\AiQuickHandler;
 use app\models\AiRun;
+use app\services\ai\AiConfigProviderInterface;
 use app\services\ai\AiProviderInterface;
 use app\services\ai\AiProviderRegistry;
 use app\services\ai\AiStreamingProviderInterface;
+use app\services\ai\PromptCommandSubstituter;
+use app\services\PathService;
 use common\enums\AiRunStatus;
 use common\enums\LogCategory;
 use InvalidArgumentException;
@@ -99,9 +102,19 @@ class RunAiJob implements RetryableJobInterface
                 return;
             }
 
+            $prompt = $run->prompt_markdown;
+
+            if ($provider instanceof AiConfigProviderInterface && !$provider->supportsSlashCommands()) {
+                $commandContents = $this->loadCommandContents($run);
+                if ($commandContents !== []) {
+                    $substituter = Yii::$container->get(PromptCommandSubstituter::class);
+                    $prompt = $substituter->substitute($prompt, $commandContents);
+                }
+            }
+
             if ($provider instanceof AiStreamingProviderInterface) {
                 $result = $provider->executeStreaming(
-                    $run->prompt_markdown,
+                    $prompt,
                     $run->working_directory ?? '',
                     $onLine,
                     3600,
@@ -128,13 +141,15 @@ class RunAiJob implements RetryableJobInterface
                     $run->markCompleted($parsed['text'], $parsed['metadata'], $streamLog);
                     $this->generateSessionSummary($run);
                 } else {
-                    $errorMessage = $result['error'] ?: 'AI CLI exited with code ' . $result['exitCode'];
+                    $errorMessage = $result['error']
+                        ?: ($parsed['error'] ?? null)
+                        ?: 'AI CLI exited with code ' . $result['exitCode'];
                     $run->markFailed($errorMessage, $streamLog);
                 }
             } else {
                 // Sync fallback for non-streaming providers
                 $syncResult = $provider->execute(
-                    $run->prompt_markdown,
+                    $prompt,
                     $run->working_directory ?? '',
                     3600,
                     $options,
@@ -299,6 +314,50 @@ class RunAiJob implements RetryableJobInterface
     {
         $registry = Yii::$container->get(AiProviderRegistry::class);
         return $registry->get($run->provider);
+    }
+
+    /**
+     * Loads command file contents from the provider that supports slash commands.
+     *
+     * @return array<string, string> Command name => file content
+     */
+    protected function loadCommandContents(AiRun $run): array
+    {
+        $workDir = $run->working_directory ?? '';
+        if ($workDir === '') {
+            return [];
+        }
+
+        $registry = Yii::$container->get(AiProviderRegistry::class);
+
+        $commandNames = [];
+        foreach ($registry->all() as $candidate) {
+            if ($candidate instanceof AiConfigProviderInterface && $candidate->supportsSlashCommands()) {
+                $commandNames = array_keys($candidate->loadCommands($workDir));
+                break;
+            }
+        }
+
+        if ($commandNames === []) {
+            return [];
+        }
+
+        $pathService = Yii::$container->get(PathService::class);
+        $containerPath = $pathService->translatePath($workDir);
+        $commandsDir = rtrim($containerPath, '/') . '/.claude/commands';
+
+        $contents = [];
+        foreach ($commandNames as $name) {
+            $filePath = $commandsDir . '/' . $name . '.md';
+            if (is_file($filePath)) {
+                $content = file_get_contents($filePath);
+                if ($content !== false) {
+                    $contents[$name] = $content;
+                }
+            }
+        }
+
+        return $contents;
     }
 
     protected function createQuickHandler(): AiQuickHandler

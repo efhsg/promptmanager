@@ -1,6 +1,14 @@
 # Codex CLI configuration for Docker container
 # This file is mounted read-only over ~/.codex/config.toml to avoid
 # host-specific settings (e.g., MCP_DOCKER) causing warnings.
+#
+# Sandbox is disabled at config level because Docker containers
+# typically lack Landlock/seccomp support required by the Codex sandbox.
+# The Docker container itself provides the isolation boundary.
+sandbox_mode = "danger-full-access"
 
 [projects."/var/www/html"]
+trust_level = "trusted"
+
+[projects."/projects"]
 trust_level = "trusted"

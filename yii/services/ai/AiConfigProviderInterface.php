@@ -48,4 +48,11 @@ interface AiConfigProviderInterface
      * @return array<string, array{type: string, label: string, hint?: string, placeholder?: string, options?: array<string, string>, default?: mixed, group?: string}>
      */
     public function getConfigSchema(): array;
+
+    /**
+     * Indicates whether the provider's CLI natively handles slash commands.
+     * When false, slash commands in prompts will be substituted with
+     * explicit instructions before execution.
+     */
+    public function supportsSlashCommands(): bool;
 }

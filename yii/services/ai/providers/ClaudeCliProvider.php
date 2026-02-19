@@ -353,7 +353,7 @@ class ClaudeCliProvider implements
 
     public function parseStreamResult(?string $streamLog): array
     {
-        $default = ['text' => '', 'session_id' => null, 'metadata' => []];
+        $default = ['text' => '', 'session_id' => null, 'metadata' => [], 'error' => null];
 
         if ($streamLog === null || $streamLog === '') {
             return $default;
@@ -397,7 +397,7 @@ class ClaudeCliProvider implements
             }
         }
 
-        return ['text' => $text, 'session_id' => $sessionId, 'metadata' => $metadata];
+        return ['text' => $text, 'session_id' => $sessionId, 'metadata' => $metadata, 'error' => null];
     }
 
     // ──────────────────────────────────────────────────────────
@@ -600,6 +600,11 @@ class ClaudeCliProvider implements
             'opus' => 'Opus',
             'haiku' => 'Haiku',
         ];
+    }
+
+    public function supportsSlashCommands(): bool
+    {
+        return true;
     }
 
     public function getConfigSchema(): array

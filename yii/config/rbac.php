@@ -37,7 +37,6 @@ return [
                 'delete' => 'deleteProject',
                 'setCurrent' => 'setCurrentProject',
                 'aiCommands' => 'viewProject',
-                'claude' => 'viewProject',
             ],
             'permissions' => [
                 'createProject' => [

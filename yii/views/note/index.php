@@ -286,7 +286,7 @@ $script = <<<JS
                     if (data.success && data.content) {
                         sessionStorage.setItem('aiPromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
                     }
-                    // Set project context to note's project before navigating to Claude
+                    // Set project context to note's project before navigating to AI Chat
                     if (data.success && data.projectId) {
                         var formData = new FormData();
                         formData.append('project_id', data.projectId);

@@ -72,7 +72,8 @@ $config = [
             'showScriptName' => false,
             'rules' => [
                 'POST api/note' => 'api/note/create',
-                'claude/<action:\w[\w-]*>' => 'ai-chat/<action>',
+                'ai/<action:\w[\w-]*>' => 'ai-chat/<action>',
+                'claude/<action:\w[\w-]*>' => 'ai-chat/<action>', // Legacy URL compat
             ],
         ],
         'assetManager' => [
@@ -154,7 +155,12 @@ $config = [
 $config['container'] = [
     'singletons' => [
         'aiProvider.claude' => ClaudeCliProvider::class,
-        'aiProvider.codex' => CodexCliProvider::class,
+        'aiProvider.codex' => function () use ($params) {
+            return new CodexCliProvider(
+                Yii::$container->get(PathService::class),
+                $params['codex']['models'] ?? [],
+            );
+        },
         AiProviderRegistry::class => function () {
             return new AiProviderRegistry([
                 Yii::$container->get('aiProvider.claude'),

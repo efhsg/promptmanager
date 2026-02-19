@@ -23,10 +23,16 @@ class CodexCliProvider implements
     AiConfigProviderInterface
 {
     private readonly PathService $pathService;
+    /** @var array<string, string> Model value => display label */
+    private readonly array $models;
 
-    public function __construct(PathService $pathService)
+    /**
+     * @param array<string, string> $models Model value => display label
+     */
+    public function __construct(PathService $pathService, array $models = [])
     {
         $this->pathService = $pathService;
+        $this->models = $models;
     }
 
     // ──────────────────────────────────────────────────────────
@@ -305,7 +311,7 @@ class CodexCliProvider implements
 
     public function parseStreamResult(?string $streamLog): array
     {
-        $default = ['text' => '', 'session_id' => null, 'metadata' => []];
+        $default = ['text' => '', 'session_id' => null, 'metadata' => [], 'error' => null];
 
         if ($streamLog === null || $streamLog === '') {
             return $default;
@@ -315,6 +321,7 @@ class CodexCliProvider implements
         $text = '';
         $sessionId = null;
         $metadata = [];
+        $errors = [];
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -333,13 +340,30 @@ class CodexCliProvider implements
                 $sessionId = $decoded['thread_id'] ?? null;
             } elseif ($type === 'item.completed') {
                 $item = $decoded['item'] ?? [];
-                if (($item['type'] ?? '') === 'agent_message') {
-                    $content = $item['content'] ?? [];
-                    foreach ($content as $block) {
-                        if (($block['type'] ?? '') === 'text') {
-                            $text .= ($text !== '' ? "\n" : '') . ($block['text'] ?? '');
+                $itemType = $item['type'] ?? '';
+
+                if ($itemType === 'agent_message') {
+                    // Flat text field (codex-cli ≥ 0.104)
+                    if (isset($item['text']) && is_string($item['text'])) {
+                        $text .= ($text !== '' ? "\n" : '') . $item['text'];
+                    } else {
+                        // Content blocks format (earlier versions)
+                        $content = $item['content'] ?? [];
+                        foreach ($content as $block) {
+                            if (($block['type'] ?? '') === 'text') {
+                                $text .= ($text !== '' ? "\n" : '') . ($block['text'] ?? '');
+                            }
                         }
                     }
+                } elseif ($itemType === 'error' && isset($item['message'])) {
+                    $errors[] = $item['message'];
+                }
+            } elseif ($type === 'error' && isset($decoded['message'])) {
+                $errors[] = $decoded['message'];
+            } elseif ($type === 'turn.failed') {
+                $failedMsg = $decoded['error']['message'] ?? null;
+                if ($failedMsg !== null) {
+                    $errors[] = $failedMsg;
                 }
             } elseif ($type === 'turn.completed') {
                 $usage = $decoded['usage'] ?? [];
@@ -351,7 +375,11 @@ class CodexCliProvider implements
             }
         }
 
-        return ['text' => $text, 'session_id' => $sessionId, 'metadata' => $metadata];
+        // Deduplicate error messages (turn.failed often repeats the error event message)
+        $errors = array_unique($errors);
+        $errorString = $errors !== [] ? implode('; ', $errors) : null;
+
+        return ['text' => $text, 'session_id' => $sessionId, 'metadata' => $metadata, 'error' => $errorString];
     }
 
     // ──────────────────────────────────────────────────────────
@@ -360,13 +388,21 @@ class CodexCliProvider implements
 
     public function hasConfig(string $path): array
     {
-        $hasCodexMd = file_exists($path . '/codex.md');
+        $configFiles = ['codex.md', 'CODEX.md', 'AGENTS.md'];
+        $hasConfigFile = false;
+        foreach ($configFiles as $configFile) {
+            if (file_exists($path . '/' . $configFile)) {
+                $hasConfigFile = true;
+                break;
+            }
+        }
+
         $hasCodexDir = is_dir($path . '/.codex');
 
         return [
-            'hasConfigFile' => $hasCodexMd,
+            'hasConfigFile' => $hasConfigFile,
             'hasConfigDir' => $hasCodexDir,
-            'hasAnyConfig' => $hasCodexMd || $hasCodexDir,
+            'hasAnyConfig' => $hasConfigFile || $hasCodexDir,
         ];
     }
 
@@ -379,7 +415,7 @@ class CodexCliProvider implements
             'hasConfigFile' => false,
             'hasConfigDir' => false,
             'hasAnyConfig' => false,
-            'configFileName' => 'codex.md',
+            'configFileName' => 'codex.md/CODEX.md/AGENTS.md',
             'configDirName' => '.codex/',
             'pathMapped' => $pathMapped,
             'requestedPath' => $path,
@@ -415,16 +451,28 @@ class CodexCliProvider implements
 
     public function getSupportedModels(): array
     {
-        return [
-            'codex-mini-latest' => 'Codex Mini',
-            'o4-mini' => 'o4 Mini',
-            'o3' => 'o3',
-        ];
+        return $this->models;
+    }
+
+    public function supportsSlashCommands(): bool
+    {
+        return false;
     }
 
     public function getConfigSchema(): array
     {
-        return [];
+        return [
+            'reasoning' => [
+                'type' => 'select',
+                'label' => 'Reasoning Level',
+                'options' => [
+                    'low' => 'Low — fast, lighter reasoning',
+                    'medium' => 'Medium — balanced (default)',
+                    'high' => 'High — deeper reasoning',
+                    'extra_high' => 'Extra high — maximum reasoning',
+                ],
+            ],
+        ];
     }
 
     // ──────────────────────────────────────────────────────────
@@ -448,11 +496,15 @@ class CodexCliProvider implements
             $cmd .= ' resume ' . escapeshellarg($sessionId);
         }
 
-        $cmd .= ' --json';
-        $cmd .= ' --sandbox danger-full-access';
+        $cmd .= ' --json --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox';
 
         if (!empty($options['model'])) {
             $cmd .= ' --model ' . escapeshellarg($options['model']);
+        }
+
+        if (!empty($options['reasoning'])) {
+            $level = str_replace('_', '-', $options['reasoning']);
+            $cmd .= ' -c ' . escapeshellarg('reasoning=' . $level);
         }
 
         $cmd .= ' -';

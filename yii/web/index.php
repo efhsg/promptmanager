@@ -13,7 +13,4 @@ $config = require __DIR__ . '/../config/web.php';
 
 $app = new yii\web\Application($config);
 
-// Backward compat: queued jobs serialized before rename can still deserialize
-class_alias('app\jobs\RunAiJob', 'app\jobs\RunClaudeJob');
-
 $app->run();

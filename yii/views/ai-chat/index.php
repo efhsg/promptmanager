@@ -95,50 +95,58 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
     <div id="ai-provider-status" class="visually-hidden" aria-live="polite"></div>
 
     <!-- Combined bar (settings badges | usage summary) — always on top -->
-    <div id="claude-combined-bar" class="claude-combined-bar claude-combined-bar--loading mb-3" role="button">
-        <div id="claude-combined-settings" class="claude-combined-bar__settings"></div>
-        <div class="claude-combined-bar__divider"></div>
-        <div id="claude-combined-usage" class="claude-combined-bar__usage">
-            <span class="claude-usage-summary__placeholder">Loading usage...</span>
+    <div id="ai-combined-bar" class="ai-combined-bar ai-combined-bar--loading mb-3" role="button">
+        <div id="ai-combined-settings" class="ai-combined-bar__settings"></div>
+        <div class="ai-combined-bar__divider"></div>
+        <div id="ai-combined-usage" class="ai-combined-bar__usage">
+            <span class="ai-usage-summary__placeholder">Loading usage...</span>
         </div>
     </div>
 
     <!-- Subscription Usage (expanded) -->
-    <div id="claude-subscription-usage" class="claude-subscription-usage mb-3 d-none">
-        <div id="claudeUsageCard">
-            <div class="claude-usage-section" role="button" id="claude-usage-expanded">
-                <div id="claude-subscription-bars"></div>
+    <div id="ai-subscription-usage" class="ai-subscription-usage mb-3 d-none">
+        <div id="aiUsageCard">
+            <div class="ai-usage-section" role="button" id="ai-usage-expanded">
+                <div id="ai-subscription-bars"></div>
             </div>
         </div>
     </div>
 
     <!-- Section 1: CLI Settings (expanded) -->
-    <div class="card mb-4 d-none" id="claudeSettingsCardWrapper">
-        <div id="claudeSettingsCard">
-            <div class="card-body claude-settings-section">
-                <div class="claude-settings-badges-bar" id="claude-settings-badges" role="button" title="Collapse settings">
+    <div class="card mb-4 d-none" id="aiSettingsCardWrapper">
+        <div id="aiSettingsCard">
+            <div class="card-body ai-settings-section">
+                <div class="ai-settings-badges-bar" id="ai-settings-badges" role="button" title="Collapse settings">
                     <span class="badge bg-secondary" title="Project"><i class="bi bi-folder2-open"></i> <?= Html::encode($project->name) ?></span>
                     <?php if ($gitBranch): ?>
                     <span class="badge bg-secondary" title="Git branch"><i class="bi bi-signpost-split"></i> <?= Html::encode($gitBranch) ?></span>
                     <?php endif; ?>
-                    <span id="claude-config-badge" class="badge d-none"></span>
-                    <i class="bi bi-chevron-up claude-settings-badges-bar__chevron"></i>
+                    <span id="ai-config-badge" class="badge d-none"></span>
+                    <i class="bi bi-chevron-up ai-settings-badges-bar__chevron"></i>
                 </div>
 
-                <div class="row g-3">
-                    <?php if ($showProviderSelector): ?>
-                    <div class="col-md-4">
-                        <label for="ai-provider" class="form-label">Provider</label>
-                        <?= Html::dropDownList('ai-provider', $defaultProvider, $providerOptions, [
-                            'id' => 'ai-provider',
-                            'class' => 'form-select',
-                            'aria-label' => 'Select AI provider',
-                        ]) ?>
+                <?php if ($showProviderSelector): ?>
+                <div id="ai-provider-row" class="ai-provider-row">
+                    <div id="ai-settings-locked-alert" class="alert alert-info ai-settings-locked-alert d-none" role="alert" aria-live="assertive">
+                        <i class="bi bi-lock-fill me-1"></i>
+                        Provider is locked for this session.
+                        <a href="#" id="ai-settings-locked-new-session" class="alert-link">Start a New Session</a> to change provider.
                     </div>
-                    <div class="col-md-4">
-                    <?php else: ?>
+                    <div class="row g-3">
+                        <div class="col">
+                            <label for="ai-provider" class="form-label">Provider</label>
+                            <?= Html::dropDownList('ai-provider', $defaultProvider, $providerOptions, [
+                                'id' => 'ai-provider',
+                                'class' => 'form-select',
+                                'aria-label' => 'Select AI provider',
+                            ]) ?>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <div class="row g-3" id="ai-core-settings-row">
                     <div class="col-md-6">
-                    <?php endif; ?>
                         <label for="ai-model" class="form-label">Model</label>
                         <?= Html::dropDownList('ai-model', '', $models, [
                             'id' => 'ai-model',
@@ -146,11 +154,7 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
                             'aria-label' => 'Select AI model',
                         ]) ?>
                     </div>
-                    <?php if ($showProviderSelector): ?>
-                    <div class="col-md-4">
-                    <?php else: ?>
-                    <div class="col-md-6">
-                    <?php endif; ?>
+                    <div class="col-md-6" id="ai-permission-mode-col">
                         <label for="ai-permission-mode" class="form-label">Permission Mode</label>
                         <?= Html::dropDownList('ai-permission-mode', '', $permissionModes, [
                             'id' => 'ai-permission-mode',
@@ -166,24 +170,24 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
         </div>
     </div>
 
-    <!-- Streaming preview (lives above the prompt editor while Claude is working) -->
-    <div id="claude-stream-container" class="d-none mb-4"></div>
+    <!-- Streaming preview (lives above the prompt editor while AI is working) -->
+    <div id="ai-stream-container" class="d-none mb-4"></div>
 
     <!-- Active response (rendered here after stream ends, hidden when empty, moved into accordion on next send) -->
-    <div id="claude-active-response-container" class="d-none mb-4"></div>
+    <div id="ai-active-response-container" class="d-none mb-4"></div>
 
     <!-- Prompt Editor (collapsible) -->
-    <div class="card mb-4 claude-prompt-card-sticky">
-        <div class="collapse show" id="claudePromptCard">
-            <div class="card-body claude-prompt-section">
-                <div class="claude-prompt-collapse-bar" id="claude-prompt-collapse-btn" role="button" title="Collapse editor">
-                    <i class="bi bi-pencil-square claude-prompt-collapse-bar__icon"></i>
-                    <span class="claude-prompt-collapse-bar__label">Prompt editor</span>
-                    <i class="bi bi-chevron-up claude-prompt-collapse-bar__chevron"></i>
+    <div class="card mb-4 ai-prompt-card-sticky">
+        <div class="collapse show" id="aiPromptCard">
+            <div class="card-body ai-prompt-section">
+                <div class="ai-prompt-collapse-bar" id="ai-prompt-collapse-btn" role="button" title="Collapse editor">
+                    <i class="bi bi-pencil-square ai-prompt-collapse-bar__icon"></i>
+                    <span class="ai-prompt-collapse-bar__label">Prompt editor</span>
+                    <i class="bi bi-chevron-up ai-prompt-collapse-bar__chevron"></i>
                 </div>
                 <!-- Quill editor (initial mode) -->
-                <div id="claude-quill-wrapper" class="resizable-editor-container">
-                    <div id="claude-quill-toolbar">
+                <div id="ai-quill-wrapper" class="resizable-editor-container">
+                    <div id="ai-quill-toolbar">
                         <span class="ql-formats">
                             <button class="ql-bold"></button>
                             <button class="ql-italic"></button>
@@ -220,9 +224,9 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
                         <span class="ql-formats">
                             <button class="ql-clean"></button>
                         </span>
-                        <span class="ql-formats" id="claude-command-slot">
+                        <span class="ql-formats" id="ai-command-slot">
                         </span>
-                        <span class="ql-formats claude-toolbar-utils">
+                        <span class="ql-formats ai-toolbar-utils">
                             <button type="button" class="ql-clearEditor" title="Clear editor content">
                                 <svg viewBox="0 0 18 18" width="18" height="18"><path d="M3 5h12M7 5V3h4v2M5 5v9a1 1 0 001 1h6a1 1 0 001-1V5" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="8" y1="8" x2="8" y2="12" stroke="currentColor" stroke-width="1"/><line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1"/></svg>
                             </button>
@@ -232,93 +236,93 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
                             <button type="button" class="ql-loadMd" title="Load markdown file">
                                 <svg viewBox="0 0 18 18" width="18" height="18"><path d="M4 2h7l4 4v10a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M9 7v6M7 11l2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                             </button>
-                            <button type="button" id="claude-focus-toggle" class="claude-focus-toggle" title="Focus mode (Alt+F)">
+                            <button type="button" id="ai-focus-toggle" class="ai-focus-toggle" title="Focus mode (Alt+F)">
                                 <i class="bi bi-arrows-fullscreen"></i>
                                 <i class="bi bi-fullscreen-exit"></i>
                             </button>
                         </span>
                     </div>
-                    <div id="claude-quill-editor" class="resizable-editor"></div>
+                    <div id="ai-quill-editor" class="resizable-editor"></div>
                 </div>
 
                 <!-- Textarea (follow-up mode, hidden initially) -->
-                <div id="claude-textarea-wrapper" class="d-none">
-                    <textarea id="claude-followup-textarea" class="form-control claude-followup-textarea"
+                <div id="ai-textarea-wrapper" class="d-none">
+                    <textarea id="ai-followup-textarea" class="form-control ai-followup-textarea"
                               rows="3" placeholder="Ask a follow-up question..."></textarea>
                 </div>
 
                 <!-- Action buttons + editor toggle -->
                 <div class="mt-3 d-flex justify-content-between align-items-center">
-                    <div class="claude-editor-toggle">
-                        <a href="#" id="claude-editor-toggle" class="small text-muted">
+                    <div class="ai-editor-toggle">
+                        <a href="#" id="ai-editor-toggle" class="small text-muted">
                             Switch to plain text
                         </a>
                     </div>
                     <div class="d-flex gap-2 align-items-center">
-                        <button type="button" id="claude-reuse-btn" class="btn btn-outline-secondary d-none">
+                        <button type="button" id="ai-reuse-btn" class="btn btn-outline-secondary d-none">
                             <i class="bi bi-arrow-counterclockwise"></i> Last prompt
                         </button>
-                        <button type="button" id="claude-send-btn" class="btn btn-primary" title="Send (Ctrl+Enter / Alt+S)">
+                        <button type="button" id="ai-send-btn" class="btn btn-primary" title="Send (Ctrl+Enter / Alt+S)">
                             <i class="bi bi-send-fill"></i> Send
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-        <div id="claude-prompt-summary" class="claude-collapsible-summary d-none"
-             data-bs-toggle="collapse" data-bs-target="#claudePromptCard" role="button">
+        <div id="ai-prompt-summary" class="ai-collapsible-summary d-none"
+             data-bs-toggle="collapse" data-bs-target="#aiPromptCard" role="button">
             <i class="bi bi-pencil-square me-1"></i> Prompt editor
-            <button type="button" id="claude-summary-reply-btn"
-                    class="claude-collapsible-summary__reply d-none"
+            <button type="button" id="ai-summary-reply-btn"
+                    class="ai-collapsible-summary__reply d-none"
                     title="Reply (Alt+R)">
                 <i class="bi bi-reply-fill"></i> Reply
             </button>
-            <i class="bi bi-chevron-down claude-collapsible-summary__chevron"></i>
+            <i class="bi bi-chevron-down ai-collapsible-summary__chevron"></i>
         </div>
     </div>
 
     <!-- Exchange History Accordion (exchanges go here immediately on send) -->
-    <div id="claude-history-wrapper" class="d-none mb-4">
+    <div id="ai-history-wrapper" class="d-none mb-4">
         <div class="d-flex align-items-center justify-content-end mb-2">
-            <div id="claude-summarize-group" class="btn-group d-none me-2">
-                <button type="button" id="claude-summarize-auto-btn" class="btn btn-outline-secondary btn-sm"
+            <div id="ai-summarize-group" class="btn-group d-none me-2">
+                <button type="button" id="ai-summarize-auto-btn" class="btn btn-outline-secondary btn-sm"
                         title="Summarize conversation for review before starting a new session">
                     <i class="bi bi-pencil-square"></i> Summarize
                 </button>
-                <button type="button" id="claude-summarize-split-toggle"
+                <button type="button" id="ai-summarize-split-toggle"
                         class="btn btn-outline-secondary btn-sm dropdown-toggle dropdown-toggle-split"
                         data-bs-toggle="dropdown" aria-expanded="false">
                     <span class="visually-hidden">Toggle Dropdown</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
-                        <a class="dropdown-item" href="#" id="claude-summarize-btn">
+                        <a class="dropdown-item" href="#" id="ai-summarize-btn">
                             <i class="bi bi-arrow-repeat me-1"></i> Summarize &amp; New Session
                             <small class="d-block text-muted">Summarize and start new session automatically</small>
                         </a>
                     </li>
                     <li><hr class="dropdown-divider"></li>
                     <li>
-                        <a class="dropdown-item" href="#" id="claude-new-session-btn">
+                        <a class="dropdown-item" href="#" id="ai-new-session-btn">
                             <i class="bi bi-x-circle me-1"></i> New Session
                             <small class="d-block text-muted">Discard context and start fresh</small>
                         </a>
                     </li>
                 </ul>
             </div>
-            <button type="button" id="claude-toggle-history-btn" class="btn btn-outline-secondary btn-sm">
+            <button type="button" id="ai-toggle-history-btn" class="btn btn-outline-secondary btn-sm">
                 <i class="bi bi-arrows-collapse"></i> Collapse All
             </button>
         </div>
-        <div class="accordion" id="claude-history-accordion"></div>
+        <div class="accordion" id="ai-history-accordion"></div>
     </div>
 
     <!-- Copy All + Save Dialog (below both) -->
-    <div id="claude-copy-all-wrapper" class="d-none text-end mb-4">
-        <button type="button" id="claude-save-dialog-btn" class="btn btn-outline-primary btn-sm me-1">
+    <div id="ai-copy-all-wrapper" class="d-none text-end mb-4">
+        <button type="button" id="ai-save-dialog-btn" class="btn btn-outline-primary btn-sm me-1">
             <i class="bi bi-save"></i> Save Dialog
         </button>
-        <button type="button" id="claude-copy-all-btn" class="btn btn-outline-secondary btn-sm">
+        <button type="button" id="ai-copy-all-btn" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-clipboard"></i> Copy All
         </button>
     </div>
@@ -391,28 +395,28 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
     </div>
 
     <!-- Streaming Process Modal -->
-    <div class="modal fade" id="claudeStreamModal" tabindex="-1" aria-labelledby="claudeStreamModalLabel" aria-hidden="true">
+    <div class="modal fade" id="aiStreamModal" tabindex="-1" aria-labelledby="aiStreamModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="claudeStreamModalLabel">
+                    <h5 class="modal-title" id="aiStreamModalLabel">
                         <i class="bi bi-terminal-fill me-1"></i>
-                        <span id="claude-modal-status-label" class="claude-stream-status">Claude thinking
-                            <span id="claude-modal-dots" class="claude-thinking-dots"><span></span><span></span><span></span></span>
+                        <span id="ai-modal-status-label" class="ai-stream-status">AI thinking
+                            <span id="ai-modal-dots" class="ai-thinking-dots"><span></span><span></span><span></span></span>
                         </span>
                     </h5>
-                    <span id="claude-modal-timer" class="claude-stream-timer me-2"></span>
-                    <button type="button" id="claude-modal-cancel-btn" class="claude-cancel-btn claude-cancel-btn--modal d-none" title="Cancel inference">
+                    <span id="ai-modal-timer" class="ai-stream-timer me-2"></span>
+                    <button type="button" id="ai-modal-cancel-btn" class="ai-cancel-btn ai-cancel-btn--modal d-none" title="Cancel inference">
                         <i class="bi bi-stop-fill"></i> Stop
                     </button>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <details id="claude-modal-thinking" class="claude-thinking-block d-none" open>
+                    <details id="ai-modal-thinking" class="ai-thinking-block d-none" open>
                         <summary>Thinking</summary>
-                        <div id="claude-modal-thinking-body" class="claude-thinking-block__content"></div>
+                        <div id="ai-modal-thinking-body" class="ai-thinking-block__content"></div>
                     </details>
-                    <div id="claude-modal-body" class="claude-message__body"></div>
+                    <div id="ai-modal-body" class="ai-message__body"></div>
                 </div>
             </div>
         </div>
@@ -423,11 +427,11 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
 $aiCommandsJson = Json::encode($aiCommands, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 $js = <<<JS
     (function() {
-        var quill = new Quill('#claude-quill-editor', {
+        var quill = new Quill('#ai-quill-editor', {
             theme: 'snow',
             modules: {
                 toolbar: {
-                    container: '#claude-quill-toolbar',
+                    container: '#ai-quill-toolbar',
                     handlers: {
                         clearEditor: function() {},
                         smartPaste: function() {},
@@ -448,10 +452,10 @@ $js = <<<JS
             window.QuillToolbar.setupLoadMd(quill, null, urlConfig);
         }
 
-        // Build Claude command dropdown
+        // Build AI command dropdown
         var aiCommands = $aiCommandsJson;
         var commandDropdown = document.createElement('select');
-        commandDropdown.classList.add('ql-insertClaudeCommand', 'ql-picker');
+        commandDropdown.classList.add('ql-insertAiCommand', 'ql-picker');
         commandDropdown.innerHTML = '<option value="" selected disabled>Command</option>';
         var firstValue = Object.values(aiCommands)[0];
         var isGrouped = firstValue !== null && firstValue !== undefined && typeof firstValue === 'object';
@@ -478,7 +482,7 @@ $js = <<<JS
                 commandDropdown.appendChild(option);
             });
         }
-        document.getElementById('claude-command-slot').appendChild(commandDropdown);
+        document.getElementById('ai-command-slot').appendChild(commandDropdown);
         commandDropdown.addEventListener('change', function() {
             var value = this.value;
             if (value) {
@@ -523,7 +527,7 @@ $js = <<<JS
         };
         marked.use({ renderer: renderer, breaks: true, gfm: true });
 
-        window.ClaudeChat = {
+        window.AiChat = {
             sessionId: $resumeSessionIdJson,
             streamToken: null,
             currentRunId: null,
@@ -535,6 +539,10 @@ $js = <<<JS
             checkConfigUrl: $checkConfigUrlJson,
             settingsState: 'collapsed',
             usageState: 'collapsed',
+            providerLocked: false,
+            _editHintActive: false,
+            _pulseTimer: null,
+            _editHintTimer: null,
 
             generateUUID: function() {
                 if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
@@ -577,7 +585,12 @@ $js = <<<JS
             init: function() {
                 this.prefillFromDefaults();
                 this.checkConfigStatus();
-                this.fetchSubscriptionUsage();
+                var provider = this.getSelectedProviderId();
+                var providerMeta = this.providerData[provider];
+                if (providerMeta)
+                    this.updateCapabilityBadges(providerMeta);
+                else
+                    this.fetchSubscriptionUsage();
                 this.updateSettingsSummary();
                 this.setupEventListeners();
                 this.startUsageAutoRefresh();
@@ -589,10 +602,13 @@ $js = <<<JS
                     this.sessionHistory.forEach(function(run) {
                         self.renderHistoricalExchange(run);
                     });
-                    document.getElementById('claude-reuse-btn').classList.remove('d-none');
-                    document.getElementById('claude-summarize-group').classList.remove('d-none');
-                    document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                    document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
+                    document.getElementById('ai-reuse-btn').classList.remove('d-none');
+                    document.getElementById('ai-summarize-group').classList.remove('d-none');
+                    document.getElementById('ai-copy-all-wrapper').classList.remove('d-none');
+                    document.getElementById('ai-summary-reply-btn').classList.remove('d-none');
+                }
+                if (this.sessionId) {
+                    this.lockProvider();
                 }
                 if (this.replayRunId) {
                     this._appendNextAccordionItem = this.sessionHistory && this.sessionHistory.length > 0;
@@ -688,13 +704,14 @@ $js = <<<JS
                 var permEl = document.getElementById('ai-permission-mode');
                 if (modelEl) modelEl.value = d.model || '';
                 if (permEl) permEl.value = d.permissionMode || '';
+                this.applyProviderFieldVisibility(provider);
                 this.renderProviderCustomFields(provider);
                 this.prefillCustomFields(provider);
             },
 
             checkConfigStatus: function() {
                 var self = this;
-                var badge = document.getElementById('claude-config-badge');
+                var badge = document.getElementById('ai-config-badge');
 
                 if (!this.checkConfigUrl) return;
 
@@ -732,7 +749,7 @@ $js = <<<JS
                         title = 'No project config found. Using managed workspace with PromptManager context.';
                     } else {
                         icon = 'bi-exclamation-triangle'; bg = 'bg-warning'; label = 'No config';
-                        title = 'No config found. Claude will use defaults.';
+                        title = 'No config found. AI will use defaults.';
                     }
 
                     badge.className = 'badge ' + bg;
@@ -754,22 +771,24 @@ $js = <<<JS
 
             setupEventListeners: function() {
                 var self = this;
-                document.getElementById('claude-send-btn').addEventListener('click', function() { self.send(); });
-                document.getElementById('claude-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
-                document.getElementById('claude-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
-                document.getElementById('claude-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
-                document.getElementById('claude-save-dialog-btn').addEventListener('click', function() { self.openSaveDialogSelect(); });
+                document.getElementById('ai-send-btn').addEventListener('click', function() { self.send(); });
+                document.getElementById('ai-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
+                document.getElementById('ai-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
+                var lockedNewSession = document.getElementById('ai-settings-locked-new-session');
+                if (lockedNewSession) lockedNewSession.addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
+                document.getElementById('ai-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
+                document.getElementById('ai-save-dialog-btn').addEventListener('click', function() { self.openSaveDialogSelect(); });
                 document.getElementById('save-dialog-toggle-all').addEventListener('change', function() { self.toggleAllMessages(this.checked); });
                 document.getElementById('save-dialog-continue-btn').addEventListener('click', function() { self.saveDialogContinue(); });
                 document.getElementById('save-dialog-back-btn').addEventListener('click', function() { self.saveDialogBack(); });
                 document.getElementById('save-dialog-save-btn').addEventListener('click', function() { self.saveDialogSave(); });
                 document.getElementById('suggest-name-btn').addEventListener('click', function() { self.suggestName(); });
-                document.getElementById('claude-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
-                var historyAccordion = document.getElementById('claude-history-accordion');
+                document.getElementById('ai-toggle-history-btn').addEventListener('click', function() { self.toggleHistory(); });
+                var historyAccordion = document.getElementById('ai-history-accordion');
                 historyAccordion.addEventListener('shown.bs.collapse', function() { self.updateToggleHistoryBtn(); });
                 historyAccordion.addEventListener('hidden.bs.collapse', function() { self.updateToggleHistoryBtn(); });
-                document.getElementById('claude-modal-cancel-btn').addEventListener('click', function() { self.cancel(); });
-                document.getElementById('claude-editor-toggle').addEventListener('click', function(e) {
+                document.getElementById('ai-modal-cancel-btn').addEventListener('click', function() { self.cancel(); });
+                document.getElementById('ai-editor-toggle').addEventListener('click', function(e) {
                     e.preventDefault();
                     if (self.inputMode === 'quill')
                         self.switchToTextarea();
@@ -787,10 +806,10 @@ $js = <<<JS
                         self.send();
                     }
                     if (e.altKey && e.key.toLowerCase() === 'g') {
-                        var visibleGo = document.querySelector('.claude-message__go:not(.d-none)');
+                        var visibleGo = document.querySelector('.ai-message__go:not(.d-none)');
                         if (visibleGo) {
                             e.preventDefault();
-                            document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                            document.getElementById('ai-summary-reply-btn').classList.add('d-none');
                             self.sendFixedText('Proceed');
                         }
                     }
@@ -803,13 +822,13 @@ $js = <<<JS
                         self.toggleFocusMode();
                     }
                 };
-                document.getElementById('claude-followup-textarea').addEventListener('keydown', handleEditorKeydown);
+                document.getElementById('ai-followup-textarea').addEventListener('keydown', handleEditorKeydown);
                 quill.root.addEventListener('keydown', handleEditorKeydown);
 
                 // Alt+R must work even when the editor is collapsed and has no focus
                 document.addEventListener('keydown', function(e) {
                     if (e.altKey && e.key.toLowerCase() === 'r') {
-                        var replyBtn = document.getElementById('claude-summary-reply-btn');
+                        var replyBtn = document.getElementById('ai-summary-reply-btn');
                         if (replyBtn && !replyBtn.classList.contains('d-none')) {
                             e.preventDefault();
                             self.replyExpand();
@@ -818,38 +837,38 @@ $js = <<<JS
                 });
 
                 document.querySelector('.ai-chat-page').addEventListener('click', function(e) {
-                    var copyBtn = e.target.closest('.claude-message__copy');
+                    var copyBtn = e.target.closest('.ai-message__copy');
                     if (copyBtn) self.handleCopyClick(copyBtn);
 
-                    var header = e.target.closest('.claude-message--claude .claude-message__header');
+                    var header = e.target.closest('.ai-message--response .ai-message__header');
                     if (header) {
-                        var msg = header.closest('.claude-message--claude');
-                        msg.classList.toggle('claude-message--collapsed');
+                        var msg = header.closest('.ai-message--response');
+                        msg.classList.toggle('ai-message--collapsed');
                     }
                 });
 
-                document.getElementById('claude-settings-badges').addEventListener('click', function() {
+                document.getElementById('ai-settings-badges').addEventListener('click', function() {
                     self.collapseSettings();
                 });
-                document.getElementById('claude-combined-settings').addEventListener('click', function(e) {
+                document.getElementById('ai-combined-settings').addEventListener('click', function(e) {
                     e.stopPropagation();
                     self.toggleSettingsExpanded();
                 });
-                document.getElementById('claude-combined-usage').addEventListener('click', function(e) {
+                document.getElementById('ai-combined-usage').addEventListener('click', function(e) {
                     e.stopPropagation();
                     self.toggleUsageExpanded();
                 });
-                document.getElementById('claude-usage-expanded').addEventListener('click', function() {
+                document.getElementById('ai-usage-expanded').addEventListener('click', function() {
                     self.toggleUsageExpanded();
                 });
 
-                var promptCard = document.getElementById('claudePromptCard');
+                var promptCard = document.getElementById('aiPromptCard');
                 promptCard.addEventListener('hidden.bs.collapse', function() {
-                    document.getElementById('claude-prompt-summary').classList.remove('d-none');
+                    document.getElementById('ai-prompt-summary').classList.remove('d-none');
                     self.setStreamPreviewTall(true);
                 });
                 promptCard.addEventListener('shown.bs.collapse', function() {
-                    var summary = document.getElementById('claude-prompt-summary');
+                    var summary = document.getElementById('ai-prompt-summary');
                     summary.classList.add('d-none');
                     self.setStreamPreviewTall(false);
                     if (self._replyExpand) {
@@ -861,22 +880,22 @@ $js = <<<JS
                     }
                     self.focusEditor();
                 });
-                document.getElementById('claude-prompt-collapse-btn').addEventListener('click', function() {
+                document.getElementById('ai-prompt-collapse-btn').addEventListener('click', function() {
                     self.collapsePromptEditor();
                 });
-                document.getElementById('claude-summary-reply-btn').addEventListener('click', function(e) {
+                document.getElementById('ai-summary-reply-btn').addEventListener('click', function(e) {
                     e.stopPropagation();
                     self.replyExpand();
                 });
-                document.getElementById('claude-focus-toggle').addEventListener('click', function() {
+                document.getElementById('ai-focus-toggle').addEventListener('click', function() {
                     self.toggleFocusMode();
                 });
 
-                document.getElementById('claude-summarize-btn').addEventListener('click', function(e) {
+                document.getElementById('ai-summarize-btn').addEventListener('click', function(e) {
                     e.preventDefault();
                     self.summarizeAndContinue(true);
                 });
-                document.getElementById('claude-summarize-auto-btn').addEventListener('click', function() {
+                document.getElementById('ai-summarize-auto-btn').addEventListener('click', function() {
                     self.summarizeAndContinue(false);
                 });
 
@@ -888,20 +907,25 @@ $js = <<<JS
                         var data = self.providerData[id];
                         self.repopulateSelect('ai-model', data.models);
                         self.repopulateSelect('ai-permission-mode', data.permissionModes);
+                        var d = self.projectDefaults[id] || {};
+                        var modelEl = document.getElementById('ai-model');
+                        var permEl = document.getElementById('ai-permission-mode');
+                        if (modelEl) modelEl.value = d.model || '';
+                        if (permEl) permEl.value = d.permissionMode || '';
+                        self.applyProviderFieldVisibility(id);
                         self.renderProviderCustomFields(id);
                         self.prefillCustomFields(id);
+                        self.checkConfigStatus();
                         var appSuffix = document.title.indexOf(' - ') > -1
                             ? ' - ' + document.title.split(' - ').slice(1).join(' - ')
                             : '';
                         document.title = data.name + ' CLI' + appSuffix;
                         var h1 = document.querySelector('.ai-chat-page h1');
                         if (h1) h1.textContent = data.name + ' CLI';
-                        if (self.sessionId)
-                            self.showProviderSwitchWarning(data.name);
                         self.updateSettingsSummary();
                         self.updateCapabilityBadges(data);
                         var statusEl = document.getElementById('ai-provider-status');
-                        if (statusEl) statusEl.textContent = 'Model and permission options updated for ' + data.name;
+                        if (statusEl) statusEl.textContent = 'Model and provider options updated for ' + data.name;
                     });
                 }
             },
@@ -913,7 +937,7 @@ $js = <<<JS
                     model: document.getElementById('ai-model').value,
                     permissionMode: document.getElementById('ai-permission-mode').value
                 };
-                var customFields = document.querySelectorAll('#provider-custom-fields [data-option-key]');
+                var customFields = document.querySelectorAll('#aiSettingsCard [data-option-key]');
                 customFields.forEach(function(el) {
                     var key = el.dataset.optionKey;
                     options[key] = el.type === 'checkbox' ? el.checked : el.value;
@@ -933,15 +957,64 @@ $js = <<<JS
                 });
             },
 
-            renderProviderCustomFields: function(providerId) {
-                var container = document.getElementById('provider-custom-fields');
-                if (!container) return;
-                container.innerHTML = '';
+            getProviderFieldConfig: function(providerId) {
+                if (providerId === 'claude') {
+                    return { showPermissionMode: true, customFieldKeys: [] };
+                }
+                if (providerId === 'codex') {
+                    return { showPermissionMode: false, customFieldKeys: ['reasoning'] };
+                }
+                return { showPermissionMode: false, customFieldKeys: [] };
+            },
+
+            applyProviderFieldVisibility: function(providerId) {
+                var config = this.getProviderFieldConfig(providerId);
+                var permissionCol = document.getElementById('ai-permission-mode-col');
+                var permissionEl = document.getElementById('ai-permission-mode');
+                if (permissionCol) {
+                    permissionCol.classList.toggle('d-none', !config.showPermissionMode);
+                }
+                if (permissionEl) {
+                    permissionEl.disabled = !config.showPermissionMode;
+                    if (!config.showPermissionMode) {
+                        permissionEl.value = '';
+                    }
+                }
+            },
+
+            getFilteredConfigSchema: function(providerId) {
                 var data = this.providerData[providerId];
-                if (!data || !data.configSchema) return;
-                var schema = data.configSchema;
+                if (!data || !data.configSchema) return {};
+
+                var config = this.getProviderFieldConfig(providerId);
+                if (!config.customFieldKeys || config.customFieldKeys.length === 0) {
+                    return {};
+                }
+
+                var schema = {};
+                config.customFieldKeys.forEach(function(key) {
+                    if (Object.hasOwn(data.configSchema, key)) {
+                        schema[key] = data.configSchema[key];
+                    }
+                });
+
+                return schema;
+            },
+
+            renderProviderCustomFields: function(providerId) {
+                var additionalRow = document.getElementById('provider-custom-fields');
+                var coreRow = document.getElementById('ai-core-settings-row');
+                if (!additionalRow || !coreRow) return;
+                additionalRow.innerHTML = '';
+                coreRow.querySelectorAll('.ai-provider-custom-field').forEach(function(el) {
+                    el.remove();
+                });
+
+                var schema = this.getFilteredConfigSchema(providerId);
                 var keys = Object.keys(schema);
                 if (keys.length === 0) return;
+                var appendToCoreRow = providerId === 'codex';
+                var container = appendToCoreRow ? coreRow : additionalRow;
 
                 keys.forEach(function(key) {
                     var field = schema[key];
@@ -949,6 +1022,7 @@ $js = <<<JS
                     var fieldId = 'ai-custom-' + key;
                     var col = document.createElement('div');
                     col.className = type === 'textarea' ? 'col-12' : 'col-md-6';
+                    col.classList.add('ai-provider-custom-field');
 
                     var label = document.createElement('label');
                     label.className = 'form-label';
@@ -1025,7 +1099,7 @@ $js = <<<JS
 
             prefillCustomFields: function(providerId) {
                 var defaults = this.projectDefaults[providerId] || {};
-                var customFields = document.querySelectorAll('#provider-custom-fields [data-option-key]');
+                var customFields = document.querySelectorAll('#aiSettingsCard [data-option-key]');
                 customFields.forEach(function(el) {
                     var key = el.dataset.optionKey;
                     var val = defaults[key];
@@ -1036,23 +1110,49 @@ $js = <<<JS
                 });
             },
 
-            showProviderSwitchWarning: function(providerName) {
-                var existing = document.getElementById('ai-provider-switch-warning');
-                if (existing) existing.remove();
-                var alert = document.createElement('div');
-                alert.id = 'ai-provider-switch-warning';
-                alert.className = 'alert alert-warning alert-dismissible py-2 mb-2';
-                alert.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i>' +
-                    'Switching to <strong>' + this.escapeHtml(providerName) + '</strong> will start a new session. ' +
-                    'The current session context will not carry over.' +
-                    '<button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="Close"></button>';
-                var promptCard = document.querySelector('.claude-prompt-card-sticky');
-                if (promptCard && promptCard.parentNode)
-                    promptCard.parentNode.insertBefore(alert, promptCard);
+            lockProvider: function() {
+                this.providerLocked = true;
+                this._editHintActive = false;
+                if (this._pulseTimer) { clearTimeout(this._pulseTimer); this._pulseTimer = null; }
+                if (this._editHintTimer) { clearTimeout(this._editHintTimer); this._editHintTimer = null; }
+
+                var el = document.getElementById('ai-provider');
+                if (el) el.disabled = true;
+
+                var providerRow = document.getElementById('ai-provider-row');
+                if (providerRow) providerRow.classList.add('ai-provider-row--locked');
+
+                var bar = document.getElementById('ai-combined-bar');
+                bar.classList.remove('ai-combined-bar--pulse');
+                this.updateSettingsSummary();
+
+                var alert = document.getElementById('ai-settings-locked-alert');
+                if (alert) alert.classList.remove('d-none');
+
+                var statusEl = document.getElementById('ai-provider-status');
+                if (statusEl) statusEl.textContent = 'Provider locked for this session';
+            },
+
+            unlockProvider: function() {
+                this.providerLocked = false;
+
+                var el = document.getElementById('ai-provider');
+                if (el) el.disabled = false;
+
+                var providerRow = document.getElementById('ai-provider-row');
+                if (providerRow) providerRow.classList.remove('ai-provider-row--locked');
+
+                this.updateSettingsSummary();
+
+                var alert = document.getElementById('ai-settings-locked-alert');
+                if (alert) alert.classList.add('d-none');
+
+                var statusEl = document.getElementById('ai-provider-status');
+                if (statusEl) statusEl.textContent = 'Provider unlocked';
             },
 
             updateCapabilityBadges: function(data) {
-                var badge = document.getElementById('claude-config-badge');
+                var badge = document.getElementById('ai-config-badge');
                 if (!data.supportsConfig) {
                     if (badge) {
                         badge.className = 'badge bg-secondary';
@@ -1065,22 +1165,23 @@ $js = <<<JS
                 }
 
                 if (!data.supportsUsage) {
-                    var usageSummary = document.getElementById('claude-combined-usage');
-                    if (usageSummary)
-                        usageSummary.innerHTML = '<span class="text-muted small">Usage not available for ' + this.escapeHtml(data.name) + '</span>';
+                    this.renderUsageUnavailable(data.name);
                 } else {
                     this.fetchSubscriptionUsage();
                 }
             },
 
+            getSelectedProviderId: function() {
+                var providerEl = document.getElementById('ai-provider');
+                return providerEl ? providerEl.value : this.defaultProvider;
+            },
+
             send: function() {
                 var self = this;
                 var options = this.getOptions();
-                var sendBtn = document.getElementById('claude-send-btn');
+                var sendBtn = document.getElementById('ai-send-btn');
 
-                // Dismiss provider switch warning on first send
-                var switchWarning = document.getElementById('ai-provider-switch-warning');
-                if (switchWarning) switchWarning.remove();
+                this.lockProvider();
 
                 this.streamToken = this.generateUUID();
                 options.streamToken = this.streamToken;
@@ -1099,7 +1200,7 @@ $js = <<<JS
                     options.contentDelta = JSON.stringify(delta);
                     quill.setText('');
                 } else {
-                    var textarea = document.getElementById('claude-followup-textarea');
+                    var textarea = document.getElementById('ai-followup-textarea');
                     var text = textarea.value.trim();
                     if (!text) return;
                     pendingPrompt = text;
@@ -1212,7 +1313,7 @@ $js = <<<JS
             isEditorEmpty: function() {
                 if (this.inputMode === 'quill')
                     return !quill.getText().replace(/\\n$/, '').trim();
-                return !document.getElementById('claude-followup-textarea').value.trim();
+                return !document.getElementById('ai-followup-textarea').value.trim();
             },
 
             needsApproval: function(text) {
@@ -1306,22 +1407,22 @@ $js = <<<JS
              * Render choice buttons into the message actions area.
              */
             renderChoiceButtons: function(messageDiv, options) {
-                var actions = messageDiv.querySelector('.claude-message__actions');
+                var actions = messageDiv.querySelector('.ai-message__actions');
                 if (!actions) return;
 
                 var self = this;
                 var strip = document.createElement('div');
-                strip.className = 'claude-choice-buttons';
+                strip.className = 'ai-choice-buttons';
 
                 for (var i = 0; i < options.length; i++) {
                     (function(opt) {
                         var btn = document.createElement('button');
                         btn.type = 'button';
-                        btn.className = 'claude-choice-btn';
+                        btn.className = 'ai-choice-btn';
                         btn.textContent = opt.label;
 
                         if (opt.action === 'edit') {
-                            btn.classList.add('claude-choice-btn--edit');
+                            btn.classList.add('ai-choice-btn--edit');
                             btn.title = 'Open editor';
                             btn.addEventListener('click', function() {
                                 self.choiceEdit();
@@ -1343,7 +1444,7 @@ $js = <<<JS
              * Choice action: send the label as a fixed reply.
              */
             choiceSend: function(label) {
-                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                document.getElementById('ai-summary-reply-btn').classList.add('d-none');
                 this.sendFixedText(label);
             },
 
@@ -1351,7 +1452,7 @@ $js = <<<JS
              * Choice action: open the prompt editor (empty) for the user to type.
              */
             choiceEdit: function() {
-                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                document.getElementById('ai-summary-reply-btn').classList.add('d-none');
                 this.replyExpand();
             },
 
@@ -1359,7 +1460,7 @@ $js = <<<JS
                 if (this.inputMode === 'quill')
                     quill.setText(text);
                 else
-                    document.getElementById('claude-followup-textarea').value = text;
+                    document.getElementById('ai-followup-textarea').value = text;
                 this.send();
             },
 
@@ -1412,6 +1513,8 @@ $js = <<<JS
                         this.onCodexItemCompleted(data);
                     else if (type === 'turn.completed')
                         this.onCodexTurnCompleted(data);
+                    else if (type === 'turn.failed')
+                        this.onStreamError((data.error && data.error.message) || 'Codex turn failed');
                     else if (type === 'error')
                         this.onStreamError(data.message || 'Codex error');
                 }
@@ -1527,6 +1630,16 @@ $js = <<<JS
                 var item = data.item;
                 if (!item) return;
                 if (item.type === 'agent_message' || item.type === 'message') {
+                    // Flat text field (codex-cli >= 0.104)
+                    if (typeof item.text === 'string' && item.text) {
+                        this.streamBuffer += item.text;
+                        this.streamReceivedText = true;
+                        if (!this.streamLabelSwitched) {
+                            this.streamLabelSwitched = true;
+                            this.updateStreamStatusLabel('responding');
+                        }
+                    }
+                    // Content blocks format (earlier versions)
                     var content = item.content || [];
                     for (var i = 0; i < content.length; i++) {
                         if (content[i].type === 'output_text' || content[i].type === 'text') {
@@ -1539,6 +1652,8 @@ $js = <<<JS
                         }
                     }
                     this.scheduleStreamRender();
+                } else if (item.type === 'error') {
+                    this.onStreamError(item.message || 'Codex error');
                 } else if (item.type === 'tool_call' || item.type === 'function_call') {
                     var toolName = item.name || item.function?.name || 'tool';
                     var uses = [toolName];
@@ -1633,7 +1748,7 @@ $js = <<<JS
              * Disables streaming UI, re-enables the send button, clears the render timer.
              */
             cleanupStreamUI: function() {
-                document.getElementById('claude-send-btn').disabled = false;
+                document.getElementById('ai-send-btn').disabled = false;
                 this.removeStreamDots();
                 this.showCancelButton(false);
                 this.closeStreamModal();
@@ -1643,7 +1758,7 @@ $js = <<<JS
                     clearTimeout(this.streamInactivityTimer);
                     this.streamInactivityTimer = null;
                 }
-                var modalDots = document.getElementById('claude-modal-dots');
+                var modalDots = document.getElementById('ai-modal-dots');
                 if (modalDots) modalDots.classList.add('d-none');
                 if (this.renderTimer) {
                     clearTimeout(this.renderTimer);
@@ -1655,12 +1770,12 @@ $js = <<<JS
                     this.streamTimerInterval = null;
                 }
                 // Remove pulse-ring
-                var preview = document.getElementById('claude-stream-preview');
-                if (preview) preview.classList.remove('claude-stream-preview--active');
+                var preview = document.getElementById('ai-stream-preview');
+                if (preview) preview.classList.remove('ai-stream-preview--active');
                 // Reset modal status label and timer for next stream
-                var modalLabel = document.getElementById('claude-modal-status-label');
-                if (modalLabel) modalLabel.firstChild.textContent = 'Claude thinking';
-                var modalTimer = document.getElementById('claude-modal-timer');
+                var modalLabel = document.getElementById('ai-modal-status-label');
+                if (modalLabel) modalLabel.firstChild.textContent = 'AI thinking';
+                var modalTimer = document.getElementById('ai-modal-timer');
                 if (modalTimer) modalTimer.textContent = '';
             },
 
@@ -1685,15 +1800,15 @@ $js = <<<JS
                 // The result event carries the canonical final answer; the full
                 // streamBuffer contains ALL text_delta output (intermediate + final)
                 // and is shown in the collapsible process block.
-                var claudeContent, processContent;
+                var aiContent, processContent;
                 if (this.streamResultText != null) {
-                    claudeContent = this.streamResultText || '';
+                    aiContent = this.streamResultText || '';
                     processContent = this.streamBuffer || '';
                     // Single-turn: process buffer is identical to result — no intermediate content
-                    if (processContent === claudeContent)
+                    if (processContent === aiContent)
                         processContent = '';
                 } else {
-                    claudeContent = this.streamBuffer || (this.streamThinkingBuffer ? '' : '(No output)');
+                    aiContent = this.streamBuffer || (this.streamThinkingBuffer ? '' : '(No output)');
                     processContent = '';
                 }
 
@@ -1709,11 +1824,11 @@ $js = <<<JS
                     configSource: this.streamMeta.configSource
                 };
 
-                this.renderCurrentExchange(userContent, claudeContent, processContent, meta);
+                this.renderCurrentExchange(userContent, aiContent, processContent, meta);
 
                 this.messages.push(
                     { role: 'user', content: userContent },
-                    { role: 'claude', content: claudeContent, processContent: processContent || '' }
+                    { role: 'ai', content: aiContent, processContent: processContent || '' }
                 );
 
                 var pctUsed = Math.min(100, Math.round(contextUsed / this.maxContext * 100));
@@ -1722,11 +1837,11 @@ $js = <<<JS
                 this.updateContextMeter(pctUsed, contextUsed);
 
                 if (this.messages.length === 2) {
-                    document.getElementById('claude-reuse-btn').classList.remove('d-none');
-                    document.getElementById('claude-summarize-group').classList.remove('d-none');
+                    document.getElementById('ai-reuse-btn').classList.remove('d-none');
+                    document.getElementById('ai-summarize-group').classList.remove('d-none');
                 }
-                document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
+                document.getElementById('ai-copy-all-wrapper').classList.remove('d-none');
+                document.getElementById('ai-summary-reply-btn').classList.remove('d-none');
                 this.scrollToTopUnlessFocused();
                 this.fetchSubscriptionUsage();
             },
@@ -1741,16 +1856,16 @@ $js = <<<JS
 
                 // If we have partial streamed text, show it with error appended
                 if (this.streamReceivedText) {
-                    var claudeBody = this.renderPartialResponse(this.streamBuffer);
+                    var aiBody = this.renderPartialResponse(this.streamBuffer);
                     var alert = document.createElement('div');
                     alert.className = 'alert alert-danger mt-2 mb-0';
                     alert.textContent = msg;
-                    claudeBody.appendChild(alert);
+                    aiBody.appendChild(alert);
                 } else {
                     this.addErrorMessage(msg);
                 }
 
-                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
+                document.getElementById('ai-summary-reply-btn').classList.remove('d-none');
                 this.expandPromptEditor();
 
                 // Attempt recovery: if the run completed on the server despite
@@ -1796,34 +1911,34 @@ $js = <<<JS
                 // Render partial content into the standalone active response container
                 var partialContent = this.streamBuffer || '';
                 if (partialContent || this.streamThinkingBuffer) {
-                    var claudeBody = this.renderPartialResponse(partialContent);
+                    var aiBody = this.renderPartialResponse(partialContent);
                     var notice = document.createElement('div');
-                    notice.className = 'claude-cancelled-notice';
+                    notice.className = 'ai-cancelled-notice';
                     notice.innerHTML = '<i class="bi bi-stop-circle"></i> Generation cancelled';
-                    claudeBody.appendChild(notice);
+                    aiBody.appendChild(notice);
                 }
 
                 // Store partial content as a message
-                var claudeContent = this.streamBuffer || '(Cancelled)';
+                var aiContent = this.streamBuffer || '(Cancelled)';
                 var userContent = this.streamPromptMarkdown || '(prompt)';
                 this.messages.push(
                     { role: 'user', content: userContent },
-                    { role: 'claude', content: claudeContent }
+                    { role: 'ai', content: aiContent }
                 );
 
                 if (this.messages.length === 2) {
-                    document.getElementById('claude-reuse-btn').classList.remove('d-none');
-                    document.getElementById('claude-summarize-group').classList.remove('d-none');
+                    document.getElementById('ai-reuse-btn').classList.remove('d-none');
+                    document.getElementById('ai-summarize-group').classList.remove('d-none');
                 }
-                document.getElementById('claude-copy-all-wrapper').classList.remove('d-none');
-                document.getElementById('claude-summary-reply-btn').classList.remove('d-none');
+                document.getElementById('ai-copy-all-wrapper').classList.remove('d-none');
+                document.getElementById('ai-summary-reply-btn').classList.remove('d-none');
 
                 this.expandPromptEditor();
             },
 
             showCancelButton: function(visible) {
-                var btn = document.getElementById('claude-cancel-btn');
-                var modalBtn = document.getElementById('claude-modal-cancel-btn');
+                var btn = document.getElementById('ai-cancel-btn');
+                var modalBtn = document.getElementById('ai-modal-cancel-btn');
                 if (visible) {
                     if (btn) btn.classList.remove('d-none');
                     if (modalBtn) modalBtn.classList.remove('d-none');
@@ -1843,7 +1958,7 @@ $js = <<<JS
             },
 
             renderStreamContent: function() {
-                var modalThinking = document.getElementById('claude-modal-thinking');
+                var modalThinking = document.getElementById('ai-modal-thinking');
 
                 // Render thinking into modal
                 if (modalThinking && this.streamThinkingBuffer) {
@@ -1859,12 +1974,12 @@ $js = <<<JS
                 this.updateStreamQuill(this.streamPreviewQuill, previewContent);
 
                 // Auto-scroll after Quill repaint
-                var previewBody = document.getElementById('claude-stream-body');
+                var previewBody = document.getElementById('ai-stream-body');
                 if (previewBody)
                     requestAnimationFrame(function() {
                         previewBody.scrollTop = previewBody.scrollHeight;
                     });
-                var modalBody = document.querySelector('#claudeStreamModal .modal-body');
+                var modalBody = document.querySelector('#aiStreamModal .modal-body');
                 if (modalBody)
                     requestAnimationFrame(function() {
                         modalBody.scrollTop = modalBody.scrollHeight;
@@ -1878,42 +1993,42 @@ $js = <<<JS
 
                 // Compact 5-line preview box (not part of final response)
                 var preview = document.createElement('div');
-                preview.id = 'claude-stream-preview';
-                preview.className = 'claude-stream-preview';
+                preview.id = 'ai-stream-preview';
+                preview.className = 'ai-stream-preview';
                 preview.title = 'Click to view full process';
                 preview.innerHTML =
-                    '<div class="claude-stream-preview__header">' +
+                    '<div class="ai-stream-preview__header">' +
                         '<i class="bi bi-terminal-fill"></i>' +
-                        '<span id="claude-stream-status-label" class="claude-stream-status">Claude thinking' +
-                            '<span id="claude-stream-dots" class="claude-thinking-dots">' +
+                        '<span id="ai-stream-status-label" class="ai-stream-status">AI thinking' +
+                            '<span id="ai-stream-dots" class="ai-thinking-dots">' +
                                 '<span></span><span></span><span></span>' +
                             '</span>' +
                         '</span>' +
-                        '<span id="claude-stream-timer" class="claude-stream-timer"></span>' +
-                        '<button type="button" id="claude-cancel-btn" class="claude-cancel-btn d-none" title="Cancel inference">' +
+                        '<span id="ai-stream-timer" class="ai-stream-timer"></span>' +
+                        '<button type="button" id="ai-cancel-btn" class="ai-cancel-btn d-none" title="Cancel inference">' +
                             '<i class="bi bi-stop-fill"></i> Stop' +
                         '</button>' +
-                        '<i class="bi bi-arrows-fullscreen claude-stream-preview__expand"></i>' +
+                        '<i class="bi bi-arrows-fullscreen ai-stream-preview__expand"></i>' +
                     '</div>' +
-                    '<div id="claude-stream-body" class="claude-stream-preview__body"></div>';
-                preview.classList.add('claude-stream-preview--active');
+                    '<div id="ai-stream-body" class="ai-stream-preview__body"></div>';
+                preview.classList.add('ai-stream-preview--active');
                 preview.addEventListener('click', function(e) {
-                    if (e.target.closest('.claude-cancel-btn')) return;
+                    if (e.target.closest('.ai-cancel-btn')) return;
                     self.openStreamModal();
                 });
-                preview.querySelector('.claude-cancel-btn').addEventListener('click', function() {
+                preview.querySelector('.ai-cancel-btn').addEventListener('click', function() {
                     self.cancel();
                 });
                 responseEl.appendChild(preview);
 
                 // Initialize persistent Quill viewer for preview
-                this.streamPreviewQuill = this.createStreamQuill('claude-stream-body');
+                this.streamPreviewQuill = this.createStreamQuill('ai-stream-body');
 
                 // Start elapsed timer (updates both preview and modal)
                 if (this.streamTimerInterval) clearInterval(this.streamTimerInterval);
                 this.streamTimerStart = Date.now();
-                var timerEl = document.getElementById('claude-stream-timer');
-                var modalTimerEl = document.getElementById('claude-modal-timer');
+                var timerEl = document.getElementById('ai-stream-timer');
+                var modalTimerEl = document.getElementById('ai-modal-timer');
                 if (timerEl) timerEl.textContent = '0:00';
                 if (modalTimerEl) modalTimerEl.textContent = '0:00';
                 this.streamTimerInterval = setInterval(function() {
@@ -1926,52 +2041,52 @@ $js = <<<JS
                 }, 1000);
 
                 // Reset modal content and initialize Quill viewers
-                var modalThinking = document.getElementById('claude-modal-thinking');
-                var modalThinkingBody = document.getElementById('claude-modal-thinking-body');
-                var modalBody = document.getElementById('claude-modal-body');
-                var modalDots = document.getElementById('claude-modal-dots');
+                var modalThinking = document.getElementById('ai-modal-thinking');
+                var modalThinkingBody = document.getElementById('ai-modal-thinking-body');
+                var modalBody = document.getElementById('ai-modal-body');
+                var modalDots = document.getElementById('ai-modal-dots');
                 modalThinking.classList.add('d-none');
                 modalThinkingBody.innerHTML = '';
                 modalBody.innerHTML = '';
                 modalDots.classList.remove('d-none');
-                this.streamModalThinkingQuill = this.createStreamQuill('claude-modal-thinking-body');
-                this.streamModalQuill = this.createStreamQuill('claude-modal-body');
+                this.streamModalThinkingQuill = this.createStreamQuill('ai-modal-thinking-body');
+                this.streamModalQuill = this.createStreamQuill('ai-modal-body');
             },
 
             openStreamModal: function() {
-                var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('claudeStreamModal'));
+                var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('aiStreamModal'));
                 modal.show();
             },
 
             closeStreamModal: function() {
-                var modalEl = document.getElementById('claudeStreamModal');
+                var modalEl = document.getElementById('aiStreamModal');
                 var modal = bootstrap.Modal.getInstance(modalEl);
                 if (modal) modal.hide();
             },
 
             createProcessBlock: function(thinkingContent, processContent) {
                 var details = document.createElement('details');
-                details.className = 'claude-process-block';
+                details.className = 'ai-process-block';
                 var summary = document.createElement('summary');
                 summary.innerHTML = '<i class="bi bi-gear-fill"></i> View process';
                 details.appendChild(summary);
                 var body = document.createElement('div');
-                body.className = 'claude-process-block__content';
+                body.className = 'ai-process-block__content';
 
                 if (thinkingContent) {
                     var thinkingSection = document.createElement('div');
-                    thinkingSection.className = 'claude-process-block__thinking';
-                    thinkingSection.innerHTML = '<div class="claude-process-block__label">Thinking</div>' +
+                    thinkingSection.className = 'ai-process-block__thinking';
+                    thinkingSection.innerHTML = '<div class="ai-process-block__label">Thinking</div>' +
                         this.renderMarkdown(thinkingContent);
                     body.appendChild(thinkingSection);
                 }
 
                 if (processContent) {
                     var reasoningSection = document.createElement('div');
-                    reasoningSection.className = 'claude-process-block__reasoning';
+                    reasoningSection.className = 'ai-process-block__reasoning';
                     var reasoningHtml = '';
                     if (thinkingContent)
-                        reasoningHtml += '<div class="claude-process-block__label">Intermediate output</div>';
+                        reasoningHtml += '<div class="ai-process-block__label">Intermediate output</div>';
                     reasoningHtml += this.renderMarkdown(processContent);
                     reasoningSection.innerHTML = reasoningHtml;
                     body.appendChild(reasoningSection);
@@ -1990,25 +2105,25 @@ $js = <<<JS
                 details.classList.add('d-none');
                 container.appendChild(details);
                 msgDiv._processBlock = details;
-                var vpBtn = msgDiv.querySelector('.claude-message__view-process');
+                var vpBtn = msgDiv.querySelector('.ai-message__view-process');
                 if (vpBtn) vpBtn.classList.remove('d-none');
             },
 
             updateStreamStatusLabel: function(status) {
-                var text = 'Claude ' + status;
-                var previewLabel = document.getElementById('claude-stream-status-label');
-                var modalLabel = document.getElementById('claude-modal-status-label');
+                var text = 'AI ' + status;
+                var previewLabel = document.getElementById('ai-stream-status-label');
+                var modalLabel = document.getElementById('ai-modal-status-label');
                 if (previewLabel) previewLabel.firstChild.textContent = text;
                 if (modalLabel) modalLabel.firstChild.textContent = text;
             },
 
             removeStreamDots: function() {
-                var dots = document.getElementById('claude-stream-dots');
+                var dots = document.getElementById('ai-stream-dots');
                 if (dots) dots.remove();
             },
 
             hideStreamContainer: function() {
-                var el = document.getElementById('claude-stream-container');
+                var el = document.getElementById('ai-stream-container');
                 el.innerHTML = '';
                 el.classList.add('d-none');
                 this.streamPreviewQuill = null;
@@ -2017,13 +2132,13 @@ $js = <<<JS
             },
 
             setStreamPreviewTall: function(tall) {
-                var body = document.getElementById('claude-stream-body');
+                var body = document.getElementById('ai-stream-body');
                 if (!body) return;
-                body.classList.toggle('claude-stream-preview__body--tall', tall);
+                body.classList.toggle('ai-stream-preview__body--tall', tall);
             },
 
             hideEmptyState: function() {
-                var empty = document.getElementById('claude-empty-state');
+                var empty = document.getElementById('ai-empty-state');
                 if (empty) empty.classList.add('d-none');
             },
 
@@ -2049,9 +2164,9 @@ $js = <<<JS
                 this.hideEmptyState();
                 this.streamEnded = false;
 
-                var accordion = document.getElementById('claude-history-accordion');
+                var accordion = document.getElementById('ai-history-accordion');
                 var idx = this.historyCounter++;
-                var itemId = 'claude-history-item-' + idx;
+                var itemId = 'ai-history-item-' + idx;
                 this.activeItemId = itemId;
 
                 // Build header text from prompt (CSS text-overflow handles visual clipping)
@@ -2063,18 +2178,18 @@ $js = <<<JS
                 item.id = 'item-' + itemId;
                 item.innerHTML =
                     '<h2 class="accordion-header" id="heading-' + itemId + '">' +
-                        '<button class="accordion-button collapsed claude-history-item__header" type="button" ' +
+                        '<button class="accordion-button collapsed ai-history-item__header" type="button" ' +
                             'data-bs-toggle="collapse" data-bs-target="#collapse-' + itemId + '" ' +
                             'aria-expanded="false" aria-controls="collapse-' + itemId + '">' +
-                            '<span class="claude-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
-                            '<span class="claude-history-item__meta"></span>' +
+                            '<span class="ai-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
+                            '<span class="ai-history-item__meta"></span>' +
                         '</button>' +
                     '</h2>' +
                     '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
                         'aria-labelledby="heading-' + itemId + '">' +
                         '<div class="accordion-body p-0">' +
-                            '<div class="claude-active-prompt"></div>' +
-                            '<div class="claude-active-response"></div>' +
+                            '<div class="ai-active-prompt"></div>' +
+                            '<div class="ai-active-response"></div>' +
                         '</div>' +
                     '</div>';
 
@@ -2085,19 +2200,19 @@ $js = <<<JS
                 } else {
                     accordion.insertBefore(item, accordion.firstChild);
                 }
-                document.getElementById('claude-history-wrapper').classList.remove('d-none');
+                document.getElementById('ai-history-wrapper').classList.remove('d-none');
 
                 // Render user prompt inside the accordion body using Quill Delta
-                var promptZone = item.querySelector('.claude-active-prompt');
+                var promptZone = item.querySelector('.ai-active-prompt');
                 this.renderUserPromptInto(promptZone, promptText, promptDelta);
 
                 // Render streaming placeholder outside the accordion
-                var streamContainer = document.getElementById('claude-stream-container');
+                var streamContainer = document.getElementById('ai-stream-container');
                 streamContainer.classList.remove('d-none');
                 this.renderStreamingPlaceholderInto(streamContainer);
 
                 // If the prompt editor is already collapsed, use the tall preview
-                if (!document.getElementById('claudePromptCard').classList.contains('show'))
+                if (!document.getElementById('aiPromptCard').classList.contains('show'))
                     this.setStreamPreviewTall(true);
 
                 // Fire-and-forget: summarize prompt into a short title.
@@ -2140,11 +2255,11 @@ $js = <<<JS
                     }
                     var title = data.title;
                     var titleEl = document.querySelector(
-                        '#item-' + itemId + ' .claude-history-item__title'
+                        '#item-' + itemId + ' .ai-history-item__title'
                     );
                     if (titleEl) {
                         titleEl.textContent = title;
-                        titleEl.classList.add('claude-history-item__title--summarized');
+                        titleEl.classList.add('ai-history-item__title--summarized');
                     }
                 })
                 .catch(function(err) { console.warn('summarizePromptTitle failed:', err); });
@@ -2176,10 +2291,10 @@ $js = <<<JS
                         console.warn('summarizeResponseTitle response:', data);
                         return;
                     }
-                    var summaryEl = messageDiv.querySelector('.claude-message__header-summary');
+                    var summaryEl = messageDiv.querySelector('.ai-message__header-summary');
                     if (summaryEl) {
                         summaryEl.textContent = '\u2014 ' + data.summary;
-                        summaryEl.classList.add('claude-message__header-summary--summarized');
+                        summaryEl.classList.add('ai-message__header-summary--summarized');
                     }
                 })
                 .catch(function(err) { console.warn('summarizeResponseTitle failed:', err); });
@@ -2206,7 +2321,7 @@ $js = <<<JS
              * so the previous response settles into the accordion.
              */
             moveActiveResponseToAccordion: function() {
-                var container = document.getElementById('claude-active-response-container');
+                var container = document.getElementById('ai-active-response-container');
                 if (container.classList.contains('d-none') || !container.hasChildNodes())
                     return;
 
@@ -2231,47 +2346,47 @@ $js = <<<JS
                 if (!item) return null;
                 return {
                     item: item,
-                    response: item.querySelector('.claude-active-response'),
-                    prompt: item.querySelector('.claude-active-prompt'),
-                    metaSpan: item.querySelector('.claude-history-item__meta')
+                    response: item.querySelector('.ai-active-response'),
+                    prompt: item.querySelector('.ai-active-prompt'),
+                    metaSpan: item.querySelector('.ai-history-item__meta')
                 };
             },
 
-            renderCurrentExchange: function(userContent, claudeContent, processContent, meta) {
+            renderCurrentExchange: function(userContent, aiContent, processContent, meta) {
                 // Render into the standalone container above the accordion.
                 // On the next send(), this content is moved into the accordion item.
-                var container = document.getElementById('claude-active-response-container');
+                var container = document.getElementById('ai-active-response-container');
                 container.innerHTML = '';
                 container.classList.remove('d-none');
 
-                var msg = this.createClaudeMessageDiv(claudeContent, meta);
+                var msg = this.createAiMessageDiv(aiContent, meta);
                 container.appendChild(msg.div);
 
                 // Brief border glow to signal inference completed
-                msg.div.classList.add('claude-message--flash');
+                msg.div.classList.add('ai-message--flash');
                 msg.div.addEventListener('animationend', function() {
-                    msg.div.classList.remove('claude-message--flash');
+                    msg.div.classList.remove('ai-message--flash');
                 }, {once: true});
 
                 // Collapsible process section (thinking + intermediate reasoning)
                 this.attachProcessBlock(container, msg.div, this.streamThinkingBuffer, processContent);
 
                 // Initialize Quill after element is in the DOM
-                this.renderToQuillViewer(msg.body, claudeContent);
+                this.renderToQuillViewer(msg.body, aiContent);
                 this.checkExpandOverflow(msg.div);
 
                 // Show choice buttons or Go! button depending on response pattern
-                var choiceOptions = this.parseChoiceOptions(claudeContent);
+                var choiceOptions = this.parseChoiceOptions(aiContent);
                 if (choiceOptions) {
                     this.renderChoiceButtons(msg.div, choiceOptions);
                 } else {
-                    var goBtn = msg.div.querySelector('.claude-message__go');
-                    if (goBtn && this.needsApproval(claudeContent))
+                    var goBtn = msg.div.querySelector('.ai-message__go');
+                    if (goBtn && this.needsApproval(aiContent))
                         goBtn.classList.remove('d-none');
                 }
 
                 // Fire-and-forget: summarize response into collapsed bar
-                this.summarizeResponseTitle(msg.div, claudeContent);
+                this.summarizeResponseTitle(msg.div, aiContent);
 
                 // Update accordion header meta
                 var zones = this.getActiveZones();
@@ -2286,9 +2401,9 @@ $js = <<<JS
             renderHistoricalExchange: function(run) {
                 this.hideEmptyState();
 
-                var accordion = document.getElementById('claude-history-accordion');
+                var accordion = document.getElementById('ai-history-accordion');
                 var idx = this.historyCounter++;
-                var itemId = 'claude-history-item-' + idx;
+                var itemId = 'ai-history-item-' + idx;
 
                 var headerText = (run.promptSummary || run.promptMarkdown || '').replace(/[#*_`>\[\]]/g, '').trim();
                 if (headerText.length > 200) headerText = headerText.substring(0, 200) + '\u2026';
@@ -2316,31 +2431,31 @@ $js = <<<JS
                 item.id = 'item-' + itemId;
                 item.innerHTML =
                     '<h2 class="accordion-header" id="heading-' + itemId + '">' +
-                        '<button class="accordion-button collapsed claude-history-item__header" type="button" ' +
+                        '<button class="accordion-button collapsed ai-history-item__header" type="button" ' +
                             'data-bs-toggle="collapse" data-bs-target="#collapse-' + itemId + '" ' +
                             'aria-expanded="false" aria-controls="collapse-' + itemId + '">' +
-                            '<span class="claude-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
+                            '<span class="ai-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
                             statusIndicator +
-                            '<span class="claude-history-item__meta">' + this.escapeHtml(metaSummary) + '</span>' +
+                            '<span class="ai-history-item__meta">' + this.escapeHtml(metaSummary) + '</span>' +
                         '</button>' +
                     '</h2>' +
                     '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
                         'aria-labelledby="heading-' + itemId + '">' +
                         '<div class="accordion-body p-0">' +
-                            '<div class="claude-active-prompt"></div>' +
-                            '<div class="claude-active-response"></div>' +
+                            '<div class="ai-active-prompt"></div>' +
+                            '<div class="ai-active-response"></div>' +
                         '</div>' +
                     '</div>';
 
                 accordion.appendChild(item);
-                document.getElementById('claude-history-wrapper').classList.remove('d-none');
+                document.getElementById('ai-history-wrapper').classList.remove('d-none');
 
-                var promptZone = item.querySelector('.claude-active-prompt');
+                var promptZone = item.querySelector('.ai-active-prompt');
                 this.renderUserPromptInto(promptZone, run.promptMarkdown, null);
 
-                var responseZone = item.querySelector('.claude-active-response');
+                var responseZone = item.querySelector('.ai-active-response');
                 if (run.status === 'completed' && run.resultText) {
-                    var msg = this.createClaudeMessageDiv(run.resultText, displayMeta);
+                    var msg = this.createAiMessageDiv(run.resultText, displayMeta);
                     responseZone.appendChild(msg.div);
                     this.renderToQuillViewer(msg.body, run.resultText);
                     this.checkExpandOverflow(msg.div);
@@ -2358,7 +2473,7 @@ $js = <<<JS
 
                 this.messages.push(
                     { role: 'user', content: run.promptMarkdown },
-                    { role: 'claude', content: run.resultText || run.errorMessage || '(No output)', processContent: '' }
+                    { role: 'ai', content: run.resultText || run.errorMessage || '(No output)', processContent: '' }
                 );
             },
 
@@ -2376,7 +2491,7 @@ $js = <<<JS
             },
 
             updateContextMeter: function(pctUsed, totalUsed) {
-                var bars = document.getElementById('claude-subscription-bars');
+                var bars = document.getElementById('ai-subscription-bars');
                 var colorClass = pctUsed < 60 ? 'green' : pctUsed < 80 ? 'orange' : 'red';
 
                 // Build tooltip with token details
@@ -2386,25 +2501,25 @@ $js = <<<JS
                     tooltip += ' \u00b7 ' + this.lastNumTurns + (this.lastNumTurns === 1 ? ' turn' : ' turns');
 
                 // Find or create the context row
-                var row = document.getElementById('claude-context-row');
+                var row = document.getElementById('ai-context-row');
                 if (!row) {
                     row = document.createElement('div');
-                    row.id = 'claude-context-row';
-                    row.className = 'claude-subscription-row';
+                    row.id = 'ai-context-row';
+                    row.className = 'ai-subscription-row';
 
                     var label = document.createElement('span');
-                    label.className = 'claude-subscription-row__label';
+                    label.className = 'ai-subscription-row__label';
                     label.textContent = 'Context used';
 
                     var barOuter = document.createElement('div');
-                    barOuter.className = 'claude-subscription-row__bar';
+                    barOuter.className = 'ai-subscription-row__bar';
 
                     var barFill = document.createElement('div');
-                    barFill.className = 'claude-subscription-row__fill';
+                    barFill.className = 'ai-subscription-row__fill';
                     barOuter.appendChild(barFill);
 
                     var pctLabel = document.createElement('span');
-                    pctLabel.className = 'claude-subscription-row__pct';
+                    pctLabel.className = 'ai-subscription-row__pct';
 
                     row.appendChild(label);
                     row.appendChild(barOuter);
@@ -2413,10 +2528,10 @@ $js = <<<JS
                 }
 
                 // Update values
-                var fill = row.querySelector('.claude-subscription-row__fill');
-                var pctLabel = row.querySelector('.claude-subscription-row__pct');
+                var fill = row.querySelector('.ai-subscription-row__fill');
+                var pctLabel = row.querySelector('.ai-subscription-row__pct');
                 fill.style.width = pctUsed + '%';
-                fill.className = 'claude-subscription-row__fill claude-subscription-row__fill--' + colorClass;
+                fill.className = 'ai-subscription-row__fill ai-subscription-row__fill--' + colorClass;
                 pctLabel.textContent = pctUsed + '%';
                 pctLabel.title = tooltip;
 
@@ -2426,8 +2541,8 @@ $js = <<<JS
 
             updateSummarizeButtonColor: function(pctUsed) {
                 var btns = [
-                    document.getElementById('claude-summarize-auto-btn'),
-                    document.getElementById('claude-summarize-split-toggle')
+                    document.getElementById('ai-summarize-auto-btn'),
+                    document.getElementById('ai-summarize-split-toggle')
                 ];
                 var remove = ['btn-outline-secondary', 'btn-outline-warning', 'btn-outline-danger'];
                 var add = pctUsed < 60 ? 'btn-outline-secondary'
@@ -2454,11 +2569,11 @@ $js = <<<JS
             },
 
             recheckUsageCompact: function() {
-                var summary = document.getElementById('claude-combined-usage');
+                var summary = document.getElementById('ai-combined-usage');
                 if (!summary || summary.classList.contains('d-none')) return;
 
                 // Reset to full mode (with bars)
-                summary.classList.remove('claude-combined-bar__usage--compact');
+                summary.classList.remove('ai-combined-bar__usage--compact');
 
                 // Temporarily force nowrap to detect horizontal overflow
                 summary.style.flexWrap = 'nowrap';
@@ -2468,32 +2583,73 @@ $js = <<<JS
                 summary.style.overflow = '';
 
                 if (overflows)
-                    summary.classList.add('claude-combined-bar__usage--compact');
+                    summary.classList.add('ai-combined-bar__usage--compact');
             },
 
             fetchSubscriptionUsage: function() {
                 if (!this.usageUrl) return;
                 var self = this;
-                var providerEl = document.getElementById('ai-provider');
-                var provider = providerEl ? providerEl.value : this.defaultProvider;
+                var provider = this.getSelectedProviderId();
+                var providerMeta = this.providerData[provider] || null;
+                if (providerMeta && !providerMeta.supportsUsage) {
+                    this.renderUsageUnavailable(providerMeta.name);
+                    return;
+                }
+                this._usageRequestId = (this._usageRequestId || 0) + 1;
+                var requestId = this._usageRequestId;
                 var sep = this.usageUrl.indexOf('?') > -1 ? '&' : '?';
                 var url = this.usageUrl + sep + 'provider=' + encodeURIComponent(provider);
                 fetch(url)
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
-                        if (data.success && data.data)
+                        if (requestId !== self._usageRequestId) return;
+                        if (self.getSelectedProviderId() !== provider) return;
+                        if (data.success && data.data) {
                             self.renderSubscriptionUsage(data.data);
+                            return;
+                        }
+                        if (providerMeta)
+                            self.renderUsageUnavailable(providerMeta.name);
                     })
-                    .catch(function(err) { console.warn('Usage fetch failed:', err); });
+                    .catch(function(err) {
+                        if (requestId !== self._usageRequestId) return;
+                        if (self.getSelectedProviderId() !== provider) return;
+                        if (providerMeta)
+                            self.renderUsageUnavailable(providerMeta.name);
+                        console.warn('Usage fetch failed:', err);
+                    });
+            },
+
+            renderUsageUnavailable: function(providerName) {
+                var combinedBar = document.getElementById('ai-combined-bar');
+                var summary = document.getElementById('ai-combined-usage');
+                var wrapper = document.getElementById('ai-subscription-usage');
+                var bars = document.getElementById('ai-subscription-bars');
+
+                if (combinedBar) {
+                    combinedBar.classList.remove('ai-combined-bar--loading');
+                    combinedBar.classList.remove('ai-combined-bar--warning');
+                }
+                if (summary)
+                    summary.innerHTML = '<span class="text-muted small">Usage not available for ' + this.escapeHtml(providerName) + '</span>';
+                if (bars)
+                    bars.innerHTML = '';
+                if (wrapper) {
+                    wrapper.classList.add('d-none');
+                    wrapper.classList.remove('ai-subscription-usage--warning');
+                }
+
+                this.usageState = 'collapsed';
+                this.syncCombinedBar();
             },
 
             renderSubscriptionUsage: function(data) {
-                var wrapper = document.getElementById('claude-subscription-usage');
-                var bars = document.getElementById('claude-subscription-bars');
+                var wrapper = document.getElementById('ai-subscription-usage');
+                var bars = document.getElementById('ai-subscription-bars');
                 if (!data.windows || !data.windows.length) return;
 
                 // Preserve context row before clearing
-                var contextRow = document.getElementById('claude-context-row');
+                var contextRow = document.getElementById('ai-context-row');
                 if (contextRow) contextRow.remove();
 
                 bars.innerHTML = '';
@@ -2523,24 +2679,24 @@ $js = <<<JS
                     }
 
                     var row = document.createElement('div');
-                    row.className = 'claude-subscription-row';
+                    row.className = 'ai-subscription-row';
 
                     var label = document.createElement('span');
-                    label.className = 'claude-subscription-row__label';
+                    label.className = 'ai-subscription-row__label';
                     label.textContent = w.label;
                     if (resetTooltip)
                         label.title = resetTooltip;
 
                     var barOuter = document.createElement('div');
-                    barOuter.className = 'claude-subscription-row__bar';
+                    barOuter.className = 'ai-subscription-row__bar';
 
                     var barFill = document.createElement('div');
-                    barFill.className = 'claude-subscription-row__fill claude-subscription-row__fill--' + colorClass;
+                    barFill.className = 'ai-subscription-row__fill ai-subscription-row__fill--' + colorClass;
                     barFill.style.width = pct + '%';
                     barOuter.appendChild(barFill);
 
                     var pctLabel = document.createElement('span');
-                    pctLabel.className = 'claude-subscription-row__pct';
+                    pctLabel.className = 'ai-subscription-row__pct';
                     pctLabel.textContent = pct + '%';
                     if (resetTooltip)
                         pctLabel.title = resetTooltip;
@@ -2555,8 +2711,8 @@ $js = <<<JS
                 if (contextRow)
                     bars.appendChild(contextRow);
 
-                if (hasWarning) wrapper.classList.add('claude-subscription-usage--warning');
-                else wrapper.classList.remove('claude-subscription-usage--warning');
+                if (hasWarning) wrapper.classList.add('ai-subscription-usage--warning');
+                else wrapper.classList.remove('ai-subscription-usage--warning');
 
                 // Populate the combined bar usage summary
                 this.updateUsageSummary();
@@ -2569,62 +2725,62 @@ $js = <<<JS
             },
 
             /**
-             * Build a claude-message div with header, body, and optional meta/copy button.
+             * Build a ai-message div with header, body, and optional meta/copy button.
              * Returns { div, body } so callers can append notices or extra elements.
              */
-            createClaudeMessageDiv: function(markdownContent, meta) {
-                var claudeDiv = document.createElement('div');
-                claudeDiv.className = 'claude-message claude-message--claude';
+            createAiMessageDiv: function(markdownContent, meta) {
+                var aiDiv = document.createElement('div');
+                aiDiv.className = 'ai-message ai-message--response';
 
-                var claudeHeader = document.createElement('div');
-                claudeHeader.className = 'claude-message__header';
+                var aiHeader = document.createElement('div');
+                aiHeader.className = 'ai-message__header';
 
                 var headerIcon = document.createElement('i');
                 headerIcon.className = 'bi bi-terminal-fill';
-                claudeHeader.appendChild(headerIcon);
-                claudeHeader.appendChild(document.createTextNode(' Claude'));
+                aiHeader.appendChild(headerIcon);
+                aiHeader.appendChild(document.createTextNode(' AI'));
 
                 var headerSummary = document.createElement('span');
-                headerSummary.className = 'claude-message__header-summary';
-                claudeHeader.appendChild(headerSummary);
+                headerSummary.className = 'ai-message__header-summary';
+                aiHeader.appendChild(headerSummary);
 
                 var headerMeta = document.createElement('span');
-                headerMeta.className = 'claude-message__header-meta';
-                claudeHeader.appendChild(headerMeta);
+                headerMeta.className = 'ai-message__header-meta';
+                aiHeader.appendChild(headerMeta);
 
                 var headerChevron = document.createElement('i');
-                headerChevron.className = 'bi bi-chevron-up claude-message__header-chevron';
-                claudeHeader.appendChild(headerChevron);
+                headerChevron.className = 'bi bi-chevron-up ai-message__header-chevron';
+                aiHeader.appendChild(headerChevron);
 
-                claudeDiv.appendChild(claudeHeader);
+                aiDiv.appendChild(aiHeader);
 
-                var claudeBody = document.createElement('div');
-                claudeBody.className = 'claude-message__body';
-                claudeBody.setAttribute('data-quill-markdown', markdownContent);
-                claudeDiv.appendChild(claudeBody);
+                var aiBody = document.createElement('div');
+                aiBody.className = 'ai-message__body';
+                aiBody.setAttribute('data-quill-markdown', markdownContent);
+                aiDiv.appendChild(aiBody);
 
                 var actions = document.createElement('div');
-                actions.className = 'claude-message__actions';
+                actions.className = 'ai-message__actions';
 
                 var goBtn = document.createElement('button');
                 goBtn.type = 'button';
-                goBtn.className = 'claude-message__go d-none';
+                goBtn.className = 'ai-message__go d-none';
                 goBtn.title = 'Approve and execute (Alt+G)';
                 goBtn.innerHTML = '<i class="bi bi-check-lg"></i> Go!';
                 var self = this;
                 goBtn.addEventListener('click', function() {
-                    document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                    document.getElementById('ai-summary-reply-btn').classList.add('d-none');
                     self.sendFixedText('Proceed');
                 });
                 actions.appendChild(goBtn);
 
                 var expandBtn = document.createElement('button');
                 expandBtn.type = 'button';
-                expandBtn.className = 'claude-message__expand d-none';
+                expandBtn.className = 'ai-message__expand d-none';
                 expandBtn.title = 'Expand / collapse response';
                 expandBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
                 expandBtn.addEventListener('click', function() {
-                    var expanded = claudeBody.classList.toggle('claude-message__body--expanded');
+                    var expanded = aiBody.classList.toggle('ai-message__body--expanded');
                     expandBtn.innerHTML = expanded
                         ? '<i class="bi bi-arrows-angle-contract"></i>'
                         : '<i class="bi bi-arrows-angle-expand"></i>';
@@ -2633,11 +2789,11 @@ $js = <<<JS
 
                 var viewProcessBtn = document.createElement('button');
                 viewProcessBtn.type = 'button';
-                viewProcessBtn.className = 'claude-message__view-process d-none';
+                viewProcessBtn.className = 'ai-message__view-process d-none';
                 viewProcessBtn.title = 'View process';
                 viewProcessBtn.innerHTML = '<i class="bi bi-gear-fill"></i>';
                 viewProcessBtn.addEventListener('click', function() {
-                    var block = claudeDiv._processBlock;
+                    var block = aiDiv._processBlock;
                     if (block) {
                         var hidden = block.classList.toggle('d-none');
                         viewProcessBtn.classList.toggle('active');
@@ -2649,7 +2805,7 @@ $js = <<<JS
                 var copyBtn = this.createCopyButton(markdownContent);
                 actions.appendChild(copyBtn);
 
-                claudeDiv.appendChild(actions);
+                aiDiv.appendChild(actions);
 
                 // Meta always visible in header bar
                 if (meta) {
@@ -2664,20 +2820,20 @@ $js = <<<JS
                 if (preview.length > 120) preview = preview.substring(0, 120) + '\u2026';
                 headerSummary.textContent = preview ? '\u2014 ' + preview : '';
 
-                return { div: claudeDiv, body: claudeBody };
+                return { div: aiDiv, body: aiBody };
             },
 
             /**
              * Render partial streamed content into the active response container.
              * Used by onStreamError (with an error alert) and cancel (with a cancelled notice).
-             * Returns the .claude-message__body element so callers can append notices.
+             * Returns the .ai-message__body element so callers can append notices.
              */
             renderPartialResponse: function(markdownContent) {
-                var container = document.getElementById('claude-active-response-container');
+                var container = document.getElementById('ai-active-response-container');
                 container.innerHTML = '';
                 container.classList.remove('d-none');
 
-                var msg = this.createClaudeMessageDiv(markdownContent, null);
+                var msg = this.createAiMessageDiv(markdownContent, null);
                 container.appendChild(msg.div);
                 this.renderToQuillViewer(msg.body, markdownContent);
                 this.checkExpandOverflow(msg.div);
@@ -2687,20 +2843,20 @@ $js = <<<JS
             },
 
             addErrorMessage: function(errorText) {
-                var container = document.getElementById('claude-active-response-container');
+                var container = document.getElementById('ai-active-response-container');
                 container.innerHTML = '';
                 container.classList.remove('d-none');
 
                 var div = document.createElement('div');
-                div.className = 'claude-message claude-message--error';
+                div.className = 'ai-message ai-message--error';
 
                 var header = document.createElement('div');
-                header.className = 'claude-message__header';
-                header.innerHTML = '<i class="bi bi-terminal-fill"></i> Claude';
+                header.className = 'ai-message__header';
+                header.innerHTML = '<i class="bi bi-terminal-fill"></i> AI';
                 div.appendChild(header);
 
                 var body = document.createElement('div');
-                body.className = 'claude-message__body';
+                body.className = 'ai-message__body';
                 var alert = document.createElement('div');
                 alert.className = 'alert alert-danger mb-0';
                 alert.textContent = errorText;
@@ -2831,8 +2987,8 @@ $js = <<<JS
 
             checkExpandOverflow: function(msgDiv) {
                 requestAnimationFrame(function() {
-                    var body = msgDiv.querySelector('.claude-message__body');
-                    var btn = msgDiv.querySelector('.claude-message__expand');
+                    var body = msgDiv.querySelector('.ai-message__body');
+                    var btn = msgDiv.querySelector('.ai-message__expand');
                     if (!body || !btn) return;
                     if (body.scrollHeight > body.clientHeight + 2)
                         btn.classList.remove('d-none');
@@ -2843,7 +2999,7 @@ $js = <<<JS
 
             checkExpandOverflowAll: function(container) {
                 var self = this;
-                var msgs = container.querySelectorAll('.claude-message--claude');
+                var msgs = container.querySelectorAll('.ai-message--response');
                 msgs.forEach(function(msgDiv) { self.checkExpandOverflow(msgDiv); });
             },
 
@@ -2869,23 +3025,23 @@ $js = <<<JS
 
             switchToTextareaNoConfirm: function() {
                 var text = quill.getText().replace(/\\n$/, '');
-                document.getElementById('claude-quill-wrapper').classList.add('d-none');
-                document.getElementById('claude-textarea-wrapper').classList.remove('d-none');
-                document.getElementById('claude-editor-toggle').textContent = 'Switch to rich editor';
+                document.getElementById('ai-quill-wrapper').classList.add('d-none');
+                document.getElementById('ai-textarea-wrapper').classList.remove('d-none');
+                document.getElementById('ai-editor-toggle').textContent = 'Switch to rich editor';
                 this.inputMode = 'textarea';
-                var textarea = document.getElementById('claude-followup-textarea');
+                var textarea = document.getElementById('ai-followup-textarea');
                 textarea.value = text;
                 textarea.focus();
             },
 
             switchToQuill: function(delta) {
-                document.getElementById('claude-textarea-wrapper').classList.add('d-none');
-                document.getElementById('claude-quill-wrapper').classList.remove('d-none');
-                document.getElementById('claude-editor-toggle').textContent = 'Switch to plain text';
+                document.getElementById('ai-textarea-wrapper').classList.add('d-none');
+                document.getElementById('ai-quill-wrapper').classList.remove('d-none');
+                document.getElementById('ai-editor-toggle').textContent = 'Switch to plain text';
                 if (delta)
                     quill.setContents(delta);
                 else
-                    quill.setText(document.getElementById('claude-followup-textarea').value || '');
+                    quill.setText(document.getElementById('ai-followup-textarea').value || '');
                 this.inputMode = 'quill';
                 quill.focus();
             },
@@ -2912,30 +3068,55 @@ $js = <<<JS
                     clearTimeout(this._toggleBtnTimer);
                     this._toggleBtnTimer = null;
                 }
-                var contextRow = document.getElementById('claude-context-row');
+                var contextRow = document.getElementById('ai-context-row');
                 if (contextRow) contextRow.remove();
 
                 this.activeItemId = null;
 
                 // Clear history, streaming container, and active response
-                document.getElementById('claude-history-accordion').innerHTML = '';
-                document.getElementById('claude-history-wrapper').classList.add('d-none');
+                document.getElementById('ai-history-accordion').innerHTML = '';
+                document.getElementById('ai-history-wrapper').classList.add('d-none');
                 this.hideStreamContainer();
-                var activeResponseContainer = document.getElementById('claude-active-response-container');
+                var activeResponseContainer = document.getElementById('ai-active-response-container');
                 activeResponseContainer.innerHTML = '';
                 activeResponseContainer.classList.add('d-none');
 
-                document.getElementById('claude-copy-all-wrapper').classList.add('d-none');
-                document.getElementById('claude-reuse-btn').classList.add('d-none');
-                document.getElementById('claude-summarize-group').classList.add('d-none');
-                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                document.getElementById('ai-copy-all-wrapper').classList.add('d-none');
+                document.getElementById('ai-reuse-btn').classList.add('d-none');
+                document.getElementById('ai-summarize-group').classList.add('d-none');
+                document.getElementById('ai-summary-reply-btn').classList.add('d-none');
                 this.updateSummarizeButtonColor(0);
                 this.summarizing = false;
 
-                this.expandSettings();
+                // Clean existing timers (prevent orphaned timers on rapid calls)
+                if (this._pulseTimer) { clearTimeout(this._pulseTimer); this._pulseTimer = null; }
+                if (this._editHintTimer) { clearTimeout(this._editHintTimer); this._editHintTimer = null; }
+
+                // Activate edit-hint BEFORE unlockProvider() calls updateSettingsSummary()
+                this._editHintActive = true;
+                this.unlockProvider();
+                // NOT: this.expandSettings() — FR-6: no auto-expand
+
                 this.usageState = 'collapsed';
-                document.getElementById('claude-subscription-usage').classList.add('d-none');
+                document.getElementById('ai-subscription-usage').classList.add('d-none');
                 this.syncCombinedBar();
+
+                // Pulse animation on combined bar
+                var bar = document.getElementById('ai-combined-bar');
+                bar.classList.add('ai-combined-bar--pulse');
+                var self = this;
+                this._pulseTimer = setTimeout(function() {
+                    bar.classList.remove('ai-combined-bar--pulse');
+                    self._pulseTimer = null;
+                }, 1200);
+
+                // Edit icon fades out after 3s
+                this._editHintTimer = setTimeout(function() {
+                    self._editHintActive = false;
+                    self._editHintTimer = null;
+                    self.updateSettingsSummary();
+                }, 3000);
+
                 this.expandPromptEditor();
                 this.expandEditor();
                 if (window.matchMedia('(max-width: 767.98px)').matches) {
@@ -2949,52 +3130,52 @@ $js = <<<JS
             collapseSettings: function() {
                 if (this.settingsState === 'expanded') {
                     this.settingsState = 'collapsed';
-                    document.getElementById('claudeSettingsCardWrapper').classList.add('d-none');
+                    document.getElementById('aiSettingsCardWrapper').classList.add('d-none');
                     this.updateSettingsSummary();
                     this.syncCombinedBar();
                 }
             },
 
             collapsePromptEditor: function() {
-                var card = document.getElementById('claudePromptCard');
+                var card = document.getElementById('aiPromptCard');
                 var bsCollapse = bootstrap.Collapse.getInstance(card);
                 if (bsCollapse) bsCollapse.hide();
                 else new bootstrap.Collapse(card, { toggle: false }).hide();
             },
 
             expandPromptEditor: function() {
-                var card = document.getElementById('claudePromptCard');
+                var card = document.getElementById('aiPromptCard');
                 var bsCollapse = bootstrap.Collapse.getInstance(card);
                 if (bsCollapse) bsCollapse.show();
                 else new bootstrap.Collapse(card, { toggle: false }).show();
             },
 
             replyExpand: function() {
-                var container = document.getElementById('claude-active-response-container');
-                var goBtn = container ? container.querySelector('.claude-message__go') : null;
+                var container = document.getElementById('ai-active-response-container');
+                var goBtn = container ? container.querySelector('.ai-message__go') : null;
                 if (goBtn) goBtn.classList.add('d-none');
                 this._replyExpand = true;
                 this.expandPromptEditor();
             },
 
             expandActiveResponse: function() {
-                var container = document.getElementById('claude-active-response-container');
+                var container = document.getElementById('ai-active-response-container');
                 if (!container) return;
-                var body = container.querySelector('.claude-message__body');
-                if (!body || body.classList.contains('claude-message__body--expanded')) return;
-                body.classList.add('claude-message__body--expanded');
-                var btn = container.querySelector('.claude-message__expand');
+                var body = container.querySelector('.ai-message__body');
+                if (!body || body.classList.contains('ai-message__body--expanded')) return;
+                body.classList.add('ai-message__body--expanded');
+                var btn = container.querySelector('.ai-message__expand');
                 if (btn) btn.innerHTML = '<i class="bi bi-arrows-angle-contract"></i>';
             },
 
             compactEditor: function() {
-                document.getElementById('claude-quill-wrapper').classList.add('claude-editor-compact');
-                document.getElementById('claude-textarea-wrapper').classList.add('claude-editor-compact');
+                document.getElementById('ai-quill-wrapper').classList.add('ai-editor-compact');
+                document.getElementById('ai-textarea-wrapper').classList.add('ai-editor-compact');
             },
 
             expandEditor: function() {
-                document.getElementById('claude-quill-wrapper').classList.remove('claude-editor-compact');
-                document.getElementById('claude-textarea-wrapper').classList.remove('claude-editor-compact');
+                document.getElementById('ai-quill-wrapper').classList.remove('ai-editor-compact');
+                document.getElementById('ai-textarea-wrapper').classList.remove('ai-editor-compact');
             },
 
             toggleFocusMode: function() {
@@ -3010,21 +3191,26 @@ $js = <<<JS
             expandSettings: function() {
                 if (this.settingsState !== 'expanded') {
                     this.settingsState = 'expanded';
-                    document.getElementById('claudeSettingsCardWrapper').classList.remove('d-none');
+                    document.getElementById('aiSettingsCardWrapper').classList.remove('d-none');
                     this.syncCombinedBar();
                 }
             },
 
             updateSettingsSummary: function() {
-                var summary = document.getElementById('claude-combined-settings');
+                var summary = document.getElementById('ai-combined-settings');
                 var modelEl = document.getElementById('ai-model');
                 var permEl = document.getElementById('ai-permission-mode');
+                var locked = this.providerLocked;
+                var providerEl = document.getElementById('ai-provider');
+                var providerId = providerEl ? providerEl.value : this.defaultProvider;
+                var providerConfig = this.getProviderFieldConfig(providerId);
 
                 summary.innerHTML = '';
 
-                var addBadge = function(icon, text, title, bg) {
+                var self = this;
+                var addBadge = function(icon, text, title, bg, extraClass) {
                     var span = document.createElement('span');
-                    span.className = 'badge ' + (bg || 'bg-secondary');
+                    span.className = 'badge ' + (bg || 'bg-secondary') + (extraClass ? ' ' + extraClass : '');
                     var i = document.createElement('i');
                     i.className = 'bi ' + icon + ' me-1';
                     span.appendChild(i);
@@ -3033,21 +3219,40 @@ $js = <<<JS
                     summary.appendChild(span);
                 };
 
+                // Context group: project, git branch, config
                 if (this.projectName)
                     addBadge('bi-folder2-open', this.projectName, 'Project');
 
                 if (this.gitBranch)
                     addBadge('bi-signpost-split', this.gitBranch, 'Git branch');
 
-                var providerEl = document.getElementById('ai-provider');
+                if (this.configBadgeLabel)
+                    addBadge(this.configBadgeIcon, this.configBadgeLabel, this.configBadgeTitle, this.configBadgeBg);
+
+                // Divider between context and settings groups
+                var divider = document.createElement('span');
+                divider.className = 'ai-combined-bar__settings-divider';
+                summary.appendChild(divider);
+
+                // Edit-hint icon
+                if (this._editHintActive) {
+                    var editBadge = document.createElement('span');
+                    editBadge.className = 'badge badge-lock';
+                    editBadge.setAttribute('aria-label', 'Click to edit settings');
+                    var editIcon = document.createElement('i');
+                    editIcon.className = 'bi bi-pencil';
+                    editBadge.appendChild(editIcon);
+                    summary.appendChild(editBadge);
+                }
+
+                // Settings group: provider, model, permission
+                var providerBg = locked ? 'badge-setting badge-setting--locked' : 'badge-setting';
+
                 if (providerEl) {
                     var providerName = providerEl.options[providerEl.selectedIndex]?.text || '';
                     if (providerName)
-                        addBadge('bi-robot', providerName, 'Provider', 'badge-setting');
+                        addBadge('bi-robot', providerName, 'Provider', providerBg);
                 }
-
-                if (this.configBadgeLabel)
-                    addBadge(this.configBadgeIcon, this.configBadgeLabel, this.configBadgeTitle, this.configBadgeBg);
 
                 var modelText = modelEl.options[modelEl.selectedIndex]?.text || '';
                 if (modelText && modelText !== '(Use default)')
@@ -3055,18 +3260,31 @@ $js = <<<JS
                 else
                     addBadge('bi-cpu', 'Default model', 'Model', 'badge-setting');
 
-                var permText = permEl.options[permEl.selectedIndex]?.text || '';
-                if (permText && permText !== '(Use default)')
-                    addBadge('bi-shield-check', permText.split(' (')[0], 'Permission mode', 'badge-setting');
-                else
-                    addBadge('bi-shield-check', 'Default permissions', 'Permission mode', 'badge-setting');
+                if (providerConfig.showPermissionMode) {
+                    var permText = permEl.options[permEl.selectedIndex]?.text || '';
+                    if (permText && permText !== '(Use default)')
+                        addBadge('bi-shield-check', permText.split(' (')[0], 'Permission mode', 'badge-setting');
+                    else
+                        addBadge('bi-shield-check', 'Default permissions', 'Permission mode', 'badge-setting');
+                } else {
+                    var reasoningEl = document.getElementById('ai-custom-reasoning');
+                    var reasoningText = reasoningEl ? reasoningEl.options[reasoningEl.selectedIndex]?.text || '' : '';
+                    if (reasoningText && reasoningText !== '(Use default)')
+                        addBadge('bi-lightning-charge', reasoningText.split(' —')[0], 'Reasoning level', 'badge-setting');
+                    else
+                        addBadge('bi-lightning-charge', 'Default reasoning', 'Reasoning level', 'badge-setting');
+                }
+
+                // Hide divider when settings card is expanded (settings badges not visible)
+                if (this.settingsState === 'expanded')
+                    divider.classList.add('d-none');
             },
 
             syncCombinedBar: function() {
-                var bar = document.getElementById('claude-combined-bar');
-                var settingsPart = document.getElementById('claude-combined-settings');
-                var usagePart = document.getElementById('claude-combined-usage');
-                var divider = bar.querySelector('.claude-combined-bar__divider');
+                var bar = document.getElementById('ai-combined-bar');
+                var settingsPart = document.getElementById('ai-combined-settings');
+                var usagePart = document.getElementById('ai-combined-usage');
+                var divider = bar.querySelector('.ai-combined-bar__divider');
                 var settingsExpanded = this.settingsState === 'expanded';
                 var usageExpanded = this.usageState === 'expanded';
 
@@ -3083,12 +3301,12 @@ $js = <<<JS
             },
 
             updateUsageSummary: function() {
-                var summary = document.getElementById('claude-combined-usage');
-                var combinedBar = document.getElementById('claude-combined-bar');
-                var rows = document.querySelectorAll('#claude-subscription-bars .claude-subscription-row');
+                var summary = document.getElementById('ai-combined-usage');
+                var combinedBar = document.getElementById('ai-combined-bar');
+                var rows = document.querySelectorAll('#ai-subscription-bars .ai-subscription-row');
 
                 // Remove loading state
-                combinedBar.classList.remove('claude-combined-bar--loading');
+                combinedBar.classList.remove('ai-combined-bar--loading');
 
                 if (!rows.length) {
                     summary.innerHTML = '';
@@ -3100,13 +3318,13 @@ $js = <<<JS
                 summary.innerHTML = '';
                 var itemCount = 0;
                 rows.forEach(function(row) {
-                    var label = row.querySelector('.claude-subscription-row__label');
-                    var fill = row.querySelector('.claude-subscription-row__fill');
+                    var label = row.querySelector('.ai-subscription-row__label');
+                    var fill = row.querySelector('.ai-subscription-row__fill');
                     if (!label || !fill) return;
 
                     if (itemCount > 0) {
                         var sep = document.createElement('span');
-                        sep.className = 'claude-usage-summary__sep';
+                        sep.className = 'ai-usage-summary__sep';
                         sep.textContent = '\u00B7';
                         summary.appendChild(sep);
                     }
@@ -3116,23 +3334,23 @@ $js = <<<JS
                     var colorClass = pct < 60 ? 'green' : pct < 80 ? 'orange' : 'red';
 
                     var item = document.createElement('span');
-                    item.className = 'claude-usage-summary__item';
+                    item.className = 'ai-usage-summary__item';
                     if (label.title)
                         item.title = label.title;
 
                     var labelSpan = document.createElement('span');
-                    labelSpan.className = 'claude-usage-summary__label';
+                    labelSpan.className = 'ai-usage-summary__label';
                     labelSpan.textContent = label.textContent;
 
                     var bar = document.createElement('span');
-                    bar.className = 'claude-usage-summary__bar';
+                    bar.className = 'ai-usage-summary__bar';
                     var barFill = document.createElement('span');
-                    barFill.className = 'claude-usage-summary__bar-fill claude-usage-summary__bar-fill--' + colorClass;
+                    barFill.className = 'ai-usage-summary__bar-fill ai-usage-summary__bar-fill--' + colorClass;
                     barFill.style.width = pct + '%';
                     bar.appendChild(barFill);
 
                     var pctSpan = document.createElement('span');
-                    pctSpan.className = 'claude-usage-summary__pct claude-usage-summary__pct--' + colorClass;
+                    pctSpan.className = 'ai-usage-summary__pct ai-usage-summary__pct--' + colorClass;
                     pctSpan.textContent = pct + '%';
 
                     item.appendChild(labelSpan);
@@ -3147,15 +3365,15 @@ $js = <<<JS
 
                 // Propagate warning state to combined bar
                 if (maxPct >= 80)
-                    combinedBar.classList.add('claude-combined-bar--warning');
+                    combinedBar.classList.add('ai-combined-bar--warning');
                 else
-                    combinedBar.classList.remove('claude-combined-bar--warning');
+                    combinedBar.classList.remove('ai-combined-bar--warning');
 
                 this._maxUsagePct = maxPct;
             },
 
             toggleUsageExpanded: function() {
-                var wrapper = document.getElementById('claude-subscription-usage');
+                var wrapper = document.getElementById('ai-subscription-usage');
 
                 if (this.usageState === 'collapsed') {
                     this.usageState = 'expanded';
@@ -3169,7 +3387,7 @@ $js = <<<JS
             },
 
             toggleSettingsExpanded: function() {
-                var wrapper = document.getElementById('claudeSettingsCardWrapper');
+                var wrapper = document.getElementById('aiSettingsCardWrapper');
 
                 if (this.settingsState === 'collapsed') {
                     this.settingsState = 'expanded';
@@ -3186,40 +3404,40 @@ $js = <<<JS
                 if (this.inputMode === 'quill')
                     quill.focus();
                 else
-                    document.getElementById('claude-followup-textarea').focus();
+                    document.getElementById('ai-followup-textarea').focus();
             },
 
             scrollToTopUnlessFocused: function() {
                 var editorHasFocus = quill.hasFocus()
-                    || document.activeElement === document.getElementById('claude-followup-textarea');
+                    || document.activeElement === document.getElementById('ai-followup-textarea');
                 if (!editorHasFocus && window.scrollY > 0)
                     window.scrollTo({ top: 0, behavior: 'smooth' });
             },
 
             _animateSwap: function(el) {
-                el.classList.remove('claude-swap-animate');
+                el.classList.remove('ai-swap-animate');
                 void el.offsetWidth;
-                el.classList.add('claude-swap-animate');
+                el.classList.add('ai-swap-animate');
                 el.addEventListener('animationend', function() {
-                    el.classList.remove('claude-swap-animate');
+                    el.classList.remove('ai-swap-animate');
                 }, {once: true});
             },
 
             swapEditorAboveResponse: function() {
-                var response = document.getElementById('claude-active-response-container');
-                var promptCard = document.getElementById('claudePromptCard');
+                var response = document.getElementById('ai-active-response-container');
+                var promptCard = document.getElementById('aiPromptCard');
                 if (!response || !promptCard || response.classList.contains('d-none')) return;
                 var editor = promptCard.parentElement;
                 var alreadyAbove = editor.compareDocumentPosition(response) & Node.DOCUMENT_POSITION_FOLLOWING;
                 response.parentElement.insertBefore(editor, response);
                 if (!alreadyAbove)
                     this._animateSwap(editor);
-                document.getElementById('claude-summary-reply-btn').classList.add('d-none');
+                document.getElementById('ai-summary-reply-btn').classList.add('d-none');
             },
 
             swapResponseAboveEditor: function() {
-                var response = document.getElementById('claude-active-response-container');
-                var promptCard = document.getElementById('claudePromptCard');
+                var response = document.getElementById('ai-active-response-container');
+                var promptCard = document.getElementById('aiPromptCard');
                 if (!response || !promptCard) return;
                 var editor = promptCard.parentElement;
                 var alreadyAbove = response.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING;
@@ -3231,7 +3449,7 @@ $js = <<<JS
             createCopyButton: function(markdownText) {
                 var btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'claude-message__copy';
+                btn.className = 'ai-message__copy';
                 btn.title = 'Copy to clipboard';
                 btn.setAttribute('aria-label', 'Copy to clipboard');
                 btn.setAttribute('data-copy-markdown', markdownText);
@@ -3257,12 +3475,12 @@ $js = <<<JS
 
             copyConversation: function() {
                 var text = this.messages.map(function(m) {
-                    var prefix = m.role === 'user' ? '## You' : '## Claude';
+                    var prefix = m.role === 'user' ? '## You' : '## AI';
                     return prefix + '\\n\\n' + m.content;
                 }).join('\\n\\n---\\n\\n');
 
                 var self = this;
-                var btn = document.getElementById('claude-copy-all-btn');
+                var btn = document.getElementById('ai-copy-all-btn');
                 self.copyText(text).then(function() {
                     var orig = btn.innerHTML;
                     btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
@@ -3289,13 +3507,13 @@ $js = <<<JS
 
                 // Build conversation markdown (same format as copyConversation)
                 var conversationText = this.messages.map(function(m) {
-                    var prefix = m.role === 'user' ? '## You' : '## Claude';
+                    var prefix = m.role === 'user' ? '## You' : '## AI';
                     return prefix + '\\n\\n' + m.content;
                 }).join('\\n\\n---\\n\\n');
 
                 // Disable buttons and show spinner on primary button
-                var summarizeAutoBtn = document.getElementById('claude-summarize-auto-btn');
-                var sendBtn = document.getElementById('claude-send-btn');
+                var summarizeAutoBtn = document.getElementById('ai-summarize-auto-btn');
+                var sendBtn = document.getElementById('ai-send-btn');
                 summarizeAutoBtn.disabled = true;
                 sendBtn.disabled = true;
                 summarizeAutoBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Summarizing…';
@@ -3320,7 +3538,7 @@ $js = <<<JS
                             if (self.inputMode === 'quill') {
                                 quill.setText(summary);
                             } else {
-                                document.getElementById('claude-followup-textarea').value = summary;
+                                document.getElementById('ai-followup-textarea').value = summary;
                             }
                             self.send();
                         } else {
@@ -3330,7 +3548,7 @@ $js = <<<JS
                                 quill.focus();
                                 quill.setSelection(0, 0);
                             } else {
-                                var textarea = document.getElementById('claude-followup-textarea');
+                                var textarea = document.getElementById('ai-followup-textarea');
                                 textarea.value = prefixed;
                                 textarea.focus();
                                 textarea.setSelectionRange(0, 0);
@@ -3349,8 +3567,8 @@ $js = <<<JS
 
             restoreSummarizeButtons: function() {
                 this.summarizing = false;
-                var summarizeAutoBtn = document.getElementById('claude-summarize-auto-btn');
-                var sendBtn = document.getElementById('claude-send-btn');
+                var summarizeAutoBtn = document.getElementById('ai-summarize-auto-btn');
+                var sendBtn = document.getElementById('ai-send-btn');
                 summarizeAutoBtn.disabled = false;
                 sendBtn.disabled = false;
                 summarizeAutoBtn.innerHTML = '<i class="bi bi-pencil-square"></i> Summarize';
@@ -3361,10 +3579,10 @@ $js = <<<JS
                 var list = document.getElementById('save-dialog-message-list');
                 list.innerHTML = '';
 
-                // Group messages into exchanges (pairs of user + claude)
+                // Group messages into exchanges (pairs of user + ai)
                 for (var i = 0; i < this.messages.length; i += 2) {
                     var userMsg = this.messages[i];
-                    var claudeMsg = this.messages[i + 1];
+                    var aiMsg = this.messages[i + 1];
                     var idx = i / 2;
 
                     var wrapper = document.createElement('div');
@@ -3422,32 +3640,32 @@ $js = <<<JS
                         messagesDiv.appendChild(userRow);
                     }
 
-                    // Claude message checkbox
-                    if (claudeMsg) {
-                        var claudePreview = claudeMsg.content.replace(/[#*_`>\[\]]/g, '').trim();
-                        if (claudePreview.length > 120) claudePreview = claudePreview.substring(0, 120) + '\u2026';
+                    // AI message checkbox
+                    if (aiMsg) {
+                        var aiPreview = aiMsg.content.replace(/[#*_`>\[\]]/g, '').trim();
+                        if (aiPreview.length > 120) aiPreview = aiPreview.substring(0, 120) + '\u2026';
 
-                        var claudeRow = document.createElement('div');
-                        claudeRow.className = 'form-check save-dialog-item__msg-row';
+                        var aiRow = document.createElement('div');
+                        aiRow.className = 'form-check save-dialog-item__msg-row';
 
-                        var claudeInput = document.createElement('input');
-                        claudeInput.className = 'form-check-input save-dialog-msg-cb';
-                        claudeInput.type = 'checkbox';
-                        claudeInput.checked = true;
-                        claudeInput.id = 'save-dialog-msg-' + (i + 1);
-                        claudeInput.setAttribute('data-msg-index', String(i + 1));
-                        claudeInput.setAttribute('data-exchange-index', String(idx));
+                        var aiInput = document.createElement('input');
+                        aiInput.className = 'form-check-input save-dialog-msg-cb';
+                        aiInput.type = 'checkbox';
+                        aiInput.checked = true;
+                        aiInput.id = 'save-dialog-msg-' + (i + 1);
+                        aiInput.setAttribute('data-msg-index', String(i + 1));
+                        aiInput.setAttribute('data-exchange-index', String(idx));
 
-                        var claudeLabel = document.createElement('label');
-                        claudeLabel.className = 'form-check-label save-dialog-item__label';
-                        claudeLabel.setAttribute('for', 'save-dialog-msg-' + (i + 1));
-                        claudeLabel.innerHTML =
-                            '<span class="save-dialog-item__role save-dialog-item__role--claude"><i class="bi bi-terminal-fill"></i> Claude</span>' +
-                            '<span class="save-dialog-item__preview">' + this.escapeHtml(claudePreview) + '</span>';
+                        var aiLabel = document.createElement('label');
+                        aiLabel.className = 'form-check-label save-dialog-item__label';
+                        aiLabel.setAttribute('for', 'save-dialog-msg-' + (i + 1));
+                        aiLabel.innerHTML =
+                            '<span class="save-dialog-item__role save-dialog-item__role--ai"><i class="bi bi-terminal-fill"></i> AI</span>' +
+                            '<span class="save-dialog-item__preview">' + this.escapeHtml(aiPreview) + '</span>';
 
-                        claudeRow.appendChild(claudeInput);
-                        claudeRow.appendChild(claudeLabel);
-                        messagesDiv.appendChild(claudeRow);
+                        aiRow.appendChild(aiInput);
+                        aiRow.appendChild(aiLabel);
+                        messagesDiv.appendChild(aiRow);
                     }
 
                     wrapper.appendChild(messagesDiv);
@@ -3569,7 +3787,7 @@ $js = <<<JS
                     var msg = self.messages[idx];
                     if (!msg) return;
                     var isUser = (idx % 2 === 0);
-                    var role = isUser ? 'You' : 'Claude';
+                    var role = isUser ? 'You' : 'AI';
                     var part = '## ' + role + '\\n\\n' + msg.content;
                     if (isUser)
                         userParts.push(part);
@@ -3726,7 +3944,7 @@ $js = <<<JS
             },
 
             toggleHistory: function() {
-                var accordion = document.getElementById('claude-history-accordion');
+                var accordion = document.getElementById('ai-history-accordion');
                 var panels = accordion.querySelectorAll('.accordion-collapse');
                 var allCollapsed = Array.prototype.every.call(panels, function(p) {
                     return !p.classList.contains('show');
@@ -3746,9 +3964,9 @@ $js = <<<JS
                 var self = this;
                 this._toggleBtnTimer = setTimeout(function() {
                     self._toggleBtnTimer = null;
-                    var accordion = document.getElementById('claude-history-accordion');
+                    var accordion = document.getElementById('ai-history-accordion');
                     var panels = accordion.querySelectorAll('.accordion-collapse');
-                    var btn = document.getElementById('claude-toggle-history-btn');
+                    var btn = document.getElementById('ai-toggle-history-btn');
                     if (!panels.length) return;
 
                     var allCollapsed = Array.prototype.every.call(panels, function(p) {
@@ -3763,7 +3981,7 @@ $js = <<<JS
             }
         };
 
-        window.ClaudeChat.init();
+        window.AiChat.init();
         quill.focus();
         quill.setSelection(quill.getLength(), 0);
     })();
