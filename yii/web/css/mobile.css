@@ -435,21 +435,8 @@ body.keyboard-open .mobile-bottom-nav {
 }
 
 /* ---------------------------------------------------------------------
-   8. PROMPT GENERATION STYLES
+   8. PROMPT GENERATION MOBILE OVERRIDES
    --------------------------------------------------------------------- */
-/* Sticky navigation buttons — always visible at bottom of viewport */
-.prompt-generation-nav {
-    position: sticky;
-    bottom: 0;
-    z-index: 1020;
-    background: #fff;
-    padding: 0.75rem;
-    border-top: 1px solid #dee2e6;
-    display: flex;
-    gap: 0.5rem;
-    justify-content: flex-end;
-}
-
 @media (max-width: 767.98px) {
     /* On mobile: raise above the bottom-nav bar */
     .prompt-generation-nav {

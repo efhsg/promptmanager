@@ -130,7 +130,8 @@ EOF
 # Install Node.js LTS (required for Codex CLI)
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    npm install -g npm@10
 
 # Install Codex CLI globally
 RUN npm install -g @openai/codex 2>/dev/null || true
