@@ -1283,10 +1283,17 @@
     }
 }
 
-/* Locked alert inside settings card */
-.ai-chat-page .ai-settings-locked-alert {
-    margin-bottom: 0.75rem;
-    font-size: 0.85rem;
+/* Locked-provider hint icon next to label */
+.ai-chat-page .ai-provider-locked-hint {
+    color: #0d6efd;
+    text-decoration: none;
+    font-size: 0.85em;
+    margin-left: 0.25rem;
+    vertical-align: baseline;
+}
+.ai-chat-page .ai-provider-locked-hint:hover,
+.ai-chat-page .ai-provider-locked-hint:focus {
+    color: #0a58ca;
 }
 
 @media (max-width: 575.98px) {

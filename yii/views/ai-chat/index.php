@@ -127,14 +127,17 @@ $this->params['breadcrumbs'][] = Html::encode($defaultProviderName) . ' CLI';
 
                 <?php if ($showProviderSelector): ?>
                 <div id="ai-provider-row" class="ai-provider-row">
-                    <div id="ai-settings-locked-alert" class="alert alert-info ai-settings-locked-alert d-none" role="alert" aria-live="assertive">
-                        <i class="bi bi-lock-fill me-1"></i>
-                        Provider is locked for this session.
-                        <a href="#" id="ai-settings-locked-new-session" class="alert-link">Start a New Session</a> to change provider.
-                    </div>
                     <div class="row g-3">
                         <div class="col">
-                            <label for="ai-provider" class="form-label">Provider</label>
+                            <label for="ai-provider" class="form-label">
+                                Provider
+                                <a href="#" id="ai-provider-locked-hint" class="ai-provider-locked-hint d-none"
+                                   role="button" tabindex="0"
+                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Provider is locked for this session. Click to start a new session.">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
+                            </label>
                             <?= Html::dropDownList('ai-provider', $defaultProvider, $providerOptions, [
                                 'id' => 'ai-provider',
                                 'class' => 'form-select',
@@ -774,8 +777,8 @@ $js = <<<JS
                 document.getElementById('ai-send-btn').addEventListener('click', function() { self.send(); });
                 document.getElementById('ai-reuse-btn').addEventListener('click', function() { self.reuseLastPrompt(); });
                 document.getElementById('ai-new-session-btn').addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
-                var lockedNewSession = document.getElementById('ai-settings-locked-new-session');
-                if (lockedNewSession) lockedNewSession.addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
+                var lockedHint = document.getElementById('ai-provider-locked-hint');
+                if (lockedHint) lockedHint.addEventListener('click', function(e) { e.preventDefault(); self.newSession(); });
                 document.getElementById('ai-copy-all-btn').addEventListener('click', function() { self.copyConversation(); });
                 document.getElementById('ai-save-dialog-btn').addEventListener('click', function() { self.openSaveDialogSelect(); });
                 document.getElementById('save-dialog-toggle-all').addEventListener('change', function() { self.toggleAllMessages(this.checked); });
@@ -1126,8 +1129,12 @@ $js = <<<JS
                 bar.classList.remove('ai-combined-bar--pulse');
                 this.updateSettingsSummary();
 
-                var alert = document.getElementById('ai-settings-locked-alert');
-                if (alert) alert.classList.remove('d-none');
+                var hint = document.getElementById('ai-provider-locked-hint');
+                if (hint) {
+                    hint.classList.remove('d-none');
+                    var tooltip = bootstrap.Tooltip.getInstance(hint);
+                    if (!tooltip) new bootstrap.Tooltip(hint);
+                }
 
                 var statusEl = document.getElementById('ai-provider-status');
                 if (statusEl) statusEl.textContent = 'Provider locked for this session';
@@ -1144,8 +1151,12 @@ $js = <<<JS
 
                 this.updateSettingsSummary();
 
-                var alert = document.getElementById('ai-settings-locked-alert');
-                if (alert) alert.classList.add('d-none');
+                var hint = document.getElementById('ai-provider-locked-hint');
+                if (hint) {
+                    var tooltip = bootstrap.Tooltip.getInstance(hint);
+                    if (tooltip) tooltip.dispose();
+                    hint.classList.add('d-none');
+                }
 
                 var statusEl = document.getElementById('ai-provider-status');
                 if (statusEl) statusEl.textContent = 'Provider unlocked';
