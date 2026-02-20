@@ -53,7 +53,7 @@ Read and follow these files:
 - `.claude/rules/testing.md` — Codeception, coverage requirements
 - `.claude/rules/commits.md` — Commit message format
 - `.claude/rules/workflow.md` — Development process
-- `.claude/rules/skill-routing.md` — Auto-load skills by file/topic
+- `.claude/rules/skill-routing.md` — Auto-load skills by file pattern or topic
 
 For architecture details, see `.claude/codebase_analysis.md`.
 
@@ -73,7 +73,7 @@ vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-c
 
 ## Domain Essentials
 
-- **Entities**: Project → { Context, Field, PromptTemplate, Note } → PromptInstance
+- **Entities**: Project → { Context, Field, PromptTemplate, Note, AiRun, ProjectLinkedProject } → PromptInstance
 - **Placeholders**: `GEN:{{name}}` (global), `PRJ:{{name}}` (project), `EXT:{{label:name}}` (linked)
 - **Rich text**: All content stored as Quill Delta JSON
 - **File fields**: Path validated at selection, content read at prompt generation

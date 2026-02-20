@@ -132,3 +132,4 @@ Defined in `FieldConstants::TYPES` (`yii/common/constants/FieldConstants.php`).
 | `PromptInstanceOwnerRule` | User owns the instance's project |
 | `NoteOwnerRule` | User owns the note's project |
 | `AiRunOwnerRule` | User owns the AI run |
+| `ClaudeRunOwnerRule` | User owns the Claude run |

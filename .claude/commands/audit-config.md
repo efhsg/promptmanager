@@ -21,7 +21,7 @@ Audit all Claude Code configuration files against the codebase understanding.
 @.claude/rules/testing.md
 @.claude/rules/commits.md
 @.claude/rules/workflow.md
-@.claude/rules/frontend-build.md
+@.claude/rules/skill-routing.md
 
 ### Skills Index
 @.claude/skills/index.md

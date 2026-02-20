@@ -774,6 +774,7 @@ generateAuthKey(): void
 | `PromptInstanceOwnerRule` | Check if user owns the instance (via template->project) |
 | `NoteOwnerRule` | Check if user owns the note |
 | `AiRunOwnerRule` | Check if user owns the AI run |
+| `ClaudeRunOwnerRule` | Check if user owns the Claude run |
 
 ---
 
@@ -924,7 +925,7 @@ try {
 ├─────────────────────────────────────────────────────────────────┤
 │  RBAC: ProjectOwnerRule, ContextOwnerRule, FieldOwnerRule,      │
 │        PromptTemplateOwnerRule, PromptInstanceOwnerRule,        │
-│        NoteOwnerRule, AiRunOwnerRule                            │
+│        NoteOwnerRule, AiRunOwnerRule, ClaudeRunOwnerRule        │
 ├─────────────────────────────────────────────────────────────────┤
 │  Infrastructure: Docker (pma_yii, pma_mysql, pma_nginx, pma_npm)│
 └─────────────────────────────────────────────────────────────────┘
