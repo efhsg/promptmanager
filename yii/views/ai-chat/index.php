@@ -2337,16 +2337,13 @@ $js = <<<JS
                 if (container.classList.contains('d-none') || !container.hasChildNodes())
                     return;
 
-                // Remove expanded state so max-height clamp + fade bar apply in accordion
+                // Remove expanded state so max-height clamp applies in accordion
                 container.querySelectorAll('.ai-message__body--expanded').forEach(function(el) {
                     el.classList.remove('ai-message__body--expanded');
                 });
-                // Reset expand-bar label/icon for collapsed state
-                container.querySelectorAll('.ai-message__expand-bar').forEach(function(bar) {
-                    var label = bar.querySelector('span');
-                    var icon = bar.querySelector('i');
-                    if (label) label.textContent = 'Show full response';
-                    if (icon) icon.className = 'bi bi-chevron-down';
+                // Reset expand button icon for collapsed state
+                container.querySelectorAll('.ai-message__expand').forEach(function(btn) {
+                    btn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
                 });
 
                 var zones = this.getActiveZones();
@@ -2398,13 +2395,7 @@ $js = <<<JS
                 // Initialize Quill after element is in the DOM
                 this.renderToQuillViewer(msg.body, aiContent);
 
-                // Detect overflow while still clamped (max-height: 23em),
-                // then expand. The bar stays so users can collapse back.
-                requestAnimationFrame(function() {
-                    if (msg.body.scrollHeight > msg.body.clientHeight + 2)
-                        msg.div.classList.add('ai-message--overflowing');
-                    msg.body.classList.add('ai-message__body--expanded');
-                });
+                this.checkExpandOverflow(msg.div);
 
                 // Show choice buttons or Go! button depending on response pattern
                 var choiceOptions = this.parseChoiceOptions(aiContent);
@@ -2805,23 +2796,18 @@ $js = <<<JS
                 });
                 actions.appendChild(goBtn);
 
-                // Full-width expand bar (replaces small icon button)
-                var expandBar = document.createElement('button');
-                expandBar.type = 'button';
-                expandBar.className = 'ai-message__expand-bar';
-                var expandBarLabel = document.createElement('span');
-                expandBarLabel.textContent = 'Show full response';
-                expandBar.appendChild(expandBarLabel);
-                var expandBarIcon = document.createElement('i');
-                expandBarIcon.className = 'bi bi-chevron-down';
-                expandBar.appendChild(expandBarIcon);
-                expandBar.addEventListener('click', function(e) {
-                    e.stopPropagation();
-                    var isExpanded = aiBody.classList.toggle('ai-message__body--expanded');
-                    expandBarLabel.textContent = isExpanded ? 'Collapse response' : 'Show full response';
-                    expandBarIcon.className = isExpanded ? 'bi bi-chevron-up' : 'bi bi-chevron-down';
+                var expandBtn = document.createElement('button');
+                expandBtn.type = 'button';
+                expandBtn.className = 'ai-message__expand d-none';
+                expandBtn.title = 'Expand / collapse response';
+                expandBtn.innerHTML = '<i class="bi bi-arrows-angle-expand"></i>';
+                expandBtn.addEventListener('click', function() {
+                    var expanded = aiBody.classList.toggle('ai-message__body--expanded');
+                    expandBtn.innerHTML = expanded
+                        ? '<i class="bi bi-arrows-angle-contract"></i>'
+                        : '<i class="bi bi-arrows-angle-expand"></i>';
                 });
-                aiDiv.appendChild(expandBar);
+                actions.appendChild(expandBtn);
 
                 var viewProcessBtn = document.createElement('button');
                 viewProcessBtn.type = 'button';
@@ -3024,11 +3010,12 @@ $js = <<<JS
             checkExpandOverflow: function(msgDiv) {
                 requestAnimationFrame(function() {
                     var body = msgDiv.querySelector('.ai-message__body');
-                    if (!body) return;
+                    var btn = msgDiv.querySelector('.ai-message__expand');
+                    if (!body || !btn) return;
                     if (body.scrollHeight > body.clientHeight + 2)
-                        msgDiv.classList.add('ai-message--overflowing');
+                        btn.classList.remove('d-none');
                     else
-                        msgDiv.classList.remove('ai-message--overflowing');
+                        btn.classList.add('d-none');
                 });
             },
 
@@ -3199,12 +3186,10 @@ $js = <<<JS
                 var body = container.querySelector('.ai-message__body');
                 if (!body || body.classList.contains('ai-message__body--expanded')) return;
                 body.classList.add('ai-message__body--expanded');
-                var bar = container.querySelector('.ai-message__expand-bar');
-                if (bar) {
-                    var label = bar.querySelector('span');
-                    var icon = bar.querySelector('i');
-                    if (label) label.textContent = 'Collapse response';
-                    if (icon) icon.className = 'bi bi-chevron-up';
+                var btn = container.querySelector('.ai-message__expand');
+                if (btn) {
+                    btn.classList.remove('d-none');
+                    btn.innerHTML = '<i class="bi bi-arrows-angle-contract"></i>';
                 }
             },
 
