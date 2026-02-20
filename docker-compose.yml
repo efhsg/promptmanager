@@ -81,7 +81,9 @@ services:
     networks:
       - promptmanager_network
 
+  # Queue workers — only started locally (remote uses managed workers)
   pma_queue:
+    profiles: ["local"]
     restart: unless-stopped
     build:
       context: .
