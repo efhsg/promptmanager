@@ -2190,14 +2190,14 @@ $js = <<<JS
                 item.id = 'item-' + itemId;
                 item.innerHTML =
                     '<h2 class="accordion-header" id="heading-' + itemId + '">' +
-                        '<button class="accordion-button collapsed ai-history-item__header" type="button" ' +
+                        '<button class="accordion-button ai-history-item__header" type="button" ' +
                             'data-bs-toggle="collapse" data-bs-target="#collapse-' + itemId + '" ' +
-                            'aria-expanded="false" aria-controls="collapse-' + itemId + '">' +
+                            'aria-expanded="true" aria-controls="collapse-' + itemId + '">' +
                             '<span class="ai-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
                             '<span class="ai-history-item__meta"></span>' +
                         '</button>' +
                     '</h2>' +
-                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
+                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse show" ' +
                         'aria-labelledby="heading-' + itemId + '">' +
                         '<div class="accordion-body p-0">' +
                             '<div class="ai-active-prompt"></div>' +
