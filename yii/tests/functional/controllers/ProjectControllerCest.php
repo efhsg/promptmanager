@@ -175,10 +175,8 @@ class ProjectControllerCest
     public function testSetCurrentProject(FunctionalTester $I): void
     {
         $I->amOnPage('/');
-        $I->submitForm('#set-context-project-form', [
-            'project_id' => 2,
-        ]);
-        $I->seeInField('#set-context-project-form select[name="project_id"]', '2');
+        $I->seeElement('#project-context-selector');
+        $I->seeElement('#project-context-selector option[value="2"]');
     }
 
     public function testUserCannotAccessProjectsOfOtherUsers(FunctionalTester $I): void

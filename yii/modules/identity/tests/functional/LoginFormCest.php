@@ -31,7 +31,7 @@ class LoginFormCest
     {
         $I->amLoggedInAs(self::TEST_USER_ID);
         $I->amOnPage('/');
-        $I->see('Logout (admin)');
+        $I->see('Logout');
     }
 
     /**
@@ -45,7 +45,7 @@ class LoginFormCest
         } else {
             $I->amLoggedInAs($user);
             $I->amOnPage('/');
-            $I->see('Logout (admin)');
+            $I->see('Logout');
         }
     }
 
@@ -83,8 +83,8 @@ class LoginFormCest
             'LoginForm[username]' => 'admin',
             'LoginForm[password]' => 'admin',
         ]);
-        $I->see('Logout (admin)');
+        $I->see('Logout');
         $I->dontSeeElement('form#login-form');
-        $I->seeElement('button.logout');
+        $I->seeElement('a[href*="logout"]');
     }
 }
