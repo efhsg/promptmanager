@@ -21,7 +21,7 @@ use yii\widgets\ActiveForm;
 /** @var array $providerList identifier => name */
 /** @var string $defaultProvider */
 
-$this->title = 'AI Sessions';
+$this->title = 'Dialogs';
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 
@@ -70,7 +70,17 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="card">
         <div class="card-header">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <strong class="mb-0">Sessions</strong>
+                <div class="d-flex align-items-center gap-2">
+                    <strong class="mb-0">Sessions</strong>
+                    <?= Html::button(
+                        '<i class="bi bi-arrow-clockwise auto-refresh-icon"></i>',
+                        [
+                            'id' => 'auto-refresh-btn',
+                            'class' => 'btn btn-sm btn-outline-secondary border-0 p-1',
+                            'title' => 'Auto-refresh every 5 seconds',
+                        ]
+                    ) ?>
+                </div>
                 <?php $form = ActiveForm::begin([
                     'action' => ['runs'],
                     'method' => 'get',
@@ -110,32 +120,29 @@ $this->params['breadcrumbs'][] = $this->title;
                         <?php if ($searchModel->q !== null || ($searchModel->status !== null && $searchModel->status !== '') || $projectChanged): ?>
                             <?= Html::a('Reset', ['runs'], ['class' => 'btn btn-link px-2']) ?>
                         <?php endif; ?>
-                        <?= Html::button(
-                            '<span class="auto-refresh-icon">&#x21bb;</span> Auto',
-                            [
-                                'id' => 'auto-refresh-btn',
-                                'class' => 'btn btn-outline-secondary',
-                                'title' => 'Auto-refresh every 5 seconds',
-                            ]
-                        ) ?>
-                        <?= Html::a('Cleanup', ['cleanup'], ['class' => 'btn btn-outline-danger']) ?>
                     </div>
                 <?php ActiveForm::end(); ?>
             </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
+            <?php $cleanupLink = Html::a(
+                '<i class="bi bi-trash"></i> Cleanup',
+                ['cleanup'],
+                ['class' => 'btn btn-sm btn-outline-danger']
+            ); ?>
             <?= GridView::widget([
                 'dataProvider' => $dataProvider,
                 'summary' => '<strong>{begin}</strong> to <strong>{end}</strong> out of <strong>{totalCount}</strong>',
                 'summaryOptions' => ['class' => 'text-start m-2'],
                 'layout' => "{items}"
-                    . "<div class='card-footer position-relative py-3 px-2'>"
-                    . "<div class='position-absolute start-0 top-50 translate-middle-y'>{summary}</div>"
-                    . "<div class='text-center'>{pager}</div>"
+                    . "<div class='card-footer d-flex align-items-center justify-content-between py-3 px-3'>"
+                    . "<div class='flex-shrink-0'>{summary}</div>"
+                    . "<div class='flex-grow-1 text-center'>{pager}</div>"
+                    . "<div class='flex-shrink-0'>$cleanupLink</div>"
                     . "</div>",
                 'tableOptions' => [
-                    'class' => 'table table-striped table-hover mb-0',
+                    'class' => 'table table-striped table-hover mb-0 ai-runs-table',
                 ],
                 'pager' => [
                     'options' => ['class' => 'pagination justify-content-center m-3'],
@@ -158,12 +165,17 @@ $this->params['breadcrumbs'][] = $this->title;
                     ])),
                     'onclick' => 'if (!event.target.closest("[data-method]")) window.location.href = this.dataset.url;',
                     'style' => 'cursor: pointer;',
+                    'class' => in_array($model->getSessionLatestStatus(), AiRunStatus::activeValues(), true)
+                        ? 'ai-run-active'
+                        : 'ai-run-terminal',
                 ],
                 'columns' => [
                     [
                         'attribute' => 'session_latest_status',
                         'label' => 'Status',
                         'format' => 'raw',
+                        'headerOptions' => ['style' => 'width: 85px;'],
+                        'contentOptions' => ['class' => 'text-nowrap'],
                         'value' => static function (AiRun $model): string {
                             $label = $model->getSessionLatestStatusEnum()->label();
                             $class = $model->getSessionStatusBadgeClass();
@@ -173,6 +185,8 @@ $this->params['breadcrumbs'][] = $this->title;
                     [
                         'attribute' => 'project_name',
                         'label' => 'Project',
+                        'headerOptions' => ['style' => 'width: 130px;'],
+                        'contentOptions' => ['class' => 'text-truncate', 'style' => 'max-width: 0;'],
                         'value' => static fn(AiRun $model): string => Html::encode($model->project?->name ?? '-'),
                         'format' => 'raw',
                     ],
@@ -180,6 +194,8 @@ $this->params['breadcrumbs'][] = $this->title;
                         'attribute' => 'provider',
                         'label' => 'Provider',
                         'format' => 'raw',
+                        'headerOptions' => ['style' => 'width: 85px;'],
+                        'contentOptions' => ['class' => 'text-nowrap'],
                         'value' => static function (AiRun $model): string {
                             $provider = $model->provider ?? 'claude';
                             $badgeClass = match ($provider) {
@@ -193,31 +209,51 @@ $this->params['breadcrumbs'][] = $this->title;
                     [
                         'attribute' => 'prompt_summary',
                         'label' => 'Summary',
+                        'contentOptions' => ['class' => 'text-truncate', 'style' => 'max-width: 0;'],
                         'value' => static fn(AiRun $model): string
-                            => Html::encode(StringHelper::truncate($model->getDisplaySummary(), 80, '...')),
+                            => Html::encode(StringHelper::truncate($model->getDisplaySummary(), 120, '...')),
                         'format' => 'raw',
                     ],
                     [
                         'attribute' => 'session_run_count',
                         'label' => 'Runs',
                         'value' => static fn(AiRun $model): int => $model->getSessionRunCount(),
-                        'contentOptions' => ['class' => 'text-center'],
-                        'headerOptions' => ['class' => 'text-center'],
+                        'headerOptions' => ['class' => 'text-center', 'style' => 'width: 55px;'],
+                        'contentOptions' => ['class' => 'text-center text-nowrap'],
                     ],
                     [
                         'attribute' => 'created_at',
                         'label' => 'Started',
-                        'format' => ['datetime', 'php:Y-m-d H:i'],
+                        'format' => 'raw',
+                        'headerOptions' => ['style' => 'width: 110px;'],
+                        'contentOptions' => ['class' => 'text-nowrap'],
+                        'value' => static function (AiRun $model): string {
+                            $short = Yii::$app->formatter->asDatetime($model->created_at, 'php:d M H:i');
+                            $relative = Yii::$app->formatter->asRelativeTime($model->created_at);
+                            return Html::tag('span', Html::encode($short), ['title' => $relative]);
+                        },
                     ],
                     [
                         'attribute' => 'session_total_duration',
                         'label' => 'Duration',
-                        'value' => static fn(AiRun $model): string => $model->getFormattedSessionDuration(),
+                        'format' => 'raw',
+                        'headerOptions' => ['style' => 'width: 110px;'],
+                        'contentOptions' => ['class' => 'text-nowrap'],
+                        'value' => static function (AiRun $model): string {
+                            $duration = Html::encode($model->getFormattedSessionDuration());
+                            $cost = $model->getSessionTotalCost();
+                            if ($cost !== null && $cost > 0) {
+                                $costStr = '$' . number_format($cost, 2);
+                                return $duration . Html::tag('span', Html::encode(" · $costStr"), ['class' => 'text-muted small']);
+                            }
+                            return $duration;
+                        },
                     ],
                     [
                         'label' => '',
                         'format' => 'raw',
-                        'contentOptions' => ['class' => 'text-center', 'style' => 'width: 50px;'],
+                        'headerOptions' => ['style' => 'width: 50px;'],
+                        'contentOptions' => ['class' => 'text-center'],
                         'value' => static function (AiRun $model): string {
                             if (!in_array($model->getSessionLatestStatus(), AiRunStatus::terminalValues(), true)) {
                                 return '';
@@ -249,14 +285,11 @@ $this->params['breadcrumbs'][] = $this->title;
 $js = <<<'JS'
 (function () {
     var btn = document.getElementById('auto-refresh-btn');
-    var icon = btn.querySelector('.auto-refresh-icon');
     var timer = null;
     var INTERVAL = 5000;
 
     function start() {
-        btn.classList.remove('btn-outline-secondary');
-        btn.classList.add('btn-primary');
-        icon.style.animation = 'spin-refresh 1s linear infinite';
+        btn.classList.add('active');
         timer = setInterval(function () {
             window.location.reload();
         }, INTERVAL);
@@ -265,9 +298,7 @@ $js = <<<'JS'
     function stop() {
         clearInterval(timer);
         timer = null;
-        btn.classList.remove('btn-primary');
-        btn.classList.add('btn-outline-secondary');
-        icon.style.animation = '';
+        btn.classList.remove('active');
     }
 
     btn.addEventListener('click', function () {
@@ -292,6 +323,26 @@ $css = <<<'CSS'
 }
 #auto-refresh-btn .auto-refresh-icon {
     display: inline-block;
+    font-size: 1.1rem;
+}
+#auto-refresh-btn.active {
+    color: var(--bs-primary) !important;
+}
+#auto-refresh-btn.active .auto-refresh-icon {
+    animation: spin-refresh 1s linear infinite;
+}
+.ai-runs-table {
+    table-layout: fixed;
+}
+.ai-runs-table tr.ai-run-active {
+    border-left: 3px solid var(--bs-warning);
+    background-color: rgba(var(--bs-warning-rgb), 0.05);
+}
+.ai-runs-table tr.ai-run-terminal {
+    opacity: 0.75;
+}
+.ai-runs-table tr.ai-run-terminal:hover {
+    opacity: 1;
 }
 .badge.badge-provider-claude {
     background-color: #d97757;

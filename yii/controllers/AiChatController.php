@@ -29,7 +29,7 @@ use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
 /**
- * Centralised AI chat interface.
+ * Centralised dialog interface.
  * Every action operates in the context of a Project (identified by query parameter `p`).
  */
 class AiChatController extends Controller

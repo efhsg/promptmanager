@@ -200,10 +200,10 @@ echo $form->field($model, 'template_id')
             'class' => 'btn btn-secondary me-2 d-none',
             'id' => 'edit-button',
         ]) ?>
-        <?= Html::button('<i class="bi bi-terminal-fill"></i> AI Chat', [
+        <?= Html::button('<i class="bi bi-terminal-fill"></i> Dialog', [
             'class' => 'btn btn-primary me-2 d-none',
             'id' => 'ai-chat-button',
-            'title' => $aiChatUrl ? 'Open AI Chat' : 'Project required',
+            'title' => $aiChatUrl ? 'Open Dialog' : 'Project required',
             'disabled' => !$aiChatUrl,
         ]) ?>
         <?= Html::submitButton('Next', [

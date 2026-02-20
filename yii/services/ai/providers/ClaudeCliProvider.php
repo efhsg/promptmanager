@@ -397,7 +397,50 @@ class ClaudeCliProvider implements
             }
         }
 
+        // Fallback: multi-turn runs may have an empty result field while the
+        // last assistant message contains the actual response text.
+        if ($text === '') {
+            $text = $this->extractLastAssistantText($lines);
+        }
+
         return ['text' => $text, 'session_id' => $sessionId, 'metadata' => $metadata, 'error' => null];
+    }
+
+    /**
+     * Extracts text from the last main-thread assistant message in the stream log.
+     *
+     * Used as fallback when the result event's `result` field is empty,
+     * which can happen in multi-turn runs where the final turn is a tool call.
+     *
+     * @param string[] $lines NDJSON stream log lines
+     */
+    private function extractLastAssistantText(array $lines): string
+    {
+        foreach (array_reverse($lines) as $line) {
+            $line = trim($line);
+            if ($line === '' || $line === '[DONE]') {
+                continue;
+            }
+            $decoded = json_decode($line, true);
+            if (
+                ($decoded['type'] ?? null) === 'assistant'
+                && !($decoded['isSidechain'] ?? false)
+                && ($decoded['parent_tool_use_id'] ?? null) === null
+            ) {
+                $content = $decoded['message']['content'] ?? [];
+                $parts = [];
+                foreach ($content as $block) {
+                    if (($block['type'] ?? '') === 'text' && isset($block['text'])) {
+                        $parts[] = $block['text'];
+                    }
+                }
+                if ($parts !== []) {
+                    return implode("\n", $parts);
+                }
+            }
+        }
+
+        return '';
     }
 
     // ──────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ use yii\widgets\DetailView;
 /** @var app\models\Note[] $children */
 
 $canRunAi = $model->project_id !== null;
-$aiTooltip = $canRunAi ? 'Talk to AI' : 'Project required';
+$aiTooltip = $canRunAi ? 'Start Dialog' : 'Project required';
 $aiChatUrl = $canRunAi
     ? Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => json_encode([
         ['label' => 'Notes', 'url' => Url::to(['/note/index'])],

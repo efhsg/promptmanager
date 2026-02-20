@@ -148,7 +148,7 @@ echo $this->render('_breadcrumbs', [
                             'ai' => function ($url, PromptInstance $model) {
                                 $projectId = $model->template?->project_id;
                                 $disabled = $projectId === null;
-                                $tooltip = $disabled ? 'Project required' : 'Talk to AI';
+                                $tooltip = $disabled ? 'Project required' : 'Start Dialog';
                                 $aiChatUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $projectId, 'breadcrumbs' => Json::encode([
                                     ['label' => 'Prompt Instances', 'url' => Url::to(['/prompt-instance/index'])],
                                     ['label' => $model->label ?: 'Instance #' . $model->id, 'url' => Url::to(['/prompt-instance/view', 'id' => $model->id])],

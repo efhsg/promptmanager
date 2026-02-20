@@ -16,7 +16,7 @@ use yii\widgets\DetailView;
 
 $projectId = $model->template?->project_id;
 $canRunAi = $projectId !== null;
-$aiTooltip = $canRunAi ? 'Talk to AI' : 'Project required';
+$aiTooltip = $canRunAi ? 'Start Dialog' : 'Project required';
 $aiChatUrl = $canRunAi
     ? Url::to(['/ai-chat/index', 'p' => $projectId, 'breadcrumbs' => json_encode([
         ['label' => 'Prompt Instances', 'url' => Url::to(['/prompt-instance/index'])],

@@ -7,7 +7,7 @@ use yii\helpers\Html;
 /** @var int $runCount */
 
 $this->title = 'Cleanup Sessions';
-$this->params['breadcrumbs'][] = ['label' => 'AI Sessions', 'url' => ['runs']];
+$this->params['breadcrumbs'][] = ['label' => 'Dialogs', 'url' => ['runs']];
 $this->params['breadcrumbs'][] = $this->title;
 ?>
 <div class="ai-cleanup-confirm container py-4">

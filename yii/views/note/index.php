@@ -232,7 +232,7 @@ $this->params['breadcrumbs'][] = $this->title;
                         'buttons' => [
                             'ai' => function ($url, Note $model) {
                                 $disabled = $model->project_id === null;
-                                $tooltip = $disabled ? 'Project required' : 'Talk to AI';
+                                $tooltip = $disabled ? 'Project required' : 'Start Dialog';
                                 $aiChatUrl = $disabled ? '#' : Url::to(['/ai-chat/index', 'p' => $model->project_id, 'breadcrumbs' => Json::encode([
                                     ['label' => 'Notes', 'url' => Url::to(['/note/index'])],
                                     ['label' => $model->name, 'url' => Url::to(['/note/view', 'id' => $model->id])],
@@ -286,7 +286,7 @@ $script = <<<JS
                     if (data.success && data.content) {
                         sessionStorage.setItem('aiPromptContent', typeof data.content === 'string' ? data.content : JSON.stringify(data.content));
                     }
-                    // Set project context to note's project before navigating to AI Chat
+                    // Set project context to note's project before navigating to Dialog
                     if (data.success && data.projectId) {
                         var formData = new FormData();
                         formData.append('project_id', data.projectId);
