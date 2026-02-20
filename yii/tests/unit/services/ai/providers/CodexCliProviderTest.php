@@ -89,7 +89,7 @@ class CodexCliProviderTest extends Unit
 
     // ── Config detection ──────────────────────────────────────
 
-    public function testHasConfigDetectsCodexMd(): void
+    public function testHasConfigIgnoresCodexMd(): void
     {
         $tmpDir = sys_get_temp_dir() . '/codex_test_' . uniqid();
         mkdir($tmpDir, 0o755, true);
@@ -97,15 +97,15 @@ class CodexCliProviderTest extends Unit
 
         $result = $this->provider->hasConfig($tmpDir);
 
-        verify($result['hasConfigFile'])->true();
+        verify($result['hasConfigFile'])->false();
         verify($result['hasConfigDir'])->false();
-        verify($result['hasAnyConfig'])->true();
+        verify($result['hasAnyConfig'])->false();
 
         unlink($tmpDir . '/codex.md');
         rmdir($tmpDir);
     }
 
-    public function testHasConfigDetectsCodexMdUppercase(): void
+    public function testHasConfigIgnoresCodexMdUppercase(): void
     {
         $tmpDir = sys_get_temp_dir() . '/codex_test_' . uniqid();
         mkdir($tmpDir, 0o755, true);
@@ -113,9 +113,9 @@ class CodexCliProviderTest extends Unit
 
         $result = $this->provider->hasConfig($tmpDir);
 
-        verify($result['hasConfigFile'])->true();
+        verify($result['hasConfigFile'])->false();
         verify($result['hasConfigDir'])->false();
-        verify($result['hasAnyConfig'])->true();
+        verify($result['hasAnyConfig'])->false();
 
         unlink($tmpDir . '/CODEX.md');
         rmdir($tmpDir);
@@ -137,7 +137,7 @@ class CodexCliProviderTest extends Unit
         rmdir($tmpDir);
     }
 
-    public function testHasConfigDetectsCodexDir(): void
+    public function testHasConfigIgnoresCodexDir(): void
     {
         $tmpDir = sys_get_temp_dir() . '/codex_test_' . uniqid();
         mkdir($tmpDir . '/.codex', 0o755, true);
@@ -145,8 +145,8 @@ class CodexCliProviderTest extends Unit
         $result = $this->provider->hasConfig($tmpDir);
 
         verify($result['hasConfigFile'])->false();
-        verify($result['hasConfigDir'])->true();
-        verify($result['hasAnyConfig'])->true();
+        verify($result['hasConfigDir'])->false();
+        verify($result['hasAnyConfig'])->false();
 
         rmdir($tmpDir . '/.codex');
         rmdir($tmpDir);
@@ -163,6 +163,40 @@ class CodexCliProviderTest extends Unit
         verify($result['hasConfigDir'])->false();
         verify($result['hasAnyConfig'])->false();
 
+        rmdir($tmpDir);
+    }
+
+    public function testCheckConfigUsesAgentsLabel(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/codex_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+
+        $result = $this->provider->checkConfig($tmpDir);
+
+        verify($result['configFileName'])->equals('AGENTS.md');
+        verify($result['hasConfigFile'])->false();
+        verify($result['hasConfigDir'])->false();
+        verify($result['hasAnyConfig'])->false();
+        verify($result['pathStatus'])->equals('no_config');
+
+        rmdir($tmpDir);
+    }
+
+    public function testCheckConfigReturnsHasConfigPathStatusWhenAgentsExists(): void
+    {
+        $tmpDir = sys_get_temp_dir() . '/codex_test_' . uniqid();
+        mkdir($tmpDir, 0o755, true);
+        file_put_contents($tmpDir . '/AGENTS.md', '# Agents');
+
+        $result = $this->provider->checkConfig($tmpDir);
+
+        verify($result['configFileName'])->equals('AGENTS.md');
+        verify($result['hasConfigFile'])->true();
+        verify($result['hasConfigDir'])->false();
+        verify($result['hasAnyConfig'])->true();
+        verify($result['pathStatus'])->equals('has_config');
+
+        unlink($tmpDir . '/AGENTS.md');
         rmdir($tmpDir);
     }
 

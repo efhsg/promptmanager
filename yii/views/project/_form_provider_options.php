@@ -14,6 +14,8 @@ $providerOptions = $model->getAiOptionsForProvider($providerId);
 $models = $providerData['models'] ?? [];
 $permissionModes = $providerData['permissionModes'] ?? [];
 $configSchema = $providerData['configSchema'] ?? [];
+// Default to true for backward compatibility with older controller payloads.
+$supportsSlashCommands = (bool) ($providerData['supportsSlashCommands'] ?? true);
 $prefix = "ai_options[{$providerId}]";
 $idPrefix = "provider-{$providerId}";
 ?>
@@ -124,8 +126,8 @@ $idPrefix = "provider-{$providerId}";
 <?php endif; ?>
 
 <?php
-// Command dropdown section — only for saved projects with a root directory
-if ($model->id && !empty($model->root_directory)):
+// Command dropdown section — only for providers with native slash command support
+if ($supportsSlashCommands && $model->id && !empty($model->root_directory)):
     $commandBlacklistJson = Json::encode($model->getAiCommandBlacklist($providerId));
     $commandGroupsJson = Json::encode($model->getAiCommandGroups($providerId) ?: new \stdClass());
     $commandsUrl = Url::to(['/project/ai-commands', 'id' => $model->id, 'provider' => $providerId]);

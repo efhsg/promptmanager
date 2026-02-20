@@ -281,7 +281,13 @@ class ProjectController extends Controller
     }
 
     /**
-     * @return array<string, array{name: string, models: array, permissionModes: array, configSchema: array}>
+     * @return array<string, array{
+     *     name: string,
+     *     models: array,
+     *     permissionModes: array,
+     *     configSchema: array,
+     *     supportsSlashCommands: bool
+     * }>
      */
     private function buildProviderViewData(): array
     {
@@ -295,6 +301,7 @@ class ProjectController extends Controller
                 'models' => $provider->getSupportedModels(),
                 'permissionModes' => $provider->getSupportedPermissionModes(),
                 'configSchema' => $provider->getConfigSchema(),
+                'supportsSlashCommands' => $provider->supportsSlashCommands(),
             ];
         }
 

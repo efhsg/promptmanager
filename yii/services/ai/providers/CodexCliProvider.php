@@ -388,21 +388,12 @@ class CodexCliProvider implements
 
     public function hasConfig(string $path): array
     {
-        $configFiles = ['codex.md', 'CODEX.md', 'AGENTS.md'];
-        $hasConfigFile = false;
-        foreach ($configFiles as $configFile) {
-            if (file_exists($path . '/' . $configFile)) {
-                $hasConfigFile = true;
-                break;
-            }
-        }
-
-        $hasCodexDir = is_dir($path . '/.codex');
+        $hasConfigFile = file_exists($path . '/AGENTS.md');
 
         return [
             'hasConfigFile' => $hasConfigFile,
-            'hasConfigDir' => $hasCodexDir,
-            'hasAnyConfig' => $hasConfigFile || $hasCodexDir,
+            'hasConfigDir' => false,
+            'hasAnyConfig' => $hasConfigFile,
         ];
     }
 
@@ -415,8 +406,8 @@ class CodexCliProvider implements
             'hasConfigFile' => false,
             'hasConfigDir' => false,
             'hasAnyConfig' => false,
-            'configFileName' => 'codex.md/CODEX.md/AGENTS.md',
-            'configDirName' => '.codex/',
+            'configFileName' => 'AGENTS.md',
+            'configDirName' => '',
             'pathMapped' => $pathMapped,
             'requestedPath' => $path,
             'effectivePath' => $containerPath,
