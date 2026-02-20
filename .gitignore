@@ -9,6 +9,7 @@ trash/
 .php-cs-fixer.cache
 scripts/backup.log
 .claude/settings.local.json
+yii/.claude/settings.local.json
 docker-compose.override.yml
 docker/yii/claude-binary
 
