@@ -24,7 +24,8 @@ RUN apt-get update && apt-get install -y \
     libmagickwand-dev \
     libmemcached-dev \
     zlib1g-dev \
-    vim --no-install-recommends && \
+    vim \
+    default-mysql-client --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update \
@@ -131,7 +132,7 @@ EOF
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y nodejs && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
-    npm install -g npm@10
+    npm install -g npm@11
 
 # Install Codex CLI globally
 RUN npm install -g @openai/codex 2>/dev/null || true

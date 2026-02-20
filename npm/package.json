@@ -6,7 +6,7 @@
         "setup": "git clone https://github.com/quilljs/quill.git && cd quill && npm install",
         "prebuild": "mkdir -p /yii/web/quill/1.3.7 && mkdir -p /yii/web/quill/1.3.7/highlight",
         "build-highlight": "mkdir -p /yii/web/quill/1.3.7/highlight && curl -o /yii/web/quill/1.3.7/highlight/default.min.css https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css && curl -o /yii/web/quill/1.3.7/highlight/highlight.min.js https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js",
-        "build": "cd quill/packages/quill && npm install && (grep -q \"skipLibCheck\" tsconfig.json || sed -i 's/\"strictNullChecks\": true,/\"strictNullChecks\": true, \"skipLibCheck\": true,/g' tsconfig.json) && npm run build -- --format=umd --modules=formula,syntax && cp -r dist/dist/* /yii/web/quill/1.3.7/",
+        "build": "cd quill/packages/quill && npm install --no-fund --no-audit && (grep -q \"skipLibCheck\" tsconfig.json || sed -i 's/\"strictNullChecks\": true,/\"strictNullChecks\": true, \"skipLibCheck\": true,/g' tsconfig.json) && BROWSERSLIST_IGNORE_OLD_DATA=1 npm run build -- --format=umd --modules=formula,syntax && cp -r dist/dist/* /yii/web/quill/1.3.7/",
         "minify": "node ./node_modules/uglify-js/bin/uglifyjs /yii/web/quill/1.3.7/quill.js -o /yii/web/quill/1.3.7/quill.min.js",
         "clean": "rm -rf quill",
         "minify-delta": "mkdir -p /yii/web/quill/1.3.7/quill-delta-to-html && node ./node_modules/uglify-js/bin/uglifyjs node_modules/quill-delta-to-html/dist/browser/QuillDeltaToHtmlConverter.bundle.js -o /yii/web/quill/1.3.7/quill-delta-to-html/quill-delta-to-html.min.js",

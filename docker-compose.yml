@@ -129,6 +129,8 @@ services:
     container_name: pma_npm
     working_dir: /app
     user: "node"
+    environment:
+      NO_UPDATE_NOTIFIER: "1"
     volumes:
       - ./npm:/app:rw
       - ./yii/web/quill:/yii/web/quill:rw

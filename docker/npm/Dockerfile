@@ -8,6 +8,8 @@ RUN apt-get update && \
 WORKDIR /app
 RUN chown -R ${USER_ID}:${GROUP_ID} /app
 
+RUN npm install -g npm@11
+
 USER ${USER_ID}
 
 COPY --chown=${USER_ID}:${GROUP_ID} package*.json ./
