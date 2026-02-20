@@ -30,7 +30,7 @@ docker exec pma_yii ./yii_test migrate --migrationNamespaces=app\\migrations --i
 docker exec pma_yii vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-cache=no
 ```
 
-> **Note:** Claude Code runs **inside** the `pma_yii` container and uses commands directly (without `docker exec`). See `.claude/config/project.md` for in-container commands.
+> **Note:** AI tools running **inside** the `pma_yii` container use commands directly (without `docker exec`). See `.claude/config/project.md` for in-container commands.
 
 ## Before Any Code Change
 

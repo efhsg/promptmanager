@@ -66,8 +66,10 @@ docker compose run --entrypoint bash pma_npm -c "npm run build-and-minify"
 | Type | Location |
 |------|----------|
 | Controllers | `yii/controllers/` |
+| API Controllers | `yii/controllers/api/` |
 | Services | `yii/services/` |
 | Models | `yii/models/` |
+| Model Traits | `yii/models/traits/` |
 | Query Classes | `yii/models/query/` |
 | Views | `yii/views/` |
 | Migrations | `yii/migrations/` |

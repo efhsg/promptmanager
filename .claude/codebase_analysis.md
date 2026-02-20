@@ -589,6 +589,12 @@ Search mode options for AdvancedSearchService.
 | Phrase | `phrase` | Exact phrase matching |
 | Keywords | `keywords` | Any keyword matching |
 
+#### ColorScheme (`yii/common/enums/ColorScheme.php`)
+Navbar background color options, settable per-project or per browser tab.
+
+#### LogCategory (`yii/common/enums/LogCategory.php`)
+Standardized log category strings for `Yii::error/warning/info/debug` calls.
+
 ---
 
 ### AdvancedSearchService (`yii/services/AdvancedSearchService.php`)
@@ -634,25 +640,30 @@ convertToQuillDelta(array $transcriptData): string
 
 | Interface | Purpose |
 |-----------|---------|
-| `AiProviderInterface` | Base provider interface (display name, health check) |
-| `AiInferenceInterface` | Execute prompts, stream output, cancel runs |
-| `AiCompletionInterface` | Single-shot completions for name suggestions etc. |
-| `AiWorkspaceInterface` | Workspace management, config checks, diagnostics |
-| `AiCommandsInterface` | Slash command discovery and API usage |
+| `AiProviderInterface` | Minimal contract every AI CLI provider must implement |
+| `AiStreamingProviderInterface` | Optional: incremental streaming output via line callback |
+| `AiUsageProviderInterface` | Optional: usage/subscription tracking |
+| `AiWorkspaceProviderInterface` | Optional: manage and sync workspace directories |
+| `AiConfigProviderInterface` | Optional: configuration checking and command loading |
+| `AiCompletionClient` | Contract for single-turn AI text completion |
+
+| Service | Purpose |
+|---------|---------|
+| `AiProviderRegistry` | Read-only registry resolving providers by identifier |
+| `PromptCommandSubstituter` | Replace slash commands in prompts with inlined command file contents |
 
 | Provider | Purpose |
 |----------|---------|
 | `ClaudeCliProvider` | Claude CLI implementation of all AI provider interfaces |
+| `CodexCliProvider` | Codex CLI provider (core + streaming + config interfaces) |
 
 ### Other Services
 
 | Service | Purpose |
 |---------|---------|
-| `ClaudeCliService` | Execute Claude CLI commands (legacy, not yet migrated to provider) |
-| `ClaudeCliCompletionClient` | Claude CLI completion client (legacy, not yet migrated) |
 | `AiRunCleanupService` | Delete AI run records and associated stream files |
 | `AiStreamRelayService` | Relay NDJSON stream events from file to callback |
-| `ClaudeWorkspaceService` | Manage persistent Claude workspace directories (legacy) |
+| `ClaudeCliCompletionClient` | Claude CLI completion client (legacy) |
 | `EntityPermissionService` | RBAC permission checking for controller actions |
 | `FileExportService` | Export content to files with path validation and format conversion |
 | `FileFieldProcessor` | Process file/directory field values |
@@ -664,6 +675,58 @@ convertToQuillDelta(array $transcriptData): string
 | `QuickSearchService` | Global search across projects, templates, fields |
 | `UserDataSeeder` | Seed initial user data |
 | `UserPreferenceService` | Manage user preferences |
+
+### Service Subdirectories
+
+#### Copy Format (`yii/services/copyformat/`)
+Writer implementations for `CopyFormatConverter`:
+
+| Class | Purpose |
+|-------|---------|
+| `FormatWriterInterface` | Contract for format writers |
+| `AbstractFormatWriter` | Base class with shared Delta parsing |
+| `DeltaParser` | Parse Quill Delta JSON into structured operations |
+| `PlainTextWriter` | Convert Delta to plain text |
+| `MarkdownWriter` | Convert Delta to GitHub-flavored markdown |
+| `HtmlWriter` | Convert Delta to HTML |
+| `QuillDeltaWriter` | Pass-through Quill Delta JSON |
+| `LlmXmlWriter` | Convert Delta to XML with `<instructions>` tags |
+| `MarkdownParser` | Parse markdown back to Delta |
+
+#### Prompt Generation (`yii/services/promptgeneration/`)
+Sub-services used by `PromptGenerationService`:
+
+| Class | Purpose |
+|-------|---------|
+| `DeltaOpsHelper` | Utility methods for Quill Delta operations manipulation |
+| `FieldValueBuilder` | Build field value Delta output by field type |
+| `PlaceholderProcessor` | Find and replace placeholders in Delta operations |
+
+#### Sync (`yii/services/sync/`)
+Bidirectional database sync between local and remote:
+
+| Class | Purpose |
+|-------|---------|
+| `SyncService` | Orchestrator for bidirectional sync |
+| `EntitySyncer` | Sync individual entity types |
+| `ConflictResolver` | Resolve conflicts between local and remote records |
+| `RemoteConnection` | Manage SSH tunnel and remote DB connection |
+| `RecordFetcher` | Fetch records from local/remote databases |
+| `SyncReport` | Collect and format sync operation results |
+| `EntityDefinitions` | Define syncable entities and their relationships |
+
+#### Project Load (`yii/services/projectload/`)
+Import projects from MySQL dump files:
+
+| Class | Purpose |
+|-------|---------|
+| `ProjectLoadService` | Orchestrator for project loading from dump |
+| `DumpImporter` | Import MySQL dump into temporary schema |
+| `SchemaInspector` | Validate dump schema compatibility |
+| `EntityLoader` | Load individual entity types from dump |
+| `EntityConfig` | Define loadable entities and column mappings |
+| `PlaceholderRemapper` | Remap placeholder IDs after import |
+| `LoadReport` | Collect and format load operation results |
 
 ---
 
@@ -708,6 +771,7 @@ Central definitions for field type categories:
 | `MarkdownDetector` | Detect if text is markdown-formatted via regex patterns |
 | `TooltipHelper` | Strip HTML and truncate Delta JSON or plain text for tooltips |
 | `BreadcrumbHelper` | Generate model-based breadcrumb arrays with labels and URLs |
+| `ChoiceOptionParser` | Parse AI response text for interactive choice button patterns |
 
 ### Presenters (`yii/presenters/`)
 
@@ -761,7 +825,7 @@ generateAuthKey(): void
 
 ### Module Structure
 - **Controllers:** `AuthController` - Login, logout, signup actions
-- **Models:** `User`, `UserQuery`, `LoginForm`, `SignupForm`
+- **Models:** `User`, `UserQuery`, `LoginForm`, `SignupForm`, `ChangePasswordForm`
 - **Services:** `UserService`, `UserDataSeederInterface`
 
 ### RBAC Rules (`yii/rbac/`)
@@ -794,6 +858,12 @@ generateAuthKey(): void
 | `SearchController` | AJAX search endpoints (quick and advanced) |
 | `AiChatController` | AI CLI run management, streaming, sessions |
 | `ExportController` | File export with format conversion |
+
+### API Controllers (`yii/controllers/api/`)
+
+| Controller | Purpose |
+|------------|---------|
+| `NoteController` | REST-style API endpoints for notes (AJAX) |
 
 ### PromptInstanceController Actions
 
