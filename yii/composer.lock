@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "83dceb033250086751f052f7af029048",
+    "content-hash": "a8aacf168158eef6e01dff5e5b44c645",
     "packages": [
         {
             "name": "bower-asset/inputmask",
@@ -684,69 +684,6 @@
                 "source": "https://github.com/Masterminds/html5-php/tree/2.10.0"
             },
             "time": "2025-07-25T09:04:22+00:00"
-        },
-        {
-            "name": "nadar/quill-delta-parser",
-            "version": "3.7.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/nadar/quill-delta-parser.git",
-                "reference": "edcf902c1a5e81ad188a12d2de0f7986e92e27f0"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/nadar/quill-delta-parser/zipball/edcf902c1a5e81ad188a12d2de0f7986e92e27f0",
-                "reference": "edcf902c1a5e81ad188a12d2de0f7986e92e27f0",
-                "shasum": ""
-            },
-            "require": {
-                "ext-json": "*",
-                "php": ">=7.2"
-            },
-            "require-dev": {
-                "friendsofphp/php-cs-fixer": "^3.2",
-                "phpstan/phpstan": "^1.7",
-                "phpunit/phpunit": "^8.0",
-                "rector/rector": "^0.14.2"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "nadar\\quill\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Basil Suter",
-                    "email": "git@nadar.io"
-                }
-            ],
-            "description": "A PHP library to parse Quill WYSIWYG editor deltas into HTML - flexible and extendible for custom elements.",
-            "keywords": [
-                "delta",
-                "html",
-                "parser",
-                "quill",
-                "quill-delta",
-                "quill-editor",
-                "quilljs",
-                "renderer"
-            ],
-            "support": {
-                "issues": "https://github.com/nadar/quill-delta-parser/issues",
-                "source": "https://github.com/nadar/quill-delta-parser/tree/3.7.0"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/nadar",
-                    "type": "github"
-                }
-            ],
-            "time": "2025-12-26T11:23:19+00:00"
         },
         {
             "name": "nikic/php-parser",

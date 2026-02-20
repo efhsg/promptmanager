@@ -6,8 +6,8 @@ use yii\web\AssetBundle;
 
 class QuillAsset extends AssetBundle
 {
-    public $basePath = '@webroot/quill/1.3.7';
-    public $baseUrl = '@web/quill/1.3.7';
+    public $basePath = '@webroot/quill/2.0.3';
+    public $baseUrl = '@web/quill/2.0.3';
 
     public $css = [
         'quill.snow.css',

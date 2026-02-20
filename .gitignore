@@ -15,4 +15,4 @@ docker/yii/claude-binary
 
 # Runtime storage (managed AI workspaces, etc.)
 yii/storage/
-yii/web/quill/1.3.7/editor-init.js
+yii/web/quill/2.0.3/editor-init.js
