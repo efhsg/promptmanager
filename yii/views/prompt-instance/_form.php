@@ -153,13 +153,7 @@ echo $form->field($model, 'template_id')
                         <div id="final-prompt-container-view">
                             <?= app\widgets\ContentViewerWidget::widget([
                                 'content' => '',
-                                'enableExpand' => true,
-                                'cssOptions' => [
-                                    'max-height' => '300px',
-                                ],
                                 'copyButtonOptions' => [
-                                    'class' => 'btn btn-sm position-absolute',
-                                    'style' => 'bottom: 10px; right: 20px;',
                                     'title' => 'Copy to clipboard',
                                     'aria-label' => 'Copy content to clipboard',
                                     'copyFormat' => $projectCopyFormat,
@@ -255,8 +249,6 @@ $script = <<<'JS'
                     updateButtonState(1);
                 } else if (currentStep === 3) {
                     $('#collapseGeneration').collapse('show');
-                    var viewer = $finalPromptContainer.find('.content-viewer')[0];
-                    if (viewer && viewer._resetExpand) viewer._resetExpand();
                     $finalPromptContainer.find('.content-viewer').empty();
                     $finalPromptContainer.find('textarea').text('');
                     updateButtonState(2);
@@ -489,7 +481,6 @@ $script = <<<'JS'
                     const $rendered  = $('<div>', { class: 'ql-container ql-snow' })
                         .append($('<div>', { class: 'ql-editor', html: innerHtml }));
                     const $viewer     = $viewContainer.find('.content-viewer');
-                    if ($viewer[0] && $viewer[0]._resetExpand) $viewer[0]._resetExpand();
                     $viewer.html($rendered);
                     $viewer.attr('data-delta-content', deltaString);
                     $finalPromptContainer.data('deltaObj', delta);

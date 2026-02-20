@@ -435,20 +435,26 @@ body.keyboard-open .mobile-bottom-nav {
 }
 
 /* ---------------------------------------------------------------------
-   8. PROMPT GENERATION MOBILE STYLES
+   8. PROMPT GENERATION STYLES
    --------------------------------------------------------------------- */
+/* Sticky navigation buttons — always visible at bottom of viewport */
+.prompt-generation-nav {
+    position: sticky;
+    bottom: 0;
+    z-index: 1020;
+    background: #fff;
+    padding: 0.75rem;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
 @media (max-width: 767.98px) {
-    /* Sticky navigation buttons */
+    /* On mobile: raise above the bottom-nav bar */
     .prompt-generation-nav {
-        position: sticky;
         bottom: calc(70px + env(safe-area-inset-bottom, 0px));
-        z-index: 1020;
-        background: #fff;
-        padding: 0.75rem;
         margin: 0 -0.75rem;
-        border-top: 1px solid #dee2e6;
-        display: flex;
-        gap: 0.5rem;
     }
 
     .prompt-generation-nav .btn {
