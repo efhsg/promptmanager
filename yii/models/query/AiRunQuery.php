@@ -131,6 +131,9 @@ class AiRunQuery extends ActiveQuery
     /**
      * Searches across all runs in each session for the given term.
      * Matches on prompt_markdown, prompt_summary or session_summary of any run within the session.
+     *
+     * Note: searches prompt_markdown in addition to the summary fields so that
+     * full prompt content is searchable, not just the AI-generated summaries.
      */
     public function searchByTerm(string $term): self
     {

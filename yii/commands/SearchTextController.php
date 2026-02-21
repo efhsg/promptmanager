@@ -20,26 +20,37 @@ class SearchTextController extends Controller
         'field' => 'content',
     ];
 
+    private const BATCH_SIZE = 500;
+
     public function actionBackfill(): int
     {
         $totalUpdated = 0;
 
         foreach (self::TABLES as $table => $contentColumn) {
             $this->stdout("Processing {$table}...\n");
-
-            $rows = Yii::$app->db->createCommand(
-                "SELECT id, {$contentColumn} FROM {{%{$table}}} WHERE search_text IS NULL"
-            )->queryAll();
-
             $updated = 0;
-            foreach ($rows as $row) {
-                $searchText = SearchTextExtractor::extract($row[$contentColumn]);
-                Yii::$app->db->createCommand()->update(
-                    "{{%{$table}}}",
-                    ['search_text' => $searchText ?: null],
-                    ['id' => $row['id']]
-                )->execute();
-                $updated++;
+
+            while (true) {
+                $rows = Yii::$app->db->createCommand(
+                    "SELECT id, {$contentColumn} FROM {{%{$table}}} WHERE search_text IS NULL LIMIT :limit",
+                    [':limit' => self::BATCH_SIZE]
+                )->queryAll();
+
+                if (empty($rows)) {
+                    break;
+                }
+
+                foreach ($rows as $row) {
+                    $searchText = SearchTextExtractor::extract($row[$contentColumn]);
+                    Yii::$app->db->createCommand()->update(
+                        "{{%{$table}}}",
+                        ['search_text' => $searchText ?: null],
+                        ['id' => $row['id']]
+                    )->execute();
+                    $updated++;
+                }
+
+                $this->stdout("  Batch done ({$updated} so far)...\n");
             }
 
             $this->stdout("  Updated {$updated} rows.\n");
