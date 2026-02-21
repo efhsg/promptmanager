@@ -104,13 +104,6 @@ $currentProject = Yii::$app->projectContext->getCurrentProject();
                     ],
 
                     [
-                        'attribute' => 'updated_at',
-                        'label' => 'Updated',
-                        'enableSorting' => true,
-                        'format' => ['relativeTime'],
-                    ],
-
-                    [
                         'attribute' => 'is_default',
                         'label' => 'Default on',
                         'enableSorting' => true,
@@ -132,6 +125,13 @@ $currentProject = Yii::$app->projectContext->getCurrentProject();
                         'attribute' => 'order',
                         'label' => 'Order',
                         'enableSorting' => true,
+                    ],
+
+                    [
+                        'attribute' => 'updated_at',
+                        'label' => 'Updated',
+                        'enableSorting' => true,
+                        'format' => ['relativeTime'],
                     ],
 
                     [
