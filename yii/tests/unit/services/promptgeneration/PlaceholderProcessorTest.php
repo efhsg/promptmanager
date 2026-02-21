@@ -477,25 +477,24 @@ class PlaceholderProcessorTest extends Unit
         $this->assertStringContainsString('Use 3 retries', $plainText);
     }
 
-    public function testProcessRendersSelectFieldInlineWhenOnSeparateLine(): void
+    public function testProcessRendersSelectFieldPreservingNewlinesWhenOnSeparateLine(): void
     {
         $this->processor->setFieldMappings(
             [1 => 'select'],
             []
         );
 
+        // Select on its own line — newlines must be preserved (not collapsed to spaces)
         $ops = [['insert' => "Write in\nGEN:{{1}}\nlanguage"]];
         $fieldValues = [1 => '{"ops":[{"insert":"Python\n"}]}'];
 
         $result = $this->processor->process($ops, $fieldValues);
 
         $plainText = $this->extractPlainText($result);
-        $this->assertStringContainsString('Write in Python language', $plainText);
-        $this->assertStringNotContainsString("in\nPython", $plainText);
-        $this->assertStringNotContainsString("Python\nlanguage", $plainText);
+        $this->assertStringContainsString("Write in\nPython\nlanguage", $plainText);
     }
 
-    public function testProcessRendersSelectInvertFieldInline(): void
+    public function testProcessRendersSelectInvertFieldPreservingNewlinesWhenOnSeparateLine(): void
     {
         $field = new stdClass();
         $field->id = 1;
@@ -512,14 +511,14 @@ class PlaceholderProcessorTest extends Unit
             [1 => $field]
         );
 
+        // Select-invert on its own line — newlines must be preserved
         $ops = [['insert' => "Answer:\nGEN:{{1}}\nplease"]];
         $fieldValues = [1 => '{"ops":[{"insert":"Yes\n"}]}'];
 
         $result = $this->processor->process($ops, $fieldValues);
 
         $plainText = $this->extractPlainText($result);
-        $this->assertStringNotContainsString("Answer:\nYes", $plainText);
-        $this->assertStringContainsString('Answer: Yes', $plainText);
+        $this->assertStringContainsString("Answer:\nYes not No\nplease", $plainText);
     }
 
     public function testProcessPreservesNewlinesForBlockFieldTypes(): void
@@ -556,18 +555,18 @@ class PlaceholderProcessorTest extends Unit
         $this->assertStringContainsString('Write in Python please', $plainText);
     }
 
-    public function testProcessRendersMultipleInlinePlaceholdersSeparatedByNewlines(): void
+    public function testProcessRendersMultipleStringPlaceholdersSeparatedByNewlines(): void
     {
         $this->processor->setFieldMappings(
-            [1 => 'string', 2 => 'select'],
+            [1 => 'string', 2 => 'string'],
             []
         );
 
-        // Two inline placeholders each on their own line
+        // Two string placeholders each on their own line — both collapse to inline
         $ops = [['insert' => "Write a\nGEN:{{1}}\nGEN:{{2}}\nfunction"]];
         $fieldValues = [
             1 => 'sorting',
-            2 => '{"ops":[{"insert":"Python\n"}]}',
+            2 => 'Python',
         ];
 
         $result = $this->processor->process($ops, $fieldValues);
@@ -577,14 +576,37 @@ class PlaceholderProcessorTest extends Unit
         $this->assertStringNotContainsString("\n", $plainText);
     }
 
-    public function testProcessRendersInlineFollowedByBlockPlaceholder(): void
+    public function testProcessRendersStringAndSelectPlaceholdersSeparatedByNewlines(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'string', 2 => 'select'],
+            []
+        );
+
+        // String collapses, select preserves newlines
+        $ops = [['insert' => "Write a\nGEN:{{1}}\nGEN:{{2}}\nfunction"]];
+        $fieldValues = [
+            1 => 'sorting',
+            2 => '{"ops":[{"insert":"Python\n"}]}',
+        ];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        // String field collapses its surrounding newlines
+        $this->assertStringContainsString('Write a sorting', $plainText);
+        // Select field preserves the newline after it
+        $this->assertStringContainsString("Python\nfunction", $plainText);
+    }
+
+    public function testProcessRendersSelectFollowedByBlockPlaceholder(): void
     {
         $this->processor->setFieldMappings(
             [1 => 'select', 2 => 'text'],
             []
         );
 
-        // Inline placeholder followed by block placeholder
+        // Select placeholder followed by block placeholder
         $ops = [['insert' => "Use\nGEN:{{1}}\nGEN:{{2}}"]];
         $fieldValues = [
             1 => '{"ops":[{"insert":"Python\n"}]}',
@@ -594,12 +616,63 @@ class PlaceholderProcessorTest extends Unit
         $result = $this->processor->process($ops, $fieldValues);
 
         $plainText = $this->extractPlainText($result);
-        // Inline field should not have newline before/after it
-        $this->assertStringContainsString('Use Python', $plainText);
+        // Select field preserves newlines
+        $this->assertStringContainsString("Use\nPython", $plainText);
         // Block field content should be present
         $this->assertStringContainsString('Some detailed instructions', $plainText);
-        // No double newline between inline and block field
+        // No double newline between select and block field
         $this->assertStringNotContainsString("Python\n\n", $plainText);
+    }
+
+    // --- Select field newline preservation tests ---
+
+    public function testProcessPreservesNewlinesAroundSelectFieldOnOwnLine(): void
+    {
+        $this->processor->setFieldMappings(
+            [1 => 'select'],
+            []
+        );
+
+        // Template: "Modus\nPRJ:{{1}}\nReferenties\nDe agent kent de codebase."
+        // The select field is on its own line — newlines must be preserved.
+        $ops = [['insert' => "Modus\nPRJ:{{1}}\nReferenties\nDe agent kent de codebase.\n"]];
+        $fieldValues = [1 => '{"ops":[{"insert":"Grondig\n"}]}'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString("Modus\nGrondig\nReferenties", $plainText);
+        $this->assertStringNotContainsString('Modus Grondig', $plainText, 'Newline before select should not collapse to space');
+        $this->assertStringNotContainsString('Grondig Referenties', $plainText, 'Newline after select should not collapse to space');
+    }
+
+    public function testProcessPreservesNewlinesAroundSelectInvertFieldOnOwnLine(): void
+    {
+        $field = new stdClass();
+        $field->id = 1;
+        $field->render_label = false;
+        $field->label = '';
+        $field->content = '{"ops":[{"insert":" not "}]}';
+        $field->fieldOptions = [
+            $this->makeFieldOption('{"ops":[{"insert":"Yes\n"}]}', ''),
+            $this->makeFieldOption('{"ops":[{"insert":"No\n"}]}', ''),
+        ];
+
+        $this->processor->setFieldMappings(
+            [1 => 'select-invert'],
+            [1 => $field]
+        );
+
+        // Placeholder on its own line — newlines must be preserved
+        $ops = [['insert' => "Answer:\nGEN:{{1}}\nplease\n"]];
+        $fieldValues = [1 => '{"ops":[{"insert":"Yes\n"}]}'];
+
+        $result = $this->processor->process($ops, $fieldValues);
+
+        $plainText = $this->extractPlainText($result);
+        $this->assertStringContainsString("Answer:\n", $plainText);
+        $this->assertStringContainsString("Yes not No", $plainText);
+        $this->assertStringNotContainsString('Answer: Yes', $plainText, 'Newline before select-invert should not collapse to space');
     }
 
     // --- Edge cases ---

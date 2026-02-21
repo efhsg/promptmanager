@@ -88,14 +88,18 @@ class PlaceholderProcessor
             $fieldType = $resolvedFieldId !== null
                 ? ($this->templateFieldTypes[$resolvedFieldId] ?? null)
                 : null;
-            $isInlineField = in_array($fieldType, FieldConstants::INLINE_RENDER_TYPES, true);
+            $isInlineRender = in_array($fieldType, FieldConstants::INLINE_RENDER_TYPES, true);
+            $isStrictlyInline = in_array($fieldType, FieldConstants::INLINE_FIELD_TYPES, true);
             $fieldAnalysis = $this->deltaHelper->analyzeFieldContent($fieldOps);
 
-            // For inline field types, collapse surrounding newlines to spaces
-            // and strip trailing newlines from field ops to prevent line breaks
-            if ($isInlineField) {
+            // For strictly inline field types (string, number), collapse surrounding newlines to spaces
+            if ($isStrictlyInline) {
                 $beforeText = $this->collapseNewlineBoundaryForInline($beforeText, true);
                 $afterText = $this->collapseNewlineBoundaryForInline($afterText, false);
+            }
+
+            // For all inline render types, strip trailing newlines from field ops to prevent line breaks
+            if ($isInlineRender) {
                 $fieldOps = $this->stripTrailingNewlineFromOps($fieldOps);
             }
 
@@ -111,7 +115,7 @@ class PlaceholderProcessor
             }
 
             $lastFieldOps = $fieldOps;
-            $lastFieldInline = $isInlineField;
+            $lastFieldInline = $isInlineRender;
 
             $finalOps = $this->processBeforeText($beforeText, $fieldAnalysis, $finalOps);
             $finalOps = $this->processFieldContent($fieldOps, $fieldAnalysis, $beforeText, $finalOps);
