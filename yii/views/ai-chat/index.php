@@ -2190,14 +2190,14 @@ $js = <<<JS
                 item.id = 'item-' + itemId;
                 item.innerHTML =
                     '<h2 class="accordion-header" id="heading-' + itemId + '">' +
-                        '<button class="accordion-button ai-history-item__header" type="button" ' +
+                        '<button class="accordion-button collapsed ai-history-item__header" type="button" ' +
                             'data-bs-toggle="collapse" data-bs-target="#collapse-' + itemId + '" ' +
-                            'aria-expanded="true" aria-controls="collapse-' + itemId + '">' +
+                            'aria-expanded="false" aria-controls="collapse-' + itemId + '">' +
                             '<span class="ai-history-item__title">' + this.escapeHtml(headerText) + '</span>' +
                             '<span class="ai-history-item__meta"></span>' +
                         '</button>' +
                     '</h2>' +
-                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse show" ' +
+                    '<div id="collapse-' + itemId + '" class="accordion-collapse collapse" ' +
                         'aria-labelledby="heading-' + itemId + '">' +
                         '<div class="accordion-body p-0">' +
                             '<div class="ai-active-prompt"></div>' +
@@ -2395,7 +2395,7 @@ $js = <<<JS
                 // Initialize Quill after element is in the DOM
                 this.renderToQuillViewer(msg.body, aiContent);
 
-                this.checkExpandOverflow(msg.div);
+                this.checkExpandOverflow(msg.div, msg.body);
 
                 // Show choice buttons or Go! button depending on response pattern
                 var choiceOptions = this.parseChoiceOptions(aiContent);
@@ -2480,7 +2480,7 @@ $js = <<<JS
                     var msg = this.createAiMessageDiv(run.resultText, displayMeta);
                     responseZone.appendChild(msg.div);
                     this.renderToQuillViewer(msg.body, run.resultText);
-                    this.checkExpandOverflow(msg.div);
+                    this.checkExpandOverflow(msg.div, msg.body);
                 } else if (run.status === 'failed') {
                     var errorDiv = document.createElement('div');
                     errorDiv.className = 'alert alert-danger m-3';
@@ -2858,7 +2858,7 @@ $js = <<<JS
                 var msg = this.createAiMessageDiv(markdownContent, null);
                 container.appendChild(msg.div);
                 this.renderToQuillViewer(msg.body, markdownContent);
-                this.checkExpandOverflow(msg.div);
+                this.checkExpandOverflow(msg.div, msg.body);
 
                 this.attachProcessBlock(container, msg.div, this.streamThinkingBuffer, '');
                 return msg.body;
@@ -3007,9 +3007,9 @@ $js = <<<JS
                 });
             },
 
-            checkExpandOverflow: function(msgDiv) {
+            checkExpandOverflow: function(msgDiv, body) {
                 requestAnimationFrame(function() {
-                    var body = msgDiv.querySelector('.ai-message__body');
+                    body = body || msgDiv.querySelector('.ai-message__body');
                     var btn = msgDiv.querySelector('.ai-message__expand');
                     if (!body || !btn) return;
                     if (body.scrollHeight > body.clientHeight + 2)

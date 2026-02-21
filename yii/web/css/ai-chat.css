@@ -434,7 +434,7 @@
 .ai-chat-page .ai-message__body {
     font-size: 0.95rem;
     line-height: 1.6;
-    max-height: 23em;
+    max-height: 28em;
     overflow-y: auto;
 }
 
