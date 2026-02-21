@@ -84,6 +84,12 @@ echo $this->render('_breadcrumbs', [
                         'enableSorting' => true,
                     ],
                     [
+                        'attribute' => 'updated_at',
+                        'label' => 'Updated',
+                        'enableSorting' => true,
+                        'format' => ['relativeTime'],
+                    ],
+                    [
                         'class' => yii\grid\ActionColumn::class,
                         'urlCreator' => function ($action, $model) {
                             $id = is_array($model) ? $model['id'] : $model->id;
