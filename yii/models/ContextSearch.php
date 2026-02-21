@@ -98,6 +98,11 @@ class ContextSearch extends Context
             'desc' => ['{{%context}}.share' => SORT_DESC],
         ];
 
+        $dataProvider->sort->attributes['updated_at'] = [
+            'asc' => ['{{%context}}.updated_at' => SORT_ASC],
+            'desc' => ['{{%context}}.updated_at' => SORT_DESC],
+        ];
+
         $this->load($params);
 
         if (!$this->validate()) {
