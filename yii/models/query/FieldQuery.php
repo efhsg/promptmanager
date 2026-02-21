@@ -21,7 +21,7 @@ class FieldQuery extends ActiveQuery
         return $this->andWhere(['or',
             ['like', Field::tableName() . '.name', $term],
             ['like', Field::tableName() . '.label', $term],
-            ['like', Field::tableName() . '.content', $term],
+            ['like', Field::tableName() . '.search_text', $term],
         ]);
     }
 
@@ -46,7 +46,7 @@ class FieldQuery extends ActiveQuery
             $conditions[] = ['or',
                 ['like', Field::tableName() . '.name', $keyword],
                 ['like', Field::tableName() . '.label', $keyword],
-                ['like', Field::tableName() . '.content', $keyword],
+                ['like', Field::tableName() . '.search_text', $keyword],
             ];
         }
 

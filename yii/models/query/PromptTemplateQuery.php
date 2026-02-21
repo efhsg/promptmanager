@@ -24,7 +24,7 @@ class PromptTemplateQuery extends ActiveQuery
     {
         return $this->andWhere(['or',
             ['like', 'prompt_template.name', $term],
-            ['like', 'prompt_template.template_body', $term],
+            ['like', 'prompt_template.search_text', $term],
         ]);
     }
 
@@ -47,7 +47,7 @@ class PromptTemplateQuery extends ActiveQuery
         foreach ($keywords as $keyword) {
             $conditions[] = ['or',
                 ['like', 'prompt_template.name', $keyword],
-                ['like', 'prompt_template.template_body', $keyword],
+                ['like', 'prompt_template.search_text', $keyword],
             ];
         }
 

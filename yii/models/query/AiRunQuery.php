@@ -129,6 +129,41 @@ class AiRunQuery extends ActiveQuery
     }
 
     /**
+     * Searches across all runs in each session for the given term.
+     * Matches on prompt_markdown, prompt_summary or session_summary of any run within the session.
+     */
+    public function searchByTerm(string $term): self
+    {
+        $t = AiRun::tableName();
+        $likeTerm = '%' . addcslashes($term, '%_\\') . '%';
+        $matchClause = "r_s.prompt_markdown LIKE :searchTerm"
+            . " OR r_s.prompt_summary LIKE :searchTerm"
+            . " OR r_s.session_summary LIKE :searchTerm";
+
+        return $this->andWhere([
+            'or',
+            // Standalone runs (no session): search directly
+            ['and',
+                ["{$t}.session_id" => null],
+                ['or',
+                    ['like', "{$t}.prompt_markdown", $term],
+                    ['like', "{$t}.prompt_summary", $term],
+                    ['like', "{$t}.session_summary", $term],
+                ],
+            ],
+            // Session runs: search across ALL runs in the session
+            ['and',
+                ['IS NOT', "{$t}.session_id", null],
+                new Expression(
+                    "EXISTS (SELECT 1 FROM {$t} r_s WHERE r_s.session_id = {$t}.session_id"
+                    . " AND ({$matchClause}))",
+                    [':searchTerm' => $likeTerm]
+                ),
+            ],
+        ]);
+    }
+
+    /**
      * Filters sessions where the latest run has the given status.
      */
     public function hasLatestSessionStatus(string $status): self

@@ -74,7 +74,7 @@ class FieldSearch extends Field
         }
         $query
             ->andFilterWhere(['like', 'name', $this->name])
-            ->andFilterWhere(['like', 'content', $this->content])
+            ->andFilterWhere(['like', '{{%field}}.search_text', $this->content])
             ->andFilterWhere(['like', 'type', $this->type])
             ->andFilterWhere(['like', 'project.name', $this->projectName]);
         return $dataProvider;

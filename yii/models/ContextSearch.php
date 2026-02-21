@@ -111,7 +111,7 @@ class ContextSearch extends Context
 
         $query
             ->andFilterWhere(['like', '{{%context}}.name', $this->name])
-            ->andFilterWhere(['like', 'content', $this->content])
+            ->andFilterWhere(['like', '{{%context}}.search_text', $this->content])
             ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;

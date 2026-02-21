@@ -3,7 +3,6 @@
 namespace app\models;
 
 use app\components\ProjectContext;
-use common\enums\AiRunStatus;
 use yii\base\Model;
 use yii\data\ActiveDataProvider;
 
@@ -122,11 +121,7 @@ class AiRunSearch extends AiRun
         }
 
         if ($this->q !== null && $this->q !== '') {
-            $query->andWhere([
-                'or',
-                ['like', "{$t}.prompt_summary", $this->q],
-                ['like', "{$t}.session_summary", $this->q],
-            ]);
+            $query->searchByTerm($this->q);
         }
 
         return $dataProvider;

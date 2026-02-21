@@ -6,6 +6,7 @@ namespace app\models;
 
 use app\models\traits\TimestampTrait;
 use app\models\query\ContextQuery;
+use app\services\SearchTextExtractor;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
@@ -20,6 +21,7 @@ use yii\db\ActiveRecord;
  * @property bool $is_default
  * @property bool $share
  * @property int $order
+ * @property string|null $search_text
  * @property string $created_at
  * @property string $updated_at
  *
@@ -125,6 +127,7 @@ class Context extends ActiveRecord
         }
 
         $this->handleTimestamps($insert);
+        $this->search_text = SearchTextExtractor::extract($this->content) ?: null;
 
         return true;
     }

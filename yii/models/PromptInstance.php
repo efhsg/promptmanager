@@ -4,6 +4,7 @@ namespace app\models;
 
 use app\models\query\PromptInstanceQuery;
 use app\models\traits\TimestampTrait;
+use app\services\SearchTextExtractor;
 use yii\db\ActiveQuery;
 use yii\db\ActiveRecord;
 
@@ -14,6 +15,7 @@ use yii\db\ActiveRecord;
  * @property int $template_id
  * @property string $label
  * @property string $final_prompt
+ * @property string|null $search_text
  * @property string $created_at
  * @property string $updated_at
  *
@@ -94,6 +96,7 @@ class PromptInstance extends ActiveRecord
         }
 
         $this->handleTimestamps($insert);
+        $this->search_text = SearchTextExtractor::extract($this->final_prompt) ?: null;
 
         return true;
     }

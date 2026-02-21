@@ -83,7 +83,7 @@ class PromptTemplateSearch extends PromptTemplate
 
         $query
             ->andFilterWhere(['like', 'name', $this->name])
-            ->andFilterWhere(['like', 'template_body', $this->template_body])
+            ->andFilterWhere(['like', '{{%prompt_template}}.search_text', $this->template_body])
             ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;

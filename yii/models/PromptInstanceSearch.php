@@ -94,7 +94,7 @@ class PromptInstanceSearch extends PromptInstance
 
         $query
             ->andFilterWhere(['like', 'prompt_instance.label', $this->label])
-            ->andFilterWhere(['like', 'final_prompt', $this->final_prompt])
+            ->andFilterWhere(['like', 'prompt_instance.search_text', $this->final_prompt])
             ->andFilterWhere(['like', 'p.name', $this->projectName]);
 
         return $dataProvider;

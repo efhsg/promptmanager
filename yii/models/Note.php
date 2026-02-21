@@ -5,6 +5,7 @@ namespace app\models;
 use app\models\query\NoteQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
+use app\services\SearchTextExtractor;
 use common\enums\NoteType;
 use Yii;
 use yii\db\ActiveQuery;
@@ -20,6 +21,7 @@ use yii\db\ActiveRecord;
  * @property string $name
  * @property string $type
  * @property string|null $content Quill Delta JSON
+ * @property string|null $search_text
  * @property string $created_at
  * @property string $updated_at
  *
@@ -138,6 +140,7 @@ class Note extends ActiveRecord
         }
 
         $this->handleTimestamps($insert);
+        $this->search_text = SearchTextExtractor::extract($this->content) ?: null;
 
         return true;
     }

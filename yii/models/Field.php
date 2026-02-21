@@ -6,6 +6,7 @@ use app\models\query\FieldQuery;
 use app\models\traits\TimestampTrait;
 use app\modules\identity\models\User;
 use app\services\PathService;
+use app\services\SearchTextExtractor;
 use common\constants\FieldConstants;
 use Yii;
 use yii\db\ActiveQuery;
@@ -23,6 +24,7 @@ use yii\db\ActiveRecord;
  * @property bool $share
  * @property string|null $label
  * @property bool $render_label
+ * @property string|null $search_text
  * @property string $created_at
  * @property string $updated_at
  *
@@ -165,6 +167,7 @@ class Field extends ActiveRecord
         }
 
         $this->handleTimestamps($insert);
+        $this->search_text = SearchTextExtractor::extract($this->content) ?: null;
 
         if (empty($this->label)) {
             $this->label = null;

@@ -82,7 +82,7 @@ class ContextQuery extends ActiveQuery
     {
         return $this->andWhere(['or',
             ['like', Context::tableName() . '.name', $term],
-            ['like', Context::tableName() . '.content', $term],
+            ['like', Context::tableName() . '.search_text', $term],
         ]);
     }
 
@@ -106,7 +106,7 @@ class ContextQuery extends ActiveQuery
         foreach ($keywords as $keyword) {
             $conditions[] = ['or',
                 ['like', Context::tableName() . '.name', $keyword],
-                ['like', Context::tableName() . '.content', $keyword],
+                ['like', Context::tableName() . '.search_text', $keyword],
             ];
         }
 

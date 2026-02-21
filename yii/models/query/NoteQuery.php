@@ -75,7 +75,7 @@ class NoteQuery extends ActiveQuery
     {
         return $this->andWhere(['or',
             ['like', Note::tableName() . '.name', $term],
-            ['like', Note::tableName() . '.content', $term],
+            ['like', Note::tableName() . '.search_text', $term],
         ]);
     }
 
@@ -99,7 +99,7 @@ class NoteQuery extends ActiveQuery
         foreach ($keywords as $keyword) {
             $conditions[] = ['or',
                 ['like', Note::tableName() . '.name', $keyword],
-                ['like', Note::tableName() . '.content', $keyword],
+                ['like', Note::tableName() . '.search_text', $keyword],
             ];
         }
 
