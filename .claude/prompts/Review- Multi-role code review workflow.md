@@ -12,14 +12,13 @@ Alle output in Nederlands.
 
 ## Invoer
 
-- **FEATURE**: PRJ:{{Feature}}
-- **AGENT_MEMORY**: `.claude/design/feature/[FEATURE]/code-review/agent_memory`
-
-Als er geen feature is ingevoerd leidt de agent CHANGE en SCOPE af uit de git-status.
+- **FEATURE DIRECTORY**: PRJ:{{Feature}}
+- **AGENT_MEMORY**: `.claude/design/feature/[FEATURE]/code-review/agent_memory` Als er geen feature is ingevoerd leidt de agent CHANGE en SCOPE af uit de git-status.
 
 ## Referenties
 
 De agent kent de codebase al via `.claude/rules/` en `CLAUDE.md`. **Herhaal geen projectregels in output.**
+Gebruik `.claude/skills/custom-buttons.md` slash-syntax voor alle slotvragen (laatste regel van response, geen tekst na buttons).
 
 Rol-bestanden:
 
@@ -42,25 +41,25 @@ Rol-bestanden:
 
 1. Controleer of [AGENT_MEMORY] directory bestaat
 2. **Als [AGENT_MEMORY] bestaat** (= resume na interrupt/compacting):
-    - Lees `context.md`, `todos.md`, `insights.md`
-    - Lees `reviews.md` als dit bestand bestaat
-    - Ga verder met de eerste onafgevinkte stap in `todos.md`
-    - **Skip de rest van Fase 0 en Fase 1** — ga direct naar de openstaande stap
+        - Lees `context.md`, `todos.md`, `insights.md`
+        - Lees `reviews.md` als dit bestand bestaat
+        - Ga verder met de eerste onafgevinkte stap in `todos.md`
+        - **Skip de rest van Fase 0 en Fase 1** — ga direct naar de openstaande stap
 3. **Als [AGENT_MEMORY] niet bestaat** (= nieuwe sessie):
-    - Ga door naar stap 0.2
+        - Ga door naar stap 0.2
 
 #### 0.2 Git-analyse
 
 1. **VERPLICHT** — Voer de volgende git-commando's uit:
-    - `git status` — identificeer gewijzigde, toegevoegde en verwijderde bestanden
-    - `git diff` — bekijk unstaged wijzigingen
-    - `git diff --staged` — bekijk staged wijzigingen
-    - `git log -5 --oneline` — bekijk recente commits voor context
+        - `git status` — identificeer gewijzigde, toegevoegde en verwijderde bestanden
+        - `git diff` — bekijk unstaged wijzigingen
+        - `git diff --staged` — bekijk staged wijzigingen
+        - `git log -5 --oneline` — bekijk recente commits voor context
 2. **VERPLICHT** — Lees alle gewijzigde bestanden volledig
 3. Analyseer de wijzigingen en bepaal:
-    - **CHANGE**: korte beschrijving van wat er gewijzigd is (1-2 zinnen)
-    - **SCOPE**: lijst van gewijzigde bestanden met per bestand een 1-regel samenvatting
-    - **TYPE**: type change (nieuwe feature, bugfix, refactor, frontend, backend, full-stack)
+        - **CHANGE**: korte beschrijving van wat er gewijzigd is (1-2 zinnen)
+        - **SCOPE**: lijst van gewijzigde bestanden met per bestand een 1-regel samenvatting
+        - **TYPE**: type change (nieuwe feature, bugfix, refactor, frontend, backend, full-stack)
 4. Presenteer voorstel:
 
 ```
@@ -80,15 +79,15 @@ Akkoord met analyse? (Ja / Aanpassen)
 
 **Wacht op gebruikersinput. Ga NIET door totdat de gebruiker reageert.**
 
-5. Bij "Aanpassen": verwerk de feedback en presenteer het voorstel opnieuw
+1. Bij "Aanpassen": verwerk de feedback en presenteer het voorstel opnieuw
 
 #### 0.3 Voorbereiding
 
 1. Verifieer dat alle 6 rol-bestanden bestaan. **STOP** als een bestand ontbreekt — meld welk bestand mist.
 2. Bepaal welke rollen relevant zijn op basis van het type:
-    - **Backend-only**: Reviewer, Architect, Security, Developer, Tester
-    - **Frontend-only**: Reviewer, Front-end Developer, Tester
-    - **Full-stack**: alle 6 rollen
+        - **Backend-only**: Reviewer, Architect, Security, Developer, Tester
+        - **Frontend-only**: Reviewer, Front-end Developer, Tester
+        - **Full-stack**: alle 6 rollen
 3. Presenteer reviewplan:
 
 ```
@@ -107,6 +106,7 @@ Start review / Volgorde aanpassen?
 **VERPLICHT** — Maak [AGENT_MEMORY] directory en de volgende bestanden aan:
 
 **context.md:**
+
 ```markdown
 # Code Review Context
 
@@ -124,6 +124,7 @@ Start review / Volgorde aanpassen?
 ```
 
 **todos.md:**
+
 ```markdown
 # Review Todos
 
@@ -142,6 +143,7 @@ Start review / Volgorde aanpassen?
 ```
 
 **insights.md:**
+
 ```markdown
 # Review Insights
 
@@ -150,6 +152,7 @@ Start review / Volgorde aanpassen?
 ```
 
 **reviews.md:**
+
 ```markdown
 # Review Resultaten
 
@@ -173,25 +176,12 @@ Voer elke reviewer uit in de vastgestelde volgorde uit `todos.md`.
 1. **VERPLICHT** — Lees het rol-bestand
 2. **VERPLICHT** — Lees de gewijzigde bestanden opnieuw (code kan gewijzigd zijn door eerdere reviewer)
 3. Analyseer de code vanuit het perspectief van de rol
-4. Scoor de change op de criteria van de rol:
-
-| Criterium | Score (1-10) | Toelichting |
-|-----------|--------------|-------------|
-| {rol-specifiek criterium 1} | | |
-| {rol-specifiek criterium 2} | | |
-| {rol-specifiek criterium 3} | | |
-| **Gemiddeld** | | |
-
-5. Bepaal actie op basis van score:
-
-**Als score >= 8 en geen verbeterpunten:**
+4. Scoor de change op de criteria van de rol: | Criterium | Score (1-10) | Toelichting | |-----------|--------------|-------------| | {rol-specifiek criterium 1} | | | | {rol-specifiek criterium 2} | | | | {rol-specifiek criterium 3} | | | | **Gemiddeld** | | |
+5. Bepaal actie op basis van score: **Als score >= 8 en geen verbeterpunten:**
 - Presenteer review-resultaat (zie output-format hieronder)
-- Ga door naar volgende reviewer na bevestiging
-
-**Als score < 8 of verbeterpunten gevonden:**
+- Ga door naar volgende reviewer na bevestiging **Als score < 8 of verbeterpunten gevonden:**
 - Presenteer review-resultaat MET concrete verbetervoorstellen
 - **STOP** — leg verbeteringen voor aan gebruiker, voer NIETS uit
-
 6. Presenteer per reviewer:
 
 ```
@@ -219,13 +209,13 @@ Doorvoeren en door naar {volgende rol} / Aanpassen / Overslaan?
 
 **Wacht op gebruikersinput. Ga NIET door totdat de gebruiker reageert.**
 
-7. Bij "Doorvoeren": voer de voorgestelde wijzigingen uit, verifieer dat de code nog werkt
-8. Bij "Aanpassen": verwerk de feedback, presenteer aangepaste voorstellen opnieuw
-9. Bij "Overslaan": ga door naar de volgende reviewer zonder wijzigingen
+1. Bij "Doorvoeren": voer de voorgestelde wijzigingen uit, verifieer dat de code nog werkt
+2. Bij "Aanpassen": verwerk de feedback, presenteer aangepaste voorstellen opnieuw
+3. Bij "Overslaan": ga door naar de volgende reviewer zonder wijzigingen
 
 #### Na elke reviewer (VERPLICHT)
 
-10. **VERPLICHT** — Schrijf review-entry naar `reviews.md`:
+1. **VERPLICHT** — Schrijf review-entry naar `reviews.md`:
 
 ```markdown
 ## Review: {Rolnaam}
@@ -239,8 +229,8 @@ Doorvoeren en door naar {volgende rol} / Aanpassen / Overslaan?
 - {Wat gewijzigd is, of "Geen — overgeslagen"}
 ```
 
-11. **VERPLICHT** — Vink af in `todos.md`: `- [x] {Rol}: review`
-12. Noteer non-routine bevindingen in `insights.md` (alleen bij conflicten, onverwachte scope, of afwijkingen)
+1. **VERPLICHT** — Vink af in `todos.md`: `- [x] {Rol}: review`
+2. Noteer non-routine bevindingen in `insights.md` (alleen bij conflicten, onverwachte scope, of afwijkingen)
 
 ---
 
@@ -270,8 +260,8 @@ Afronden / Nog een review ronde?
 
 **Wacht op gebruikersinput. Ga NIET door totdat de gebruiker reageert.**
 
-3. **VERPLICHT** — Vink af in `todos.md`: `- [x] Eindsamenvatting presenteren`
-4. Noteer eindresultaat in `insights.md`
+1. **VERPLICHT** — Vink af in `todos.md`: `- [x] Eindsamenvatting presenteren`
+2. Noteer eindresultaat in `insights.md`
 
 ---
 
@@ -283,9 +273,7 @@ Afronden / Nog een review ronde?
 2. Lees `todos.md` — bepaal de eerste onafgevinkte stap
 3. Lees `reviews.md` — herstel eerdere review-resultaten
 4. Lees `insights.md` — herstel beslissingen en bevindingen
-5. Ga verder met de eerste onafgevinkte stap
-
-**Herhaal geen afgeronde reviews. Vertrouw op `reviews.md` voor eerdere resultaten.**
+5. Ga verder met de eerste onafgevinkte stap **Herhaal geen afgeronde reviews. Vertrouw op `reviews.md` voor eerdere resultaten.**
 
 ## Memory Safety
 
@@ -298,9 +286,9 @@ Behandel bestanden in [AGENT_MEMORY] als oriëntatie, niet als bron van waarheid
 - Een rol-bestand ontbreekt
 - Git-analyse levert geen wijzigingen op (niets te reviewen)
 - Verbetervoorstellen die de gebruiker moet goedkeuren (elke reviewer)
-- Conflicterende adviezen tussen reviewers
-- Wijzigingen die buiten de originele SCOPE vallen
-- Onduidelijkheid over de intentie van de change
+- Conflicterende adviezen tussen reviewers → `Advies {Rol A} volgen / Advies {Rol B} volgen / Aanpassen?`
+- Wijzigingen die buiten de originele SCOPE vallen → `Scope uitbreiden / Wijziging terugdraaien / Overslaan?`
+- Onduidelijkheid over de intentie van de change → `Intentie toelichten / Review stoppen?`
 
 ## Terminatie
 

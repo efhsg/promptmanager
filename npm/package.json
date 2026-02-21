@@ -12,6 +12,7 @@
         "build-init": "cp src/js/editor-init.js /yii/web/quill/2.0.3/ && node ./node_modules/uglify-js/bin/uglifyjs /yii/web/quill/2.0.3/editor-init.js -o /yii/web/quill/2.0.3/editor-init.min.js",
         "build-and-minify": "npm run prebuild && npm run build && npm run minify && npm run build-highlight && npm run build-init",
         "build-all": "npm install && npm run clean && npm run setup && npm run build-and-minify",
+        "build-worktree": "cp src/js/worktree-manager.js ../yii/web/js/",
         "watch": "npm run build-init && chokidar 'src/js/**/*.js' -c 'npm run build-init'"
     },
     "devDependencies": {

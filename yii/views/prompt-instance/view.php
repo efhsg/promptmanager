@@ -39,6 +39,13 @@ echo $this->render('_breadcrumbs', [
                 'data-bs-toggle' => 'tooltip',
                 'disabled' => !$canRunAi,
             ]) ?>
+            <?php if ($model->template?->project?->root_directory): ?>
+                <?= Html::a(
+                    '<i class="bi bi-diagram-2"></i> Worktree',
+                    ['/project/view', 'id' => $model->template->project_id, '#' => 'worktrees'],
+                    ['class' => 'btn btn-outline-secondary me-2', 'title' => 'Create or manage worktrees for this project']
+                ) ?>
+            <?php endif; ?>
             <?= Html::a('Update', ['update', 'id' => $model->id], ['class' => 'btn btn-primary me-2']) ?>
             <?= Html::a('Delete', ['delete', 'id' => $model->id], [
                 'class' => 'btn btn-danger me-2',

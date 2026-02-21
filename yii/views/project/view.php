@@ -116,4 +116,8 @@ echo $this->render('_breadcrumbs', [
             ]) ?>
         </div>
     </div>
+
+    <?php if ($model->root_directory): ?>
+        <?= $this->render('_worktrees', ['model' => $model]) ?>
+    <?php endif; ?>
 </div>

@@ -13,6 +13,7 @@ enum LogCategory: string
     case AI = 'ai';
     case YOUTUBE = 'youtube';
     case IDENTITY = 'identity';
+    case WORKTREE = 'worktree';
 
     public static function values(): array
     {
@@ -37,6 +38,7 @@ enum LogCategory: string
             self::AI => 'AI',
             self::YOUTUBE => 'YouTube',
             self::IDENTITY => 'Identity',
+            self::WORKTREE => 'Worktree',
         };
     }
 }

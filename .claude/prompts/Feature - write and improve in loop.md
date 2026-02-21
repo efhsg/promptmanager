@@ -13,7 +13,6 @@ Alle output in GEN:{{Language}}.
 ## Invoer
 
 - **FEATURE**: PRJ:{{Feature}}
-- **USER_STORY**: GEN:{{Description}}
 - **DESIGN_DIR**: `.claude/design/[FEATURE]`
 - **AGENT_MEMORY**: `.claude/design/[FEATURE]/review`
 
@@ -36,19 +35,16 @@ Rol-bestanden:
 ## Voordat je begint
 
 1. Lees `.claude/codebase_analysis.md` voor domeincontext
-2. Verifieer dat alle rol-bestanden bestaan (zie lijst in Referenties).
-
-   **STOP** als een bestand ontbreekt — meld aan gebruiker welk bestand mist.
-
+2. Verifieer dat alle rol-bestanden bestaan (zie lijst in Referenties). **STOP** als een bestand ontbreekt — meld aan gebruiker welk bestand mist.
 3. Als [AGENT_MEMORY] **niet** bestaat:
-    1. Maak directory [DESIGN_DIR] aan
-    2. Maak directory [AGENT_MEMORY] aan
-    3. Maak memory files:
-        - `context.md` — doel, scope, user story
-        - `todos.md` — alle stappen (zie template hieronder)
-        - `insights.md` — beslissingen, open vragen, blokkades
+        1. Maak directory [DESIGN_DIR] aan
+        2. Maak directory [AGENT_MEMORY] aan
+        3. Maak memory files:
+                - `context.md` — doel, scope, user story
+                - `todos.md` — alle stappen (zie template hieronder)
+                - `insights.md` — beslissingen, open vragen, blokkades
 4. Als [AGENT_MEMORY] **wel** bestaat:
-    - Volg het **Resume Protocol** (zie onderaan)
+        - Volg het **Resume Protocol** (zie onderaan)
 
 ## todos.md template
 
@@ -79,11 +75,10 @@ Rol-bestanden:
 1. Lees de relevante rol-file
 2. Lees `spec.md` (behalve bij eerste stap — dan schrijf je deze)
 3. Voer de stap uit volgens de rol
-4. Bij open vragen voor gebruiker: **STOP**, noteer in `insights.md`, vraag gebruiker
-5. Bij blokkade: **STOP**, noteer in `insights.md`, vraag gebruiker
-6. Vink af in `todos.md` **voordat** je aan de volgende stap begint
-7. Schrijf review naar `reviews.md` (bij review-stappen)
-8. **Bij fase-overgang**: Update alle memory files (context.md, insights.md)
+4. Bij open vragen of blokkade: zie **Stopregels**
+5. Vink af in `todos.md` **voordat** je aan de volgende stap begint
+6. Schrijf review naar `reviews.md` (bij review-stappen)
+7. **Bij fase-overgang**: Update alle memory files (context.md, insights.md)
 
 ---
 
@@ -96,9 +91,9 @@ Rol-bestanden:
 **VERPLICHT** — Voordat je de spec schrijft:
 
 1. Zoek vergelijkbare features in de codebase:
-    - Gebruik Grep/Glob om gerelateerde controllers, services, views te vinden
-    - Identificeer bestaande UI componenten die hergebruikt kunnen worden
-    - Noteer bestaande patterns die gevolgd moeten worden
+        - Gebruik Grep/Glob om gerelateerde controllers, services, views te vinden
+        - Identificeer bestaande UI componenten die hergebruikt kunnen worden
+        - Noteer bestaande patterns die gevolgd moeten worden
 2. Documenteer bevindingen in `insights.md`:
 
 ```markdown
@@ -127,9 +122,6 @@ Schrijf `spec.md` naar [DESIGN_DIR] met onderstaande structuur.
 
 ## Samenvatting
 {1-2 zinnen: wat doet deze feature?}
-
-## User story
-[USER_STORY]
 
 ## Functionele requirements
 
@@ -340,10 +332,9 @@ Een score van 8 of hoger vereist dat **alle** volgende punten voldaan zijn:
 | Edge cases ↔ Tests | Is elke edge case gedekt door een test scenario? |
 | Architectuur ↔ Locaties | Zijn architectuurbeslissingen consistent met component locaties? |
 | Security ↔ Endpoints | Heeft elk endpoint expliciete security validatie? |
-
 3. Bij contradicties:
-    - Corrigeer de spec
-    - Noteer in `insights.md` wat gecorrigeerd is
+        - Corrigeer de spec
+        - Noteer in `insights.md` wat gecorrigeerd is
 4. Vink af: `- [x] Consistentiecheck uitvoeren`
 
 ### Stap 2: Finale samenvatting
@@ -379,7 +370,7 @@ Een score van 8 of hoger vereist dat **alle** volgende punten voldaan zijn:
 - Reviews: [DESIGN_DIR]/reviews.md
 - Insights: [AGENT_MEMORY]/insights.md
 
-[I] Start implementatie [R] Nog een review ronde [E] Handmatig bewerken
+Start implementatie / Nog een review ronde / Handmatig bewerken?
 ```
 
 **Wacht op gebruikersinput. Ga NIET door totdat de gebruiker reageert.**
