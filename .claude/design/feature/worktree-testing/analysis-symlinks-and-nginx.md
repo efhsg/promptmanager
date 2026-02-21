@@ -31,10 +31,10 @@ wél met Yii's autoloader erbij. Dit is bevestigd via CLI test.
 PHP's `__DIR__` resolvet symlinks naar het **fysieke pad**.
 
 ```
-Worktree: /var/www/worktree/html-feat/yii/vendor → symlink → /var/www/worktree/html/yii/vendor
-PHP ziet: __DIR__ = /var/www/worktree/html/yii/vendor/composer  (target, niet link)
-Resolved: /../.. = /var/www/worktree/html/yii
-           /tests = /var/www/worktree/html/yii/tests  ← MAIN REPO, niet worktree!
+Worktree: /var/www/worktree/feat/yii/vendor → symlink → /var/www/worktree/main/yii/vendor
+PHP ziet: __DIR__ = /var/www/worktree/main/yii/vendor/composer  (target, niet link)
+Resolved: /../.. = /var/www/worktree/main/yii
+           /tests = /var/www/worktree/main/yii/tests  ← MAIN REPO, niet worktree!
 ```
 
 De test-classes, common-classes en identity-tests laden uit de **main repo** in plaats van
@@ -46,11 +46,11 @@ verkeerde resultaten.
 Hardlinks hebben geen "echt" vs "link" pad. PHP's `__DIR__` retourneert het **access pad**.
 
 ```
-cp -al /var/www/worktree/html/yii/vendor /var/www/worktree/html-feat/yii/vendor
+cp -al /var/www/worktree/main/yii/vendor /var/www/worktree/feat/yii/vendor
 
-PHP ziet: __DIR__ = /var/www/worktree/html-feat/yii/vendor/composer  (access pad)
-Resolved: /../.. = /var/www/worktree/html-feat/yii
-           /tests = /var/www/worktree/html-feat/yii/tests  ← WORKTREE, correct!
+PHP ziet: __DIR__ = /var/www/worktree/feat/yii/vendor/composer  (access pad)
+Resolved: /../.. = /var/www/worktree/feat/yii
+           /tests = /var/www/worktree/feat/yii/tests  ← WORKTREE, correct!
 ```
 
 **Voordelen:**
@@ -74,7 +74,7 @@ Resolved: /../.. = /var/www/worktree/html-feat/yii
 Veiligste optie. Genereert een eigen autoloader met correcte `__DIR__` paden.
 
 ```
-cd /var/www/worktree/html-feat/yii && composer install
+cd /var/www/worktree/feat/yii && composer install
 ```
 
 - Eerste keer: ~30 seconden (met Composer cache)
@@ -108,7 +108,7 @@ Als je een tweede set containers wilt starten vanuit de worktree, heb je `.env` 
 voor Docker Compose. Een symlink werkt prima:
 
 ```bash
-ln -s ../html/.env /var/www/worktree/html-feat/.env
+ln -s ../main/.env /var/www/worktree/feat/.env
 ```
 
 Docker Compose leest `.env` als gewoon tekstbestand. Geen PHP `__DIR__` issues.
@@ -128,7 +128,7 @@ Eén server block, één root:
 ```nginx
 server {
     listen 80;
-    root /var/www/worktree/html/yii/web;      # na refactor met APP_ROOT
+    root /var/www/worktree/main/yii/web;      # na refactor met APP_ROOT
 }
 ```
 
@@ -138,14 +138,14 @@ server {
 # Main app
 server {
     listen 80;
-    root /var/www/worktree/html/yii/web;
+    root /var/www/worktree/main/yii/web;
     # ... PHP-FPM proxy
 }
 
 # Worktree: feature-x
 server {
     listen 81;
-    root /var/www/worktree/html-feat-x/yii/web;
+    root /var/www/worktree/feat-x/yii/web;
     # ... PHP-FPM proxy (zelfde PHP-FPM, ander root)
 }
 ```
@@ -179,8 +179,8 @@ Een script dat:
 #!/bin/bash
 # Genereer per worktree: listen op poort 80 + offset
 PORT=81
-for wt in /var/www/worktree/html-*/; do
-    suffix=$(basename "$wt" | sed 's/^html-//')
+for wt in /var/www/worktree/*/; do
+    suffix=$(basename "$wt")
     cat >> /tmp/worktrees.conf <<EOF
 server {
     listen $PORT;
@@ -205,7 +205,7 @@ done
 ### Optie C: PHP built-in server (voor quick testing)
 
 ```bash
-docker exec -w /var/www/worktree/html-feat/yii pma_yii php yii serve --port=8080
+docker exec -w /var/www/worktree/feat/yii pma_yii php yii serve --port=8080
 ```
 
 | Pro | Con |
@@ -218,7 +218,7 @@ docker exec -w /var/www/worktree/html-feat/yii pma_yii php yii serve --port=8080
 
 ```nginx
 location ~ ^/_wt/([^/]+)/(.*)$ {
-    alias /var/www/worktree/html-$1/yii/web/$2;
+    alias /var/www/worktree/$1/yii/web/$2;
     # ... PHP proxy
 }
 ```
@@ -236,8 +236,8 @@ location ~ ^/_wt/([^/]+)/(.*)$ {
 server {
     listen 80;
     server_name ~^(?<wt>.+)\.localhost$;
-    root /var/www/worktree/html-$wt/yii/web;
-    # fallback: als $wt leeg of 'www', gebruik html/
+    root /var/www/worktree/$wt/yii/web;
+    # fallback: als $wt leeg of 'www', gebruik main/
 }
 ```
 
@@ -284,7 +284,7 @@ docker exec pma_yii mysql -h ${DB_HOST} -u root -p${DB_ROOT_PASSWORD} \
     -e "CREATE DATABASE IF NOT EXISTS promptmanager_test_${SUFFIX};"
 
 # Bij test run:
-docker exec -w /var/www/worktree/html-feat-x/yii \
+docker exec -w /var/www/worktree/feat-x/yii \
     -e DB_DATABASE_TEST=promptmanager_test_feat_x \
     pma_yii vendor/bin/codecept run unit
 ```
@@ -293,7 +293,7 @@ docker exec -w /var/www/worktree/html-feat-x/yii \
 je migraties draaien:
 
 ```bash
-docker exec -w /var/www/worktree/html-feat-x/yii \
+docker exec -w /var/www/worktree/feat-x/yii \
     -e DB_DATABASE_TEST=promptmanager_test_feat_x \
     pma_yii php yii migrate --interactive=0
 ```
@@ -314,7 +314,7 @@ automatisch meegenomen.
 |----------|-----------|---------|
 | vendor/ | `cp -al` (hardlink copy) | Script, eenmalig per worktree |
 | .env (tests) | Niet nodig | `docker exec` erft container env |
-| .env (aparte stack) | Symlink | `ln -s ../html/.env` |
+| .env (aparte stack) | Symlink | `ln -s ../main/.env` |
 | Container ziet worktree | Parent mount `/var/www/worktree/` | Docker refactor |
 | Nginx (unit tests) | Niet nodig | `docker exec -w` |
 | Nginx (browser) | Poort per worktree | Server blocks + reload |

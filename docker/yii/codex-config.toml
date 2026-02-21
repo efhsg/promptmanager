@@ -7,7 +7,7 @@
 # The Docker container itself provides the isolation boundary.
 sandbox_mode = "danger-full-access"
 
-[projects."/var/www/html"]
+[projects."/var/www/worktree/main"]
 trust_level = "trusted"
 
 [projects."/projects"]

@@ -65,7 +65,7 @@ See `.claude/config/project.md` for:
 - Test path conventions
 - Domain concepts and RBAC rules
 
-**Quick reference (vanuit `/var/www/html/yii`):**
+**Quick reference (vanuit `/var/www/worktree/main/yii`):**
 ```bash
 vendor/bin/codecept run unit                              # Run tests
 vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-cache=no  # Linter

@@ -25,8 +25,8 @@ Totaal: **8 productiebestanden**, **7 documentatiebestanden**, **~30 wijzigingen
 ```env
 # Application root inside the container.
 # The /var/www/worktree/ parent allows sibling worktrees for isolated development
-# (e.g., /var/www/worktree/html-feat-x/). Parent mount wordt toegevoegd in fase 2.
-APP_ROOT=/var/www/worktree/html
+# (e.g., /var/www/worktree/main-feat-x/). Parent mount wordt toegevoegd in fase 2.
+APP_ROOT=/var/www/worktree/main
 ```
 
 **Waarom hier:** Tussen de poort-config en Xdebug-config in, bij de andere container-gerelateerde vars.
@@ -44,7 +44,7 @@ daadwerkelijk worktree-siblings bestaan.
 
 ```dockerfile
 # Application root path (parameterized for worktree support)
-ARG APP_ROOT=/var/www/worktree/html
+ARG APP_ROOT=/var/www/worktree/main
 ```
 
 ### 2b. Error logging (regel ~81-84)
@@ -80,7 +80,7 @@ RUN mkdir -p ${APP_ROOT} && \
     chown -R $USER_NAME:$USER_NAME ${APP_ROOT} /data /home/$USER_NAME/.local
 ```
 
-**Let op:** `mkdir -p` is noodzakelijk omdat `/var/www/worktree/html` niet bestaat in het
+**Let op:** `mkdir -p` is noodzakelijk omdat `/var/www/worktree/main` niet bestaat in het
 base image (alleen `/var/www/html` bestaat standaard). Zonder `mkdir` faalt de `chown`.
 
 ### 2d. WORKDIR arg (regel ~102)
@@ -117,24 +117,24 @@ Drie services bevatten hardcoded paden: `pma_yii`, `pma_nginx`, `pma_queue`.
 ```yaml
 build:
   args:
-    - APP_ROOT=${APP_ROOT:-/var/www/worktree/html}   # NIEUW
+    - APP_ROOT=${APP_ROOT:-/var/www/worktree/main}   # NIEUW
     - USER_ID=...
 ```
 
 **working_dir:**
 ```yaml
-working_dir: ${APP_ROOT:-/var/www/worktree/html}/yii
+working_dir: ${APP_ROOT:-/var/www/worktree/main}/yii
 ```
 
 **PATH in environment:**
 ```yaml
-PATH: /home/${USER_NAME}/.local/bin:${APP_ROOT:-/var/www/worktree/html}/yii:/usr/local/sbin:...
+PATH: /home/${USER_NAME}/.local/bin:${APP_ROOT:-/var/www/worktree/main}/yii:/usr/local/sbin:...
 ```
 
 **Volume mounts:**
 ```yaml
 volumes:
-  - .:${APP_ROOT:-/var/www/worktree/html}
+  - .:${APP_ROOT:-/var/www/worktree/main}
 ```
 
 ### 3b. `pma_nginx` service
@@ -142,14 +142,14 @@ volumes:
 **Volume mounts:**
 ```yaml
 volumes:
-  - .:${APP_ROOT:-/var/www/worktree/html}
+  - .:${APP_ROOT:-/var/www/worktree/main}
 ```
 
 **Environment toevoegen:**
 ```yaml
 environment:
   PHP_FPM_PORT: ${PHP_FPM_PORT:-9000}
-  APP_ROOT: ${APP_ROOT:-/var/www/worktree/html}     # NIEUW
+  APP_ROOT: ${APP_ROOT:-/var/www/worktree/main}     # NIEUW
 ```
 
 **envsubst command uitbreiden:**
@@ -177,7 +177,7 @@ Alle docker-compose referenties gebruiken fallbacks met `:-`:
 
 | Variabele | Fallback | Toelichting |
 |-----------|----------|-------------|
-| `APP_ROOT` | `/var/www/worktree/html` | Container pad naar app root |
+| `APP_ROOT` | `/var/www/worktree/main` | Container pad naar app root |
 
 De `:-` fallback zorgt dat het werkt als de env var niet gezet is (bijv. gebruiker
 heeft `.env` niet bijgewerkt). Dit is bewust — geen harde afhankelijkheid op de
@@ -217,7 +217,7 @@ trust_level = "trusted"
 
 **Naar:**
 ```toml
-[projects."/var/www/worktree/html"]
+[projects."/var/www/worktree/main"]
 trust_level = "trusted"
 ```
 
@@ -235,7 +235,7 @@ docker exec pma_yii vendor/bin/php-cs-fixer $1 --config /var/www/html/linterConf
 
 **Naar:**
 ```bash
-APP_ROOT=${APP_ROOT:-/var/www/worktree/html}
+APP_ROOT=${APP_ROOT:-/var/www/worktree/main}
 docker exec pma_yii vendor/bin/php-cs-fixer $1 --config ${APP_ROOT}/linterConfig.php
 ```
 
@@ -255,7 +255,7 @@ docker exec pma_yii vendor/bin/php-cs-fixer $1 --sequential --config /var/www/ht
 
 **Naar:**
 ```bash
-APP_ROOT=${APP_ROOT:-/var/www/worktree/html}
+APP_ROOT=${APP_ROOT:-/var/www/worktree/main}
 CONTAINER_FILES=$(echo "$FILES" | sed "s|^|${APP_ROOT}/|")
 docker exec pma_yii vendor/bin/php-cs-fixer $1 --sequential --config ${APP_ROOT}/linterConfig.php $CONTAINER_FILES
 ```
@@ -274,7 +274,7 @@ docker exec pma_yii vendor/bin/php-cs-fixer $1 --sequential --config ${APP_ROOT}
 **Naar:**
 ```json
 "pathMappings": {
-    "/var/www/worktree/html": "${workspaceFolder}"
+    "/var/www/worktree/main": "${workspaceFolder}"
 }
 ```
 
@@ -284,7 +284,7 @@ JSON ondersteunt geen variabelen. Het pad is statisch en volgt de default van `A
 
 ## 9. Documentatie (bulk replace)
 
-Alle referenties naar `/var/www/html/yii` vervangen door `/var/www/worktree/html/yii`
+Alle referenties naar `/var/www/html/yii` vervangen door `/var/www/worktree/main/yii`
 in deze bestanden:
 
 | Bestand | Referenties | Context |
@@ -346,23 +346,23 @@ docker compose up -d
 ```bash
 # Working directory
 docker exec pma_yii pwd
-# Verwacht: /var/www/worktree/html/yii
+# Verwacht: /var/www/worktree/main/yii
 
 # Nginx root
 docker exec pma_nginx cat /etc/nginx/nginx.conf | grep root
-# Verwacht: root /var/www/worktree/html/yii/web;
+# Verwacht: root /var/www/worktree/main/yii/web;
 
 # PHP error_log
 docker exec pma_yii php -i | grep error_log
-# Verwacht: /var/www/worktree/html/yii/runtime/logs/php_errors.log
+# Verwacht: /var/www/worktree/main/yii/runtime/logs/php_errors.log
 
 # Repo bestanden zichtbaar
-docker exec pma_yii ls /var/www/worktree/html/yii/web/index.php
+docker exec pma_yii ls /var/www/worktree/main/yii/web/index.php
 # Verwacht: bestand bestaat
 
 # Queue worker paden
 docker exec pma_queue-1 pwd
-# Verwacht: /var/www/worktree/html/yii
+# Verwacht: /var/www/worktree/main/yii
 
 # Port binding: alleen op localhost
 docker port pma_nginx
@@ -391,7 +391,7 @@ een project openen toont templates/contexts/fields.
 - **Geen code-afhankelijkheden.** Alle Yii/PHP-paden zijn relatief.
 - **Gebruikersactie vereist:** Na pull moet de gebruiker:
   1. Toevoegen aan `.env` (of de default accepteren):
-     - `APP_ROOT=/var/www/worktree/html`
+     - `APP_ROOT=/var/www/worktree/main`
   2. `docker compose build --no-cache && docker compose up -d`
 
 ## Rollback
@@ -402,4 +402,4 @@ Bij problemen:
 3. Documenteer de fout en reden van rollback in `insights.md`
 
 De oude `.env` werkt nog met de Docker Compose fallback
-(`${APP_ROOT:-/var/www/worktree/html}` valt terug op de default).
+(`${APP_ROOT:-/var/www/worktree/main}` valt terug op de default).

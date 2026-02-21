@@ -147,7 +147,7 @@ For each service:
 
 ### 7. Development Commands
 
-Alle commands vanuit `/var/www/html/yii`:
+Alle commands vanuit `/var/www/worktree/main/yii`:
 
 ```bash
 # Tests

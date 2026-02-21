@@ -19,7 +19,7 @@ Read `.claude/rules/coding-standards.md`, then verify each changed PHP file. Rep
 
 ### 3. Run linter
 
-Vanuit `/var/www/html/yii`:
+Vanuit `/var/www/worktree/main/yii`:
 
 ```bash
 vendor/bin/php-cs-fixer fix <path> --config=../.php-cs-fixer.dist.php
@@ -31,7 +31,7 @@ Map changed files to test files:
 - `models/Foo.php` → `tests/unit/models/FooTest.php`
 - `services/FooService.php` → `tests/unit/services/FooServiceTest.php`
 
-Vanuit `/var/www/html/yii`:
+Vanuit `/var/www/worktree/main/yii`:
 
 ```bash
 vendor/bin/codecept run unit <test-path>

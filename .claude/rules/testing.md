@@ -3,7 +3,7 @@
 ## Stack
 
 - **Codeception** for all tests
-- Run all (vanuit `/var/www/html/yii`): `vendor/bin/codecept run unit`
+- Run all (vanuit `/var/www/worktree/main/yii`): `vendor/bin/codecept run unit`
 - Run single: `vendor/bin/codecept run unit tests/unit/path/ToTest.php`
 
 ## Requirements

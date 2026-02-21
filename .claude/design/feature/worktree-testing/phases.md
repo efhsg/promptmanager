@@ -15,7 +15,7 @@
 
 ### Doel
 
-De applicatie draait vanuit `/var/www/worktree/html/` in plaats van `/var/www/html/`.
+De applicatie draait vanuit `/var/www/worktree/main/` in plaats van `/var/www/html/`.
 Er komt een directory-niveau tussen. Met alleen branch "main" is het gedrag identiek
 aan nu — transparante wijziging.
 
@@ -33,26 +33,26 @@ aan nu — transparante wijziging.
 **Na:**
 ```
 /var/www/worktree/          ← mount point, bevat de repo + toekomstige worktrees
-├── html/                   ← main branch (de repo zelf)
+├── main/                   ← main branch (de repo zelf)
 │   ├── yii/
 │   ├── docker/
 │   ├── .env
 │   └── ...
-├── html-bugfix-123/        ← (fase 2+)
-└── html-feat-x/            ← (fase 3+)
+├── bugfix-123/             ← (fase 2+)
+└── feat-x/                 ← (fase 3+)
 ```
 
 ### Wat wijzigt
 
 **docker-compose.yml:**
-- Volume mount: `.:/var/www/html` → `.:${APP_ROOT:-/var/www/worktree/html}`
+- Volume mount: `.:/var/www/html` → `.:${APP_ROOT:-/var/www/worktree/main}`
   plus parent mount voor worktree-zichtbaarheid
-- working_dir: `/var/www/html/yii` → `${APP_ROOT:-/var/www/worktree/html}/yii`
+- working_dir: `/var/www/html/yii` → `${APP_ROOT:-/var/www/worktree/main}/yii`
 - PATH env: idem
 - Alle services (pma_yii, pma_queue, pma_nginx)
 
 **Dockerfile:**
-- `ARG APP_ROOT=/var/www/worktree/html`
+- `ARG APP_ROOT=/var/www/worktree/main`
 - Alle hardcoded `/var/www/html` → `${APP_ROOT}`
 - mkdir, chown, error_log, symlinks
 
@@ -64,10 +64,10 @@ aan nu — transparante wijziging.
 - `linter.sh`, `linter-staged.sh`: `/var/www/html` → `${APP_ROOT}`
 
 **codex-config.toml:**
-- `[projects."/var/www/html"]` → `[projects."/var/www/worktree/html"]`
+- `[projects."/var/www/html"]` → `[projects."/var/www/worktree/main"]`
 
 **.env.example:**
-- Nieuwe vars: `APP_ROOT=/var/www/worktree/html`, `WORKTREE_PARENT=.`, `WORKTREE_MOUNT=/var/www/worktree`
+- Nieuwe vars: `APP_ROOT=/var/www/worktree/main`, `WORKTREE_PARENT=.`, `WORKTREE_MOUNT=/var/www/worktree`
 
 ### Host-side verandering
 
@@ -78,11 +78,11 @@ De repo op de host verplaatst NIET. De Docker volume mount wijzigt:
 - .:/var/www/html
 
 # Nieuw:
-- .:${APP_ROOT:-/var/www/worktree/html}         # repo → container
+- .:${APP_ROOT:-/var/www/worktree/main}         # repo → container
 - ${WORKTREE_PARENT:-.}:${WORKTREE_MOUNT:-/var/www/worktree}  # parent → worktrees zichtbaar
 ```
 
-`WORKTREE_PARENT` wijst naar de directory op de host die `html/` en toekomstige
+`WORKTREE_PARENT` wijst naar de directory op de host die `main/` en toekomstige
 worktrees bevat. Default: `.` (de repo IS de parent, worktrees worden siblings).
 
 ### Verificatie
@@ -113,7 +113,7 @@ Al het andere komt van main.
 ### Wat is gedeeld
 
 - `vendor/` — hardlink copy van main (`cp -al`)
-- `.env` — symlink naar `../html/.env`
+- `.env` — symlink naar `../main/.env`
 - Database — zelfde `yii_test` schema
 - Sessions — zelfde (geen aparte login nodig)
 - Nginx — cookie-routing (zelfde poort)
@@ -121,10 +121,10 @@ Al het andere komt van main.
 ### Setup (`php yii worktree/setup --id=42`)
 
 ```
-1. cp -al html/yii/vendor → html-bugfix/yii/vendor
-2. ln -s ../html/.env → html-bugfix/.env
-3. mkdir -p html-bugfix/yii/runtime
-4. mkdir -p html-bugfix/yii/web/assets
+1. cp -al main/yii/vendor → bugfix/yii/vendor
+2. ln -s ../main/.env → bugfix/.env
+3. mkdir -p bugfix/yii/runtime
+4. mkdir -p bugfix/yii/web/assets
 ```
 
 Geen database setup. Geen nginx config. ~1 seconde.
@@ -137,10 +137,10 @@ Verwijder git worktree + DB record. Geen DB of nginx cleanup nodig.
 
 ```bash
 # Unit tests in de bugfix worktree:
-docker exec -w /var/www/worktree/html-bugfix/yii pma_yii vendor/bin/codecept run unit
+docker exec -w /var/www/worktree/bugfix/yii pma_yii vendor/bin/codecept run unit
 
 # Of een specifieke test:
-docker exec -w /var/www/worktree/html-bugfix/yii pma_yii \
+docker exec -w /var/www/worktree/bugfix/yii pma_yii \
     vendor/bin/codecept run unit tests/unit/path/ToTest.php
 
 # Browser testing: zet cookie _worktree=bugfix, reload pagina
@@ -171,9 +171,9 @@ maar de database en login deelt met main.
 
 ```
 1. Detectie: verschilt composer.lock? → composer install, anders cp -al
-2. cp html/.env → html-feat/.env (kopie, niet symlink — kan afwijken)
-3. mkdir -p html-feat/yii/runtime
-4. mkdir -p html-feat/yii/web/assets
+2. cp main/.env → feat/.env (kopie, niet symlink — kan afwijken)
+3. mkdir -p feat/yii/runtime
+4. mkdir -p feat/yii/web/assets
 5. Indien nieuwe migraties: draai op gedeeld test schema
 ```
 
@@ -219,9 +219,9 @@ isolatie nodig hebt. Apart inloggen, eigen schema, eigen Nginx poort.
 
 ```
 1. composer install
-2. cp html/.env → html-feat/.env
-3. mkdir -p html-feat/yii/runtime
-4. mkdir -p html-feat/yii/web/assets
+2. cp main/.env → feat/.env
+3. mkdir -p feat/yii/runtime
+4. mkdir -p feat/yii/web/assets
 5. CREATE DATABASE promptmanager_test_{suffix}
 6. php yii migrate op eigen schema
 7. Genereer nginx server block op volgende vrije poort
@@ -400,7 +400,7 @@ Nieuwe kolommen op `project_worktree`:
 
 | Variabele | Gedefinieerd in | Default | Beschrijving |
 |-----------|----------------|---------|-------------|
-| `APP_ROOT` | `.env` + `docker-compose.yml` | `/var/www/worktree/html` | Container pad naar actieve app |
+| `APP_ROOT` | `.env` + `docker-compose.yml` | `/var/www/worktree/main` | Container pad naar actieve app |
 | `WORKTREE_PARENT` | `.env` + `docker-compose.yml` | `.` | Host pad naar parent van repo + worktrees |
 | `WORKTREE_MOUNT` | `.env` + `docker-compose.yml` | `/var/www/worktree` | Container mount voor worktree parent |
 | `WORKTREE_PORT_MIN` | `.env` | `8504` | Eerste poort voor worktree port-routing |
@@ -417,8 +417,8 @@ Validatie is **verplicht** in het nginx `map` block:
 
 ```nginx
 map $cookie__worktree $wt_root {
-    default                     /var/www/worktree/html;
-    ~^([a-zA-Z0-9_-]{1,100})$   /var/www/worktree/html-$1;
+    default                     /var/www/worktree/main;
+    ~^([a-zA-Z0-9_-]{1,100})$   /var/www/worktree/$1;
 }
 ```
 
@@ -451,7 +451,7 @@ Vóór `DROP DATABASE` wordt gevalideerd dat:
 
 `WORKTREE_MOUNT` mount exposeert potentieel meer dan nodig. Mitigatie:
 - Documenteer in `.env.example` dat `WORKTREE_PARENT` naar een dedicated worktree-parent moet wijzen, niet naar een brede projectmap
-- De mount is `:rw` voor worktrees, maar alleen `html*` directories worden aangesproken
+- De mount is `:rw` voor worktrees, maar alleen `main` en worktree directories worden aangesproken
 - Binnen de container draait de app als `appuser` (non-root), waardoor schrijftoegang beperkt is tot owned directories
 
 #### RBAC voor console commands
@@ -595,7 +595,7 @@ Visuele indicator in de navbar button:
 | T1.1 | `docker compose up -d` met nieuwe padconfiguratie | Alle containers starten, app bereikbaar op bestaande poort |
 | T1.2 | `vendor/bin/codecept run unit` na padwijziging | Alle bestaande tests slagen |
 | T1.3 | `./linter.sh check` na padwijziging | Linter draait zonder fouten |
-| T1.4 | APP_ROOT env var niet gezet (default) | App gebruikt default `/var/www/worktree/html` |
+| T1.4 | APP_ROOT env var niet gezet (default) | App gebruikt default `/var/www/worktree/main` |
 
 ### Fase 2: WorktreeSetupService — shared vendor
 

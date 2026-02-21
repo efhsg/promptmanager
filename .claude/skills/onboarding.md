@@ -34,7 +34,7 @@ Project → { Context, Field, PromptTemplate, Note } → PromptInstance
 
 ## Quick Commands
 
-Alle commands vanuit `/var/www/html/yii`:
+Alle commands vanuit `/var/www/worktree/main/yii`:
 
 ```bash
 # Run tests

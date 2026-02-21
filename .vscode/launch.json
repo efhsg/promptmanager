@@ -8,7 +8,7 @@
       "port": 9003,
       "hostname": "0.0.0.0",
       "pathMappings": {
-        "/var/www/html": "${workspaceFolder}"
+        "/var/www/worktree/main": "${workspaceFolder}"
       },
       "xdebugSettings": {
         "max_children": 128,

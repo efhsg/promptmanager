@@ -11,7 +11,7 @@ De gebruiker kan per worktree de defaults overriden.
 | Dimensie | Gedeeld | Onafhankelijk |
 |----------|---------|---------------|
 | **vendor/** | `cp -al` van main (instant, 0 disk) | `composer install` (eigen autoloader) |
-| **.env** | Symlink naar `../html/.env` | Eigen kopie (andere DB, API keys, etc.) |
+| **.env** | Symlink naar `../main/.env` | Eigen kopie (andere DB, API keys, etc.) |
 | **Database** | Zelfde test schema (`promptmanager_test`) | Eigen schema + migraties |
 | **Nginx** | Geen server block (alleen CLI tests) | Eigen poort (browser testing) |
 
@@ -103,8 +103,8 @@ Het command:
 ### Stap 1: `cp -al` vendor (altijd, als default)
 
 ```bash
-MAIN=/var/www/worktree/html/yii/vendor
-TARGET=/var/www/worktree/html-feat/yii/vendor
+MAIN=/var/www/worktree/main/yii/vendor
+TARGET=/var/www/worktree/feat/yii/vendor
 cp -al "$MAIN" "$TARGET"
 ```
 
@@ -112,10 +112,10 @@ cp -al "$MAIN" "$TARGET"
 
 ```bash
 # Gedeeld (default):
-ln -s ../html/.env /var/www/worktree/html-feat/.env
+ln -s ../main/.env /var/www/worktree/feat/.env
 
 # Onafhankelijk:
-cp /var/www/worktree/html/.env /var/www/worktree/html-feat/.env
+cp /var/www/worktree/main/.env /var/www/worktree/feat/.env
 ```
 
 ### Stap 3: Database schema (optioneel)
@@ -128,7 +128,7 @@ DB_TEST="promptmanager_test_${SUFFIX}"
 docker exec pma_yii mysql -h "$DB_HOST" -u root -p"$DB_ROOT_PASSWORD" \
     -e "CREATE DATABASE IF NOT EXISTS \`${DB_TEST}\`;"
 
-docker exec -w /var/www/worktree/html-feat/yii \
+docker exec -w /var/www/worktree/feat/yii \
     -e "DB_DATABASE_TEST=${DB_TEST}" \
     pma_yii php yii migrate --interactive=0
 ```
@@ -140,7 +140,7 @@ PORT=8504  # volgende vrije poort
 cat >> /etc/nginx/conf.d/worktrees.conf <<EOF
 server {
     listen ${PORT};
-    root /var/www/worktree/html-feat/yii/web;
+    root /var/www/worktree/feat/yii/web;
     location / { try_files \$uri \$uri/ /index.php?\$query_string; }
     location ~ \.php$ {
         include fastcgi_params;

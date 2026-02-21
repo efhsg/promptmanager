@@ -208,11 +208,11 @@ Worktree:   /home/esg/projects/promptmanager-feat/    → Container: ??? (niet z
 Voorstel — mount de parent directory:
 ```
 Host:       /home/esg/projects/                       → Container: /var/www/worktree/
-Main repo:  /var/www/worktree/html/
-Worktree:   /var/www/worktree/html-feat/
+Main repo:  /var/www/worktree/main/
+Worktree:   /var/www/worktree/feat/
 ```
 
-Alle worktrees (`html-{suffix}`) zijn siblings onder hetzelfde mountpoint. Ze zijn
+Alle worktrees (`{suffix}`) zijn siblings onder hetzelfde mountpoint. Ze zijn
 allemaal zichtbaar in de container.
 
 ### Wat dit oplost
@@ -231,7 +231,7 @@ die WorktreeService aanmaakt als `{root}-{suffix}` valt automatisch onder de mou
 
 ### Wat er verandert aan het hoofdpad
 
-Het app-pad verschuift van `/var/www/html` naar `/var/www/worktree/html`. Dit raakt
+Het app-pad verschuift van `/var/www/html` naar `/var/www/worktree/main`. Dit raakt
 alle 18 hardcoded referenties. In de refactor worden die toch al variabel gemaakt,
 dus de padwijziging is geen extra werk — het is dezelfde refactor.
 
@@ -250,7 +250,7 @@ docker-compose wijzigingen vereist.
 **2. Hoe heet de repo directory op de host?**
 
 Het voorstel gaat ervan uit dat de repo directory `html` heet zodat het pad
-`/var/www/worktree/html` wordt. In de praktijk heet de directory waarschijnlijk
+`/var/www/worktree/main` wordt. In de praktijk heet de directory waarschijnlijk
 `promptmanager` of iets dergelijks. Dan wordt het pad `/var/www/worktree/promptmanager`.
 
 Dit maakt het pad installatie-afhankelijk. Twee opties:
@@ -277,7 +277,7 @@ van `/projects/`.
 **4. Claude Code sessie-pad**
 
 Claude Code start in `/var/www/html` (het huidige working directory). Na de refactor
-wordt dat `/var/www/worktree/html`. Alle CLAUDE.md paden, skill-referenties, en
+wordt dat `/var/www/worktree/main`. Alle CLAUDE.md paden, skill-referenties, en
 `vendor/bin/codecept` commando's gaan uit van het working directory — die zijn
 relatief en werken nog. Maar externe tooling (PHPStorm remote interpreter, Xdebug
 path mappings) moet opnieuw geconfigureerd worden.
@@ -285,7 +285,7 @@ path mappings) moet opnieuw geconfigureerd worden.
 **5. Dockerfile build context**
 
 De Dockerfile maakt directories aan op `/var/www/html/...` tijdens de build.
-Na de refactor is dat `/var/www/worktree/html/...`. Maar de build gebeurt vóór
+Na de refactor is dat `/var/www/worktree/main/...`. Maar de build gebeurt vóór
 de volume mount — de directories worden overschreven door de mount. Dit is nu
 ook al zo (de Dockerfile maakt `runtime/logs` en `vendor/bin` aan, maar de mount
 overschrijft ze). De Dockerfile-regels zijn dus cosmetisch/fallback.

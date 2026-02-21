@@ -5,14 +5,15 @@ services:
       context: .
       dockerfile: ./docker/yii/Dockerfile
       args:
+        - APP_ROOT=${APP_ROOT:-/var/www/worktree/main}
         - USER_ID=${USER_ID:-1000}
         - USER_NAME=${USER_NAME:-appuser}
         - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}
     container_name: pma_yii
-    working_dir: /var/www/html/yii
+    working_dir: ${APP_ROOT:-/var/www/worktree/main}/yii
     environment:
       HOME: /home/${USER_NAME}
-      PATH: /home/${USER_NAME}/.local/bin:/var/www/html/yii:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PATH: /home/${USER_NAME}/.local/bin:${APP_ROOT:-/var/www/worktree/main}/yii:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       TZ: ${TIMEZONE:-Europe/Amsterdam}
       PHP_IDE_CONFIG: "serverName=Docker"
       XDEBUG_MODE: ${XDEBUG_MODE:-debug,develop}
@@ -26,7 +27,7 @@ services:
       - path: .env.db
         required: false
     volumes:
-      - .:/var/www/html
+      - .:${APP_ROOT:-/var/www/worktree/main}
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
       - ${YTX_PATH:-./ytx}:/opt/ytx:ro
       - ${PROJECTS_ROOT}:/projects:rw
@@ -48,13 +49,14 @@ services:
       - "127.0.0.1:${NGINX_PORT:-8502}:80"
       - "${TAILSCALE_IP}:${NGINX_PORT:-8502}:80"
     volumes:
-      - .:/var/www/html
+      - .:${APP_ROOT:-/var/www/worktree/main}
       - ./docker/nginx.conf.template:/etc/nginx/nginx.conf.template
     environment:
       PHP_FPM_PORT: ${PHP_FPM_PORT:-9000}
+      APP_ROOT: ${APP_ROOT:-/var/www/worktree/main}
     entrypoint: [""]  # Override default nginx entrypoint to use our own envsubst command
     command: >
-      sh -c "envsubst '$$PHP_FPM_PORT' < /etc/nginx/nginx.conf.template \
+      sh -c "envsubst '$$PHP_FPM_PORT $$APP_ROOT' < /etc/nginx/nginx.conf.template \
       > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
     depends_on:
       - pma_yii
@@ -89,16 +91,17 @@ services:
       context: .
       dockerfile: ./docker/yii/Dockerfile
       args:
+        - APP_ROOT=${APP_ROOT:-/var/www/worktree/main}
         - USER_ID=${USER_ID:-1000}
         - USER_NAME=${USER_NAME:-appuser}
         - PHP_FPM_PORT=${PHP_FPM_PORT:-9000}
-    working_dir: /var/www/html/yii
+    working_dir: ${APP_ROOT:-/var/www/worktree/main}/yii
     mem_limit: 1g
     command: ["php", "yii", "queue/listen", "--verbose=1"]
     deploy:
       replicas: ${QUEUE_WORKERS:-3}
     volumes:
-      - .:/var/www/html
+      - .:${APP_ROOT:-/var/www/worktree/main}
       - ./yii/.phpstorm_helpers:/opt/.phpstorm_helpers
       - ${YTX_PATH:-./ytx}:/opt/ytx:ro
       - ${PROJECTS_ROOT}:/projects:rw
@@ -115,7 +118,7 @@ services:
         required: false
     environment:
       HOME: /home/${USER_NAME}
-      PATH: /home/${USER_NAME}/.local/bin:/var/www/html/yii:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      PATH: /home/${USER_NAME}/.local/bin:${APP_ROOT:-/var/www/worktree/main}/yii:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       TZ: ${TIMEZONE:-Europe/Amsterdam}
     depends_on:
       - pma_mysql

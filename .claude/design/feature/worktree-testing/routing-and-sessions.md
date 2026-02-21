@@ -20,8 +20,8 @@ Eén Nginx server block, één poort. Een cookie `_worktree` bepaalt de document
 
 ```nginx
 map $cookie__worktree $wt_root {
-    default   /var/www/worktree/html;
-    ~^(.+)$   /var/www/worktree/html-$1;
+    default   /var/www/worktree/main;
+    ~^(.+)$   /var/www/worktree/$1;
 }
 
 server {
@@ -80,8 +80,8 @@ Mitigatie: valideer de cookie-waarde in de `map` met een strikt patroon:
 
 ```nginx
 map $cookie__worktree $wt_root {
-    default                     /var/www/worktree/html;
-    ~^[a-zA-Z0-9_-]{1,100}$    /var/www/worktree/html-$1;
+    default                     /var/www/worktree/main;
+    ~^[a-zA-Z0-9_-]{1,100}$    /var/www/worktree/$1;
 }
 ```
 
@@ -112,14 +112,14 @@ Elk worktree krijgt een eigen Nginx server block op een unieke poort.
 # Main (bestaand)
 server {
     listen 80;
-    root /var/www/worktree/html/yii/web;
+    root /var/www/worktree/main/yii/web;
     # ...
 }
 
 # Worktree feat-x (gegenereerd door worktree/setup)
 server {
     listen 81;
-    root /var/www/worktree/html-feat-x/yii/web;
+    root /var/www/worktree/feat-x/yii/web;
     # ... identiek aan main, ander root
 }
 ```

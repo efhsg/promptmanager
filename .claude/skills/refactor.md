@@ -38,7 +38,7 @@ These constraints are non-negotiable:
    - Long methods → Split into focused methods
    - Deep nesting → Early returns
    - Tight coupling → Dependency injection or interfaces
-3. Run existing tests to establish baseline (vanuit `/var/www/html/yii`):
+3. Run existing tests to establish baseline (vanuit `/var/www/worktree/main/yii`):
    ```bash
    vendor/bin/codecept run unit {relevant-test-path}
    ```

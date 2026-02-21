@@ -21,7 +21,7 @@ Single source of truth for project-specific operations.
 ### Linter
 
 ```bash
-# Vanuit /var/www/html/yii - gebruik php-cs-fixer direct
+# Vanuit /var/www/worktree/main/yii - gebruik php-cs-fixer direct
 vendor/bin/php-cs-fixer fix path/to/file.php --config=../.php-cs-fixer.dist.php --using-cache=no
 
 # Of fix meerdere bestanden
@@ -31,7 +31,7 @@ vendor/bin/php-cs-fixer fix models/ --config=../.php-cs-fixer.dist.php --using-c
 ### Tests
 
 ```bash
-# Run all unit tests (vanuit /var/www/html/yii)
+# Run all unit tests (vanuit /var/www/worktree/main/yii)
 vendor/bin/codecept run unit
 
 # Run single test file
@@ -44,7 +44,7 @@ vendor/bin/codecept run unit tests/unit/services/MyServiceTest:testMethod
 ### Database
 
 ```bash
-# Run migrations (both schemas required, vanuit /var/www/html/yii)
+# Run migrations (both schemas required, vanuit /var/www/worktree/main/yii)
 ./yii migrate --migrationNamespaces=app\\migrations --interactive=0
 ./yii_test migrate --migrationNamespaces=app\\migrations --interactive=0
 

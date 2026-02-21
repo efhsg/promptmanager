@@ -77,11 +77,14 @@ EOF
 # Set max_execution_time
 RUN echo "max_execution_time=3600" > /usr/local/etc/php/conf.d/custom.ini
 
+# Application root path (parameterized for worktree support)
+ARG APP_ROOT=/var/www/worktree/main
+
 # Enable PHP error logging to a writable runtime file
-RUN mkdir -p /var/www/html/yii/runtime/logs && \
-    cat <<'EOF' > /usr/local/etc/php/conf.d/error-logging.ini
+RUN mkdir -p ${APP_ROOT}/yii/runtime/logs && \
+    cat <<EOF > /usr/local/etc/php/conf.d/error-logging.ini
 log_errors=On
-error_log=/var/www/html/yii/runtime/logs/php_errors.log
+error_log=${APP_ROOT}/yii/runtime/logs/php_errors.log
 EOF
 
 # Install Composer
@@ -96,10 +99,11 @@ ARG USER_NAME
 RUN adduser --uid $USER_ID --disabled-password --gecos "" $USER_NAME \
     && mkdir -p /data \
     && mkdir -p /home/$USER_NAME/.local/bin /home/$USER_NAME/.local/share \
-    && chown -R $USER_NAME:$USER_NAME /var/www/html /data /home/$USER_NAME/.local
+    && mkdir -p ${APP_ROOT} \
+    && chown -R $USER_NAME:$USER_NAME ${APP_ROOT} /data /home/$USER_NAME/.local
 
 # Define the work directory as a build argument
-ARG WORKDIR=/var/www/html/yii
+ARG WORKDIR=${APP_ROOT}/yii
 
 # Set the working directory
 WORKDIR $WORKDIR
@@ -110,8 +114,8 @@ ENV PATH="$WORKDIR:${PATH}"
 USER root
 
 # Solves problem with PHPStorm
-RUN mkdir -p /var/www/html/yii/vendor/bin && \
-    ln -s ../autoload.php /var/www/html/yii/vendor/bin/autoload.php
+RUN mkdir -p ${WORKDIR}/vendor/bin && \
+    ln -s ../autoload.php ${WORKDIR}/vendor/bin/autoload.php
 
 ARG PHP_FPM_PORT
 
