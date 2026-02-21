@@ -1,0 +1,29 @@
+# Insights
+- Review gestart. Memory-initialisatie voltooid.
+- Architect bevinding 1 geaccepteerd: expliciet configuratiecontract voor APP_ROOT toegevoegd (bronprioriteit, propagatie, build/runtime, verificatiechecks).
+- Architect bevinding 2 geaccepteerd: T1.11 gestandaardiseerd naar service-gebaseerde compose-aanroep (`docker compose exec pma_queue pwd`).
+- Architect bevinding 3 geaccepteerd: T1.7 vernauwd naar expliciete controle op de 8 doelbestanden om false positives te voorkomen.
+- Architect bevinding 4 geaccepteerd: expliciete 8+-checklistdekking toegevoegd met NVT-markering voor niet-toepasselijke UI/security/wireframe-criteria in fase 1.
+- Architect review afgerond met score 8/10.
+- Security bevinding 1 geaccepteerd: security guardrails voor `APP_ROOT` toegevoegd inclusief fail-fast gedrag en expliciete acceptatietest T1.12.
+- Security bevinding 2 geaccepteerd: implementatieverdeling toegevoegd (script-laag primair, compose secundair, Dockerfile alleen default).
+- Security bevinding 3 geaccepteerd: expliciete verboden tekens en allowlist-regex toegevoegd voor eenduidige APP_ROOT-validatie.
+- Security review afgerond met score 8/10.
+- UX/UI bevinding 1 geaccepteerd: expliciete CLI operator states toegevoegd (loading, success, error, empty/default fallback).
+- UX/UI bevinding 2 geaccepteerd: acceptatiecriteria T1.13 en T1.14 toegevoegd voor meetbare fallback- en foutmelding-UX.
+- UX/UI bevinding 3 geaccepteerd: exact standaard foutformat vastgelegd voor `linter.sh` en `linter-staged.sh`.
+- UX/UI review afgerond met score 8/10.
+- Checkpoint na 3 afgeronde reviews: memory files geverifieerd en in sync.
+- Front-end Developer bevinding 1 geaccepteerd: staged-flow acceptatiecriteria toegevoegd (`T1.15`, `T1.16`) voor consistent scriptgedrag.
+- Front-end Developer bevinding 2 geaccepteerd: preconditie voor relevante staged files toegevoegd aan `T1.15` en `T1.16`.
+- Front-end Developer review afgerond met score 8/10.
+- Developer bevinding 1 geaccepteerd: `T1.11` non-interactief gemaakt met `docker compose exec -T`.
+- Developer bevinding 2 geaccepteerd: `T1.7` omgezet naar expliciete pass/fail-check met `! grep` en exitcode-duiding.
+- Developer bevinding 3 geaccepteerd: exitcode-contract toegevoegd (0/2/1) en gekoppeld aan `T1.14` en `T1.16`.
+- Developer review afgerond met score 8/10.
+- Tester bevinding 1 geaccepteerd: checklistdekking geactualiseerd van `T1.1-T1.11` naar `T1.1-T1.16` inclusief negatieve/UX scriptcases.
+- Tester bevinding 2 geaccepteerd: `T1.12` opgesplitst in `T1.12a` (compose) en `T1.12b` (linter) voor betere fouttriage.
+- Tester bevinding 3 geaccepteerd: staged preconditie geconcretiseerd met vaste probe-file en cleanup-stappen.
+- Tester review afgerond met score 8/10.
+- Consistentiecheck uitgevoerd: geen contradicties gevonden tussen scope, componentlocaties, security guardrails en acceptatiecriteria.
+- Eindresultaat: alle 6 reviews >= 8/10, consistentiecheck passed, specificatie klaar voor implementatie.
